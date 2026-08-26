@@ -1,7 +1,7 @@
 # dotai
 
 Stow-managed repo for every AI-harness config on this machine: Claude Code,
-Codex, Hermes, opencode, GitHub Copilot CLI. Split out of `dotfiles`, which
+Hermes, opencode, GitHub Copilot CLI. Split out of `dotfiles`, which
 now keeps only system/shell/desktop config (it still owns
 `~/.claude/{hooks,themes,statusline.sh}` — see below). LOCAL ONLY, no remote.
 
@@ -10,7 +10,6 @@ now keeps only system/shell/desktop config (it still owns
 | Package    | Deploy target         | Mechanism                      |
 |------------|------------------------|---------------------------------|
 | `.claude`  | `~/.claude`             | `stow --no-folding`            |
-| `.codex`   | `~/.codex`               | `stow --no-folding` (allowlist)|
 | `.hermes`  | `~/.hermes`              | `stow --no-folding`            |
 | `opencode` | `~/.config/opencode`     | `stow --no-folding`            |
 | `copilot`  | `~/.copilot`             | `copilot/install.sh` (own linker)|
@@ -27,16 +26,6 @@ package except `copilot`, which owns its own idempotent installer.
 Adding another harness later (e.g. `pi` — already has a `[pi]` entry under
 `deps.toml`'s `groups.ai`, but no local config yet) is one `deploy` line in
 `setup.sh` plus a package directory here.
-
-## The `.codex` allowlist
-
-`~/.codex` is ~155M of live runtime (sessions, caches, sqlite state,
-`auth.json` OAuth credentials). `.gitignore` ignores `.codex/*` wholesale and
-un-ignores only `AGENTS.md`, `rules/`, `schemas/`, `skills/`. Within
-`skills/`, `skills/.system/` (imagegen, openai-docs, plugin-creator,
-review-agent, skill-creator, skill-installer) is vendor-managed — the Codex
-CLI regenerates it on upgrade, so tracking it would be permanent churn. It
-stays live and untracked by design, same as `~/.claude/skills/krita`.
 
 ## Deliberately gitignored
 

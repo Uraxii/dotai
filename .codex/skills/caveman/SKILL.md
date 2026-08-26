@@ -1,1 +1,0 @@
-../../../.claude/skills/caveman/SKILL.md

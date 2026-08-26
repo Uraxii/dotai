@@ -31,7 +31,6 @@ $(find "$PWD/.hermes" -path '*/SOUL.md' -type f | sort)
 EOF2
 
 deploy "$HOME/.claude" "$@" .claude
-deploy "$HOME/.codex" "$@" .codex
 deploy "$HOME/.hermes" "$@" .hermes
 deploy "$HOME/.config/opencode" "$@" opencode
 ./copilot/install.sh
