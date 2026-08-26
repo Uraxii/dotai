@@ -1,0 +1,9 @@
+\.git
+\.gitignore
+__pycache__
+.*local.*
+memory
+inbox
+plans
+projects
+models\.local
