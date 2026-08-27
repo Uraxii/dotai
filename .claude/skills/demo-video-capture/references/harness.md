@@ -20,7 +20,7 @@ src/debug/gauntlet/
 
 ## launcher.sh
 
-- `GODOT` binary from ~/.claude/rules/godot.md (GODOT_ROOT, Godot 4.6 path).
+- `GODOT` binary at GODOT_ROOT, per the `code-quality` skill's godot reference.
 - Args: demo scene, bucket, seed, session count, out dir.
 - Host: `"$GODOT" --headless --path src res://debug/gauntlet/capture_host.tscn -- --bucket=X --seed=N --out=DIR`
   (custom args after `--`, read via `OS.get_cmdline_user_args()`).

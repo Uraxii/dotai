@@ -1,0 +1,41 @@
+---
+name: never-block-on-the-human
+description: Use when about to stop and ask the human for permission or a preference on work that can be undone, such as writing code, editing a scene, renaming things, restructuring notes, or splitting tasks, while the human reviews on their own schedule. Proceed and present the result; keep confirmation for actions that cannot be taken back.
+---
+
+# Never Block on Human
+
+Human supervise async. Agent stay unblocked: make reasonable decision,
+proceed, let human course-correct after. Code cheap. Waiting expensive.
+
+**Why:** every permission pause stall pipeline, make human bottleneck. Code
+change reversible and reviewable, so wrong decision usually cost less than
+blocking.
+
+## Pattern
+
+- **Proceed, then present.** Do X, show result, state why. Not "should I do X?"
+- **Question only for genuine ambiguity.** Intent not inferable from task,
+  repo, adjacent code -> then ask.
+- **Self-heal.** Spot problem -> log it, fix next round.
+- **Design for review-after-fact.** Human read plan, diff, artifact on own
+  clock.
+- **Code cheap, attention scarce.** Wrong impl cost minutes. Blocked agent
+  cost human attention.
+
+## Boundaries
+
+Confirm first, irreversible:
+
+- force-push, history rewrite, branch or tag delete
+- drop or migrate production data, destroy infra, delete volume/bucket
+- send external message, publish package, deploy
+- overwrite unversioned master asset or art source file
+
+Proceed, reversible:
+
+- write or edit code, scenes, shaders, tests, notes
+- rerun render or export into fresh output path
+- split, reorder, or rescope tasks
+
+Product direction come from human. Execution never block.

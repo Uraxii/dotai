@@ -1,36 +1,53 @@
 # dotai
 
 Stow-managed repo for every AI-harness config on this machine: Claude Code,
-Hermes, opencode, GitHub Copilot CLI. Split out of `dotfiles`, which
+Codex, Hermes, opencode, GitHub Copilot CLI. Split out of `dotfiles`, which
 now keeps only system/shell/desktop config (it still owns
-`~/.claude/{hooks,themes,statusline.sh}` — see below). LOCAL ONLY, no remote.
+`~/.claude/{hooks,themes,statusline.sh}`, see below). LOCAL ONLY, no remote.
 
-## Packages
+## Layout
 
-| Package    | Deploy target         | Mechanism                      |
-|------------|------------------------|---------------------------------|
-| `.claude`  | `~/.claude`             | `stow --no-folding`            |
-| `.hermes`  | `~/.hermes`              | `stow --no-folding`            |
-| `opencode` | `~/.config/opencode`     | `stow --no-folding`            |
-| `copilot`  | `~/.copilot`             | `copilot/install.sh` (own linker)|
+The repo root mirrors `$HOME`, so the whole repo is one stow package.
+
+| Dir                 | Deploys to             |
+|---------------------|------------------------|
+| `.claude/`          | `~/.claude`            |
+| `.codex/`           | `~/.codex` (allowlist) |
+| `.hermes/`          | `~/.hermes`            |
+| `.config/opencode/` | `~/.config/opencode`   |
+| `.copilot/`         | `~/.copilot`           |
+
+One `.stow-local-ignore` at the root covers every harness.
 
 ## Usage
 
 ```
-./setup.sh
+cd ~/dotai
+stow -t ~ --no-folding .
 ```
 
-Forwards extra args to stow (`-R` to restow, `-n` to preview) for every
-package except `copilot`, which owns its own idempotent installer.
+Add `-R` to restow after a rename, `-n -v1` to preview, `-D` to remove.
+After a restow, prune links whose source moved:
+`find ~/.claude ~/.codex ~/.hermes ~/.config/opencode ~/.copilot -xtype l -delete`.
+`--no-folding` links files, never dirs, so live runtime state (copilot's sqlite
+store, codex sessions) sits beside the links untouched.
 
-Adding another harness later (e.g. `pi` — already has a `[pi]` entry under
-`deps.toml`'s `groups.ai`, but no local config yet) is one `deploy` line in
-`setup.sh` plus a package directory here.
+Adding another harness later is one more `$HOME`-shaped dir at the root.
+
+## The `.codex` allowlist
+
+`~/.codex` is ~155M of live runtime (sessions, caches, sqlite state,
+`auth.json` OAuth credentials). `.gitignore` ignores `.codex/*` wholesale and
+un-ignores only `AGENTS.md`, `rules/`, `schemas/`, `skills/`. Within
+`skills/`, `skills/.system/` (imagegen, openai-docs, plugin-creator,
+review-agent, skill-creator, skill-installer) is vendor-managed; the Codex
+CLI regenerates it on upgrade, so tracking it would be permanent churn. It
+stays live and untracked by design, same as `~/.claude/skills/krita`.
 
 ## Deliberately gitignored
 
 - `~/.claude/settings.json` and `settings.local.json` are gitignored. A
-  fresh machine must recreate `~/.claude/settings.json` by hand — it's not
+  fresh machine must recreate `~/.claude/settings.json` by hand; it's not
   in this repo.
 - `~/.claude/skills/krita` stays live/untracked by design (341 files, 14M).
 
@@ -45,7 +62,7 @@ in sync by hand; this repo does not automate that.
 `~/.hermes` is 1.9G, almost all of it live upstream runtime:
 `hermes-agent/` (1.9G), `bin/` (63M), `config.yaml`, a 74K
 `config.yaml.bak.*`, `.env` (secrets), and ~20 upstream-bundled skill trees
-under `~/.hermes/skills/` — of which only `caveman` and
-`productivity/session-transfer` come from this repo. The dotai `.hermes`
-package deploys exactly 20 leaf symlinks into that directory; nothing
-outside those 20 leaves is ever touched by `setup.sh` or this repo.
+under `~/.hermes/skills/`, of which only `caveman` and
+`productivity/session-transfer` come from this repo. The dotai `hermes`
+package deploys exactly 19 leaf symlinks into that directory; nothing
+outside those 19 leaves is ever touched by stow or this repo.

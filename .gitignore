@@ -1,84 +1,74 @@
-# generic
-*.local
+# Global patterns only. Packages mirror $HOME and deploy as leaf symlinks
+# (stow --no-folding), so harness runtime state lands in $HOME, not here.
+# The rules below catch the few live files that DO sit inside the repo
+# (global CLAUDE.md, settings.json, opencode.json) plus anything
+# secret- or state-shaped at any depth.
+
+# build / tooling
 __pycache__/
 *.pyc
 *.pyo
 .pytest_cache/
+.ruff_cache/
 .venv/
 node_modules/
 *.egg-info/
-# install-provenance stamps (e.g. agent-workbench's) — machine-local, not config
 .installed-by-*
 
-# ---- .claude ---- (migrated verbatim from dotfiles' .gitignore, lines 13-18 + 39-54)
-# Global CLAUDE.md is personal, machine-local instruction — deployed by stow,
-# never tracked.
-.claude/CLAUDE.md
-.claude/*local*
-.claude/**/*local*
-.claude/settings.json
-# .stow-local-ignore is stow's package-level ignore file — DO track it.
-!.claude/.stow-local-ignore
-.claude/plans
-.claude/projects
-# claude-code runtime state (written into ~/.claude/ at runtime; never tracked)
-.claude/.credentials.json
-.claude/cache/
-.claude/debug/
-.claude/history.jsonl
-.claude/plugins/
-.claude/session-env/
-.claude/statsig/
-.claude/todos/
-.claude/backups/
-.claude/file-history/
-.claude/sessions/
-.claude/shell-snapshots/
-.claude/mcp-needs-auth-cache.json
+# local-only and secrets, any depth
+*.local
+*local*
+!.stow-local-ignore
+.env
+.env.*
+auth.json
+auth.lock
+.credentials.json
+config.json
+config.toml
+config.yaml
+CLAUDE.md
+settings.json
+opencode.json
+mcp-config.json
+mcp-needs-auth-cache.json
 
-# ---- .hermes ---- (migrated verbatim from dotfiles' .gitignore, lines 71-94)
-.hermes/.env
-.hermes/.env.local
-.hermes/state.db
-.hermes/sessions/
-.hermes/memory/
-.hermes/pipeline-registry.json
-.hermes/*local*
-# .stow-local-ignore is stow's package-level ignore file — DO track it.
-!.hermes/.stow-local-ignore
-.hermes/channel_directory.json
-.hermes/cron/
-.hermes/kanban.db
-.hermes/kanban.db-shm
-.hermes/kanban.db-wal
-# Local-only live config; SOUL.md identity files are static and tracked.
-.hermes/config.yaml
-.hermes/profiles/*/config.yaml
-.hermes/profiles/*/.env
-.hermes/profiles/*/state.db
-.hermes/profiles/*/sessions/
-.hermes/profiles/*/memory/
-.hermes/profiles/*/logs/
-.hermes/profiles/*/auth.json
-
-# ---- opencode ---- (migrated from dotfiles' .gitignore, lines 19-34;
-# opencode/opencode.json stays tracked — dotfiles unignored it at line 64,
-# reproduced below)
-opencode/projects/*
-!opencode/projects/.gitkeep
-opencode/plans/*
-!opencode/plans/.gitkeep
-opencode/memory/*
-!opencode/memory/.gitkeep
-opencode/agents/memory/*
-!opencode/agents/memory/.gitkeep
-opencode/agents/shared/agent-models.local.json
-opencode/agents/shared/model-map.local.md
-opencode/inbox/
-opencode/opencode.json
-opencode/models.local
+# runtime state, any depth
+*.db
+*.db-shm
+*.db-wal
+*.sqlite*
+history.jsonl
+session_index.jsonl
+sessions/
+session-env/
+session-state/
+session-store.db*
+shell-snapshots/
+shell_snapshots/
+file-history/
+backups/
+cache/
+plugins/
+installed-plugins/
+statsig/
+todos/
+plans/
+projects/
+memory/
+inbox/
+logs/
+log/
+tmp/
+debug/
+telemetry/
+cron/
+ide/
+pastes/
+audio_cache/
+image_cache/
+sandboxes/
 messages.md
 configstore
 uv
-!/opencode/opencode.json
-
+.system/

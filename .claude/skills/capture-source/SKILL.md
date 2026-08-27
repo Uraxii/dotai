@@ -1,6 +1,6 @@
 ---
 name: capture-source
-description: Store a web source's CONTENT (plus metadata + provenance) into the project knowledgebase instead of dropping a bare link. Use WHENEVER you cite, reference, or rely on a web page, article, doc, or blog post in your work or a report, or when the user shares a URL to keep. Deterministic (no model spend): fetches the page and extracts Open Graph / Schema.org / meta + the cleaned article body into `~/.knowledgebase/<project>/sources/`, then indexes it for later search.
+description: Store a web source's CONTENT (plus metadata + provenance) into the project knowledgebase instead of dropping a bare link. Use WHENEVER you cite, reference, or rely on a web page, article, doc, or blog post in your work or a report, or when the user shares a URL to keep. Deterministic and costs no model spend, fetching the page and extracting Open Graph / Schema.org / meta plus the cleaned article body into the project knowledgebase sources area, then indexing it for later search.
 ---
 
 # capture-source

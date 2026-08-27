@@ -1,0 +1,48 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["status", "summary", "changed_files", "verification", "open_risks"],
+  "properties": {
+    "status": {
+      "type": "string",
+      "enum": ["DONE", "PARTIAL", "BLOCKED"]
+    },
+    "summary": {
+      "type": "string",
+      "description": "One or two sentences on what was changed and why."
+    },
+    "changed_files": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "change"],
+        "properties": {
+          "path": { "type": "string", "description": "Repository-relative path." },
+          "change": { "type": "string", "description": "What changed in this file, one line." }
+        }
+      }
+    },
+    "verification": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["command", "result", "confidence"],
+        "properties": {
+          "command": { "type": "string", "description": "The exact command run." },
+          "result": { "type": "string", "description": "The real output, or the failure, quoted or closely paraphrased." },
+          "confidence": {
+            "type": "string",
+            "enum": ["VERIFIED", "REASONED", "ASSUMED"]
+          }
+        }
+      }
+    },
+    "open_risks": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Anything left unproven, deferred, or worth a second look."
+    }
+  }
+}

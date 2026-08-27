@@ -9,8 +9,8 @@ Drive pipeline in main thread. Understand req → break into phases → build ea
 increment user signs off before next. No finished-feature dump. Skeleton first, push each
 phase, add logic only after design confirmed.
 
-Self-contained. Bundles Designer/Builder/skeptic agents; optional test-engineer from
-registry. Operates only on invoked project.
+Self-contained. Bundles Designer/Builder/skeptic agents; optional test engineer is a
+`worker` loading the `test-automation-engineer` skill. Operates only on invoked project.
 
 ## Core Responsibilities
 
@@ -26,7 +26,7 @@ registry. Operates only on invoked project.
 |---|---|---|---|---|
 | **Designer** | `designer.md` | 0-3 | req, data structures, interface contracts, TODO siting (read-only) | **spawn a Designer subagent** (`designer.md`); orchestrator relays its reasoning + artifact at the gate. Inline ONLY for trivial single-line transcription. |
 | **Builder** | `builder.md` | 4-6 | impl, invariants, runs, deviation log; P6 tests on refactor slices | spawn Builder subagent. Inline ONLY for trivial 1-line edits. |
-| **Test engineer** *(opt, P6)* | registry `test-automation-engineer` | 6 | P6 tests, INDEPENDENT of impl | spawn for feature/new-behavior — implementer no grade own tests. Refactor/rename → Builder writes (regression suite IS spec). Pick at P0. |
+| **Test engineer** *(opt, P6)* | skill `test-automation-engineer` | 6 | P6 tests, INDEPENDENT of impl | spawn a `worker` loading the `test-automation-engineer` skill for feature/new-behavior; implementer no grade own tests. Refactor/rename → Builder writes (regression suite IS spec). Pick at P0. |
 | **skeptic** | `skeptic.md` | design + risky impl | challenge check (no one certifies own work) | fresh subagent = clean-context independence. Challenge the DESIGN (plan, skeleton, interfaces, TODO map - will the feature build from it?) AND risky impl diffs (netcode, migration). Skip trivial/comment-only mechanics. |
 
 **Delegation is default.** Orchestrator spawns agent subagents for phase work +
@@ -91,8 +91,8 @@ trivial guard-clause add.
 **Phase 6 - Real impl + tests.** Builder impls against confirmed skeleton + invariants via
 `tdd` (outside-in: acceptance test first, then one test→one impl→refactor; NO horizontal
 slicing). All tests **green** (CI regression). Run headless/UAT (`verify` / `run`). Test
-author set at P0: feature/new-behavior → dedicated `test-automation-engineer` writes tests
-blind to impl (acceptance test first, Builder drives green); refactor/rename → Builder writes
+author set at P0: feature/new-behavior → a `worker` loading the `test-automation-engineer`
+skill writes tests blind to impl (acceptance test first, Builder drives green); refactor/rename → Builder writes
 (port-existing; regression suite IS spec). skeptic = final challenge.
 
 ## Per-phase ritual (phases 1,2,3,5,6)
