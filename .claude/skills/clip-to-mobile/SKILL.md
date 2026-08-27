@@ -1,6 +1,6 @@
 ---
 name: clip-to-mobile
-description: Convert a gameplay clip (animated WebP, AVI, or MP4) into a small, mobile-viewable video for sending to the user. Use whenever you are about to send/attach a recorded clip and the source is an animated WebP or an oversized MP4 — animated WebP and AVI do NOT render inline in the Claude Code mobile app. Produces a small H.264 MP4 (default) or a GIF fallback with one command; no LLM-driven ffmpeg session needed.
+description: Convert a gameplay clip (animated WebP, AVI, or MP4) into a small, mobile-viewable video for sending to the user. Use whenever you are about to send/attach a recorded clip and the source is an animated WebP or an oversized MP4. Animated WebP and AVI do NOT render inline in the Claude Code mobile app. Produces a small H.264 MP4 (default) or a GIF fallback with one command; no LLM-driven ffmpeg session needed.
 ---
 
 # clip-to-mobile
@@ -13,15 +13,15 @@ reasoning.
 
 | Format | Inline on mobile? | Use |
 |--------|-------------------|-----|
-| **MP4 (H.264 / yuv420p / +faststart)** | Yes — universal | **DEFAULT. Send this.** |
+| **MP4 (H.264 / yuv420p / +faststart)** | Yes, universal | **DEFAULT. Send this.** |
 | **GIF (palette-optimized)** | Yes (Claude-supported image type) | **Fallback** if an MP4 preview ever fails to appear |
-| Animated WebP | No | never send — the format that started this |
+| Animated WebP | No | never send, the format that started this |
 | AVI | No | source only (`/tmp/cap/`), never send |
 | WebM / VP9 | Unreliable in chat/mobile | avoid |
 
 **Default: small H.264 MP4** (`yuv420p` + `-movflags +faststart`, <=720p,
 CRF 30). Most universally decoded video in mobile/chat contexts; faststart lets
-it start playing before it fully downloads. **Fallback: GIF** — GIF is in
+it start playing before it fully downloads. **Fallback: GIF.** GIF is in
 Claude's supported image list and auto-animates, but files are large (~9MB for
 5s), so only reach for it if an MP4 won't preview.
 
@@ -39,11 +39,11 @@ mobile MP4 out. It prints the output path, size, stream info, and PASS/FAIL.
 
 ### Options
 
-- `--gif` — emit a palette-optimized GIF instead (fallback format).
-- `--maxsec N` — trim to the first N seconds (long clips → smaller files).
-- `--height H` — max output height in px (default 720 for MP4, 480 for GIF).
-- `--crf N` — x264 quality/size knob (default 30; lower = bigger + sharper).
-- `--fps N` — GIF framerate (default 15; ignored for MP4, which keeps source fps).
+- `--gif`: emit a palette-optimized GIF instead (fallback format).
+- `--maxsec N`: trim to the first N seconds (long clips → smaller files).
+- `--height H`: max output height in px (default 720 for MP4, 480 for GIF).
+- `--crf N`: x264 quality/size knob (default 30; lower = bigger + sharper).
+- `--fps N`: GIF framerate (default 15; ignored for MP4, which keeps source fps).
 
 ### Examples
 
@@ -67,8 +67,8 @@ python3 ~/.claude/skills/clip-to-mobile/convert.py big.mp4 clip.mp4 --height 720
   frames with PIL (inferring fps from per-frame durations, 30fps fallback) and
   re-encodes from a PNG sequence. AVI/MP4 inputs go straight through ffmpeg.
 - **Validation:** MP4 output is probed with ffprobe (must be an H.264 stream);
-  GIF output is opened with PIL. Size is checked against a 10MB comfort line —
-  over it still PASSes but prints a WARN suggesting `--maxsec`/`--height`/`--crf`.
+  GIF output is opened with PIL. Size is checked against a 10MB comfort line.
+  Over it still PASSes but prints a WARN suggesting `--maxsec`/`--height`/`--crf`.
 - **Speed:** ~40s for a 470-frame 720p clip (frame extraction dominates); the
-  encoder runs the `veryfast` x264 preset. Fully standalone — no model in the loop.
+  encoder runs the `veryfast` x264 preset. Fully standalone, no model in the loop.
 - **Dependencies:** ffmpeg + ffprobe + Pillow (all already installed).

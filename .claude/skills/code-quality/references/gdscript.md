@@ -1,4 +1,4 @@
-# GDScript Rules
+# GDScript rules
 
 - Type hints: all vars, params, returns. Static typing mode on.
 - `@onready` over `_ready()` assignment for node refs.

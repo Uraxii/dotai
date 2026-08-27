@@ -1,4 +1,4 @@
-# TypeScript Rules
+# TypeScript rules
 
 - `strict: true` in tsconfig. No `any` w/o comment justifying (bare,
   external data, or generic constraints); prefer `unknown`, validate at boundary.

@@ -2,7 +2,7 @@
 
 Quiz = diagnostic practice that feeds a progress tracker. Unlike a plain exercise set, every
 quiz here is **tracked**: each question targets one atomic item, results update a Mastery DB,
-and the next quiz is weighted toward weak/unknown items. No untracked one-shot quizzes — if the
+and the next quiz is weighted toward weak/unknown items. No untracked one-shot quizzes. If the
 user wants questions, they get a tracked quiz.
 
 Quiz extends the exercise format with five rules:
@@ -19,13 +19,13 @@ Quiz extends the exercise format with five rules:
 4. **Point-weighted rubrics on free-text/code.** Every free-text question (short, code-review,
    diagram, and the non-code exercise types) carries a rubric worth a whole-number point total,
    broken into discrete checkpoints. Pick the total by depth, not a fixed value:
-   - **1 pt** — a single recall/recognition answer with one checkpoint, where appropriate.
-   - **3 pts** — single concept; name-the-flaw / one-fix (most L1 items).
-   - **5 pts** — two-part reasoning, or flaw + fix + why-the-partial-fails.
-   - **10 pts** — multi-step design, threat-model, or several independent checkpoints.
+   - **1 pt.** A single recall/recognition answer with one checkpoint, where appropriate.
+   - **3 pts.** Single concept; name-the-flaw / one-fix (most L1 items).
+   - **5 pts.** Two-part reasoning, or flaw + fix + why-the-partial-fails.
+   - **10 pts.** Multi-step design, threat-model, or several independent checkpoints.
    A 1-pt question is all-or-nothing; 3/5/10 split the total into weighted checkpoints (e.g.
-   10 = 4 identify + 4 fix + 2 idiomatic detail) and state them. mcq/multi are NOT point-weighted
-   — score by correct option / partial-for-multi.
+   10 = 4 identify + 4 fix + 2 idiomatic detail) and state them. mcq/multi are NOT point-weighted:
+   score by correct option / partial-for-multi.
    **Scoring bands → mastery** (scale to the question's total): full = correct, mid = partial,
    low/zero = missed; a blank answer is a gap, not a miss, and a ticked "Not Sure" keeps the scored
    result but flags it for review (never `solid` that attempt). These bands drive the state
@@ -39,15 +39,15 @@ Quiz extends the exercise format with five rules:
 
 ## Question types
 
-Mix across a quiz — never all one type. Each maps to exactly one item.
+Mix across a quiz. Never all one type. Each maps to exactly one item.
 
-- **mcq** — scenario + 4-5 options, one correct. Distractors plausible: adjacent concept, right
+- **mcq.** Scenario + 4-5 options, one correct. Distractors plausible: adjacent concept, right
   idea wrong layer, real-but-insufficient.
-- **multi** — select all that apply. Separates necessary from decoy. Partial credit.
-- **code-review** — short snippet (JS/TS/C#/Python, or the subject's language) with the flaw.
+- **multi.** Select all that apply. Separates necessary from decoy. Partial credit.
+- **code-review.** Short snippet (JS/TS/C#/Python, or the subject's language) with the flaw.
   Student names the flaw + fix. Rubric = discrete checkpoints. Code subjects only.
-- **short** — open "how/why/implement X". Rubric of required points + model answer.
-- **diagram** — reason over a Mermaid figure with a gap or a choice between two designs.
+- **short.** Open "how/why/implement X". Rubric of required points + model answer.
+- **diagram.** Reason over a Mermaid figure with a gap or a choice between two designs.
 - Non-code subjects swap code-review/diagram for the exercise types (translation, problem set,
   derivation, cloze) under the same hide-the-target + tracked rules.
 
@@ -57,10 +57,10 @@ Build the quiz as a page under the subject's sub-page (inside the workspace-root
 Quizzes" hub; see `progress-tracking.md` for the layout). Match the structure the user already
 has (see an existing quiz page for the pattern):
 
-- Title `Quiz — YYYY-MM-DD`, icon a Notion line-icon URL (no emoji).
+- Title `Quiz - YYYY-MM-DD`, icon a Notion line-icon URL (no emoji).
 - Short intro: practice not a test, no timer, take a guess and tick "Not Sure" if not confident,
   open the key or say "grade today's quiz".
-- Per question: `### Q<n> — <type label>`, the scenario, code in fenced blocks with a language,
+- Per question: `### Q<n> - <type label>`, the scenario, code in fenced blocks with a language,
   diagrams in ```mermaid, options plus a `- [ ] Not Sure` to-do, a
   `**Your answer:**` label for free-text. `---` between questions.
 - A collapsed `<details>` answer-key toggle at the end: per question, reveal item id + short
@@ -72,7 +72,7 @@ has (see an existing quiz page for the pattern):
 
 ## Self-critique before delivering
 
-- [ ] Each question discriminates real understanding — a guess can't pass
+- [ ] Each question discriminates real understanding. A guess can't pass
 - [ ] Distractors plausible; no give-away phrasing leaks the item
 - [ ] Options formatting-neutral: near-equal length, same register, correct answer not the
       longest or most detailed (rule 5)

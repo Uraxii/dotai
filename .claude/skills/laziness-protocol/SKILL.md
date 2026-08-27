@@ -3,7 +3,7 @@ name: laziness-protocol
 description: The deeper treatment the `ponytail` skill escalates to, never a first-pass substitute for it. Use after ponytail has already been applied and the change still grows layers, wrappers, config options, or parameters threaded through many files, or when the fix is to delete existing code rather than to keep one new diff small. Inventories what can be removed outright and re-sequences the work around subtraction.
 ---
 
-# Laziness Protocol
+# Laziness protocol
 
 Writing code cheap for model, so over-engineering easy. Borrow human
 maintainer fatigue. Most result, least code and complexity.

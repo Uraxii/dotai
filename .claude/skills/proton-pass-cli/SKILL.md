@@ -5,39 +5,39 @@ description: Retrieve credentials (API keys, passwords, tokens, SSH keys) from P
 
 # Proton Pass CLI
 
-Read secrets from Proton Pass on the command line with `pass-cli`. Authentication is a **Personal Access Token (PAT)** stored in the OS keyring (secret-service / KWallet) - never in a file, never in this repo.
+Read secrets from Proton Pass on command line with `pass-cli`. Auth is a **Personal Access Token (PAT)** stored in OS keyring (secret-service / KWallet), never in a file, never in this repo.
 
 ## The token lives in the keyring, not here
 
-There is no token in this skill. Retrieve it at runtime:
+No token in this skill. Retrieve it at runtime:
 
 ```bash
 PROTON_PASS_PERSONAL_ACCESS_TOKEN="$(secret-tool lookup service proton-pass-cli account machinesecrets-pat)"
 ```
 
-If that lookup returns empty, the PAT has not been stored on this machine yet. Store it (paste the current PAT on stdin):
+Lookup returns empty -> PAT not stored on this machine yet. Store it (paste current PAT on stdin):
 
 ```bash
 printf '%s' 'PASTE_PAT_HERE' | secret-tool store --label="Proton Pass CLI PAT (MachineSecrets)" service proton-pass-cli account machinesecrets-pat
 ```
 
-Rotating the PAT = re-run that `store` command with the new value. Nothing else changes.
+Rotating the PAT = re-run that `store` command with new value. Nothing else changes.
 
 ## Prerequisites
 
-- `pass-cli` installed: `pass-cli --version` (if missing, see <https://protonpass.github.io/pass-cli/get-started/installation/>).
-- `secret-tool` (libsecret) with an active secret-service provider (KDE `ksecretd` / `kwalletd`, or gnome-keyring).
+- `pass-cli` installed: `pass-cli --version` (missing -> see <https://protonpass.github.io/pass-cli/get-started/installation/>).
+- `secret-tool` (libsecret) with active secret-service provider (KDE `ksecretd` / `kwalletd`, or gnome-keyring).
 
-## 1. Ensure an authenticated session
+## 1. Check for an authenticated session
 
-Always check before doing real work - the session can expire mid-task:
+Always check before real work, session can expire mid-task:
 
 ```bash
 export PROTON_PASS_SESSION_DIR="/tmp/pass-agent-$USER"   # isolate from other sessions
 pass-cli info    # exit 0 + session details = good; non-zero = must log in
 ```
 
-If not authenticated, log in with the PAT from the keyring:
+Not authenticated -> log in with PAT from keyring:
 
 ```bash
 export PROTON_PASS_SESSION_DIR="/tmp/pass-agent-$USER"
@@ -46,7 +46,7 @@ PROTON_PASS_PERSONAL_ACCESS_TOKEN="$(secret-tool lookup service proton-pass-cli 
 pass-cli info    # verify
 ```
 
-`PROTON_PASS_SESSION_DIR` must be set to the **same** value for every subsequent `pass-cli` command in the task, or they will not see the session.
+`PROTON_PASS_SESSION_DIR` must stay the **same** value for every subsequent `pass-cli` command in the task, or they won't see the session.
 
 ## 2. Verify access
 
@@ -55,11 +55,11 @@ pass-cli vault list      # expect the MachineSecrets vault
 pass-cli share list      # vaults + directly-shared items granted to this PAT
 ```
 
-The current PAT is scoped to the **MachineSecrets** vault (Owner).
+Current PAT is scoped to the **MachineSecrets** vault (Owner).
 
 ## 3. Read an item (reason is mandatory)
 
-`item view`, `item create*`, `item update`, `item trash`, `item untrash`, and `vault update` all REQUIRE `PROTON_PASS_AGENT_REASON` describing why you need access.
+`item view`, `item create*`, `item update`, `item trash`, `item untrash`, and `vault update` all REQUIRE `PROTON_PASS_AGENT_REASON` naming why you need access.
 
 ```bash
 # whole item
@@ -86,7 +86,7 @@ Use `--output json` when parsing programmatically.
 
 ## Auto-recovery from a dead session
 
-If any command fails with an authentication error or non-zero exit:
+Any command fails with auth error or non-zero exit:
 
 1. `pass-cli logout --force`
 2. Re-run the login block in step 1
@@ -103,8 +103,8 @@ pass-cli agent instructions   # upstream usage reference
 
 ## Rules
 
-- Never write the PAT or any retrieved secret to a file, a tracked path, or a log. Read into a shell variable, use it, let it fall out of scope.
+- Never write the PAT or any retrieved secret to a file, tracked path, or log. Read into a shell variable, use it, let it fall out of scope.
 - Prefer `--field` over whole-item reads.
-- Always give a truthful, specific `PROTON_PASS_AGENT_REASON` (it is audited).
+- Always give a truthful, specific `PROTON_PASS_AGENT_REASON` (audited).
 
 Full docs: <https://protonpass.github.io/pass-cli/>

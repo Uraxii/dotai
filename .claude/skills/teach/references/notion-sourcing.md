@@ -4,13 +4,13 @@ When the user wants material drawn from their own Notion ("quiz me on X", "pull 
 ground the questions and answer keys in their workspace instead of model memory. Read content
 from Notion; never invent what their notes say.
 
-## Find the source — auto-search, then confirm
+## Find the source: auto-search, then confirm
 
 1. **Search.** `notion-search` for the topic. Load Notion tools first via tool_search
    ("notion search", "notion fetch", "notion query data sources", "notion create pages",
    "notion update page").
-2. **Confirm before building.** Search is semantic and imperfect — a wrong page yields a wrong
-   quiz. State what you found and confirm: "Basing this on your V11 Cryptography notes — right
+2. **Confirm before building.** Search is semantic and imperfect. A wrong page yields a wrong
+   quiz. State what you found and confirm: "Basing this on your V11 Cryptography notes, right
    pages?" Proceed once confirmed, or let the user point you at a specific page/DB.
 3. **Fetch.** `notion-fetch` the confirmed page(s); for a structured database, query the data
    source. Use the real content as the basis for questions; put verbatim/cited text in the key.
@@ -21,9 +21,9 @@ If search returns nothing usable, say so and offer to fall back to the content l
 
 Notion supplies the *content*; mastery tracking needs *stable item ids*. Two cases:
 
-- **Structured KB** — each page/row is an atomic item with a stable title (e.g. requirement
+- **Structured KB.** Each page/row is an atomic item with a stable title (e.g. requirement
   notes titled `ASVS 5.3.2 ...`). Use those titles as item ids directly. Best case.
-- **Loose notes** — unstructured pages. Derive a syllabus once (a tree of atomic items), confirm
+- **Loose notes.** Unstructured pages. Derive a syllabus once (a tree of atomic items), confirm
   it with the user, and **freeze** it as the Mastery DB rows. Don't regenerate it casually or
   mastery history detaches from items. See `progress-tracking.md`.
 

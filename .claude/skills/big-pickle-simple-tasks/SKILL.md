@@ -3,9 +3,9 @@ name: big-pickle-simple-tasks
 description: Load when scope feels paralyzing, when a high-stakes operation needs its step order worked out carefully, or when someone asks for a task breakdown. Turns an overwhelming or ambiguous project into small, concrete, sequenced action items of 15 minutes to 2 hours each.
 ---
 
-# Big Pickle, Simple Tasks
+# Big Pickle, simple tasks
 
-## Operational Constraints
+## Operational constraints
 
 - **READ-ONLY. Never write, edit, or create files.** Never commit. Report the
   breakdown as text in your final message.
@@ -32,7 +32,7 @@ description: Load when scope feels paralyzing, when a high-stakes operation need
 4. Full decomposition too long -> ID "minimum viable progress" path: what must
    happen first to validate direction.
 
-**Output Format:**
+**Output format:**
 
 For each task, provide:
 
@@ -42,7 +42,7 @@ For each task, provide:
 - **Time estimate**: Realistic duration
 - **Next decision**: What to evaluate before proceeding (if applicable)
 
-**Behavioral Guidelines:**
+**Behavioral guidelines:**
 
 - Never output vague tasks like "plan more" or "think about X": always convert
   to observable actions
@@ -52,7 +52,7 @@ For each task, provide:
 - Include a "quick win" option if user needs immediate momentum
 - Uncertainty high -> frame tasks as experiments or spikes with timeboxes
 
-**Self-Correction:**
+**Self-correction:**
 
 More than 12 tasks for a single phase -> pause, ask: "Can these be grouped
 into milestones?" Present milestone view first, then offer to expand any

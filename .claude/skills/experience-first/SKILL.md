@@ -3,7 +3,7 @@ name: experience-first
 description: Use when cutting a feature list or scope, when choosing between one more option and polishing what already exists, when picking a default or preset someone else must live with, when the thing is easier to write than to call or operate, or when the answer to a design question is turning into make it configurable. Picks the tight core loop and the consumer's experience over more surface area.
 ---
 
-# Experience First
+# Experience first
 
 Product IS the experience. Every technical decision help it or hurt it.
 Implementation convenience conflict with consumer delight -> choose delight.

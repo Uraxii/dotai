@@ -3,7 +3,7 @@ name: code-quality
 description: Load before writing or changing code in any language, and before reviewing a diff, designing types or interfaces, refactoring, or debugging. Covers cross-language limits, naming, code smells, type and boundary discipline, domain modelling, reader load, deletion-first sequencing, and scope rules, plus on-demand references for Python, TypeScript, C#, GDScript, and Godot.
 ---
 
-# Code Quality (all languages, all vendors)
+# Code quality (all languages, all vendors)
 
 Repo's own documented standard always override this file. Skip anything the
 repo's tooling already enforce.
@@ -156,7 +156,7 @@ Applies even when repo document nothing. Each is a labelled heuristic
 - **Refused Bequest**: subclass ignore or override most of what it inherit. ->
   drop inheritance, use composition.
 
-## Code Naming (engineering artifacts, all languages)
+## Code naming (engineering artifacts, all languages)
 
 A name must reveal the thing's purpose to a reader with no other context. If it
 only makes sense after reading the design discussion, it is wrong.

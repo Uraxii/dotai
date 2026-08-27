@@ -1,4 +1,4 @@
-# Python Rules
+# Python rules
 
 - Type hints: all fn sigs. `-> None` explicit. No untyped public API.
 - No `type: ignore` w/o inline comment why.

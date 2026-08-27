@@ -3,7 +3,7 @@ name: redesign-from-first-principles
 description: Use when a new requirement lands on a design that already exists and the cheap move is to bolt it on beside the current shape with a flag, an extra branch, or a second registry. Rebuilds the design as if the requirement had been known on day one, then delivers that in increments.
 ---
 
-# Redesign From First Principles
+# Redesign from first principles
 
 New requirement arrive -> do not bolt onto existing design. Redesign as if the
 requirement had been there from the start. Result should look like what you

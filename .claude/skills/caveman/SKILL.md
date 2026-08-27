@@ -40,13 +40,13 @@ Yes: "Bug in auth middleware. Token expiry check use `<` not `<=`. Fix:"
 | **wenyan-full** | Maximum classical terseness. Fully 文言文. 80-90% character reduction. Classical sentence patterns, verbs precede objects, subjects often omitted, classical particles (之/乃/為/其). |
 | **wenyan-ultra** | Extreme abbreviation while keeping classical Chinese feel. Maximum compression. |
 
-Example — "Why React component re-render?"
+Example: "Why React component re-render?"
 - full: "New object ref each render. Inline object prop = new ref = re-render. Wrap in `useMemo`."
 - ultra: "Inline obj prop → new ref → re-render. `useMemo`."
 - wenyan-full: "物出新參照，致重繪。useMemo Wrap之。"
 - wenyan-ultra: "新參照→重繪。useMemo Wrap。"
 
-Example — "Explain database connection pooling."
+Example: "Explain database connection pooling."
 - full: "Pool reuse open DB connections. No new connection per request. Skip handshake overhead."
 - ultra: "Pool = reuse DB conn. Skip handshake → fast under load."
 - wenyan-full: "池reuse open connection。不每req新開。skip handshake overhead。"
@@ -62,7 +62,7 @@ Drop caveman for:
 
 Resume caveman after clear part done.
 
-Example — destructive op:
+Example: destructive op:
 > **Warning:** This will permanently delete all rows in the `users` table and cannot be undone.
 > ```sql
 > DROP TABLE users;

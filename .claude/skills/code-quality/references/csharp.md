@@ -1,4 +1,4 @@
-# C# Rules
+# C# rules
 
 - Nullable reference types: `<Nullable>enable</Nullable>`. Handle nulls explicitly.
 - `using` / `await using` for all `IDisposable`. No manual `.Dispose()`.

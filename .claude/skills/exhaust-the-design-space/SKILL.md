@@ -3,7 +3,7 @@ name: exhaust-the-design-space
 description: Use when two or three plausible designs must be built and judged side by side before one is committed to, and no precedent in the codebase settles it, for instance a novel interaction, a mechanic that lives or dies on feel, a look-dev direction, or an architecture with several viable shapes. Requires competing candidates and an explicit comparison. One throwaway sketch answering a single design question is the `prototype` skill instead.
 ---
 
-# Exhaust the Design Space
+# Exhaust the design space
 
 Novel decision, no established precedent -> explore several concrete
 alternatives before implementing. Building the wrong thing cost more than

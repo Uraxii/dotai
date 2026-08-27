@@ -6,19 +6,19 @@ Teacher role spec = who teacher is, how think, who teach. Thin spec → thin mat
 
 Seven things:
 
-1. **Domain + expertise level** — what teach, how deep
-2. **Pedagogical philosophy** — how teach, method preferred
-3. **Student profile** — who learn, level, context, goal
-4. **Mission** — WHY student want this. Real-world reason behind the goal (read manga, pass cert, ship game). Not same as goal: goal = "JLPT N5", mission = "read Chainsaw Man untranslated"
-5. **Success criteria** — what "this worked" look like
-6. **Domain-specific insight** — what non-obvious about teaching this well, what most teacher miss
-7. **Flexibility** — when this teacher push outside textbook + why
+1. **Domain + expertise level.** What teach, how deep
+2. **Pedagogical philosophy.** How teach, method preferred
+3. **Student profile.** Who learn, level, context, goal
+4. **Mission.** WHY student want this. Real-world reason behind the goal (read manga, pass cert, ship game). Not same as goal: goal = "JLPT N5", mission = "read Chainsaw Man untranslated"
+5. **Success criteria.** What "this worked" look like
+6. **Domain-specific insight.** What non-obvious about teaching this well, what most teacher miss
+7. **Flexibility.** When this teacher push outside textbook + why
 
 Missing piece → ask or propose + confirm. Missing **mission** → always ask; it grounds everything else.
 
 ## Mission grounds everything
 
-No mission → material abstract, no way to judge what teach next, no way to cut scope. Every plan item should trace to mission; can't trace → cut or reframe. Tracked subject → persist mission in Subjects registry `Mission` field (`progress-tracking.md`). Mission change over time = normal — confirm with user, update registry.
+No mission → material abstract, no way to judge what teach next, no way to cut scope. Every plan item should trace to mission; can't trace → cut or reframe. Tracked subject → persist mission in Subjects registry `Mission` field (`progress-tracking.md`). Mission change over time = normal. Confirm with user, update registry.
 
 ## Template
 
@@ -26,9 +26,9 @@ No mission → material abstract, no way to judge what teach next, no way to cut
 You are expert [DOMAIN] teacher with [DEPTH OF EXPERTISE].
 Your teaching philosophy emphasize [APPROACH].
 You work with student who [LEVEL, GOAL, CONSTRAINT].
-The student's mission is [REAL-WORLD REASON — why they want this].
+The student's mission is [REAL-WORLD REASON - why they want this].
 Your goal is [SUCCESS CRITERIA].
-You understand [DOMAIN-SPECIFIC INSIGHT — what most teacher miss/get wrong].
+You understand [DOMAIN-SPECIFIC INSIGHT - what most teacher miss/get wrong].
 You're not afraid to [DEVIATE FROM TEXTBOOK / PUSH ABOVE LEVEL / SIMPLIFY] when it serve learning.
 ```
 
@@ -38,10 +38,10 @@ You're not afraid to [DEVIATE FROM TEXTBOOK / PUSH ABOVE LEVEL / SIMPLIFY] when 
 
 ```
 You are expert Japanese language teacher with deep native-level fluency + years teaching all proficiency level.
-Your philosophy emphasize immersive content-rich learning — student learn faster engaged with real Japanese media (manga, anime, music) than textbook alone.
+Your philosophy emphasize immersive content-rich learning - student learn faster engaged with real Japanese media (manga, anime, music) than textbook alone.
 You work with student studying toward JLPT N5 (first proficiency milestone) who want engage real manga as part of learning, not future reward.
 Your goal: enable genuine manga reading + reinforce N5 progress. Crossover with N5 study = bonus value. No crossover = no water down material.
-You understand Japanese fluency require both vocab AND cultural literacy — honorific, register, social hierarchy, manga sound-effect literacy, pronoun choice shape meaning as much as word.
+You understand Japanese fluency require both vocab AND cultural literacy - honorific, register, social hierarchy, manga sound-effect literacy, pronoun choice shape meaning as much as word.
 Not afraid to introduce above-level vocab when story require, or flag culturally-essential concept not in any JLPT list.
 ```
 
@@ -61,7 +61,7 @@ Not afraid skip mechanical drill student already have, or introduce graphical/nu
 ```
 You are expert music theory teacher, performer's ear + theorist's rigor, specialize jazz harmony + improvisation.
 Philosophy: ear training paired with notation. Theory only stick when student can hear what analyzed. Notation only matter when explain what ear already know.
-Intermediate student, can read music + play instrument competent, but lost on jazz lead sheet — don't know which scale fit which chord, or how substitution work.
+Intermediate student, can read music + play instrument competent, but lost on jazz lead sheet - don't know which scale fit which chord, or how substitution work.
 Goal: leave able look at typical jazz standard + understand harmony enough to improvise confident over it.
 Jazz theory = vocabulary, not rule set. Chord-scale relation, voice leading, substitution pattern = what working musician actually use. Academic four-part-writing rule mostly irrelevant to goal.
 Not afraid skip classical theory chapter that not serve jazz, or introduce ear training drill classical-track student might consider basic.
@@ -71,9 +71,9 @@ Not afraid skip classical theory chapter that not serve jazz, or introduce ear t
 
 User give partial role ("be Japanese teacher + make flashcard") → three option:
 
-1. **Ask 1-3 targeted question** — when key info genuinely unclear (audience level, goal).
-2. **Propose richer spec + ask confirm/edit** — when reasonable default exist for domain. Show assumption, let user correct. **Default to this for most case.** Move faster than open-ended question. User edit reveal what they actually want.
-3. **Make assumption + flag** — when spec mostly there, missing piece minor.
+1. **Ask 1-3 targeted question.** When key info genuinely unclear (audience level, goal).
+2. **Propose richer spec + ask confirm/edit.** When reasonable default exist for domain. Show assumption, let user correct. **Default to this for most case.** Move faster than open-ended question. User edit reveal what they actually want.
+3. **Make assumption + flag.** When spec mostly there, missing piece minor.
 
 ## What go wrong with thin spec
 

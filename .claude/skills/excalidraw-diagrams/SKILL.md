@@ -1,12 +1,12 @@
 ---
 name: excalidraw-diagrams
-description: House standard for drawing diagrams through the claude.ai Excalidraw MCP connector — 4:3 camera sizes, font and element sizing, spacing, color palette, contrast, drawing order, dark mode. ALSO covers embedding diagrams in an Obsidian vault (.excalidraw.md), which has extra hard constraints (8-char ids, static geometry, headless verify). Use when creating or editing an Excalidraw diagram, or when asked for a flowchart, architecture diagram, sequence diagram, state chart, or any visual drawn via create_view or embedded in Obsidian. Load before drawing so the output follows the sizing/spacing/color conventions.
+description: House standard for drawing diagrams through the claude.ai Excalidraw MCP connector, 4:3 camera sizes, font and element sizing, spacing, color palette, contrast, drawing order, dark mode. ALSO covers embedding diagrams in an Obsidian vault (.excalidraw.md), which has extra hard constraints (8-char ids, static geometry, headless verify). Use when creating or editing an Excalidraw diagram, or when asked for a flowchart, architecture diagram, sequence diagram, state chart, or any visual drawn via create_view or embedded in Obsidian. Load before drawing so the output follows the sizing/spacing/color conventions.
 ---
 
-# Excalidraw Diagrams
+# Excalidraw diagrams
 
 Rules for diagrams drawn via the Excalidraw MCP connector. The diagram renders
-inline at ~700px wide — design for that constraint.
+inline at ~700px wide. Design for that constraint.
 
 ## First steps
 
@@ -30,9 +30,9 @@ Ignoring any of them corrupts the file.
    non-8-char id → parser matches nothing → the next open+autosave dumps the raw
    `## Text Elements` (anchors and all) into the shapes and duplicates entries.
    Use deterministic `sha1(name)[:8]`. This is the #1 corruption cause.
-   - Corollary: NEVER open a non-conforming file in Obsidian to "check" it — the
+   - Corollary: NEVER open a non-conforming file in Obsidian to "check" it. The
      open+autosave corrupts it in place. Verify headlessly (rule 5).
-2. **Bake FINAL static geometry — live-snap does not survive export.** MCP snaps
+2. **Bake FINAL static geometry: live-snap does not survive export.** MCP snaps
    arrows onto edges and auto-fits text as you draw; Obsidian draws the stored
    points verbatim and never recomputes. `read_checkpoint` returns your RAW
    authored points, not the snapped ones. So arrow start/end points must
@@ -48,31 +48,31 @@ Ignoring any of them corrupts the file.
    diagrams with code that computes edge-accurate arrows, text-fit boxes, and
    8-char ids. (project_e: `90 Meta/tools/excalidraw_gen.py`;
    `normalize_excalidraw_ids.py` stabilizes existing/hand-authored files.)
-5. **Verify renders HEADLESS — never on the user's screen.** You cannot see
+5. **Verify renders HEADLESS: never on the user's screen.** You cannot see
    Obsidian's render otherwise, and opening files there corrupts non-conforming
    ones. Recipe: extract the ```json``` Drawing block → `scene.excalidraw` →
    `npx excalidraw-brute-export-cli -i scene.excalidraw -o out.png -f png -b true -s 2`
-   (headless Chromium — same engine/font as Obsidian, zero display use), then Read
+   (headless Chromium, same engine/font as Obsidian, zero display use), then Read
    the PNG. No node/Chromium on the host (immutable OS)? Run it in a container
    (distrobox/toolbox). Drive the user's live Obsidian GUI only with explicit
-   consent — never on their primary display by default (a naive `obsidian://` /
+   consent. Never on their primary display by default (a naive `obsidian://` /
    `notesmd-cli open` pops their screen and, via autosave, corrupts a
    non-conforming file). Never use the user's eyes as the render loop.
 
 ### Workflow (Obsidian-embedded)
 
-Verify BEFORE Obsidian ever opens the file — that is the whole game.
+Verify BEFORE Obsidian ever opens the file. That is the whole game.
 
 1. Author with a generator (rule 4), not the MCP round-trip.
 2. Static-check every id is 8-char alphanumeric and `## Text Elements` is
-   symmetric (rules 1, 3) — before the vault sees the file.
+   symmetric (rules 1, 3), before the vault sees the file.
 3. Headless-render and Read the PNG to check layout (rule 5). Iterate HERE.
 4. Only a file that passed 2–3 is safe to open in the vault.
 
 ### Layout conventions (house style)
 
 - Decision trees / flows fan OUT: wide column spread, generous gaps, branches
-  diverge outward — not cramped or converging.
+  diverge outward, not cramped or converging.
 - Branch arrows link to the box TOP (arrowhead drops straight down into
   top-center), not the inner side.
 - Edge conditions (YES/NO, labels) are BOUND ARROW LABELS on the line, not
@@ -146,7 +146,7 @@ Emit a `cameraUpdate` as the FIRST element. Use ONLY these sizes:
 - Text on white: never light gray. Minimum text color `#757575`.
 - Colored text on light fills: use dark variants (`#15803d` not `#22c55e`, `#2563eb` not `#4a9eed`).
 - White text needs a dark background.
-- No emoji in text — they don't render in Excalidraw's font.
+- No emoji in text. They don't render in Excalidraw's font.
 
 ## Drawing order
 

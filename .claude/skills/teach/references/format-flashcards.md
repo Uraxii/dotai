@@ -17,10 +17,10 @@ Turn flashcard into not-flashcard:
 | Anti-pattern | Example | Fix |
 |---|---|---|
 | Multi answer one card | term: 悪魔 / def: あくま, devil, demon, used in CSM | Split: 悪魔→あくま + あくま→devil |
-| Definition = paragraph | term: 公安 / def: "Public Safety Bureau. NOT regular police — Japan's domestic intelligence agency, similar to FBI..." | Move to guide. If card needed, one-liner |
-| Embedded note | term: 殺せ / def: "Kill! (from 殺す/korosu)" | Just "Kill!" — dict form in metadata or separate deck |
+| Definition = paragraph | term: 公安 / def: "Public Safety Bureau. NOT regular police. Japan's domestic intelligence agency, similar to FBI..." | Move to guide. If card needed, one-liner |
+| Embedded note | term: 殺せ / def: "Kill! (from 殺す/korosu)" | Just "Kill!", dict form in metadata or separate deck |
 | Multi meaning packed | term: やばい / def: "bad/dangerous; awesome (slang, both meanings)" | "dangerous; awesome" |
-| Backstory on card | term: ザクッ / def: "slicing, stabbing (sharp cut) — Chainsaw Devil's signature attack" | "sharp slice" — context in metadata |
+| Backstory on card | term: ザクッ / def: "slicing, stabbing (sharp cut). Chainsaw Devil's signature attack" | "sharp slice", context in metadata |
 
 ### Good pattern
 
@@ -28,7 +28,7 @@ Turn flashcard into not-flashcard:
 - **Two-line back OK when serve one concept.** Contraction with standard form:
   - term: やっぱ
   - definition: as I thought; after all\n(= やっぱり)
-- **One-liner cultural card OK if truly compact.** "Public Safety — Japanese FBI-like agency, not police."
+- **One-liner cultural card OK if truly compact.** "Public Safety. Japanese FBI-like agency, not police."
 - **Metadata for grouping, not card face.** Level (N5, N4), category (verb, noun), source (chapter 1) → field student filter on, not card itself.
 
 ## Multi card per concept
@@ -48,7 +48,7 @@ Different cognitive task. Student might know one, not other. Drill separate = mo
 
 **Imperative verb (Japanese):**
 1. imperative → meaning (殺せ → Kill!)
-2. imperative → dict form (殺せ → 殺す) — separate deck for grammar drill
+2. imperative → dict form (殺せ → 殺す). Separate deck for grammar drill
 
 Pattern: one card per recall direction student need.
 
@@ -64,7 +64,7 @@ Quizlet AI smart-assist accept JSON. Flat array of `{term, definition}`:
 ]
 ```
 
-Richer metadata for AI assist or downstream tool — not appear on card face but allow filter/group:
+Richer metadata for AI assist or downstream tool. Not appear on card face but allow filter/group:
 
 ```json
 [
@@ -111,10 +111,10 @@ Per-deck file → student import as separate Quizlet set (recommend). Combined =
 
 No hard rule, rough heuristic for single-import deck:
 
-- **20-50 card** — comfortable session, easy onboard
-- **50-150 card** — solid topical (one chapter, one grammar pattern)
-- **150-400 card** — large; consider split if natural split exist
-- **400+ card** — usually too big to start; split by topic, level, chapter
+- **20-50 card.** Comfortable session, easy onboard
+- **50-150 card.** Solid topical (one chapter, one grammar pattern)
+- **150-400 card.** Large; consider split if natural split exist
+- **400+ card.** Usually too big to start; split by topic, level, chapter
 
 Bigger ≠ better. Focused 80 well-chosen card beat sprawling 400 mixed-quality.
 

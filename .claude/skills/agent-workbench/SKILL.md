@@ -34,9 +34,9 @@ see the corresponding mode doc:
 
 ## Never verify against the live stack
 
-Verifying a change by probing the live stack -- curling
+Verifying a change by probing the live stack, curling
 `127.0.0.1:9099`/`9100`/`9101`, or running any `kb`/`bd`/`artifact` verb
-without a `KB_SVC_*`/`BD_SVC_*`/`ARTIFACT_SVC_*` override -- is NOT an
+without a `KB_SVC_*`/`BD_SVC_*`/`ARTIFACT_SVC_*` override, is NOT an
 acceptable verification method. It permanently mutates the real vault, the
 real board hub, or the real artifact store, and there is no delete verb to
 undo it.
@@ -56,15 +56,15 @@ $AW init-workspace [TARGET_DIR] [--prefix PREFIX]
 `$HOME/.claude/skills/agent-workbench`. `--copy` is the production
 install: a real copy pinned to the source commit, stamped into a marker
 file the CLI reads back. `--link` is a dev symlink, and it makes the
-installed skill track whatever branch that working tree has checked out
--- that's why `--copy` is the default recommendation. `--uninstall`
+installed skill track whatever branch that working tree has checked out,
+that's why `--copy` is the default recommendation. `--uninstall`
 removes a repo-owned install (symlink or stamped copy).
 
 A `--copy` reinstall produces **exactly** the source tree: a module the
 source has since deleted does not survive the upgrade. It only ever
 replaces its own installs. If the target is a real directory with no
 marker, or is not a directory at all, it refuses, leaves the target
-untouched, and **exits 1** -- move the path aside yourself and re-run:
+untouched, and **exits 1**. Move the path aside yourself and re-run:
 
 ```
 $ $AW install --copy
@@ -97,8 +97,8 @@ indexed by the one indexer (`scripts/kb-index.py`) and searched with
 
 **Pure Python, single entrypoint.** The five separate shell scripts
 collapse into one executable with subcommands. The `kb` family is now an
-HTTP client of the knowledgebase service (which owns the vault outright
--- no CLI code touches it), and `artifact` is the same shape against the
+HTTP client of the knowledgebase service (which owns the vault outright,
+no CLI code touches it), and `artifact` is the same shape against the
 artifact review service; the `bd` family (former `hub`/`board`) and
 `init-workspace` are genuine rewrites. kb- and bd-specific audit fixes
 are documented in their own mode docs above.
@@ -138,7 +138,7 @@ artifact-svc's publish endpoint is enabled and loopback-only (127.0.0.1-bound).
 It is driven by `artifact publish` and is the only publish path.
 See `modes/artifact.md` for the full detail.
 
-## n8n Public API
+## n8n public API
 
 n8n integration is currently inactive and not driven through this CLI.
 See https://github.com/TODO/agent-workbench/issues/TODO for status.

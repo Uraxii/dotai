@@ -1,6 +1,6 @@
 # Study Guide Format Reference
 
-Study guide hold lesson-shape content — concept, theory, context, "why matter". Anything need more than sentence or two of explain → guide, not flashcard.
+Study guide hold lesson-shape content. Concept, theory, context, "why matter". Anything need more than sentence or two of explain → guide, not flashcard.
 
 ## When to use
 
@@ -19,11 +19,11 @@ Markdown (`.md`). Render well in Quizlet note feature, GitHub, Notion, Obsidian,
 
 Guide should have:
 
-1. **Title** — clear, descriptive, include scope
-2. **Intro** — what cover, who for, how use (1-3 sentence)
-3. **Section** — one per concept/topic, ordered logical
-4. **Cross-reference** — link between section + to related flashcard deck if relevant
-5. **"How to use" closing** — when applicable
+1. **Title.** Clear, descriptive, include scope
+2. **Intro.** What cover, who for, how use (1-3 sentence)
+3. **Section.** One per concept/topic, ordered logical
+4. **Cross-reference.** Link between section + to related flashcard deck if relevant
+5. **"How to use" closing.** When applicable
 
 ## Section design
 
@@ -33,14 +33,14 @@ Each section:
 - One-sentence hook telling student why matter
 - Prose for explain, not bullet/table (bullet for enumerable list only)
 - Concrete example
-- "So what" — how this change student understanding/behavior
+- "So what": how this change student understanding/behavior
 
 ### Good section example
 
 ```markdown
 ## Yakuza (ヤクザ) and debt
 
-Japanese organized crime. Loan-sharking is a classic yakuza activity — Denji's father borrowed money before dying, leaving Denji with the debt. Yakuza debts are quasi-legal but enforced through fear and violence. This is why Denji can't just declare bankruptcy: refusing to pay can mean death. Selling his organs in chapter 1 is not metaphor — it's a real (illegal) thing desperate people do.
+Japanese organized crime. Loan-sharking is a classic yakuza activity - Denji's father borrowed money before dying, leaving Denji with the debt. Yakuza debts are quasi-legal but enforced through fear and violence. This is why Denji can't just declare bankruptcy: refusing to pay can mean death. Selling his organs in chapter 1 is not metaphor - it's a real (illegal) thing desperate people do.
 ```
 
 Why work:
@@ -59,7 +59,7 @@ The yakuza is a thing in Japan. Some characters in Chainsaw Man are involved wit
 Why fail:
 - No real explain, just fact
 - No concrete example with detail
-- No "so what" — student can't apply
+- No "so what": student can't apply
 - Tone flat + forgettable
 
 ## Length guidance
@@ -93,10 +93,10 @@ Use for genuine comparison along multi dimension. Don't use to dress up info tha
 
 | Pronoun | Reading | Use |
 |---|---|---|
-| 私 | watashi | "I" — polite default |
-| 僕 | boku | "I" — softer male |
-| 俺 | ore | "I" — rough/boastful male |
-| お前 | omae | "you" — rude unless very close |
+| 私 | watashi | "I": polite default |
+| 僕 | boku | "I": softer male |
+| 俺 | ore | "I": rough/boastful male |
+| お前 | omae | "you": rude unless very close |
 
 Work because pronoun vary along genuine comparable dimension (form, reading, register).
 
@@ -114,13 +114,13 @@ Glossary that should be paragraph series. Table add nothing when each row indepe
 
 Don't trust parametric knowledge for factual claim. Ground guide in trusted source: user's own notes (Notion), primary docs, high-reputation reference. Nontrivial factual claim → cite it (inline link or short source line). Citation raise trust + give student a primary source to go deeper.
 
-Each guide should name **one primary source** — the single highest-quality resource on the topic — near the top, so student know where to read/watch beyond the guide.
+Each guide should name **one primary source**, the single highest-quality resource on the topic, near the top, so student know where to read/watch beyond the guide.
 
 Don't over-cite: common knowledge for the audience need no footnote. Cite what a skeptical student would question.
 
 ## Glossary
 
-Topic with own nomenclature → glossary is essential reference material. Short guide (or appendix section): term, one-line definition, minimal example. Prose paragraph per term, not table (see Tables — bad use).
+Topic with own nomenclature → glossary is essential reference material. Short guide (or appendix section): term, one-line definition, minimal example. Prose paragraph per term, not table (see Tables, bad use).
 
 Once glossary exist, **adhere to it everywhere**: every card, guide, quiz use the glossary's term + spelling. Drift between material = student learn two names for one thing.
 

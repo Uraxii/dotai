@@ -14,7 +14,7 @@ In long sessions, do not wait until the end: append decisions, constraints, and 
 
 Save the handoff document to the temporary directory of the user's operating system, not the current workspace. On Linux/macOS, prefer `/tmp`. On Windows, use the path from `%TEMP%`/`$env:TEMP`.
 
-## When to Use
+## When to use
 
 Use this skill when:
 - The user asks for a handoff, session compact, continuity note, or next-agent brief.
@@ -38,7 +38,7 @@ Example arguments:
 
 If no arguments are supplied, infer the likely next-step focus from the current conversation and label it as inferred.
 
-## Procedure: Consuming a Handoff
+## Procedure: consuming a handoff
 
 Use this flow when the user references an existing handoff file and appears to want continuation rather than a new handoff.
 
@@ -68,19 +68,19 @@ Use this flow when the user references an existing handoff file and appears to w
    - The carry-forward context is living, not frozen. If work on this task changed a prior decision, revise that entry (and note what it superseded and why); if it produced a new fact, constraint, convention, or directive that later tasks need, ADD it. The next handoff should reflect the chain's current truth, not the state at chain start.
    - Losing or staling carry-forward context is the main failure of chained handoffs. Treat that section as cumulative and maintained, never as "already handled."
 
-## Procedure: Creating a Handoff
+## Procedure: creating a handoff
 
 1. Identify the active workstream and the wider chain.
    - Summarize the current objective in 1-3 sentences.
    - Include the intended next-session focus from the user arguments, if present.
-   - If this handoff is one link in a sequence (e.g. a set of tickets or milestones done in order), capture the WHOLE workstream, not just the next task: the overarching goal, the full task list with done / current / remaining status, and every decision, convention, or constraint agreed up front that binds all the tasks. This is carry-forward context and it must survive the entire chain. Do not prune it just because early tasks are finished — a decision made before task 1 is exactly what a task-3 successor most often loses. When this handoff continues a prior one, carry its Carry-Forward Context forward and keep it current: revise entries that later work changed (noting what was superseded and why), add new facts/constraints/conventions/directives that downstream tasks will need, and never silently drop an entry that still binds remaining tasks.
+   - If this handoff is one link in a sequence (e.g. a set of tickets or milestones done in order), capture the WHOLE workstream, not just the next task: the overarching goal, the full task list with done / current / remaining status, and every decision, convention, or constraint agreed up front that binds all the tasks. This is carry-forward context and it must survive the entire chain. Do not prune it just because early tasks are finished. A decision made before task 1 is exactly what a task-3 successor most often loses. When this handoff continues a prior one, carry its Carry-Forward Context forward and keep it current: revise entries that later work changed (noting what was superseded and why), add new facts/constraints/conventions/directives that downstream tasks will need, and never silently drop an entry that still binds remaining tasks.
 
 2. Gather transient context, recall first.
    - Include decisions with their rationale, constraints, unresolved questions, and immediate next steps.
    - Capture user directives verbatim: corrections, vetoes, terminology preferences, scope limits, and every "don't do X" instruction. Quote them exactly; do not paraphrase. Paraphrase loses the nuance the user will otherwise have to re-teach.
    - Record failed approaches and dead ends, with why they failed, so the next agent does not retry them.
    - Anchor state claims to ground truth (git status/log, test output, files on disk), not to memory of the conversation.
-   - Do not duplicate full PRDs, plans, ADRs, issue bodies, diffs, commits, or generated artifacts. Reference them by path, URL, branch, or commit — but verify the referenced document actually contains the claim before relying on the reference. When in doubt, include the detail inline.
+   - Do not duplicate full PRDs, plans, ADRs, issue bodies, diffs, commits, or generated artifacts. Reference them by path, URL, branch, or commit, but verify the referenced document actually contains the claim before relying on the reference. When in doubt, include the detail inline.
 
 3. Redact sensitive data.
    - Remove API keys, tokens, passwords, cookies, private credentials, SSH keys, and raw auth headers.
@@ -109,7 +109,7 @@ Use this flow when the user references an existing handoff file and appears to w
    - Put that path on its own line so it is easy to select.
    - Keep the rest of the final response short. Mention any assumptions or redactions.
 
-## Recommended Document Structure
+## Recommended document structure
 
 ```markdown
 # Handoff: <short title>
@@ -120,7 +120,7 @@ Next-session focus: <user argument or inferred focus>
 ## Active Workstream
 <1-3 sentence summary.>
 
-## Carry-Forward Context (propagate through the whole chain — do NOT prune)
+## Carry-Forward Context (propagate through the whole chain, do NOT prune)
 <Only when this is one link in a sequence of tasks/tickets/milestones. Carry this
 section forward into every subsequent handoff and keep it current: it is
 cumulative and living, not task-specific and not frozen. Revise entries that
@@ -128,7 +128,7 @@ later work changed (note what was superseded), and add new chain-wide facts as
 they emerge.>
 - Overarching goal: <the end state the whole chain is working toward>
 - Task/ticket sequence + status: <e.g. T1 done, T2 in progress, T3-T5 pending>
-- Cross-cutting decisions (bind all tasks): <decision — because rationale>
+- Cross-cutting decisions (bind all tasks): <decision, because rationale>
 - Standing conventions / patterns: <naming, structure, style agreed once, applies throughout>
 - Directives that apply chain-wide: "<verbatim user instruction that governs every task>"
 - Global do-NOT (whole chain): <approach rejected for all tasks, and why>
@@ -143,7 +143,7 @@ they emerge.>
 - "<exact quote of user instruction, correction, veto, or preference>"
 
 ## Key Decisions + Rationale
-- <decision> — because <why it was decided this way>
+- <decision>, because <why it was decided this way>
 
 ## Failed Approaches / Do NOT
 - <approach tried and abandoned, and why it failed>

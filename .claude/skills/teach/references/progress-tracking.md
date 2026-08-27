@@ -1,7 +1,7 @@
 # Progress Tracking Reference
 
 Every quiz is tracked. Progress lives in a per-subject **Mastery DB** in the user's Notion: one
-row per atomic item, carrying state. The DB doubles as the subject's syllabus — selection weights
+row per atomic item, carrying state. The DB doubles as the subject's syllabus. Selection weights
 over the full item pool. Tracking is generic; nothing here is tied to one subject.
 
 ## Where practice lives
@@ -14,14 +14,14 @@ subject's Mastery DB and its dated quiz pages:
 Practice Quizzes (root)
 └── <Subject>           e.g. ASVS
     ├── <Subject> Mastery (DB)
-    └── Quiz — YYYY-MM-DD ...
+    └── Quiz - YYYY-MM-DD ...
 ```
 
 Never nest practice inside the user's reference knowledge base.
 
 ## Subject registry (resolve exactly)
 
-Under "Practice Quizzes" is a **Subjects** registry database — one row per subject — that pins
+Under "Practice Quizzes" is a **Subjects** registry database, one row per subject, that pins
 each subject to exact ids and its profile. Resolve subjects through the registry, not by guessing
 page names.
 
@@ -30,31 +30,31 @@ data source:
 `SELECT "Subject","Mastery","Subject page","Source","Persona","Mission","Item scheme","Question types" FROM "collection://<registry-ds>"`.
 
 Each row gives everything needed. Note: `Mastery` and `Subject page` are stored as Notion
-**mentions** (live links), not bare ids — parse the id out of the tag before using it.
-- `Mastery` — a `<mention-data-source url="collection://<id>"/>` for the subject's Mastery data
+**mentions** (live links), not bare ids. Parse the id out of the tag before using it.
+- `Mastery`. A `<mention-data-source url="collection://<id>"/>` for the subject's Mastery data
   source. Extract `collection://<id>` from the tag; query/upsert against it.
-- `Subject page` — a `<mention-page url="https://app.notion.com/p/<id>"/>` for the subject
+- `Subject page`. A `<mention-page url="https://app.notion.com/p/<id>"/>` for the subject
   sub-page. Extract the page id from the tag; create new quiz pages under it.
-- `Source` — where content comes from (the user's Notes DB, a page, a project doc, web).
-- `Persona` — teacher persona/level/framing for Step 1.
-- `Mission` — WHY the user is learning this subject (the real-world reason, not the topic).
+- `Source`. Where content comes from (the user's Notes DB, a page, a project doc, web).
+- `Persona`. Teacher persona/level/framing for Step 1.
+- `Mission`. WHY the user is learning this subject (the real-world reason, not the topic).
   Ground every plan, quiz framing, and next-topic pick in it. Empty or stale → ask the user
-  before generating; missions change as skills grow — confirm, then update the row. A legacy
+  before generating; missions change as skills grow. Confirm, then update the row. A legacy
   row without the property → backfill it on first use.
-- `Item scheme` — the stable item-id format (e.g. `ASVS 5.3.2`).
-- `Question types` — which styles apply (remaps non-code subjects). JSON array.
+- `Item scheme`. The stable item-id format (e.g. `ASVS 5.3.2`).
+- `Question types`. Which styles apply (remaps non-code subjects). JSON array.
 
-**New subject (no row yet):** set it up once — create the subject sub-page under "Practice
+**New subject (no row yet):** set it up once. Create the subject sub-page under "Practice
 Quizzes", create its `<Subject> Mastery` DB under that sub-page, then add a registry row with the
 then add a registry row with the profile and the resolved `Mastery` and `Subject page` written
-as **mentions** — `<mention-data-source url="collection://<id>"/>` and
-`<mention-page url="https://app.notion.com/p/<id>"/>` respectively — so the registry stays a graph
+as **mentions**: `<mention-data-source url="collection://<id>"/>` and
+`<mention-page url="https://app.notion.com/p/<id>"/>` respectively, so the registry stays a graph
 of live links, not opaque ids. After that, resolution is always exact.
 
 ## Mastery DB (per subject)
 
 The registry row's `Mastery` mention resolves to the data source to query and upsert. You only create a Mastery
-DB when setting up a brand-new subject — under that subject's sub-page, with this generic schema,
+DB when setting up a brand-new subject. Under that subject's sub-page, with this generic schema,
 then record its id in the registry. Generic schema:
   ```
   CREATE TABLE (
@@ -113,6 +113,6 @@ checkbox `__YES__`/`__NO__`; date via the expanded `date:Last seen:start` key.
 
 ## Feedback write-back
 
-Append a `Results — YYYY-MM-DD` callout/toggle to the quiz page and summarize in chat: per-item
+Append a `Results - YYYY-MM-DD` callout/toggle to the quiz page and summarize in chat: per-item
 reveal + objective, depth on gaps (control/concept, common mistake, idiomatic fix in the
 relevant language, the senior layer), a solid-vs-review summary, and what resurfaces next.

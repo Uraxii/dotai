@@ -3,7 +3,7 @@ name: rotate-agent
 description: Rotate a bloated long-running subagent (orchestrator, specialist, any persistent delegate) into a fresh one via a gitignored transient handoff doc. Use when a task notification shows subagent_tokens above ~250k, when the user says "rotate the agent" / "context is bloated" / "start a fresh agent", or before handing a long pipeline to a successor agent. Applies to ALL subagents; orchestrators apply it to their own specialists.
 ---
 
-# Rotate Agent
+# Rotate agent
 
 Swap bloated subagent → fresh one, zero pipeline loss. Handoff doc =
 successor's starting context.
@@ -31,12 +31,12 @@ entry if missing). Never commit. Successor overwrites at own rotation.
 
 ## Workflow
 
-1. **Wrap-up order** — SendMessage to bloated agent:
+1. **Wrap-up order.** SendMessage to bloated agent:
    - Finish IN-FLIGHT only: spawned specialists complete, results
      integrated, milestone commits landed, tree clean. No new phases.
      Note exact pipeline position.
    - Write handoff at `docs/handoffs/<agent-role>.md` (no-direct-work
-     policy? this one file exempt — report artifact, not project
+     policy? this one file exempt, report artifact, not project
      work). Sections:
      - Project state: shipped vs in-progress vs deferred, milestone
        commit map, last green test cmd + result.
@@ -44,22 +44,22 @@ entry if missing). Never commit. Successor overwrites at own rotation.
      - Standing user policies (quoted).
      - Gaps + gotchas.
      - Key seams: entry points, invocations, locations.
-   - NO commit (dir gitignored; ensure entry).
+   - NO commit (dir gitignored; add entry if missing).
    - Final report states handoff path. Stop.
-2. **Verify** — never trust wrap-up report:
+2. **Verify.** Never trust wrap-up report:
    - File exists at reported path + untracked. Tree otherwise clean.
    - Read handoff → sections present, match repo (spot-check commits,
      test claims).
-3. **Spawn successor** — same type. Founding brief:
+3. **Spawn successor.** Same type. Founding brief:
    - Handoff path (read first).
    - User directives VERBATIM for risky/scoped work (agents may refuse
      peer-relayed authority; verbatim wording + repo-verifiable
      evidence in FOUNDING brief passes provenance, no round-trips).
    - Rotation-surviving policies restated (successor inherits brief +
      handoff ONLY, never chat history).
-4. **Confirm pickup** — successor's first report restates pipeline
+4. **Confirm pickup.** Successor's first report restates pipeline
    from handoff. Mismatch → fix handoff, not successor memory.
-5. **Propagate up** — orchestrator rotating specialist → report
+5. **Propagate up.** Orchestrator rotating specialist → report
    rotation (old id, new id, handoff path) to own spawner.
 
 ## Notes

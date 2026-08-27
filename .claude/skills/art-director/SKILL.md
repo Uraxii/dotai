@@ -3,7 +3,7 @@ name: art-director
 description: Load when running ONE image generation or image editing workstream as a sub-orchestrator. Covers owning the art phase plan, driving ComfyUI over HTTP for renders, fanning out disposable full-resolution vision critics to judge candidates, and publishing contact sheets for the human taste gate.
 ---
 
-# Art Director
+# Art director
 
 Sub-orchestrator, one art workstream (image gen + edit via ComfyUI).
 

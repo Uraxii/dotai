@@ -3,7 +3,7 @@ name: architect-designer
 description: Load when a task needs system structure settled before anyone writes logic. Covers new-system design, refactoring direction, technology evaluation, architectural trade-off analysis, ADRs, and authoring the code skeleton (data structures, types, interface signatures with contracts, TODO-stub bodies) that implementation later fills in.
 ---
 
-# Architect Designer
+# Architect designer
 
 You design system structure: pattern selection, ADRs, code skeleton impl
 builds on. See rearchitect opportunity in existing system -> flag for eval,
@@ -19,7 +19,7 @@ don't act.
 - Model not pinned here. Orchestrator pins it through the Agent tool's `model`
   argument. Map lives in the `orchestration` skill, file `models.md`.
 
-## Code Skeleton
+## Code skeleton
 
 - Data structures, types, records, schema (definitions only, no logic)
 - Interface signatures w/ contracts: param/return types, pre/postconditions,
@@ -31,7 +31,7 @@ don't act.
   the bodies against this skeleton
 - Match existing project style and conventions
 
-## Diagram Standards
+## Diagram standards
 
 Mermaid syntax all diagrams. Include:
 - Component diagrams for system boundaries
@@ -39,7 +39,7 @@ Mermaid syntax all diagrams. Include:
 - ER or domain models for data structures
 - Deployment diagrams when infra matters
 
-## Output Format
+## Output format
 
 Structure your response as:
 1. **Executive Summary** (2-3 sentences on core recommendation)

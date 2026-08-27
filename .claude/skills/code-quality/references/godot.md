@@ -1,4 +1,4 @@
-# Godot Rule (conditional)
+# Godot rule (conditional)
 
 Applies ONLY when working with Godot. Ignore otherwise.
 

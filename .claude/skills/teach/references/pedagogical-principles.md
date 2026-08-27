@@ -12,7 +12,7 @@ Each drill unit test exactly one thing. Card with three thing bundled on back ("
 
 ## 2. Drill vs lesson separate
 
-Some content **drillable** — fact, vocab, formula, date, code pattern. Some **lesson-shape** — concept, theory, context, "why matter". Two shape need different format.
+Some content **drillable**. Fact, vocab, formula, date, code pattern. Some **lesson-shape**. Concept, theory, context, "why matter". Two shape need different format.
 
 4-paragraph explain of what 公安 is = lesson, not card. Put on flashcard back → unusable card AND buried lesson.
 
@@ -71,9 +71,9 @@ Self-critique ≠ sycophant avoidance theater. Work genuinely good → say brief
 ## 8. Spaced repetition aware
 
 Most flashcard tool (Quizlet, Anki) implement SR. Shape good card design:
-- Card **specific** — vague card confuse SR algorithm, student can't grade self
-- Card **independent** — A's answer depend on B → drill in random order broken
-- Card **stable** — answer not change based on context
+- Card **specific**. Vague card confuse SR algorithm, student can't grade self
+- Card **independent**. A's answer depend on B → drill in random order broken
+- Card **stable**. Answer not change based on context
 
 **Rule:** Each card = single unambiguous answer student grade self on without context.
 
@@ -92,26 +92,26 @@ Format chosen by what content need, not what user request. User ask flashcard bu
 ## 11. Fluency vs storage strength
 
 Two type of learning:
-- **Fluency strength** — in-the-moment retrieval. Feel like mastery. Often illusory.
-- **Storage strength** — long-term retention. The real goal.
+- **Fluency strength.** In-the-moment retrieval. Feel like mastery. Often illusory.
+- **Storage strength.** Long-term retention. The real goal.
 
 Student who just re-read a guide answers fast = fluency, not storage. Build storage through **desirable difficulty**:
 - Retrieval practice (recall from memory, not re-read)
-- Spacing (distribute practice over time — Mastery DB re-surfacing does this)
-- Interleaving (mix related topics within practice — skills practice only, not initial teaching)
+- Spacing (distribute practice over time. Mastery DB re-surfacing does this)
+- Interleaving (mix related topics within practice. Skills practice only, not initial teaching)
 
 **Rule:** Never mistake fluent recall right after teaching for mastery. Design drills and quizzes for effortful retrieval, spaced and interleaved.
 
 ## 12. Difficulty asymmetry: knowledge vs skill
 
-For **knowledge acquisition**, difficulty is the enemy — it eats working memory needed for understanding. Guides and lessons: minimize friction, short, one win at a time.
+For **knowledge acquisition**, difficulty is the enemy. It eats working memory needed for understanding. Guides and lessons: minimize friction, short, one win at a time.
 
-For **skill practice**, difficulty is the tool — effortful retrieval is what builds storage strength. Drills, quizzes, exercises: maximize productive struggle, tight feedback loop (feedback immediate, ideally automatic).
+For **skill practice**, difficulty is the tool. Effortful retrieval is what builds storage strength. Drills, quizzes, exercises: maximize productive struggle, tight feedback loop (feedback immediate, ideally automatic).
 
 **Rule:** Teach the knowledge easy, then practice the skill hard. Never invert (hard-to-read guide, softball quiz).
 
 ## 13. Zone of proximal development
 
-Each unit of material should make student feel challenged "just enough" — hardest thing they can do with support. Too easy = fluency theater; too hard = overload, nothing sticks.
+Each unit of material should make student feel challenged "just enough": hardest thing they can do with support. Too easy = fluency theater; too hard = overload, nothing sticks.
 
 **Rule:** Calibrate from history (Mastery DB states, prior quiz results), not vibes. User didn't specify what next → pick the most mission-relevant thing inside the ZPD.

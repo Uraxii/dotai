@@ -302,9 +302,9 @@ sqlite3 "$HOME/.local/share/artifacts/feedback.db" \
 
 The following test artifacts are present and may be removed or left as-is:
 
-- `xss/probe` — XSS injection test artifact
-- `e2e/single` — Single-file end-to-end test
-- `e2e/tree` — Multi-file directory tree test
+- `xss/probe`: XSS injection test artifact
+- `e2e/single`: Single-file end-to-end test
+- `e2e/tree`: Multi-file directory tree test
 
 Use the commands above (substituting your project/subdir) to clean them up.
 

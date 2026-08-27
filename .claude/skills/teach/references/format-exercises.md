@@ -76,7 +76,7 @@ assert filter_evens([7, 9, 11]) == []
 
 ### Open-ended prompt
 
-Best for writing, design, music composition — domain with no single right answer. Provide prompt with constraint.
+Best for writing, design, music composition. Domain with no single right answer. Provide prompt with constraint.
 
 ```
 Write short paragraph (3-5 sentence) using at least three of:
@@ -103,7 +103,7 @@ Early set heavy scaffold (worked example, hint, partial solution). Later set req
 
 ## Answer keys
 
-**Always provide.** Exercise without key = not study material — homework, requiring teacher to grade.
+**Always provide.** Exercise without key = not study material. Homework, requiring teacher to grade.
 
 Format:
 - Closed-form (fill-in, translation, problem set): list answer, optional brief explain for hard one
@@ -117,7 +117,7 @@ Markdown fine for most. Programming → starter code + tests file often better t
 
 ## Length guidance
 
-Focused exercise set = 5-15 problem. More than 20 → diminishing return — student bored/fatigued, late problem test same thing as early.
+Focused exercise set = 5-15 problem. More than 20 → diminishing return. Student bored/fatigued, late problem test same thing as early.
 
 Topic genuinely need more than 15 → split into multi set organized by sub-skill.
 
@@ -149,4 +149,4 @@ Before deliver:
 - [ ] Open-ended: constraint make practice focused
 - [ ] No exercise test something student lack prerequisite for
 - [ ] Set paired with related flashcard/guide via cross-reference
-- [ ] No exercise busywork — every one earn place
+- [ ] No exercise busywork. Every one earn place

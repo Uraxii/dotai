@@ -3,7 +3,7 @@ name: tech-lead
 description: Load when leading ONE software workstream end to end as a sub-orchestrator. Covers triaging the workstream, breaking it into phases, writing task briefs, delegating every piece of work to subagents, running the serial pre-ship gate, and integrating the results. Multiple parallel instances are fine, one workstream each.
 ---
 
-# Tech Lead
+# Tech lead
 
 Team lead AI dev. Job: understand workstream, break into steps, delegate.
 

@@ -25,33 +25,33 @@ Skill enforce loop.
 
 Two checkpoint (plan, material). Each = self-review before user contact. Skip → worse work.
 
-### Step 1 — Capture teacher role
+### Step 1. Capture teacher role
 
 User usually provide spec. Missing essential → ask. Read `references/teacher-role-template.md` for template. Minimum:
 
 - Domain + expertise level
 - Pedagogical approach
 - Student profile (level, goal, constraint)
-- Mission — WHY student want this (real-world reason). Missing → always ask; it ground all teaching
+- Mission: WHY student want this (real-world reason). Missing → always ask; it ground all teaching
 - Success criteria
 - Domain-specific insight (what most teacher miss)
 
 Thin spec ("be Japanese teacher") → enrich. Either ask 1-3 targeted question, OR propose richer version + ask confirm/edit. Template has fill pattern.
 
-### Step 2 — Plan content
+### Step 2. Plan content
 
 As teacher, plan. Cover:
 
 - Mission trace (every planned item serve the mission; can't trace → cut or reframe)
 - Scope (single topic / multi-topic / curriculum)
-- Format(s) — flashcard / guide / exercise / mix (see Format Selection)
+- Format(s): flashcard / guide / exercise / mix (see Format selection)
 - Sequence + dependency
 - Drill vs lesson split
 - Level accommodation
 - Crossover value (e.g., manga vocab = JLPT prep too)
 - Cultural/contextual content
 
-### Step 3 — Self-critique plan
+### Step 3. Self-critique plan
 
 Review as critical reviewer. Real issue only, not nitpick:
 
@@ -64,16 +64,16 @@ Review as critical reviewer. Real issue only, not nitpick:
 
 Found issue → fix silent in plan, OR flag to user + propose fix. Flag only what matter. Fake concern waste user time.
 
-### Step 4 — User signoff
+### Step 4. User signoff
 
 Show plan + flagged issue + proposed fix. Get explicit signoff before create. User push back → take serious, they know thing you don't. Revise + check again.
 
-### Step 5 — Create material
+### Step 5. Create material
 
 Apply `references/pedagogical-principles.md`:
 
 - Atomic content (one concept per drill unit)
-- Knowledge easy, skill practice hard (desirable difficulty: retrieval, spacing, interleaving — build storage strength, not fluency theater)
+- Knowledge easy, skill practice hard (desirable difficulty: retrieval, spacing, interleaving. Build storage strength, not fluency theater)
 - Drill vs lesson separate (long explain → guide, not card)
 - Level/audience tag (JLPT, CEFR, grade level)
 - Multi card per concept when appropriate (kanji→read + read→meaning = 2 card)
@@ -84,11 +84,11 @@ Format ref:
 - `references/format-study-guides.md`
 - `references/format-exercises.md`
 
-### Step 6 — Self-critique material
+### Step 6. Self-critique material
 
 Review before deliver. Common defect:
 
-- Card bloat (definition → paragraph) — most common
+- Card bloat (definition → paragraph). Most common
 - Missing context that block understand
 - Inconsistent tag
 - Format mismatch (should be guide, is card)
@@ -97,11 +97,11 @@ Review before deliver. Common defect:
 
 Flag real defect + fix. Recreate when warrant.
 
-### Step 7 — Deliver
+### Step 7. Deliver
 
 Present final. Briefly explain structure + how use (study order, which deck for which goal, which guide pair which exercise).
 
-## Format Selection
+## Format selection
 
 Format follow content shape. No force-fit.
 
@@ -123,14 +123,14 @@ When the user wants to be quizzed/tested or to track progress, the teacher perso
 self-critique loop still applies, plus three subsystems. Read `references/format-quizzes.md`,
 `references/notion-sourcing.md`, and `references/progress-tracking.md`.
 
-Quizzes are **always tracked** — there is no untracked one-shot quiz. Every quiz targets atomic
+Quizzes are **always tracked**. There is no untracked one-shot quiz. Every quiz targets atomic
 items, records results to a per-subject Notion **Mastery DB**, and weights the next quiz toward
 weak/unknown items.
 
 Two requests, two paths:
 
 **Make a new quiz** ("quiz me on X", "today's set"):
-1. Establish/confirm the subject + persona (Step 1) — this defines the level and framing.
+1. Establish/confirm the subject + persona (Step 1). This defines the level and framing.
 2. Source the content from the user's Notion: auto-search, then **confirm the pages before
    building** (`notion-sourcing.md`). Use a structured KB's item titles as stable ids; for loose
    notes, derive and freeze a syllabus.
@@ -150,19 +150,19 @@ Two requests, two paths:
 
 No emojis anywhere; icons are Notion line-icon URLs. All practice lives under a workspace-root
 "Practice Quizzes" page (kept out of the reference KB), one sub-page per subject. A **Subjects**
-registry there pins each subject to its exact Mastery data source, subject page, and profile —
-resolve subjects through the registry (`progress-tracking.md`), not by name. ASVS is already
+registry there pins each subject to its exact Mastery data source, subject page, and profile.
+Resolve subjects through the registry (`progress-tracking.md`), not by name. ASVS is already
 registered; reuse it, never duplicate.
 
 ## Wisdom: delegate to community
 
-Knowledge comes from sources, skills from practice — **wisdom** comes from real-world interaction outside the learning loop. Question that need practitioner judgment (is my form right, does this sound idiomatic, is this design sane): answer as teacher, then point at a high-reputation **community** (forum, subreddit, local class/group) where the user can test skills for real. User declines community → respect it, don't re-offer.
+Knowledge comes from sources, skills from practice. **Wisdom** comes from real-world interaction outside the learning loop. Question that need practitioner judgment (is my form right, does this sound idiomatic, is this design sane): answer as teacher, then point at a high-reputation **community** (forum, subreddit, local class/group) where the user can test skills for real. User declines community → respect it, don't re-offer.
 
 ## Asking questions
 
 Ask when uncertain. Cost of one question << cost of wrong material. But:
 - No interrogate. Ask only what block.
-- Prefer concrete proposal over open question: "Plan cover X, skip Y — agree?" beat "What include?"
+- Prefer concrete proposal over open question: "Plan cover X, skip Y. Agree?" beat "What include?"
 - Can answer reasonable self → do, flag assumption.
 
 ## Common failure mode
@@ -175,11 +175,11 @@ Ask when uncertain. Cost of one question << cost of wrong material. But:
 
 ## Reference files
 
-- `references/teacher-role-template.md` — Template + example
-- `references/pedagogical-principles.md` — Cross-domain principle
-- `references/format-flashcards.md` — Flashcard design + JSON format
-- `references/format-study-guides.md` — Markdown guide pattern
-- `references/format-exercises.md` — Exercise pattern
-- `references/format-quizzes.md` — Quiz pattern (tracked, adaptive, hides the target item)
-- `references/notion-sourcing.md` — Pull source material from the user's Notion (search → confirm → fetch → ground)
-- `references/progress-tracking.md` — Per-subject Notion Mastery DB: weakness-weighting, grade-and-upsert, state transitions
+- `references/teacher-role-template.md`: Template + example
+- `references/pedagogical-principles.md`: Cross-domain principle
+- `references/format-flashcards.md`: Flashcard design + JSON format
+- `references/format-study-guides.md`: Markdown guide pattern
+- `references/format-exercises.md`: Exercise pattern
+- `references/format-quizzes.md`: Quiz pattern (tracked, adaptive, hides the target item)
+- `references/notion-sourcing.md`: Pull source material from the user's Notion (search → confirm → fetch → ground)
+- `references/progress-tracking.md`: Per-subject Notion Mastery DB: weakness-weighting, grade-and-upsert, state transitions

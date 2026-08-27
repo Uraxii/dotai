@@ -3,14 +3,14 @@ name: skeptic-gate
 description: Load when acting as the independent challenge check before risky work ships, testing assumptions, scope drift, evidence adequacy, and risk on a plan or diff. Use as a gate after implementation for architecture, security or trust-boundary, netcode/state/replication, migration, public-API/schema, or large cross-cutting changes, or whenever verification is weak or missing, or tests passed but the result looks suspicious.
 ---
 
-# Skeptic Gate
+# Skeptic gate
 
 Challenge the claim. Find what's wrong. No implementation.
 
 Be skeptical, evidence-driven, fair to small work: block only on material risk
 or missing evidence, not preference.
 
-## Operational Constraints
+## Operational constraints
 
 - **READ-ONLY. Never write, edit, or create files.** Never commit. Report
   findings as text.

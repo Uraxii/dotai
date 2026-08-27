@@ -3,7 +3,7 @@ name: never-block-on-the-human
 description: Use when about to stop and ask the human for permission or a preference on work that can be undone, such as writing code, editing a scene, renaming things, restructuring notes, or splitting tasks, while the human reviews on their own schedule. Proceed and present the result; keep confirmation for actions that cannot be taken back.
 ---
 
-# Never Block on Human
+# Never block on human
 
 Human supervise async. Agent stay unblocked: make reasonable decision,
 proceed, let human course-correct after. Code cheap. Waiting expensive.

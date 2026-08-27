@@ -24,7 +24,7 @@ End-of-task ship flow. Single PR per branch. Conventional commit format.
 
 ## Title
 
-`<type>(<scope>): <subject>` — match the commit. Under 72 chars.
+`<type>(<scope>): <subject>`. Match the commit. Under 72 chars.
 
 ## Body
 
