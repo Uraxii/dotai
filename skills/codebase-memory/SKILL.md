@@ -9,8 +9,8 @@ One tool per process. JSON in, JSON out on stdout, one `level=info msg=mem.init`
 
 ```bash
 codebase-memory-mcp cli <tool> '<json>' 2>/dev/null
-~/.claude/skills/codebase-memory/scripts/cbm <tool> ['<json>']   # same, init line dropped, jq-pretty, json defaults to {}
-alias cbm=~/.claude/skills/codebase-memory/scripts/cbm   # examples below assume this
+scripts/cbm <tool> ['<json>']   # same, init line dropped, jq-pretty, json defaults to {}
+alias cbm=<skilldir>/scripts/cbm   # skilldir = directory holding this SKILL.md; examples below assume this
 ```
 
 ## Project name
