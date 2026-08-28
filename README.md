@@ -3,7 +3,7 @@
 Skills, agents, and per-harness config for every AI harness on this machine:
 Claude Code, Codex, GitHub Copilot CLI, opencode, Hermes. Layout follows
 pstack: one skills tree in the open Agent Skills format, copied into each
-harness by an agent-driven installer. LOCAL ONLY, no remote.
+harness by an agent-driven installer.
 
 ## Layout
 
