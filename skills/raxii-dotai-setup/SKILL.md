@@ -1,6 +1,6 @@
 ---
 name: raxii-dotai-setup
-description: "User invokes by name to install this repo's skills, agents, and harness config into the harness dirs under $HOME. Deploys by copy, tracks a manifest, prunes stale files. Use when user say install, deploy, sync, set up dotai, push skills to harnesses, or after moving/renaming/deleting skill in repo."
+description: "User invokes by name to install this repo's skills and agents into the harness dirs under $HOME. Deploys by copy, tracks a manifest, prunes stale files. Use when user say install, deploy, sync, set up dotai, push skills to harnesses, or after moving/renaming/deleting skill in repo."
 ---
 
 # Setup
@@ -100,13 +100,9 @@ Script standalone. Needs bash, find, cmp, comm, sort. Nothing else.
 | claude | `skills/*` | `~/.claude/skills/` |
 | claude | `agents/*` | `~/.claude/agents/` |
 | codex | `skills/*` | `~/.agents/skills/` |
-| codex | `harness/codex/*` | `~/.codex/` |
 | copilot | `skills/*` | `~/.copilot/skills/` |
-| copilot | `harness/copilot/*` | `~/.copilot/` |
 | opencode | `skills/*` | `~/.config/opencode/skills/` |
-| opencode | `harness/opencode/*` | `~/.config/opencode/` |
 | hermes | `skills/*` | `~/.hermes/skills/` |
-| hermes | `harness/hermes/*` | `~/.hermes/` |
 
 Excluded always: `__pycache__`, `.pytest_cache`, `.ruff_cache`, `*.pyc`,
 `.git`.

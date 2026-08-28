@@ -55,19 +55,14 @@ esac
 
 # One job per line: <repo subdir>|<target root>|<subdir under target root>.
 # Jobs sharing a target root share its manifest. Skills come before the
-# harness overlay so a harness-specific file of the same name wins.
 jobs_for() {
   case "$1" in
     claude)   printf '%s\n' "skills|$HOME/.claude|skills" \
                             "agents|$HOME/.claude|agents" ;;
-    codex)    printf '%s\n' "skills|$HOME/.agents|skills" \
-                            "harness/codex|$HOME/.codex|" ;;
-    copilot)  printf '%s\n' "skills|$HOME/.copilot|skills" \
-                            "harness/copilot|$HOME/.copilot|" ;;
-    opencode) printf '%s\n' "skills|$HOME/.config/opencode|skills" \
-                            "harness/opencode|$HOME/.config/opencode|" ;;
-    hermes)   printf '%s\n' "skills|$HOME/.hermes|skills" \
-                            "harness/hermes|$HOME/.hermes|" ;;
+    codex)    printf '%s\n' "skills|$HOME/.agents|skills" ;;
+    copilot)  printf '%s\n' "skills|$HOME/.copilot|skills" ;;
+    opencode) printf '%s\n' "skills|$HOME/.config/opencode|skills" ;;
+    hermes)   printf '%s\n' "skills|$HOME/.hermes|skills" ;;
   esac
 }
 

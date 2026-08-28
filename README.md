@@ -1,6 +1,6 @@
 # dotai
 
-Skills, agents, and per-harness config for every AI harness on this machine:
+Skills and agents for every AI harness on this machine:
 Claude Code, Codex, GitHub Copilot CLI, opencode, Hermes. Layout follows
 pstack: one skills tree in the open Agent Skills format, copied into each
 harness by an agent-driven installer.
@@ -11,10 +11,6 @@ harness by an agent-driven installer.
 |--------------------|-------------------------------------------------------------|
 | `skills/`          | Every skill, `skills/<name>/SKILL.md`. Source of truth.     |
 | `agents/`          | Agent definitions (`zakia`, `subagent`, impeccable fleet).  |
-| `harness/codex/`   | `AGENTS.md`, `rules/`, `schemas/` for `~/.codex`.           |
-| `harness/copilot/` | instructions, refs, agents for `~/.copilot`.                |
-| `harness/opencode/`| `agent/`, `command/`, `tui.json` for `~/.config/opencode`.  |
-| `harness/hermes/`  | `SOUL.md`, profiles, skins, patches for `~/.hermes`.        |
 
 ## Install
 
