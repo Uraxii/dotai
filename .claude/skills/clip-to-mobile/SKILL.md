@@ -7,8 +7,8 @@ Paths below are relative to this skill's directory (where this SKILL.md lives).
 
 # clip-to-mobile
 
-Turn a captured clip into something the user can actually watch on the Claude
-Code mobile app, cheaply and repeatably. One command, no per-send ffmpeg
+Turn a captured clip into something the user can actually watch in a mobile
+chat client, cheaply and repeatably. One command, no per-send ffmpeg
 reasoning.
 
 ## Format recommendation (what to send)
@@ -16,15 +16,15 @@ reasoning.
 | Format | Inline on mobile? | Use |
 |--------|-------------------|-----|
 | **MP4 (H.264 / yuv420p / +faststart)** | Yes, universal | **DEFAULT. Send this.** |
-| **GIF (palette-optimized)** | Yes (Claude-supported image type) | **Fallback** if an MP4 preview ever fails to appear |
+| **GIF (palette-optimized)** | Yes (common image type) | **Fallback** if an MP4 preview ever fails to appear |
 | Animated WebP | No | never send, the format that started this |
 | AVI | No | source only (`/tmp/cap/`), never send |
 | WebM / VP9 | Unreliable in chat/mobile | avoid |
 
 **Default: small H.264 MP4** (`yuv420p` + `-movflags +faststart`, <=720p,
 CRF 30). Most universally decoded video in mobile/chat contexts; faststart lets
-it start playing before it fully downloads. **Fallback: GIF.** GIF is in
-Claude's supported image list and auto-animates, but files are large (~9MB for
+it start playing before it fully downloads. **Fallback: GIF.** GIF is a
+universally supported image type and auto-animates, but files are large (~9MB for
 5s), so only reach for it if an MP4 won't preview.
 
 Keep clips small: a ~20s 720p MP4 lands ~3-4MB (well under the ~10MB comfort

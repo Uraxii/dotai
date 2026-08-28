@@ -11,9 +11,9 @@ questions (vision tokens are the expensive path).
 
 ## Preconditions
 
-1. godot-mcp tools reachable: `ToolSearch` for `godot` tools. If absent,
-   STOP and tell the user to run:
-   - `claude mcp add --scope user godot-mcp -- npx -y @satelliteoflove/godot-mcp`
+1. godot-mcp tools reachable (look for `godot_*` tools). If absent,
+   STOP and tell the user to register the MCP server in their harness
+   (Claude Code: `claude mcp add --scope user godot-mcp -- npx -y @satelliteoflove/godot-mcp`) and run:
    - `npx @satelliteoflove/godot-mcp --install-addon <godot project dir>`
    - Enable Project Settings > Plugins > Godot MCP, editor open.
    Addon speaks WebSocket on 127.0.0.1:6550; Godot 4.5+; Node 20+.

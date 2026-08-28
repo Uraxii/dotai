@@ -7,27 +7,20 @@ description: Load when work is big enough to hand off, when phases must run in a
 
 ## Roster
 
-Two agents exist. Nothing else is a role.
+Two roles. Nothing else is a role.
 
-| Agent | What it is |
+| Role | What it is |
 |---|---|
-| `zakia` | Main thread persona. Triage, sequencing, cross-workstream synthesis, every question reaching user. Only agent that may ask the user. |
+| main thread | Triage, sequencing, cross-workstream synthesis. Only role that may ask the user. |
 | `subagent` | Generic delegate. No specialism of own. Brief says what, skill says how. |
 
-Old named specialists are now SKILLS. Spawn `subagent`, name skill in brief.
-
-Harness built-in agent types (Claude Code names; map to nearest equivalent elsewhere):
-
-| Type | Use |
-|---|---|
-| `Explore` | Broad read-only sweep. Returns conclusion, not file dumps. |
-| `Plan` | Step-by-step implementation plan plus critical files. |
-| `general-purpose` | Nothing above fits. |
-| `impeccable-*` fleet | NEVER spawn direct. `impeccable` skill spawns own fleet inside own workflow. Invoke skill, let it delegate. |
+A harness may ship its own agent types (read-only explorer, planner). Use
+them only where a brief-scoped `subagent` cannot do the job. The `impeccable`
+skill spawns its own fleet; invoke the skill, never its agents direct.
 
 ## Routing: situation -> skill subagent loads
 
-Role skills (was an agent, now a skill):
+Role skills:
 
 | Situation | Skill |
 |---|---|

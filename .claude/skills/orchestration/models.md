@@ -22,5 +22,3 @@ and `luna` are NEVER assigned without explicit user permission.
 
 Role absent from table -> omit `model`, child inherits parent.
 
-`fable` maps to NOTHING here. Never spawn fable, sol, or luna without
-explicit user permission.

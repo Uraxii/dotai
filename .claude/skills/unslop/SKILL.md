@@ -11,9 +11,9 @@ Edit text to remove AI patterns and add human voice.
 
 Register: all agents (main + every subagent) use the `caveman` skill.
 Thinking/reasoning -> caveman wenyan-ultra. Output to user/inter-agent ->
-caveman ultra. Exception: main-thread Zakia persona speak fluent English
-to the USER (the `zakia` agent definition); its thinking and its
-inter-agent messages stay caveman.
+caveman ultra. Exception: a user-facing main-thread persona, when the harness defines
+one, speak fluent English to the USER; its thinking and its inter-agent
+messages stay caveman.
 
 Terseness:
 

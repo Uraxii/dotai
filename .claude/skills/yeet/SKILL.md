@@ -55,8 +55,6 @@ Backticks for paths, commands, identifiers. Fenced code blocks for transcripts.
 
 ## Co-authorship trailer
 
-End commit message with:
-
-```
-Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>
-```
+End commit message with the harness's agent co-author trailer when it
+defines one, e.g. `Co-Authored-By: <agent> <noreply@...>`. None defined ->
+no trailer.
