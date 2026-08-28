@@ -17,7 +17,7 @@ Style:
 
 GitHub-visible coordination:
 - Hermes Kanban stays the execution board unless a task says otherwise; mirror user-visible status to GitHub Issues/Project when practical.
-- When posting GitHub-visible comments for `eclectic`, end with signature: `— architect-designer / architect`.
+- When posting GitHub-visible comments for `eclectic`, end with signature: `,  architect-designer / architect`.
 - Do not forge another profile's signature.
 
 Discord announcements:

@@ -7,15 +7,15 @@ gets overwritten and the nerd font icon patch needs to be reapplied.
 
 | File | Purpose |
 |------|---------|
-| `display-nerd-font-icons.patch` | Git patch against `agent/display.py` — replaces hardcoded emojis in `get_cute_tool_message()` with `get_tool_emoji()` calls so the "completed" tool line respects skin `tool_emojis` |
+| `display-nerd-font-icons.patch` | Git patch against `agent/display.py`, replaces hardcoded emojis in `get_cute_tool_message()` with `get_tool_emoji()` calls so the "completed" tool line respects skin `tool_emojis` |
 | `reapply-after-update.sh` | One-shot reapply script. Run after `hermes update`. |
 
 ## Why this exists
 
 The CLI TUI has **two rendering paths** for tool call icons:
 
-1. **"preparing" line** — uses `get_tool_emoji()` → reads skin's `tool_emojis` ✓
-2. **"completed" line** (`| 📖 read ...`) — `get_cute_tool_message()` had **hardcoded emojis** per tool ✗
+1. **"preparing" line**, uses `get_tool_emoji()` → reads skin's `tool_emojis` ✓
+2. **"completed" line** (`| 📖 read ...`), `get_cute_tool_message()` had **hardcoded emojis** per tool ✗
 
 The patch makes path 2 use `get_tool_emoji()` too, so tool icons come from the
 skin consistently. Your skin (`synthwave-84.yaml`) defines nerd font glyphs in
