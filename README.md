@@ -9,7 +9,7 @@ harness by an agent-driven installer. Layout follows pstack.
 | Dir       | What                                                    |
 |-----------|---------------------------------------------------------|
 | `skills/` | Every skill, `skills/<name>/SKILL.md`. Source of truth. |
-| `agents/` | Claude Code agent definitions.                          |
+| `agents/` | Named thin agents for graph readability, land in `~/.claude/agents`. |
 
 ## Install
 

@@ -1,6 +1,6 @@
 # Code Quality Review
 
-Each reviewer applies this code-quality lens in addition to the rubric, plus the `code-quality` skill (smell baseline, naming, limits, boundary rules) and its reference for the diff's language. It is a strict standard focused on implementation quality, maintainability, abstraction quality, and codebase health.
+Each reviewer applies this code-quality lens in addition to the rubric, plus the `principle-code-quality` skill (smell baseline, naming, limits, boundary rules) and its reference for the diff's language. It is a strict standard focused on implementation quality, maintainability, abstraction quality, and codebase health.
 
 Above all, be ambitious about code structure. Do not merely identify local cleanup. Actively search for "code judo" moves, restructurings that preserve behavior while making the implementation dramatically simpler, smaller, more direct, and more elegant.
 

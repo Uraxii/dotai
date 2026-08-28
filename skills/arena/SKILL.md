@@ -24,7 +24,7 @@ The N candidates will receive the same prompt, so the prompt is the contract. Ge
 
 1. State the artifact each candidate is producing.
 2. Derive the rubric. State what success looks like for *this* task, then turn it into 3-6 concrete gradeable criteria. Concrete: `Adds a --dry-run flag that skips writes`. Vague: `code is correct`. The rubric is the picker's tool in Phase D; candidates only see the task.
-3. Pick the runners. Use `arena runners` from the `orchestration` skill's `models.md` when present; row absent -> omit `model`. Spawn more when the arena covers multiple design directions. Same model N times when the work is generation-bound rather than judgment-sensitive. `fable`, `sol`, and `luna` are never runners without explicit user permission.
+3. Pick the runners. Use `arena runners` from the `poteto-mode` skill's `models.md` when present; row absent -> omit `model`. Spawn more when the arena covers multiple design directions. Same model N times when the work is generation-bound rather than judgment-sensitive. `fable`, `sol`, and `luna` are never runners without explicit user permission.
 4. Assign output paths. Each candidate writes to its own location (a git worktree where possible, otherwise `/tmp/arena-<slug>/candidate-<n>/`). N candidates writing to the same path is shared mutable state, keep them isolated.
 
 ## Phase B: Fan out
@@ -37,7 +37,7 @@ If a candidate fails to produce output, proceed with N-1 and note the dropout in
 
 ## Phase C: Cross-judge
 
-After all Phase B candidates complete, choose one model from the `arena cross-judge pool` in the `orchestration` skill's `models.md` when present; absent -> omit `model`. Prefer a different model family from the parent's. Spawn one judge `subagent` on that model. FORBIDDEN: no writes, no commits, inspection only. It sees the rubric and the candidates by path label, scores each criterion, and recommends a base with rationale. It runs in parallel with the parent's reading in Phase D, not with the candidates themselves. Spawning while candidates are still writing means the judge sees partial or empty outputs and reports them as dropouts.
+After all Phase B candidates complete, choose one model from the `arena cross-judge pool` in the `poteto-mode` skill's `models.md` when present; absent -> omit `model`. Prefer a different model family from the parent's. Spawn one judge `developer` on that model. FORBIDDEN: no writes, no commits, inspection only. It sees the rubric and the candidates by path label, scores each criterion, and recommends a base with rationale. It runs in parallel with the parent's reading in Phase D, not with the candidates themselves. Spawning while candidates are still writing means the judge sees partial or empty outputs and reports them as dropouts.
 
 ## Phase D: Pick a base
 

@@ -1,38 +1,31 @@
 ---
 name: setup-models
-description: The user invokes this by name to change which model each delegated role runs on. Interviews them role by role, then rewrites the orchestration skill's model map so later spawns pin the new choices.
+description: The user invokes this by name to change which model each delegated role runs on. Interviews them role by role, then rewrites the poteto-mode skill's model map so later spawns pin the new choices.
 ---
 
 # Setup models
 
-Rewrite `models.md`, the per-role model map bundled beside the `orchestration`
-skill's SKILL.md. Skills and playbooks read it and pin `model` per Agent call.
-Role absent from it -> the child inherits the parent's model. Locate the file
-through the same skills install this skill was loaded from; never hardcode an
-install layout or guess a home directory.
+Edit rows in the `poteto-mode` skill's `models.md`: one row per label, an
+ordered preference list of model names. A spawner walks the list and pins
+the first name its harness accepts, so one row serves every harness at
+once. Locate the file through the same skills install this skill was loaded
+from; never hardcode an install layout or guess a home directory.
 
-Allowed values: `sonnet`, `opus`, `haiku`, `fable`, plus `inherit`. `fable`,
-`sol`, and `luna` need explicit user permission stated in words this turn.
-Silence is not permission; no permission -> leave the role unset and say so.
+Model names this harness lets you pin on a spawned agent right now: `sonnet`,
+`opus`, `haiku`, `fable`. Never write a name outside that set for this
+harness, and never write one unconfirmed by the user. `fable`, `sol`, and
+`luna` need explicit user permission stated in words this turn; silence is
+not permission, leave that name out and say so.
 
-1. **Load current state.** Read the target file; its table is the current
-   choice. Missing file -> start from opus for architect-designer,
-   skeptic-gate, tech-lead; sonnet for art-director, requirements-clarifier,
-   test-automation-engineer; haiku for big-pickle-simple-tasks; `opus, sonnet`
-   for the `interrogate reviewers` list, one reviewer per entry, repeats
-   allowed.
+1. **Load current state.** Read the `poteto-mode` skill's `models.md`; its
+   rows are the current preference lists, one per label.
 
-2. **Interview.** Show every role with its current model and ask whether to
-   accept as-is or change specific roles. Prefer the harness's structured
-   question prompt over free text. Offer this shape as a default, not a
-   lecture: opus for judgment, design, and gates; sonnet for scoped execution;
-   haiku for mechanical decomposition.
+2. **Interview, per row.** Show the label and its current list. Confirm the
+   first pinnable name that goes first for this harness, or ask the user
+   which one does. No inline defaults, no assumed answer.
 
-3. **Validate.** Reject any value outside the allowed set. A map pointing at a
-   model the user cannot run breaks every delegation that reads it.
+3. **Validate.** Reject any name outside the enumerated pinnable set.
 
-4. **Write.** Overwrite the whole file so re-runs stay idempotent. Keep its
-   shape: the `setup-models rewrites this file` note, the allowed-values line
-   with its permission caveat, one table row per role, the inherit rule, the
-   fable hard rule. Report the path written and that it governs spawns from
-   now on.
+4. **Write.** Overwrite only the confirmed rows, in the same
+   `label: comma-separated list` format. Leave other harnesses' entries and
+   every other line in the file untouched. Report the path written.

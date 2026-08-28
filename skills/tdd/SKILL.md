@@ -15,8 +15,8 @@ description: Test-driven development. Use when the user wants to build features 
   behaviour, go insensitive to real changes, and lock in test structure before
   the implementation is understood. Each test is a tracer bullet that responds
   to what the last cycle taught.
-- **Refactoring is not part of the loop.** It belongs to review (`code-quality`
-  and `interrogate` skills), not the red-green cycle.
+- **Refactoring is not part of the loop.** It belongs to review
+  (`principle-code-quality` and `interrogate` skills), not the red-green cycle.
 - Do not change a test to match a wrong implementation, and do not weaken an
   assertion unless the expected behaviour genuinely changed.
 

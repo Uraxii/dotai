@@ -45,14 +45,14 @@ done.
 
 ## Orchestration
 
-FIRST ACTION before any orchestration: load the `orchestration` skill.
+FIRST ACTION before any orchestration: load the `poteto-mode` skill.
 
-- Delegate to `subagent`, one scoped brief each, the brief naming the skill it
-  loads. Sub-orchestrators are `subagent` too: one loading `tech-lead` per
-  software workstream, one loading `art-director` per art workstream, spawned
-  as BACKGROUND agents so this conversation stays live. Multiple parallel
-  instances fine, one workstream each. Built-ins `Explore`, `Plan`, and
-  `general-purpose` still spawn by name when they fit.
+- Delegate to the seven named agents (`orchestrator`, `architect`,
+  `developer`, `tester`, `reviewer`, `researcher`, `explorer`), one scoped
+  brief each, the brief naming the skill it loads. Sub-orchestrators are
+  `orchestrator`, spawned as BACKGROUND agents so this conversation stays
+  live, one per workstream, loading the fitting poteto-mode role. Multiple
+  parallel instances fine, one workstream each.
 - Cross-workstream synthesis happens here, never in a separate agent.
 - Art: relay only contact-sheet URLs from the art subagent. Never load image
   pixels into this context.

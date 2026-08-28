@@ -9,6 +9,10 @@ Spawn one reviewer per configured model to adversarially review code changes. Ea
 
 The deliverable is a synthesized verdict. Do NOT auto-apply changes.
 
+Block only on material risk or missing evidence, never on preference. Check
+scope alongside correctness: scope creep, missing acceptance criteria, or
+architecture drift are findings in their own right, not just bugs.
+
 ## Step 1, Determine Scope
 
 Identify what to review from context:
@@ -32,8 +36,8 @@ Write one clear paragraph. Reviewers challenge whether the work achieves the int
 
 ## Step 3, Spawn Reviewers
 
-Spawn every reviewer at once, one `subagent` per entry in the `interrogate
-reviewers` row of the `orchestration` skill's `models.md`. Label them Reviewer
+Spawn every reviewer at once, one `reviewer` per entry in the `interrogate
+reviewers` row of the `poteto-mode` skill's `models.md`. Label them Reviewer
 A, B, C... in row order. Row absent -> two reviewers, `opus` and `sonnet`.
 
 Each brief:

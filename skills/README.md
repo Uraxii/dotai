@@ -24,27 +24,23 @@ User-level skills, harness-neutral, in the Agent Skills format. Source of truth 
 | Skill | Description |
 |-------|-------------|
 | [research](research/SKILL.md) | Background agent investigates a question against primary sources into a cited Markdown file. |
-| [codebase-design](codebase-design/SKILL.md) | Shared vocabulary for designing deep modules and placing seams. |
 | [interrogate](interrogate/SKILL.md) | Adversarial multi-model review of a diff; lead synthesizes a verdict. |
 | [blast-radius](blast-radius/SKILL.md) | Find what a change breaks elsewhere before it ships; prove the safety fact by running code. |
 | [resolving-merge-conflicts](resolving-merge-conflicts/SKILL.md) | Resolve an in-progress git merge / rebase conflict. |
 | [why](why/SKILL.md) | Investigate why code was built this way from source control, tickets, docs, chat, and telemetry; returns a cited, confidence-calibrated read. |
+| [how](how/SKILL.md) | Explain how a subsystem works, or critique its architecture with multi-model critics. |
 
 ### Orchestration and role skills
 
 | Skill | Description |
 |-------|-------------|
-| [orchestration](orchestration/SKILL.md) | The mode for any non-trivial task: triggers, principle index, autonomy, subagent contract, playbook index. |
+| [poteto-mode](poteto-mode/SKILL.md) | The mode for any non-trivial task: triggers, principle index, autonomy, role contract, playbook index. |
 | [show-me-your-work](show-me-your-work/SKILL.md) | Keep a reviewable TSV decision trail for long-running or unattended work, cross-model reviewed at the end. |
-| [setup-models](setup-models/SKILL.md) | Interview the user role by role, then rewrite the orchestration model map. |
-| [code-quality](code-quality/SKILL.md) | Cross-language standard for writing, reviewing, and refactoring code, with per-language references. |
+| [setup-models](setup-models/SKILL.md) | Interview the user role by role, then rewrite the poteto-mode model map. |
+| [principle-code-quality](principle-code-quality/SKILL.md) | Cross-language standard for writing, reviewing, and refactoring code, with per-language references. |
 | [architect-designer](architect-designer/SKILL.md) | Settle system structure and author the code skeleton before any logic is written. |
-| [art-director](art-director/SKILL.md) | Sub-orchestrator for one image generation or editing workstream. |
 | [big-pickle-simple-tasks](big-pickle-simple-tasks/SKILL.md) | Turn paralyzing scope into small sequenced action items. Read-only. |
 | [requirements-clarifier](requirements-clarifier/SKILL.md) | Turn a vague task into user stories, acceptance criteria, and edge cases. Read-only. |
-| [skeptic-gate](skeptic-gate/SKILL.md) | Independent pre-ship challenge check on a plan or diff. Read-only. |
-| [tech-lead](tech-lead/SKILL.md) | Sub-orchestrator for one software workstream, delegating every piece of work. |
-| [test-automation-engineer](test-automation-engineer/SKILL.md) | Write and run tests, diagnose failures, verify fixes by execution. |
 | [arena](arena/SKILL.md) | Fan out N parallel candidates at the same task, pick a base, graft in the best of the losers. |
 | [swarm](swarm/SKILL.md) | Fan out N parallel workers, drain them, return one consolidated report. |
 | [figure-it-out](figure-it-out/SKILL.md) | Design an auditable playbook for a large migration or ambitious change when no narrower one fits. |
@@ -72,7 +68,6 @@ User-level skills, harness-neutral, in the Agent Skills format. Source of truth 
 | [unslop](unslop/SKILL.md) | Cut AI tells and shape register, format, and length of any writing. |
 | [technical-writing](technical-writing/SKILL.md) | Layered technical-writing standard: Diátaxis, Google style, STE, Global English. |
 | [rotate-agent](rotate-agent/SKILL.md) | Rotate a bloated long-running subagent into a fresh one via a transient handoff doc. |
-| [impeccable](impeccable/SKILL.md) | Design, critique, and polish frontend interfaces; spawns its own fleet. |
 | [teach](teach/SKILL.md) | Embody a domain-expert teacher and build tracked learning material. |
 | [excalidraw-diagrams](excalidraw-diagrams/SKILL.md) | House standard for Excalidraw diagrams, including Obsidian-embedded ones. |
 
