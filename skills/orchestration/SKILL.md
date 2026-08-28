@@ -7,28 +7,20 @@ description: The mode loaded at the start of any non-trivial task, before the fi
 
 ## Non-negotiables
 
-**Start every multi-step task with a todolist whose first item read the Principles section below in full.** Principles ground every trigger here. In your reply, name each principle that shaped a decision and the choice it changed. Citation with no decision behind it mean the leaf skill got skipped.
+**Start every multi-step task with a todolist whose first item read the Principles section below in full.** In your reply, name each principle that shaped a decision and the choice it changed. Citation with no decision behind it mean the leaf skill got skipped.
 
-Rest of triggers:
+Triggers a skill description alone would not fire:
 
-- Vague task, no acceptance criteria yet -> `requirements-clarifier`. Scope paralyzing, or step order high stakes -> `big-pickle-simple-tasks`.
-- Structure, pattern choice, ADR, skeleton of types and stubs -> `architect-designer`. Scoped implementation -> `implementation-specialist`.
-- Write tests, run suite, diagnose failures, verify fix -> `test-automation-engineer`. Hard bug, broken thing, perf regression -> `diagnose`. Behaviour testable, want red-green-refactor -> `tdd`.
-- One software workstream end to end -> `tech-lead`. One image generation or editing workstream -> `art-director`.
+- Any code written, changed, or reviewed -> `code-quality`. Any step that WRITES code, or reach for a new dependency -> `ponytail`, mandatory. Stdlib and native platform before any new dep.
 - Before any PR opened or integrated -> `skeptic-gate`. Serial, one gate at a time, never batched.
-- Any code written, changed, reviewed -> `code-quality`. Deep module, seam placement, navigable code -> `codebase-design`.
-- Any step that WRITES code, or reach for a new dependency -> `ponytail`, mandatory, no exception. Stdlib and native platform before any new dep.
 - About to ask the user a "which approach" or "what should this do" fork -> classify it first. Answer observable by running something is not the human's to give: sketch it with `prototype` and let the result decide. Save the ask for a taste call no experiment settle.
-- Parallel fan-out -> `swarm` for coverage matrices, races, exploration partitions. `arena` for design or code bakeoffs.
-- Contested design -> `interrogate` before shipping. Change might break something outside its diff -> `blast-radius`.
-- Any prose surface, own reply included -> `unslop`. Register for every agent, output and reasoning -> `caveman`.
-- Docs, RFCs, readmes, PR descriptions, commit messages -> `technical-writing`.
-- Long, autonomous, or unattended work the user review later -> `show-me-your-work`.
-- Reading legwork against primary sources -> `research`. Citing or relying on a web page -> `capture-source`. Why built this way, nothing recorded -> `why`.
-- Gameplay-affecting change in a Godot project -> `godot-playtest`. Frontend interface designed, critiqued, polished -> `impeccable`.
-- Creating or editing a SKILL.md -> `write-a-skill`. Durable notes, sources, boards, artifacts for human review -> `agent-workbench`. Stage, commit, push, open PR -> `yeet`.
-- Session picked up by another agent -> `handoff`. Subagent bloated, tokens high -> `rotate-agent`.
+- Parallel fan-out -> `swarm` for coverage, races, partitions; `arena` for bakeoffs. Contested design -> `interrogate` before shipping.
+- Any prose surface, own reply included -> `unslop`. Register for every agent -> `caveman`.
+- Long, autonomous, or unattended work -> `show-me-your-work`.
+- Citing a web page -> `capture-source`, never a bare link.
 - Broken skill mid-task -> fix it in its own change. Do not block. Do not work around it silently.
+
+Everything else routes by skill description. Read the catalog, load what matches.
 
 ## Principles
 
@@ -75,29 +67,11 @@ Read the leaf skill in full for any principle you apply. Each entry name when it
 
 ## Subagents
 
-Two roles, nothing else is a role. Main thread: triage, sequencing, cross-workstream synthesis, and the only role that may ask the user. `subagent`: generic delegate with no specialism of own, brief say what and skill say how.
+Two roles, nothing else is a role. Main thread: triage, sequencing, synthesis, and the only role that may ask the user. `subagent`: generic delegate, brief say what and skill say how.
 
-Every spawn carry all of these. Field you cannot fill = task not scoped: scope it or do not spawn.
+Every spawn carry the brief fields in `references/brief.md` (GOAL, SCOPE, SKILLS, CONTEXT, ACCEPTANCE, VERIFY, TIMEBOX, FORBIDDEN, REPORT). Field you cannot fill = task not scoped. Model pinned per call from `models.md`, never in frontmatter. Constraints live in brief text (FORBIDDEN), not tool config. Paste the user's global instructions into every spawn; directives decay.
 
-```text
-GOAL         one sentence outcome, executable by stranger with no chat access
-SCOPE        paths this task may write; paths it may not; its branch
-SKILLS       skills to load first, by name
-CONTEXT      file paths and issue ids; upstream reports pasted in full when
-             this task depends on them (subagents cannot see siblings)
-ACCEPTANCE   checkable criteria, one per line
-VERIFY       exact commands to run, plus known gotchas
-TIMEBOX      rough runtime cap; on expiry return partial findings and stop
-FORBIDDEN    out-of-scope edits, task-specific bans, read-only or no-pixels
-REPORT       status, branch, head SHA, verdict, what was actually run,
-             deviations, suggested follow-ups
-```
-
-- Size to task. One-command task collapse to a paragraph still naming goal, scope, verify command, report shape.
-- Model pinned PER CALL via the spawn call's model argument, never in frontmatter. Map: `models.md`.
-- Constraints go in brief text, not tool config. Read-only means FORBIDDEN says "no writes, no commits, inspection commands only". No-pixels means FORBIDDEN says "never load image pixels, hold paths and verdict text only".
-- Standing orders: paste the user's global instructions file into every spawn. Directives decay, and each dropped one cost a user turn.
-- Fresh spawn over resume-chain, always. Scope change -> fresh spawn with consolidated scope. Bloated agent -> `rotate-agent`.
+- Fresh spawn over resume-chain, always. Scope change -> fresh spawn. Bloated agent -> `rotate-agent`.
 - You own every subagent's work. Review the diff, write your own summary, never pass through what it said.
 - `principle-guard-the-context-window`: file pointers not inlined context, bulk to subagents, summaries in the main thread.
 
