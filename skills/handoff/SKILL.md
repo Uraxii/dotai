@@ -7,7 +7,7 @@ description: Compact the current conversation into a handoff document for anothe
 
 A handoff lets a fresh agent continue the work without replaying the conversation. Recall beats brevity: capture everything the successor needs, then trim.
 
-Write it to the OS temp directory (`/tmp` on Linux and macOS, `%TEMP%` on Windows), never into the repo unless the user asks. Never rewrite project documents while creating one.
+Write it to `.handoffs/` at the project root, gitignored (add the entry if missing). Never commit it. Never rewrite project documents while creating one. This skill owns the ceremony: naming, location, chain numbering. Other skills that need a handoff invoke this one, never their own variant.
 
 In a long session, append decisions, constraints, and verbatim user directives to the handoff file as they are established. A handoff reconstructed from an already-degraded context is the main cause of lost detail.
 
@@ -36,7 +36,7 @@ Arguments passed to this skill are the next session's focus. Absent, infer the f
 5. **Redact.** Strip API keys, tokens, passwords, cookies, SSH keys, raw auth headers, and unnecessary PII. Write `[REDACTED_SECRET]` and name what kind of credential the successor needs.
 6. **List suggested skills** with why each is relevant, by exact name.
 7. **Completeness pass, mandatory.** Re-scan the whole conversation for user corrections, vetoes, terminology preferences, scope limits, and abandoned approaches. Negative constraints are the detail summaries lose most. Anything found goes into `Verbatim User Directives` or `Failed Approaches / Do NOT`.
-8. **Write the file.** Name it `handoff_<project>_<topic>_<chain number>_<unix time>.md`, underscores between fields, hyphens allowed inside the topic slug. `<project>` is the repo the work targets, never the session cwd. User's rule verbatim: "When I say project I mean the project being worked on. Not the base directory the session is running from. Ex. bad: Claude session in Projects, Project = Projects. good: working on ~/Projects/gvn, Project = gvn." Chain number starts at 1; a successor finds the highest existing `handoff_<project>_<topic>_*` and adds 1. Recommend a fresh chain when the effort changes rather than continues, the slug has drifted, the prior chain shipped, or the lineage has grown into noise. You recommend, the human decides.
+8. **Write the file.** Name it `handoff_<project>_<topic>_<chain number>_<unix time>.md`, underscores between fields, hyphens allowed inside the topic slug. `<project>` is the repo the work targets, never the session cwd. User's rule verbatim: "When I say project I mean the project being worked on. Not the base directory the session is running from. Ex. bad: Claude session in Projects, Project = Projects. good: working on ~/Projects/gvn, Project = gvn." Chain number starts at 1; a successor finds the highest existing `.handoffs/handoff_<project>_<topic>_*` and adds 1. Recommend a fresh chain when the effort changes rather than continues, the slug has drifted, the prior chain shipped, or the lineage has grown into noise. You recommend, the human decides.
 9. **Report the full absolute path** on its own line. Keep the rest of the reply short, naming any assumptions or redactions.
 
 Document structure: `references/document-structure.md`.

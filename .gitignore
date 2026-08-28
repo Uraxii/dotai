@@ -24,3 +24,4 @@ settings.json
 opencode.json
 .dotai-manifest
 .installed-by-*
+.handoffs/
