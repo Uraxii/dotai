@@ -1,1 +1,0 @@
-../../../.claude/skills/unslop/SKILL.md

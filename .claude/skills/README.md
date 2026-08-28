@@ -1,8 +1,7 @@
 # Skills
 
-User-level skills, harness-neutral. Source of truth for every harness; deployed to `~/.claude/skills/` by stow and copied or linked into the others. Each skill is a directory with a `SKILL.md` (frontmatter + body) plus optional bundled resources.
+User-level skills, harness-neutral. Source of truth for every harness; deployed to `~/.claude/skills/` and `~/.agents/skills/` by stow; codex, copilot, and opencode read the latter natively, hermes via `skills.external_dirs`. Each skill is a directory with a `SKILL.md` (frontmatter + body) plus optional bundled resources.
 
-Hermes-equivalent skills live under `.hermes/skills/` with omerxx-style frontmatter; opencode versions under `opencode/skills/`. Edit files directly; no generator.
 
 ## Skills
 

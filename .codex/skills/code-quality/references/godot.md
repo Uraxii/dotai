@@ -1,1 +1,0 @@
-../../../../.claude/skills/code-quality/references/godot.md

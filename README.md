@@ -11,13 +11,22 @@ The repo root mirrors `$HOME`, so the whole repo is one stow package.
 
 | Dir                 | Deploys to             |
 |---------------------|------------------------|
-| `.claude/`          | `~/.claude`            |
+| `.claude/`          | `~/.claude` (skills source of truth) |
+| `.agents/skills`    | `~/.agents/skills` -> `.claude/skills`; read natively by codex, copilot, opencode |
 | `.codex/`           | `~/.codex` (allowlist) |
 | `.hermes/`          | `~/.hermes`            |
 | `.config/opencode/` | `~/.config/opencode`   |
 | `.copilot/`         | `~/.copilot`           |
 
 One `.stow-local-ignore` at the root covers every harness.
+
+Hermes needs one config line to see the shared skills (`~/.hermes/config.yaml`):
+
+```yaml
+skills:
+  external_dirs:
+    - ~/.agents/skills
+```
 
 ## Usage
 
