@@ -11,13 +11,6 @@ Blender-side retargeting and the `extract_tracks` EditorScript step, use the
 [blender-godot-pipeline](../blender-godot-pipeline/SKILL.md) skill instead; this
 skill is about driving Godot itself.
 
-## When to use
-
-- Run Godot logic from a shell with no editor (agent shell, CI, batch jobs).
-- Read a GLB/GLTF model or its animations WITHOUT the editor import pipeline.
-- Import assets, inspect scenes, convert/save resources, run tests, or export.
-- Separate real errors from the harmless headless dummy-renderer exit noise.
-
 ## Binary discovery
 
 Do not hardcode a version path. The binary lives under the Godots flatpak;

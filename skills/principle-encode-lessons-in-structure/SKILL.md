@@ -5,11 +5,9 @@ description: Recurrence is the trigger. Use on the SECOND occurrence of a lesson
 
 # Encode lessons in structure
 
-Recurring fix belong in mechanism, not in more text. Every error, human
-correction, surprising outcome is learning signal. Capture, route, close loop.
-
-**Why:** text instruction easy to miss. Needs reader to notice, remember,
-comply. Mechanism enforce without cooperation.
+Recurring fix belong in mechanism, not in more text. Text instruction easy to
+miss: need reader notice, remember, comply. Mechanism enforce without
+cooperation.
 
 ## Pattern
 
@@ -21,27 +19,12 @@ Catch self writing same instruction second time:
 
 ## Pick strongest rung
 
-Strongest the situation allow, in order:
-
-1. **Unrepresentable state.** Type, enum, or resource schema make bad value
-   impossible.
-2. **Fails CI.** Lint rule, banned symbol, schema validation, import test.
-3. **Canonical helper.** One function everyone call; wrong path stop existing.
-4. **Runtime assert.** Loud failure at boundary.
-5. **Prose.** Last resort only.
-
-Weaker guard become next template, because agents copy whatever surrounding
-code already do.
-
-## Domain shapes
-
-- Godot: "forgot to free node" -> assert in `_exit_tree`. Repeated magic path
-  string -> preloaded const.
-- Art pipeline: "always set seed" -> default in workflow loader, not a note.
-- Infra: "always tag resource" -> policy check in CI, not README line.
-
-**Corollary:** do not paper over symptom. Fix is structural -> use ONLY the
-structural fix. The instruction IS the symptom.
+Strongest the situation allow, best first: unrepresentable state (type or
+schema make bad value impossible) > fails CI (lint, banned symbol, schema
+validation, import test) > canonical helper (wrong path stop existing) >
+runtime assert at boundary > prose, last resort. Agents copy whatever
+surrounding code already do, so weaker guard become next template. Fix is
+structural -> use ONLY the structural fix. The instruction IS the symptom.
 
 ## Anti-patterns
 

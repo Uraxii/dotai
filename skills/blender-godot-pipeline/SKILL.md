@@ -10,13 +10,6 @@ keeping that skeleton's native bone names so existing bone references,
 attachments, and code keep working. Everything is parameterized: supply your own
 target GLB, source anim(s), bone map, skeleton path, and output dir.
 
-## When to use
-
-- Retargeting Mixamo (or any FBX/rig) animation onto a game character.
-- Arms/limbs land in a wrong "guard" pose after a naive retarget (double-apply).
-- You must NOT let Godot's import rename bones to `SkeletonProfileHumanoid`.
-- Authoring or fixing a model/animation headlessly in Blender for Godot.
-
 ## Pipeline
 
 ```

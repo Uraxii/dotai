@@ -5,54 +5,34 @@ description: The user invokes this by name to change which model each delegated 
 
 # Setup models
 
-Rewrite the orchestration skill's `models.md`, the per-role model map. Skills
-and playbooks read it and pin `model` per Agent call. Absent role -> child
-inherits parent.
+Rewrite `models.md`, the per-role model map bundled beside the `orchestration`
+skill's SKILL.md. Skills and playbooks read it and pin `model` per Agent call.
+Role absent from it -> the child inherits the parent's model. Locate the file
+through the same skills install this skill was loaded from; never hardcode an
+install layout or guess a home directory.
 
-Target: the `orchestration` skill's model map, `models.md`, bundled beside its
-SKILL.md. Locate it through the same skills install this skill was loaded
-from; never hardcode an install layout or guess a home directory.
+Allowed values: `sonnet`, `opus`, `haiku`, `fable`, plus `inherit`. `fable`,
+`sol`, and `luna` need explicit user permission stated in words this turn.
+Silence is not permission; no permission -> leave the role unset and say so.
 
-Allowed values: `sonnet`, `opus`, `haiku`, `fable`, where `fable`, `sol`,
-and `luna` are NEVER assigned without explicit user permission.
+1. **Load current state.** Read the target file; its table is the current
+   choice. Missing file -> start from opus for architect-designer,
+   skeptic-gate, tech-lead; sonnet for art-director, requirements-clarifier,
+   test-automation-engineer; haiku for big-pickle-simple-tasks; `opus, sonnet`
+   for the `interrogate reviewers` list, one reviewer per entry, repeats
+   allowed.
 
-## Steps
+2. **Interview.** Show every role with its current model and ask whether to
+   accept as-is or change specific roles. Prefer the harness's structured
+   question prompt over free text. Offer this shape as a default, not a
+   lecture: opus for judgment, design, and gates; sonnet for scoped execution;
+   haiku for mechanical decomposition.
 
-### 1. Load current state
+3. **Validate.** Reject any value outside the allowed set. A map pointing at a
+   model the user cannot run breaks every delegation that reads it.
 
-Read the target file. Its table is the current choice. Missing file -> start
-from defaults: opus for architect-designer, skeptic-gate, tech-lead;
-sonnet for art-director, implementation-specialist, requirements-clarifier,
-test-automation-engineer; haiku for big-pickle-simple-tasks; `opus, sonnet`
-for the `interrogate reviewers` list (one reviewer per entry, repeats allowed).
-
-### 2. Interview
-
-Show every role with its current model. Ask whether to accept as-is or change
-specific roles. Offer the four allowed values plus `inherit` (role omits
-`model`, runs on parent's). Prefer the harness's structured question prompt over free text where one exists.
-
-Rough shape: opus for judgment, design, and gates. Sonnet for scoped
-execution. Haiku for mechanical decomposition. Offer that as the default, not
-as a lecture.
-
-### 3. Validate
-
-Reject any value outside the allowed set plus `inherit`. Map pointing at a
-model the user cannot run breaks every delegation reading it.
-
-`fable` needs explicit user permission in this turn, stated in words, before
-it may be written. Same for any sol or luna role. Silence is not permission.
-No permission -> leave that role unset and say so.
-
-### 4. Write
-
-Overwrite the whole file so re-runs stay idempotent. Keep its shape: the
-`setup-models rewrites this file` note at top, the allowed-values line with
-its permission caveat naming fable, sol, and luna, one table row per role, the
-inherit rule, the fable hard rule.
-
-### 5. Confirm
-
-Tell the user the file path written and that it applies to spawns from now on.
-Re-running this skill updates it.
+4. **Write.** Overwrite the whole file so re-runs stay idempotent. Keep its
+   shape: the `setup-models rewrites this file` note, the allowed-values line
+   with its permission caveat, one table row per role, the inherit rule, the
+   fable hard rule. Report the path written and that it governs spawns from
+   now on.

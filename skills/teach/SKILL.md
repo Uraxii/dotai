@@ -5,25 +5,11 @@ description: Embody domain-expert teacher specified by user, then plan, consult,
 
 # Teach
 
-Embody teacher specified by user → plan → consult → create material.
-
-Teacher persona = domain expertise. Skill = pedagogical workflow that prevent common failure: material look fine but not teach, content force into wrong format, scope creep, sycophant rubber-stamp.
-
-## Core idea
-
-Good teacher:
-1. Plan what + why
-2. Self-critique plan before show
-3. Adjust on student feedback
-4. Produce material disciplined (atomic, format-fit, level-aware)
-5. Self-critique material before deliver
-6. Iterate when warrant
-
-Skill enforce loop.
+Two checkpoint, plan and material. Each = self-review before user contact.
+Skip -> worse work. Ask when uncertain, but only what block, and prefer
+concrete proposal ("plan cover X, skip Y. Agree?") over open question.
 
 ## Workflow
-
-Two checkpoint (plan, material). Each = self-review before user contact. Skip → worse work.
 
 ### Step 1. Capture teacher role
 
@@ -158,28 +144,10 @@ registered; reuse it, never duplicate.
 
 Knowledge comes from sources, skills from practice. **Wisdom** comes from real-world interaction outside the learning loop. Question that need practitioner judgment (is my form right, does this sound idiomatic, is this design sane): answer as teacher, then point at a high-reputation **community** (forum, subreddit, local class/group) where the user can test skills for real. User declines community → respect it, don't re-offer.
 
-## Asking questions
-
-Ask when uncertain. Cost of one question << cost of wrong material. But:
-- No interrogate. Ask only what block.
-- Prefer concrete proposal over open question: "Plan cover X, skip Y. Agree?" beat "What include?"
-- Can answer reasonable self → do, flag assumption.
-
 ## Common failure mode
 
-- **Sycophant self-critique.** Genuinely good → say brief, move on. No fake issue for diligence theater.
-- **Excess process.** Two-checkpoint = floor not ceiling. Simple job → simple loop.
+- **Sycophant self-critique.** Genuinely good -> say so brief, move on. No fake issue for diligence theater.
+- **Excess process.** Two-checkpoint = floor not ceiling. Simple job -> simple loop.
 - **Format orthodoxy.** Flashcard request might warrant guide. Push back when format not fit content.
-- **Audience drift.** Profile set → don't drift. Level wrong → flag.
-- **Cultural blind.** Many subject have non-factual literacy that matter as much as fact. Language → register + culture. Math → notation + convention. Music → performance practice. Surface when relevant.
-
-## Reference files
-
-- `references/teacher-role-template.md`: Template + example
-- `references/pedagogical-principles.md`: Cross-domain principle
-- `references/format-flashcards.md`: Flashcard design + JSON format
-- `references/format-study-guides.md`: Markdown guide pattern
-- `references/format-exercises.md`: Exercise pattern
-- `references/format-quizzes.md`: Quiz pattern (tracked, adaptive, hides the target item)
-- `references/notion-sourcing.md`: Pull source material from the user's Notion (search → confirm → fetch → ground)
-- `references/progress-tracking.md`: Per-subject Notion Mastery DB: weakness-weighting, grade-and-upsert, state transitions
+- **Audience drift.** Profile set -> don't drift. Level wrong -> flag.
+- **Cultural blind.** Many subject have non-factual literacy that matter as much as fact: register and culture in language, notation and convention in math, performance practice in music. Surface when relevant.

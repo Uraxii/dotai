@@ -5,10 +5,8 @@ description: The deeper treatment the `ponytail` skill escalates to, never a fir
 
 # Laziness protocol
 
-Writing code cheap for model, so over-engineering easy. Borrow human
-maintainer fatigue. Most result, least code and complexity.
-
-## Rules
+Writing code cheap for model, so over-engineering easy. Borrow human maintainer
+fatigue. Most result, least code and complexity.
 
 - **Prefer deletion.** Refactor or improve request -> hunt removals before
   additions.
@@ -22,16 +20,9 @@ maintainer fatigue. Most result, least code and complexity.
   autoload, render graph, pipeline stage" -> stop, find direct path.
 - **Sweat small leaks.** Tiny pass-throughs, representation leaks, duplicated
   choices compound into permanent coordination cost.
-
-## Shapes to refuse
-
-- Godot: new autoload plus signal bus hop to carry one bool -> read node
-  property direct, or export var.
-- Art pipeline: wrapper class over workflow JSON -> set dict key.
-- Infra: templating layer over compose/module used exactly once -> literal
-  file.
-- General: config option nobody asked for -> named constant.
-- Any: abstraction with one implementation -> inline it.
+- **Refuse one-off structure.** Abstraction with one implementation -> inline
+  it. Config option nobody asked for -> named constant. Templating layer over a
+  file used exactly once -> literal file.
 
 **Prime directive:** human dev would find code exhausting to maintain -> bad
 solution. Be lazy. Stay simple.

@@ -23,14 +23,12 @@ Copy these steps into todolist verbatim before any task-specific todo.
    before fix exists. No cheap test path -> state why, name runtime evidence
    replacing it.
 5. **Fix.** Subagent loads `ponytail` and `code-quality` plus its reference for
-   the language in play. `ponytail` is mandatory on any step writing code.
-   Smallest change removing the cause. No adjacent refactoring.
+   the language in play. Smallest change removing the cause. No adjacent
+   refactoring.
 6. **Prove it.** Re-run step 1 repro, not proxy. Load `principle-prove-it-works`. Test
    green AND original symptom gone. Verification failed -> suspect observation
    method before system.
-7. **GATE.** Subagent loads `skeptic-gate`, serial: one gate, wait, fix, one
-   fresh gate. Record verdict, head SHA, and resolution as a `show-me-your-work` verdict row.
-   Non-PASS halts delivery.
+7. **GATE.** Subagent loads `skeptic-gate`; that skill owns the gate rules.
 8. **Ship.** `yeet`. Stage commits so failing repro lands before fix; diff
    tells story.
 

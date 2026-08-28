@@ -15,20 +15,13 @@ reasoning.
 
 | Format | Inline on mobile? | Use |
 |--------|-------------------|-----|
-| **MP4 (H.264 / yuv420p / +faststart)** | Yes, universal | **DEFAULT. Send this.** |
-| **GIF (palette-optimized)** | Yes (common image type) | **Fallback** if an MP4 preview ever fails to appear |
-| Animated WebP | No | never send, the format that started this |
-| AVI | No | source only (`/tmp/cap/`), never send |
-| WebM / VP9 | Unreliable in chat/mobile | avoid |
+| MP4 (H.264 / yuv420p / +faststart) | Yes, universal | Default, send this |
+| GIF (palette-optimized) | Yes (common image type) | Fallback if an MP4 preview fails to appear; ~9MB for 5s |
+| Animated WebP | No | Never send, the format that started this |
+| AVI | No | Source only (`/tmp/cap/`), never send |
+| WebM / VP9 | Unreliable in chat/mobile | Avoid |
 
-**Default: small H.264 MP4** (`yuv420p` + `-movflags +faststart`, <=720p,
-CRF 30). Most universally decoded video in mobile/chat contexts; faststart lets
-it start playing before it fully downloads. **Fallback: GIF.** GIF is a
-universally supported image type and auto-animates, but files are large (~9MB for
-5s), so only reach for it if an MP4 won't preview.
-
-Keep clips small: a ~20s 720p MP4 lands ~3-4MB (well under the ~10MB comfort
-line). If a send feels heavy, trim with `--maxsec` or drop `--height`.
+`+faststart` lets playback start before the file fully downloads. A ~20s 720p MP4 lands ~3-4MB, under the ~10MB comfort line; if a send feels heavy, trim with `--maxsec` or drop `--height`.
 
 ## Command
 
@@ -47,20 +40,10 @@ mobile MP4 out. It prints the output path, size, stream info, and PASS/FAIL.
 - `--crf N`: x264 quality/size knob (default 30; lower = bigger + sharper).
 - `--fps N`: GIF framerate (default 15; ignored for MP4, which keeps source fps).
 
-### Examples
+### Example
 
 ```bash
-# Default: animated WebP → small mobile MP4 (send this to the user)
-python3 ./convert.py capture.webp clip.mp4
-
-# Trim a long capture to 20s
 python3 ./convert.py capture.webp clip.mp4 --maxsec 20
-
-# GIF fallback of the first 5 seconds
-python3 ./convert.py capture.webp clip.gif --gif --maxsec 5
-
-# Big source MP4 → smaller MP4 (e.g. the 33MB problem case)
-python3 ./convert.py big.mp4 clip.mp4 --height 720
 ```
 
 ## How it works / notes

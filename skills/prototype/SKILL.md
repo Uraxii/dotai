@@ -5,26 +5,85 @@ description: Build a throwaway prototype to answer a design question. Use when t
 
 # Prototype
 
-Prototype is **throwaway code that answers a question**. Question decides the shape.
+Throwaway code that answers ONE question. The question decides the shape.
+Several competing candidates compared side by side is
+`principle-exhaust-the-design-space` instead.
 
-## Pick a branch
+Pick the branch from the prompt, the surrounding code, or by asking; getting it
+wrong wastes the whole prototype. Ambiguous and the user is away -> default by
+surroundings (backend module -> logic, page -> UI) and say so at the top.
 
-Find which question is being answered, from the user's prompt, the surrounding code, or by asking if the user is around:
+## Rules for both branches
 
-- **"Does this logic / state model feel right?"** → [LOGIC.md](LOGIC.md). Build a tiny interactive terminal app that pushes the state machine through cases hard to reason about on paper.
-- **"What should this look like?"** → [UI.md](UI.md). Generate several radically different UI variants on a single route, switchable via a URL search param and a floating bottom bar.
+1. **Throwaway from day one, and marked as such.** Put it next to the module or
+   page it prototypes for, named so a casual reader sees it is not production.
+   Follow the project's existing routing and task-runner conventions; invent no
+   new top-level structure.
+2. **One command to run.** Add it to the project's existing task runner. The
+   user must start it without thinking.
+3. **No persistence.** State lives in memory. Persistence is what the prototype
+   is checking, not what it depends on. Question is specifically about
+   persistence -> scratch DB or a file named "PROTOTYPE: wipe me".
+4. **Skip the polish.** No tests, no abstractions, no error handling beyond
+   what makes it runnable. No "what if we want X later".
+5. **Surface the state.** After every action, or on every variant switch, show
+   the full relevant state so the user sees what changed.
+6. **Capture the answer, then delete the prototype.** The answer is the only
+   thing worth keeping: record the verdict and the question it settled in an
+   ADR, issue, or commit message, outside the prototype. A notes file beside it
+   does not count, it keeps the prototype alive on main. Fold the validated
+   decision into real code, commit the prototype to a throwaway branch off
+   main, leave a pointer to that branch on the issue.
 
-The two branches produce very different artifacts, so getting this wrong wastes the whole prototype. If the question is genuinely ambiguous and the user isn't reachable, default to whichever branch matches the surrounding code (a backend module → logic; a page or component → UI) and state the assumption at the top of the prototype.
+## Logic branch: "does this state model feel right?"
 
-## Rules that apply to both
+A tiny interactive terminal app the user drives by hand, for questions about
+business logic, state transitions, or data shape: the kind of thing that looks
+reasonable on paper and only feels wrong once pushed through real cases. Write
+the state model and the question down first, at the top of the file.
 
-1. **Throwaway from day one, and clearly marked as such.** Put the prototype code near where it will actually be used (next to the module or page it's prototyping for) so context is obvious, but name it so a casual reader sees it's a prototype, not production. For throwaway UI routes, follow whatever routing convention the project already uses; don't invent a new top-level structure.
-2. **One command to run.** Whatever the project's existing task runner supports, `pnpm <name>`, `python <path>`, `bun <path>`, etc. The user must be able to start it without thinking.
-3. **No persistence by default.** State lives in memory. Persistence is the thing the prototype is _checking_, not something it should depend on. If the question explicitly involves a database, hit a scratch DB or a local file with a clear "PROTOTYPE: wipe me" name.
-4. **Skip the polish.** No tests, no error handling beyond what makes the prototype _runnable_, no abstractions. The point is to learn something fast, then delete it.
-5. **Surface the state.** After every action (logic) or on every variant switch (UI), print or render the full relevant state so the user can see what changed.
-6. **Capture it when done.** Fold any validated decision into the real code, then capture the prototype itself as a **primary source**: commit it to a throwaway branch, out of main, and leave a context pointer to that branch on the implementation issue. Capture the answer too (the verdict and the question it settled) in the issue or a commit. The main branch keeps only the validated decision.
+**Isolate the logic in a portable module.** The bit answering the question sits
+behind a small pure interface that could be lifted into the real codebase
+later: a reducer `(state, action) => state`, an explicit state machine when
+"which actions are even legal now" is part of the question, a set of pure
+functions over a plain data type, or a module owning genuine internal state.
+Pick by the question, not by what wires most easily to a TUI. Keep it pure: no
+I/O, no terminal code, no logging for control flow. The TUI imports it; nothing
+flows the other way. The TUI shell gets deleted, the module gets lifted.
 
-## When done
+**Build the smallest TUI that exposes the state.** Every tick, clear the screen
+and re-render the whole frame, so the user sees one stable view instead of
+growing scrollback. Each frame: current state one field per line (bold names,
+dim derived values, native ANSI escapes are fine), then the keyboard shortcuts.
+Read one keystroke, dispatch, re-render, loop until quit. Frame fits one
+screen. Hand it over with the run command; the interesting moments are "wait,
+that should not be possible", which are bugs in the idea.
 
-The _answer_ is the only thing worth keeping from a prototype. Capture it somewhere durable and outside the prototype (ADR, issue, or commit message) along with the question it was answering. A notes file living next to the prototype doesn't count: it keeps the prototype alive on main. If the user is around, that capture is a quick conversation; if not, leave the placeholder so they (or you, on the next pass) can fill in the verdict before the prototype leaves main.
+## UI branch: "what should this look like?"
+
+Several radically different variants on a single route, switchable from a
+floating bottom bar. The user flips between them, picks one or steals bits from
+each, and throws the rest away.
+
+**Prefer variants inside an existing page.** Render them on the same route,
+gated by a `?variant=` search param, keeping the existing data fetching, params
+and auth so only the rendering swaps. Something with no page yet that would
+naturally live inside one still goes here. Create a throwaway route only when
+there is genuinely no page to live in: an empty route hides design problems a
+populated one would expose.
+
+**Default to 3 variants, cap at 5.** Beyond that they stop being radically
+different. Variants must differ in layout, information hierarchy, and primary
+affordance, not colour or copy. Two drafts coming out similar -> redo one with
+an explicit "do not use a card grid" constraint. Share a `<Header>` if you
+like, never a `<Layout>`; each variant must be free to throw the layout out.
+
+**The switcher** is one shared component: left arrow, current variant key and
+name, right arrow, all wrapping. Arrows update the URL search param through the
+project's router so the variant is shareable and reload-stable. Left and right
+keys cycle too, except while an input, textarea, or contenteditable has focus.
+Visually distinct from the page, and gated off in production builds.
+
+Wire variants to stubs, never to real mutations. When one wins, delete the
+losers and the switcher, then rewrite the winner properly as you fold it in;
+the variant code was written under prototype constraints.

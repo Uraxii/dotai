@@ -23,8 +23,6 @@ Copy these steps into todolist verbatim before any task-specific todo.
    Plausible guess in the gap is the failure mode here.
 7. **Draw it if structural.** Flow, layering, call path -> `excalidraw-diagrams`.
    One diagram, not a gallery.
-8. **Record what gets acted on.** Decision, settled fact, or answer used later
-   -> `agent-workbench` kb. Throwaway lookups not stored.
 
 No gate: nothing ships. `unslop` the reply.
 

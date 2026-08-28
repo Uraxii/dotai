@@ -1,34 +1,32 @@
 # Deepening
 
-How to deepen a cluster of shallow modules safely, given its dependencies. Assumes the vocabulary in [SKILL.md](SKILL.md), **module**, **interface**, **seam**, **adapter**.
+How to deepen a cluster of shallow modules given its dependencies. Assumes the
+vocabulary in [SKILL.md](SKILL.md): **module**, **interface**, **seam**,
+**adapter**. Seam discipline (one adapter is hypothetical, two is real;
+internal seams stay internal) lives there too and governs ports here.
 
 ## Dependency categories
 
-When assessing a candidate for deepening, classify its dependencies. The category determines how the deepened module is tested across its seam.
+Classify the candidate's dependencies. The category decides how the deepened
+module is tested across its seam.
 
-### 1. In-process
+1. **In-process.** Pure computation, in-memory state, no I/O. Always
+   deepenable: merge the modules, test through the new interface, no adapter.
+2. **Local-substitutable.** Has a local test stand-in (PGLite for Postgres,
+   in-memory filesystem). Deepenable if the stand-in exists; it runs in the
+   test suite. The seam is internal, so no port at the external interface.
+3. **Remote but owned.** Your own services across a network. Define a port at
+   the seam. The deep module owns the logic; the transport is an injected
+   adapter, in-memory for tests and HTTP/gRPC/queue in production.
+4. **True external.** Third-party services you do not control. Same shape as 3:
+   injected port, mock adapter in tests.
 
-Pure computation, in-memory state, no I/O. Always deepenable, merge the modules and test through the new interface directly. No adapter needed.
+## Testing strategy: replace, do not layer
 
-### 2. Local-substitutable
-
-Dependencies that have local test stand-ins (PGLite for Postgres, in-memory filesystem). Deepenable if the stand-in exists. The deepened module is tested with the stand-in running in the test suite. The seam is internal; no port at the module's external interface.
-
-### 3. Remote but owned (Ports & Adapters)
-
-Your own services across a network boundary (microservices, internal APIs). Define a **port** (interface) at the seam. The deep module owns the logic; the transport is injected as an **adapter**. Tests use an in-memory adapter. Production uses an HTTP/gRPC/queue adapter.
-
-Recommendation shape: *"Define a port at the seam, implement an HTTP adapter for production and an in-memory adapter for testing, so the logic sits in one deep module even though it's deployed across a network."*
-
-### 4. True external (Mock)
-
-Third-party services (Stripe, Twilio, etc.) you don't control. The deepened module takes the external dependency as an injected port; tests provide a mock adapter.
-
-Seam discipline (one adapter is hypothetical, two is real; internal seams stay internal) lives in [SKILL.md](SKILL.md) under Principles. It governs ports here too: a single-adapter port is just indirection.
-
-## Testing strategy: replace, don't layer
-
-- Old unit tests on shallow modules become waste once tests at the deepened module's interface exist: delete them.
-- Write new tests at the deepened module's interface. The **interface is the test surface**.
-- Tests assert on observable outcomes through the interface, not internal state.
-- Tests should survive internal refactors: they describe behaviour, not implementation. If a test has to change when the implementation changes, it's testing past the interface.
+- Old unit tests on the shallow modules become waste once tests at the deepened
+  interface exist. Delete them.
+- Write the new tests at the deepened module's interface. The interface is the
+  test surface.
+- Assert on observable outcomes through the interface, never internal state. A
+  test that must change when the implementation changes is testing past the
+  interface.

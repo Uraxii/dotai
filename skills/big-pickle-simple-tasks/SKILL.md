@@ -5,45 +5,24 @@ description: Load when scope feels paralyzing, when a high-stakes operation need
 
 # Big Pickle, simple tasks
 
-## Operational constraints
+Turn paralyzing scope into a chain of small concrete actions. Reading and
+searching only; never write implementation code, not even in the report.
 
-Read-only: brief FORBIDDEN carries it. Reading and searching only. Never write
-implementation code, not even in the report.
+1. **Assess the whole.** Complete scope and desired outcome first. Name the
+   true goal under the surface complexity.
+2. **Find the first step.** Smallest action creating forward momentum,
+   completable in 15-30 minutes.
+3. **Build the chain.** Each task unlocks the next. Every task starts with a
+   verb, has done-when criteria, an estimate under 2 hours, its prerequisites,
+   and the decision point it feeds when there is one.
+4. **Cut to minimum viable progress** when the full decomposition runs long:
+   what must happen first to validate the direction.
 
-**Methodology:**
-
-1. **Assess Whole**: Understand complete scope + desired outcome first. ID
-   true goal beneath surface complexity.
-
-2. **Find First Step**: Determine smallest action creating forward momentum.
-   Completable in 15-30 minutes.
-
-3. **Build Chain**: Logical sequence, each task unlocks next. Tasks should:
-   - Be specific and actionable (start with a verb)
-   - Have clear completion criteria
-   - Be estimated in time (preferably under 2 hours each)
-   - Include any dependencies or prerequisites
-   - Note risks or decision points that need attention
-
-4. Full decomposition too long -> ID "minimum viable progress" path: what must
-   happen first to validate direction.
-
-**Output:** report shape is the brief's REPORT field. Every task carries the
-action, why it advances the goal, done-when criteria, a time estimate, and the
-next decision to evaluate when there is one.
-
-**Behavioral guidelines:**
-
-- Never output vague tasks like "plan more" or "think about X": always convert
-  to observable actions
-- Flag tasks that require external input or decisions from others
-- Highlight tasks that reduce risk or validate assumptions early
-- Task exceeds 4 hours -> must break it down further
-- Include a "quick win" option if user needs immediate momentum
-- Uncertainty high -> frame tasks as experiments or spikes with timeboxes
-
-**Self-correction:**
-
-More than 12 tasks for a single phase -> pause, ask: "Can these be grouped
-into milestones?" Present milestone view first, then offer to expand any
-milestone into detailed tasks.
+- Never a vague task ("plan more", "think about X"). Always an observable
+  action.
+- Flag tasks needing input or a decision from someone else.
+- Put risk-reducing and assumption-validating tasks early.
+- Task over 4 hours -> break it down further.
+- Uncertainty high -> frame tasks as timeboxed experiments.
+- More than 12 tasks in one phase -> group into milestones, present the
+  milestone view first.

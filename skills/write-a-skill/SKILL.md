@@ -5,105 +5,52 @@ description: Create new agent skills with proper structure, progressive disclosu
 
 # Writing skills
 
-## Process
-
-1. **Gather requirements** - ask user about:
-   - What task/domain does the skill cover?
-   - What specific use cases should it handle?
-   - Does it need executable scripts or just instructions?
-   - Any reference materials to include?
-
-2. **Draft the skill** - create:
-   - SKILL.md with concise instructions
-   - Additional reference files if content exceeds 500 lines
-   - Utility scripts if deterministic operations needed
-
-3. **Review with user** - present draft and ask:
-   - Does this cover your use cases?
-   - Anything missing or unclear?
-   - Should any section be more/less detailed?
-
-## Skill structure
+## Structure
 
 ```
 skill-name/
-├── SKILL.md           # Main instructions (required)
-├── REFERENCE.md       # Detailed docs (if needed)
-├── EXAMPLES.md        # Usage examples (if needed)
-└── scripts/           # Utility scripts (if needed)
-    └── helper.js
+├── SKILL.md           # required
+├── references/*.md    # detail SKILL.md points at but does not state
+└── scripts/           # deterministic operations
 ```
 
-## SKILL.md template
+Frontmatter carries `name` and `description`, nothing else. Body opens with the
+rules, not a restatement of the description.
 
-```md
----
-name: skill-name
-description: Brief description of capability. Use when [specific triggers].
----
+## Description
 
-# Skill Name
+The description is the only thing an agent sees when deciding whether to load
+the skill, listed beside every other installed skill. It must answer two
+questions: what capability this gives, and what triggers it (keywords,
+contexts, file types).
 
-## Quick start
+Max 1024 chars, third person. First sentence what it does, second "Use when
+[specific triggers]".
 
-[Minimal working example]
+Good: `Extract text and tables from PDF files, fill forms, merge documents. Use
+when working with PDF files or when user mentions PDFs, forms, or document
+extraction.`
 
-## Workflows
+`Helps with documents.` gives the agent no way to pick this over any other
+document skill.
 
-[Step-by-step processes with checklists for complex tasks]
+## What earns a line
 
-## Advanced features
+Every section is a rule the agent could not derive. Cut on sight: sections
+restating the description, "when to use" blocks, checklists restating the body,
+output templates longer than the rule they serve, worked examples repeating a
+stated rule, provenance prose, and anything a task brief already carries.
 
-[Link to separate files: See [REFERENCE.md](REFERENCE.md)]
-```
+A rule stated in two skills has one home. Point at it from the other.
 
-## Description requirements
+## Scripts
 
-Description = **the only thing your agent sees** when deciding which skill to load. Surfaced in the system prompt alongside every other installed skill. Agent reads these descriptions, picks the relevant skill based on the user's request.
+Add one when the operation is deterministic (validation, formatting), when the
+same code would otherwise be generated repeatedly, or when errors need explicit
+handling. Scripts save tokens and beat generated code on reliability.
 
-**Goal**: Give your agent just enough info to know:
+## Splitting
 
-1. What capability this skill provides
-2. When/why to trigger it (specific keywords, contexts, file types)
-
-**Format**:
-
-- Max 1024 chars
-- Write in third person
-- First sentence: what it does
-- Second sentence: "Use when [specific triggers]"
-
-**Good example**:
-
-```
-Extract text and tables from PDF files, fill forms, merge documents. Use when working with PDF files or when user mentions PDFs, forms, or document extraction.
-```
-
-**Bad example**:
-
-```
-Helps with documents.
-```
-
-Bad example gives your agent no way to distinguish this from other document skills.
-
-## When to add scripts
-
-Add utility scripts when:
-
-- Operation is deterministic (validation, formatting)
-- Same code would be generated repeatedly
-- Errors need explicit handling
-
-Scripts save tokens and improve reliability vs generated code.
-
-## When to split files
-
-Split into separate files when:
-
-- SKILL.md exceeds 500 lines
-- Content has distinct domains (finance vs sales schemas)
-- Advanced features are rarely needed
-
-Keep SKILL.md under 500 lines. Move the overflow into reference files one level
-deep, never deeper. No time-sensitive info in any of them.
+Keep SKILL.md under 500 lines. Overflow goes into `references/`, one level deep,
+never deeper. A reference file survives only when SKILL.md points at it for a
+rule SKILL.md does not itself state. No time-sensitive information anywhere.

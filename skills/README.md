@@ -38,7 +38,6 @@ User-level skills, harness-neutral, in the Agent Skills format. Source of truth 
 | [architect-designer](architect-designer/SKILL.md) | Settle system structure and author the code skeleton before any logic is written. |
 | [art-director](art-director/SKILL.md) | Sub-orchestrator for one image generation or editing workstream. |
 | [big-pickle-simple-tasks](big-pickle-simple-tasks/SKILL.md) | Turn paralyzing scope into small sequenced action items. Read-only. |
-| [implementation-specialist](implementation-specialist/SKILL.md) | Execute a scoped implementation task with zero architectural drift. |
 | [requirements-clarifier](requirements-clarifier/SKILL.md) | Turn a vague task into user stories, acceptance criteria, and edge cases. Read-only. |
 | [skeptic-gate](skeptic-gate/SKILL.md) | Independent pre-ship challenge check on a plan or diff. Read-only. |
 | [tech-lead](tech-lead/SKILL.md) | Sub-orchestrator for one software workstream, delegating every piece of work. |

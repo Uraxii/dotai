@@ -51,7 +51,6 @@ Examples:
 
 ```text
 - tech-lead / orchestrator
-- implementation-specialist / implementer
 - test-automation-engineer / tester
 - architect-designer / architect
 ```
@@ -69,15 +68,4 @@ Do not forge another profile's signature.
 
 Architect/designer coordinates, verifies, documents decisions, and delegates implementation. Direct conflict edits are acceptable only as integration stewardship when preserving already-reviewed worker slices and immediately backed by gates; otherwise route implementation to the implementation specialist.
 
-## Project customization checklist
-
-Before using this in a new repo, edit this file to match that repo:
-
-- feature branch naming
-- worker PR base branch policy
-- draft vs ready PR rules
-- review-bot behavior
-- required checks/tests/imports
-- GitHub Project statuses
-- issue closure/linking standards
-- required comment signatures
+Before using this skill in a new repo, edit it to match that repo's branch naming, PR base/draft policy, review-bot behavior, required gates, Project statuses, closure/linking standards, and comment signatures.

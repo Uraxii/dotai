@@ -14,23 +14,19 @@
 - Zod/valibot at API boundaries. No trust of external shape.
 - `satisfies` over `as` when asserting type compatibility.
 - Nullish coalescing (`??`) over logical OR (`||`) for defaults.
-- Brand primitives so they can't be swapped: `type UserId = string & {
-  readonly __brand: "UserId" }`. Validate once at creation.
-- Construct the shape so the illegal value can't exist: `[T, ...T[]]` for
-  non-empty, `[T, T][]` for even length, `start` + `duration` for a range. Not
-  a runtime guard, not a wish for refinement types.
-- Simplest total type: keep `T[]` while every operation on it stays total.
-  Strengthen to `NonEmpty<T>` only where the loose type force `!`, a cast, or a
-  "should never happen" throw.
+- Brand primitives: `type UserId = string & { readonly __brand: "UserId" }`.
+- Construct so the illegal value can't exist: `[T, ...T[]]` non-empty, `[T,
+  T][]` even length, `start` + `duration` for a range.
+- Keep `T[]` while every operation stays total. Strengthen to `NonEmpty<T>`
+  only where the loose type force `!`, a cast, or a never-happens throw.
 - Narrowing hierarchy, best first: discriminant switch > `in` > `typeof` /
   `instanceof` > user-defined type guard > `as`.
-- Type guard must verify the claim it makes. Lying guard worse than `as`: bug
-  hide behind a name saying it's safe. Name `isX` / `hasX`.
+- Type guard must verify the claim it makes; lying guard worse than `as`.
+  Name `isX` / `hasX`.
 - Exhaustiveness: inline `const _exhaustive: never = x;` in default arms, so a
   new variant break the build.
-- Derive types from what already exist: `Pick` / `Omit` / `Parameters` /
-  `ReturnType` / `Awaited` / `typeof` before declaring a new interface.
+- Derive before declaring: `Pick` / `Omit` / `Parameters` / `ReturnType` /
+  `Awaited` / `typeof`.
 - Object args over positional, so argument order self-document. Skip on hot
   paths (per-frame render, tokenizers, parsers).
-- No `console.log` in shipped code. Structured logger with enough context to
-  debug from an id.
+- No `console.log` in shipped code. Structured logger, debuggable from an id.

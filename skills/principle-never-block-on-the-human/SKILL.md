@@ -5,12 +5,10 @@ description: Use when about to stop and ask the human for permission or a prefer
 
 # Never block on human
 
-Human supervise async. Agent stay unblocked: make reasonable decision,
-proceed, let human course-correct after. Code cheap. Waiting expensive.
-
-**Why:** every permission pause stall pipeline, make human bottleneck. Code
-change reversible and reviewable, so wrong decision usually cost less than
-blocking.
+Human supervise async. Agent stay unblocked: make reasonable decision, proceed,
+let human course-correct after. Every permission pause stall pipeline and make
+human the bottleneck. Code change reversible and reviewable, so wrong decision
+usually cost less than blocking.
 
 ## Pattern
 
@@ -20,22 +18,17 @@ blocking.
 - **Self-heal.** Spot problem -> log it, fix next round.
 - **Design for review-after-fact.** Human read plan, diff, artifact on own
   clock.
-- **Code cheap, attention scarce.** Wrong impl cost minutes. Blocked agent
-  cost human attention.
+- **Code cheap, attention scarce.** Wrong impl cost minutes. Blocked agent cost
+  human attention.
 
 ## Boundaries
 
-Confirm first, irreversible:
+Confirm first, irreversible: force-push, history rewrite, branch or tag delete,
+drop or migrate production data, destroy infra, delete volume or bucket, send
+external message, publish package, deploy, overwrite an unversioned master
+asset.
 
-- force-push, history rewrite, branch or tag delete
-- drop or migrate production data, destroy infra, delete volume/bucket
-- send external message, publish package, deploy
-- overwrite unversioned master asset or art source file
-
-Proceed, reversible:
-
-- write or edit code, scenes, shaders, tests, notes
-- rerun render or export into fresh output path
-- split, reorder, or rescope tasks
+Proceed, reversible: write or edit code, scenes, shaders, tests, notes; rerun
+render or export into fresh output path; split, reorder, rescope tasks.
 
 Product direction come from human. Execution never block.

@@ -5,13 +5,13 @@ description: Use during a planned rewrite, port, or migration with explicit phas
 
 # Outcome-oriented execution
 
-Optimise for intended, verifiable END state. Not for smooth intermediate
+Optimise for the intended, verifiable END state. Not for smooth intermediate
 states.
 
 **Why:** keeping every step fully stable breed temporary compatibility code:
 shim, adapter, dual code path, flag nobody ever remove. Temporary become
-long-lived debt. Converge on target architecture, prove correctness at
-explicit verification boundary.
+long-lived debt. Converge on target architecture, prove correctness at explicit
+verification boundary.
 
 ## Core rule
 
@@ -29,14 +29,5 @@ explicit verification boundary.
 - Require full static and runtime verification at plan completion.
 - "Reversible" must be real: branch, backup, exported original asset, infra
   state snapshot. No safety net -> not this principle, go incremental.
-
-## Shapes
-
-- Godot: change resource format once, migrate every `.tres` in one pass.
-  Do not keep a loader that reads both forever.
-- Art pipeline: re-render whole set on the new graph, compare to baseline.
-  Do not maintain old and new graph side by side.
-- Infra: cut over to the new module and delete the old. Not both stacks live
+- Cut over once and delete the old path in the same phase. Not both stacks live
   "just in case".
-- API: migrate all callers, then delete the legacy entry point in the same
-  phase.

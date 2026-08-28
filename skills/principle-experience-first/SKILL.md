@@ -16,18 +16,9 @@ Implementation convenience conflict with consumer delight -> choose delight.
   default value.
 - **Tighten core loop.** Feature serve the central workflow or get out of way.
 
-## Consumer is whoever consume the work
-
-- Game -> player. Frame timing, input feel, readability at speed.
-- Art pipeline -> artist. One command, sane defaults, visible progress, output
-  where expected.
-- Infra or CLI -> operator. Error message naming the fix, idempotent rerun, no
-  silent partial state.
-- Library or API -> colleague who import it. Small surface, obvious call,
-  honest types.
-- Codebase -> next maintainer. Their experience count the same.
-
-Explain impact from their seat, not from the implementation's.
+Consumer is whoever consume the work: player, artist, operator, the colleague
+who import the library, the next maintainer of the code. Weigh their experience
+the same way. Explain impact from their seat, not from the implementation's.
 
 Foundations serve the experience, not the reverse. `principle-foundational-thinking`
 govern the SEQUENCE of work; this one govern the TARGET.

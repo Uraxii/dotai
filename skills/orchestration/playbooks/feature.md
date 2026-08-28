@@ -25,15 +25,14 @@ Copy these steps into todolist verbatim before any task-specific todo.
 6. **Break into units each ending in a check.** Verify each before starting
    next. Never batch edits and verify once. Disjoint files parallelize; shared
    writes serialize. One subagent best -> name why.
-7. **Write.** Subagent loads `ponytail`, mandatory on any step writing code, and
-   `code-quality` plus its reference for the language in play, both before
-   first line. Add `principle-laziness-protocol` when the diff starts growing layers.
+7. **Write.** Subagent loads `ponytail` and `code-quality` plus its reference
+   for the language in play, both before the first line. Add
+   `principle-laziness-protocol` when the diff starts growing layers.
    Review the diff yourself; never pass through the delegate's summary.
 8. **Prove on real artifact.** Load `principle-prove-it-works`. Run feature the way a
    user hits it. "It compiles" is not evidence behaviour exists.
-9. **GATE.** Subagent loads `skeptic-gate`, serial: one gate, wait, fix, one
-   fresh gate. Record verdict, head SHA, resolution as a `show-me-your-work` verdict row. Non-PASS
-   halts delivery. Then `yeet`.
+9. **GATE.** Subagent loads `skeptic-gate`; that skill owns the gate rules.
+   Then `yeet`.
 
 **Reply:** data shape chosen and why, acceptance criteria and which are met,
 units and their checks, real-artifact evidence, gate verdict with SHA, open
