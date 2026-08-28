@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# cbm <tool> [json]  -> codebase-memory-mcp cli, init log line dropped, jq-pretty
+set -o pipefail
+codebase-memory-mcp cli "$1" "${2:-{\}}" 2> >(grep -v 'msg=mem.init' >&2) | jq .
