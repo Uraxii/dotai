@@ -12,10 +12,10 @@ Copy these steps into todolist verbatim before any task-specific todo.
 
 1. **Green baseline.** Run suite before touching anything; record command and
    pass count. Preserved means proven preserved. No coverage over target ->
-   characterization test first, worker loads `tdd` or
+   characterization test first, subagent loads `tdd` or
    `test-automation-engineer`, pinning current behaviour, bugs included. Type
    check and lint are not a pin.
-2. **Name the smell.** Worker loads `code-quality`, cites the Fowler smell plus
+2. **Name the smell.** Subagent loads `code-quality`, cites the Fowler smell plus
    naming rules for any rename. "Felt messy" is not a reason -> stop, report
    NO-OP.
 3. **Delete before you construct.** Load `principle-laziness-protocol`. Dead code, unused
@@ -24,7 +24,7 @@ Copy these steps into todolist verbatim before any task-specific todo.
 4. **Name the target shape.** `codebase-design` for seams. State what module
    layout, types, and call graph should be if built today. Reshape must delete
    branches or invalid states, not add indirection.
-5. **One transform, one green check.** Worker loads `ponytail`, mandatory on
+5. **One transform, one green check.** Subagent loads `ponytail`, mandatory on
    any step writing code. Apply single transform, run suite, commit. Never
    batch several then verify once. Red -> revert that transform, do not patch
    forward.
@@ -38,7 +38,7 @@ Copy these steps into todolist verbatim before any task-specific todo.
    output, replayed baseline, or smoke run on real surface. Not "it compiles",
    not a delegate's "looks good". Confirm reader load dropped: fewer layers,
    less hidden state. No drop anywhere -> revert.
-9. **GATE.** Worker loads `skeptic-gate`, serial: one gate, wait, fix, one
+9. **GATE.** Subagent loads `skeptic-gate`, serial: one gate, wait, fix, one
    fresh gate. Record verdict, head SHA, resolution in verdict ledger. Then
    `yeet`.
 

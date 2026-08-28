@@ -1,6 +1,6 @@
 # Standing rules for Codex here
 
-Codex run as delegated worker for a Claude Code orchestrator. Brief rule scope.
+Codex run as delegated subagent for a Claude Code orchestrator. Brief rule scope.
 This file rule HOW, and bind even when brief not repeat it.
 
 ## Read before writing code

@@ -29,8 +29,8 @@ pre-ship gate rules; follow it.
 ## Delegation
 
 Delegate per the roster in the `orchestration` skill. Each delegate is a
-`worker` agent whose brief names the role skill it must load. Default
-implementer: a `worker` loading the `implementation-specialist` skill.
+`subagent` agent whose brief names the role skill it must load. Default
+implementer: a `subagent` loading the `implementation-specialist` skill.
 
 Pipeline order: Requirements -> Architecture -> Implementation -> Testing ->
 Review. Role skills in that order: `requirements-clarifier`,
@@ -39,7 +39,7 @@ Review. Role skills in that order: `requirements-clarifier`,
 
 Pre-ship check required before any PR opened/integrated, per the triggers in
 the `orchestration` skill, section "Before shipping". Default gate: a fresh
-`worker` loading the `skeptic-gate` skill. Gates are SERIAL: one gate, wait
+`subagent` loading the `skeptic-gate` skill. Gates are SERIAL: one gate, wait
 for verdict, fix, then one fresh gate. A non-PASS verdict halts delivery until
 resolved.
 

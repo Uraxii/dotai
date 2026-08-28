@@ -12,9 +12,9 @@ Two agents exist. Nothing else is a role.
 | Agent | What it is |
 |---|---|
 | `zakia` | Main thread persona. Triage, sequencing, cross-workstream synthesis, every question reaching user. Only place `AskUserQuestion` works. |
-| `worker` | Generic delegate. No specialism of own. Brief says what, skill says how. |
+| `subagent` | Generic delegate. No specialism of own. Brief says what, skill says how. |
 
-Old named specialists are now SKILLS. Spawn `worker`, name skill in brief.
+Old named specialists are now SKILLS. Spawn `subagent`, name skill in brief.
 
 Built-in agent types still spawnable by name:
 
@@ -25,7 +25,7 @@ Built-in agent types still spawnable by name:
 | `general-purpose` | Nothing above fits. |
 | `impeccable-*` fleet | NEVER spawn direct. `impeccable` skill spawns own fleet inside own workflow. Invoke skill, let it delegate. |
 
-## Routing: situation -> skill worker loads
+## Routing: situation -> skill subagent loads
 
 Role skills (was an agent, now a skill):
 
@@ -145,7 +145,7 @@ verdict AND its resolution as bd note on tracking issue via `agent-workbench`:
 
 ## Before shipping
 
-Gate required before any PR opened or integrated. Spawn `worker` loading
+Gate required before any PR opened or integrated. Spawn `subagent` loading
 `skeptic-gate`. Any ONE trigger is enough:
 
 - Architecture change.

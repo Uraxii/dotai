@@ -8,7 +8,7 @@ unavailable; re-running it overwrites the whole table.
 Allowed values: `sonnet`, `opus`, `haiku`, `fable`, where `fable`, `sol`,
 and `luna` are NEVER assigned without explicit user permission.
 
-| Role skill worker loads | Model |
+| Role skill subagent loads | Model |
 |---|---|
 | architect-designer | opus |
 | skeptic-gate | opus |

@@ -1,5 +1,5 @@
 ---
-name: worker
+name: subagent
 description: Generic delegate for ONE scoped unit of work. Carries no role of its own: the brief says what to do, the skills it names say how. Spawn for implementation, tests, requirements analysis, design skeletons, task decomposition, review gates, or a whole sub-orchestrated workstream. Model pinned per call.
 ---
 
