@@ -32,9 +32,9 @@ Copy these steps into todolist verbatim before any task-specific todo.
 5. **Blocking phases before fan-out.** Scaffold, schema, shared contracts land
    first, in one unit, verified, before parallel work starts. Shared writes
    serialize; disjoint paths parallelize.
-6. **Drain, do not poll.** Rules below, section "Drain and liveness".
-7. **Gate at phase boundaries.** Rules below, sections "Before shipping" and
-   "Verdict ledger". Non-PASS halts that phase.
+6. **Drain, do not poll.** Rules below, section "Drain".
+7. **Gate at phase boundaries.** Rules below, section "Verification".
+   Non-PASS halts that phase.
 8. **Rotate, do not chain.** Subagent bloated or scope changed -> `rotate-agent`
    or fresh spawn with consolidated scope. Resume-chaining drops directives.
    Your own context filling -> `handoff` naming what is done, where it lives,
@@ -46,47 +46,20 @@ Copy these steps into todolist verbatim before any task-specific todo.
 with resolutions, blocked units with failure mode, what is still in the queue,
 decisions taken and open.
 
-## Before shipping
+## Verification
 
-Gate required before any PR opened or integrated, in this program and in every
-playbook that reaches for a gate. Spawn `subagent` loading `skeptic-gate`. Any
-ONE trigger is enough:
+Gate before any PR opened or integrated: spawn `subagent` loading
+`skeptic-gate` (its description carries the triggers). Serial: one gate, wait,
+fix, one FRESH gate. Non-PASS halts delivery.
 
-- Architecture change.
-- Security or trust-boundary change.
-- Netcode, shared state, or replication change.
-- Migration.
-- Public API or schema change.
-- Large cross-cutting change.
-- Verification weak or missing.
-- Tests passed but result looks suspicious.
+Verdict pinned to head SHA, recorded as a `show-me-your-work` row:
+`verdict=<X> sha=<head> ran=<cmd> resolution=<fix|accepted|open>`. New SHA voids
+it. CI green is input to a verdict, not a verdict. Ship only when every unit
+has PASS for its current SHA.
 
-Serial rule: spawn ONE gate. Wait for verdict. Fix. Spawn ONE FRESH gate.
-Never batch, never parallel. Gate calls are a dependency chain, not
-independent tool calls. Non-PASS verdict halts delivery until resolved.
+## Drain
 
-## Verdict ledger
-
-Verdict pinned to commit SHA, never to memory or transcript. Record every gate
-verdict AND its resolution as bd note on tracking issue via `agent-workbench`:
-`verdict=<X> sha=<head> by=skeptic-gate ran=<cmd> resolution=<fix|accepted|open>`.
-
-- New head SHA voids verdict. Re-gate after any commit, rebase, amend.
-- CI green is input to verdict, not verdict.
-- BLOCK gets fix task, not re-gate of same SHA.
-- Before shipping: every change on branch has PASS for current SHA.
-- `show-me-your-work` trail active -> gate verdict also goes in as a row on
-  that trail, not just the bd note.
-
-## Drain and liveness
-
-- Never resume child just to check on it. Resume restarts an idle agent.
-  Probe read-only instead.
-- Account for every child spawned. Completion is queue event, not interrupt;
-  note it, keep working, drain queue before declaring done. Unaccounted child
-  is unfinished work.
-- Retry by failure mode, never blindly. Cap-hit or OOM -> respawn smaller
-  scope. Network -> retry as is. Tool error -> different model. Unknown ->
-  once.
-- Bound own retries: two, then mark unit blocked and replan around it.
-  Cannot replan -> bubble up BLOCKED naming exactly what stuck.
+Account for every child; drain the queue before declaring done. Never resume a
+child to check on it, probe read-only. Retry by failure mode (cap or OOM ->
+smaller scope, network -> as is, tool error -> other model), two tries, then
+BLOCKED naming exactly what stuck.

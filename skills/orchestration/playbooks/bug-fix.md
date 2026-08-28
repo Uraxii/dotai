@@ -29,7 +29,7 @@ Copy these steps into todolist verbatim before any task-specific todo.
    green AND original symptom gone. Verification failed -> suspect observation
    method before system.
 7. **GATE.** Subagent loads `skeptic-gate`, serial: one gate, wait, fix, one
-   fresh gate. Record verdict, head SHA, and resolution in the verdict ledger (`orchestrate.md`).
+   fresh gate. Record verdict, head SHA, and resolution as a `show-me-your-work` verdict row.
    Non-PASS halts delivery.
 8. **Ship.** `yeet`. Stage commits so failing repro lands before fix; diff
    tells story.

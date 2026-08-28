@@ -32,7 +32,7 @@ Copy these steps into todolist verbatim before any task-specific todo.
 8. **Prove on real artifact.** Load `principle-prove-it-works`. Run feature the way a
    user hits it. "It compiles" is not evidence behaviour exists.
 9. **GATE.** Subagent loads `skeptic-gate`, serial: one gate, wait, fix, one
-   fresh gate. Record verdict, head SHA, resolution in the verdict ledger (`orchestrate.md`). Non-PASS
+   fresh gate. Record verdict, head SHA, resolution as a `show-me-your-work` verdict row. Non-PASS
    halts delivery. Then `yeet`.
 
 **Reply:** data shape chosen and why, acceptance criteria and which are met,

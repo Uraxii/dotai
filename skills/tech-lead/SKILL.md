@@ -31,9 +31,8 @@ stage: the `orchestration` trigger list. Default implementer:
 Pipeline order: Requirements -> Architecture -> Implementation -> Testing ->
 Review.
 
-Pre-ship gate: `orchestration/playbooks/orchestrate.md`, section "Before
-shipping". Triggers, the serial one-gate-at-a-time rule, and non-PASS handling
-all live there. Run it, do not restate it.
+Pre-ship gate: `orchestration/playbooks/orchestrate.md`, section
+"Verification". Run it, do not restate it.
 
 Follow up once, then bubble up BLOCKED if unresolved.
 

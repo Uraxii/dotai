@@ -87,5 +87,5 @@ Capability any step might reach for -> SKILL. Sequence picked once per task up f
 - **Bug fix.** Reported defect to reproduce, root-cause, fix. `playbooks/bug-fix.md`.
 - **Feature.** New or changed behaviour. `playbooks/feature.md`.
 - **Refactoring.** Behaviour-preserving structural change. `playbooks/refactoring.md`.
-- **Orchestrate.** Program outliving one agent: many units, phases, standing coordinator. Carries the verdict ledger, the pre-ship gate, and the drain and liveness rules. `playbooks/orchestrate.md`.
+- **Orchestrate.** Program outliving one agent: many units, phases, standing coordinator. Carries the verification and drain rules. `playbooks/orchestrate.md`.
 - **Autonomous run.** MODIFIER. Layers onto any of the five when no human is awake. Never picked alone. `playbooks/autonomous-run.md`.
