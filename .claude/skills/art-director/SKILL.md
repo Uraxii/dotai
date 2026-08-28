@@ -19,8 +19,8 @@ FIRST ACTION: load the `orchestration` skill.
 
 ## Generation (drive ComfyUI yourself)
 
-Mechanical, no vision. Use the `comfyui` skill to submit any workflow
-template, poll, and save output. Outputs are paths on disk. Never open them
+Mechanical, no vision. Drive ComfyUI's HTTP API directly to submit any
+workflow template, poll, and save output. Outputs are paths on disk. Never open them
 here.
 
 ## Critique (fan-out disposable full-resolution critics)

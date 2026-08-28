@@ -78,9 +78,6 @@ User-level skills, harness-neutral. Source of truth for every harness; deployed 
 | [godot-headless-cli](godot-headless-cli/SKILL.md) | Drive Godot 4.x from the shell without opening the editor. |
 | [godot-playtest](godot-playtest/SKILL.md) | Drive a running Godot game through godot-mcp to verify a change in-game. |
 | [blender-godot-pipeline](blender-godot-pipeline/SKILL.md) | Retarget external animation onto a Godot character via headless Blender. |
-| [demo-video-capture](demo-video-capture/SKILL.md) | Capture the benchmark clip set for a nikki-net demo build. |
-| [demo-video-judge](demo-video-judge/SKILL.md) | Judge a captured clip set against the demo GDD gates and file bugs. |
-| [demo-friction-log](demo-friction-log/SKILL.md) | Record a framework friction hit from demo development into the GDD. |
 | [clip-to-mobile](clip-to-mobile/SKILL.md) | Convert a gameplay clip into a small mobile-viewable video. |
 
 ### Tools and integrations
@@ -88,7 +85,6 @@ User-level skills, harness-neutral. Source of truth for every harness; deployed 
 | Skill | Description |
 |-------|-------------|
 | [agent-workbench](agent-workbench/SKILL.md) | One CLI over the knowledgebase vault, bd board hub, and artifact review service. |
-| [comfyui](comfyui/SKILL.md) | Drive a local ComfyUI instance headlessly over its HTTP API. |
 | [proton-pass-cli](proton-pass-cli/SKILL.md) | Retrieve credentials from Proton Pass via pass-cli. |
 | [azure-devops](azure-devops/SKILL.md) | Read-only queries against Azure DevOps repos, pipelines, and work items. |
 | [cloudflare](cloudflare/SKILL.md) | Query Cloudflare zones, DNS exposure, rulesets, WAF posture, and Workers routes. |

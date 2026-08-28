@@ -1,6 +1,6 @@
 ---
 name: godot-playtest
-description: Drive a running Godot game through godot-mcp (freeze clock, step time, inject input, read live state JSON) to verify a change actually works, then fix what breaks. Inner dev loop, per change, minutes. Use when the user says "playtest this", "verify in-game", "does this work when played", or after any gameplay-affecting change in a Godot project. Not for full demo evaluation (use demo-video-capture + demo-video-judge).
+description: Drive a running Godot game through godot-mcp (freeze clock, step time, inject input, read live state JSON) to verify a change actually works, then fix what breaks. Inner dev loop, per change, minutes. Use when the user says "playtest this", "verify in-game", "does this work when played", or after any gameplay-affecting change in a Godot project. Not for full demo evaluation.
 ---
 
 # godot-playtest
@@ -44,5 +44,5 @@ questions (vision tokens are the expensive path).
 ## Multiplayer claims
 
 One editor instance = one MCP client. For host+client claims, run the
-second instance headless from CLI and observe it via logs/state dumps,
-or use demo-video-capture's paired capture. Never fake the second peer.
+second instance headless from CLI and observe it via logs/state dumps.
+Never fake the second peer.
