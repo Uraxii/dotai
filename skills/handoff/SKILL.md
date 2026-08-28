@@ -7,7 +7,7 @@ description: Compact the current conversation into a handoff document for anothe
 
 A handoff lets a fresh agent continue the work without replaying the conversation. Recall beats brevity: capture everything the successor needs, then trim.
 
-Write it to `.handoffs/` at the project root, gitignored (add the entry if missing). Never commit it. Never rewrite project documents while creating one. This skill owns the ceremony: naming, location, chain numbering. Other skills that need a handoff invoke this one, never their own variant.
+Write it to `.handoffs/` at the project root, gitignored (add the entry if missing). Never commit it. Never rewrite project documents while creating one.
 
 In a long session, append decisions, constraints, and verbatim user directives to the handoff file as they are established. A handoff reconstructed from an already-degraded context is the main cause of lost detail.
 
