@@ -16,7 +16,7 @@ Copy these steps into todolist verbatim before any task-specific todo.
    stays with you.
 4. **Evidence over memory.** Every claim carries `path:line` or quoted real
    output you actually ran. Recall is hypothesis, not finding.
-5. **Web sources.** Worker loads `capture-source`. Cite stored source, never
+5. **Web sources.** Subagent loads `capture-source`. Cite stored source, never
    bare link.
 6. **Mark the seams.** Split answer into verified and inferred. Label
    inferences as inferences. Could not determine X -> say exactly that.

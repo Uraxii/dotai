@@ -14,21 +14,21 @@ Copy these steps into todolist verbatim before any task-specific todo.
    cannot verify fix. Capture exact command, input, observed output. Godot
    runtime symptom -> `godot-playtest`. No repro after real attempt -> report
    BLOCKED with what you tried. Never fix blind.
-2. **Root-cause.** Worker loads `diagnose`. Binary-search hypotheses, get
+2. **Root-cause.** Subagent loads `diagnose`. Binary-search hypotheses, get
    runtime evidence each pass, eliminate. Null guard silencing a crash is
    symptom fix, not fix. Confirm mechanism with evidence BEFORE designing fix.
 3. **Pattern, not instance.** Grep same shape elsewhere. Fix every instance or
    name the ones you leave and why.
-4. **Failing test first.** Worker loads `tdd`. Test fails for stated reason
+4. **Failing test first.** Subagent loads `tdd`. Test fails for stated reason
    before fix exists. No cheap test path -> state why, name runtime evidence
    replacing it.
-5. **Fix.** Worker loads `ponytail` and `code-quality` plus its reference for
+5. **Fix.** Subagent loads `ponytail` and `code-quality` plus its reference for
    the language in play. `ponytail` is mandatory on any step writing code.
    Smallest change removing the cause. No adjacent refactoring.
 6. **Prove it.** Re-run step 1 repro, not proxy. Load `principle-prove-it-works`. Test
    green AND original symptom gone. Verification failed -> suspect observation
    method before system.
-7. **GATE.** Worker loads `skeptic-gate`, serial: one gate, wait, fix, one
+7. **GATE.** Subagent loads `skeptic-gate`, serial: one gate, wait, fix, one
    fresh gate. Record verdict, head SHA, and resolution in verdict ledger.
    Non-PASS halts delivery.
 8. **Ship.** `yeet`. Stage commits so failing repro lands before fix; diff
