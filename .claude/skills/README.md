@@ -47,16 +47,16 @@ Tree maintained as the Claude Code source of truth. Hermes-equivalent skills liv
 
 | Skill | Description |
 |-------|-------------|
-| [laziness-protocol](laziness-protocol/SKILL.md) | Deeper subtraction pass when a diff keeps growing layers, wrappers, and options. |
-| [never-block-on-the-human](never-block-on-the-human/SKILL.md) | Proceed on reversible work instead of stopping to ask permission. |
-| [prove-it-works](prove-it-works/SKILL.md) | Observe the real artifact before declaring anything done. |
-| [guard-the-context-window](guard-the-context-window/SKILL.md) | Route bulk output to subagents and keep only summaries in the main thread. |
-| [encode-lessons-in-structure](encode-lessons-in-structure/SKILL.md) | Turn a rule that keeps recurring into a mechanism, then delete the prose. |
-| [foundational-thinking](foundational-thinking/SKILL.md) | Pick the core data shape and the order of work before writing logic. |
-| [outcome-oriented-execution](outcome-oriented-execution/SKILL.md) | Converge on the target architecture instead of shimming every intermediate commit green. |
-| [experience-first](experience-first/SKILL.md) | Spend effort where the consumer feels it, and cut surface area to keep the core tight. |
-| [exhaust-the-design-space](exhaust-the-design-space/SKILL.md) | Compare two or three competing prototypes side by side before committing. |
-| [redesign-from-first-principles](redesign-from-first-principles/SKILL.md) | Rebuild the design as if the new requirement had been known on day one. |
+| [principle-laziness-protocol](principle-laziness-protocol/SKILL.md) | Deeper subtraction pass when a diff keeps growing layers, wrappers, and options. |
+| [principle-never-block-on-the-human](principle-never-block-on-the-human/SKILL.md) | Proceed on reversible work instead of stopping to ask permission. |
+| [principle-prove-it-works](principle-prove-it-works/SKILL.md) | Observe the real artifact before declaring anything done. |
+| [principle-guard-the-context-window](principle-guard-the-context-window/SKILL.md) | Route bulk output to subagents and keep only summaries in the main thread. |
+| [principle-encode-lessons-in-structure](principle-encode-lessons-in-structure/SKILL.md) | Turn a rule that keeps recurring into a mechanism, then delete the prose. |
+| [principle-foundational-thinking](principle-foundational-thinking/SKILL.md) | Pick the core data shape and the order of work before writing logic. |
+| [principle-outcome-oriented-execution](principle-outcome-oriented-execution/SKILL.md) | Converge on the target architecture instead of shimming every intermediate commit green. |
+| [principle-experience-first](principle-experience-first/SKILL.md) | Spend effort where the consumer feels it, and cut surface area to keep the core tight. |
+| [principle-exhaust-the-design-space](principle-exhaust-the-design-space/SKILL.md) | Compare two or three competing prototypes side by side before committing. |
+| [principle-redesign-from-first-principles](principle-redesign-from-first-principles/SKILL.md) | Rebuild the design as if the new requirement had been known on day one. |
 
 ### Prose and session management
 

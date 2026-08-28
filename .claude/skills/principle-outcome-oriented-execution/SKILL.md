@@ -1,5 +1,5 @@
 ---
-name: outcome-oriented-execution
+name: principle-outcome-oriented-execution
 description: Use during a planned rewrite, port, or migration with explicit phases, when tempted to add shims, adapters, dual code paths, or flags purely to keep every intermediate commit green. Converges on the target architecture and proves correctness at phase boundaries instead of at every step.
 ---
 

@@ -1,5 +1,5 @@
 ---
-name: foundational-thinking
+name: principle-foundational-thinking
 description: Use at the very start of a new area, before any logic exists, to fix the core data structure, decide which piece gets built first, and name what two concurrent actors share. Boundary, module interfaces and seams belong to the `codebase-design` skill, domain vocabulary and decision records to `domain-modeling`.
 ---
 

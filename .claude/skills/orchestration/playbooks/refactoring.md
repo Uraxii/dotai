@@ -5,7 +5,7 @@ dedupe, move, restructure. Structure changes, behaviour does not.
 
 Refactor smuggling a behaviour change loses its safety net. Cleanup revealing a
 missing feature or real bug -> split out, ship structural change first. New
-requirement landing on the old shape -> `redesign-from-first-principles`, then
+requirement landing on the old shape -> `principle-redesign-from-first-principles`, then
 route to Feature.
 
 Copy these steps into todolist verbatim before any task-specific todo.
@@ -18,7 +18,7 @@ Copy these steps into todolist verbatim before any task-specific todo.
 2. **Name the smell.** Worker loads `code-quality`, cites the Fowler smell plus
    naming rules for any rename. "Felt messy" is not a reason -> stop, report
    NO-OP.
-3. **Delete before you construct.** Load `laziness-protocol`. Dead code, unused
+3. **Delete before you construct.** Load `principle-laziness-protocol`. Dead code, unused
    params, speculative abstraction, reinvented stdlib. Subtract, re-run green,
    then reshape the simpler base. Half the planned refactor often vanishes here.
 4. **Name the target shape.** `codebase-design` for seams. State what module
@@ -34,7 +34,7 @@ Copy these steps into todolist verbatim before any task-specific todo.
    rename against real files; strings and prose get missed.
 7. **No behaviour smuggled in.** Real bug spotted mid-refactor -> leave it, say
    so, file it as separate unit. Silent fix makes diff unreviewable.
-8. **Prove equivalence.** Load `prove-it-works`. Script diffing old vs new
+8. **Prove equivalence.** Load `principle-prove-it-works`. Script diffing old vs new
    output, replayed baseline, or smoke run on real surface. Not "it compiles",
    not a delegate's "looks good". Confirm reader load dropped: fewer layers,
    less hidden state. No drop anywhere -> revert.

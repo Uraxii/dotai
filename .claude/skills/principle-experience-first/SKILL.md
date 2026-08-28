@@ -1,5 +1,5 @@
 ---
-name: experience-first
+name: principle-experience-first
 description: Use when cutting a feature list or scope, when choosing between one more option and polishing what already exists, when picking a default or preset someone else must live with, when the thing is easier to write than to call or operate, or when the answer to a design question is turning into make it configurable. Picks the tight core loop and the consumer's experience over more surface area.
 ---
 
@@ -29,5 +29,5 @@ Implementation convenience conflict with consumer delight -> choose delight.
 
 Explain impact from their seat, not from the implementation's.
 
-Foundations serve the experience, not the reverse. `foundational-thinking`
+Foundations serve the experience, not the reverse. `principle-foundational-thinking`
 govern the SEQUENCE of work; this one govern the TARGET.

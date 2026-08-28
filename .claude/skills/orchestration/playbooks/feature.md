@@ -9,7 +9,7 @@ Copy these steps into todolist verbatim before any task-specific todo.
    worker loads `requirements-clarifier` first. Write criteria down, check them
    at end. Never build then ask what was wanted. Tracked work -> record in bd
    via `agent-workbench`.
-2. **Name the data shape first.** Load `foundational-thinking`. Before any
+2. **Name the data shape first.** Load `principle-foundational-thinking`. Before any
    logic: what is stored, what keys it, who owns it. `domain-modeling` for
    vocabulary. Data-shape change late is a rewrite, early it is a one-line diff.
 3. **Model state in types, not booleans.** Invalid states unconstructable. Two
@@ -18,7 +18,7 @@ Copy these steps into todolist verbatim before any task-specific todo.
 4. **Design shape before bodies.** `codebase-design` for seams, worker loads
    `architect-designer` for skeleton: types, signatures, contracts, stub
    bodies. Question you cannot answer on paper -> `prototype`, then bin it.
-   Design space genuinely open -> `exhaust-the-design-space`.
+   Design space genuinely open -> `principle-exhaust-the-design-space`.
    Skip stays as `architect skipped: <reason>`; never fold design silently
    into implementation.
 5. **Scaffold before feature.** Anything every later phase needs goes first, in
@@ -28,9 +28,9 @@ Copy these steps into todolist verbatim before any task-specific todo.
    writes serialize. One worker best -> name why.
 7. **Write.** Worker loads `ponytail`, mandatory on any step writing code, and
    `code-quality` plus its reference for the language in play, both before
-   first line. Add `laziness-protocol` when the diff starts growing layers.
+   first line. Add `principle-laziness-protocol` when the diff starts growing layers.
    Review the diff yourself; never pass through the delegate's summary.
-8. **Prove on real artifact.** Load `prove-it-works`. Run feature the way a
+8. **Prove on real artifact.** Load `principle-prove-it-works`. Run feature the way a
    user hits it. "It compiles" is not evidence behaviour exists.
 9. **GATE.** Worker loads `skeptic-gate`, serial: one gate, wait, fix, one
    fresh gate. Record verdict, head SHA, resolution in verdict ledger. Non-PASS

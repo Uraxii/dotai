@@ -1,5 +1,5 @@
 ---
-name: prove-it-works
+name: principle-prove-it-works
 description: Use right before declaring a task done or reporting success, and when checking work a delegate says it finished. Requires observing the real artifact (run the scene, render the image, hit the endpoint, read the diff) instead of trusting a green build, a file timestamp, or an agent's own summary.
 ---
 

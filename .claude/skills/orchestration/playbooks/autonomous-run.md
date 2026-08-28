@@ -15,7 +15,7 @@ Copy these steps into todolist verbatim, after the base playbook's steps.
 2. **Fix the stop list before unit one.** Irreversible actions still stop:
    force-push to shared branch, deploy, data deletion, anything sent to a
    person. Everything reversible proceeds without asking. Load
-   `never-block-on-the-human`.
+   `principle-never-block-on-the-human`.
 3. **Close each unit before opening next.** Run its check now, commit and push
    or advance the bd item immediately. Never batch state or verification to the
    end. Work existing only in this session's context was never done; an

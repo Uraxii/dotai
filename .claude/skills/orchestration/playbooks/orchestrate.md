@@ -43,7 +43,7 @@ Copy these steps into todolist verbatim before any task-specific todo.
    Your own context filling -> `handoff` naming what is done, where it lives,
    exact resume command.
 9. **Synthesize here.** Cross-workstream judgment happens on main thread, never
-   in another agent. Load `guard-the-context-window`: summaries in, bulk out.
+   in another agent. Load `principle-guard-the-context-window`: summaries in, bulk out.
 
 **Reply:** workstreams and their owners, units shipped with SHAs, gate verdicts
 with resolutions, blocked units with failure mode, what is still in the queue,

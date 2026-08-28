@@ -25,7 +25,7 @@ Copy these steps into todolist verbatim before any task-specific todo.
 5. **Fix.** Worker loads `ponytail` and `code-quality` plus its reference for
    the language in play. `ponytail` is mandatory on any step writing code.
    Smallest change removing the cause. No adjacent refactoring.
-6. **Prove it.** Re-run step 1 repro, not proxy. Load `prove-it-works`. Test
+6. **Prove it.** Re-run step 1 repro, not proxy. Load `principle-prove-it-works`. Test
    green AND original symptom gone. Verification failed -> suspect observation
    method before system.
 7. **GATE.** Worker loads `skeptic-gate`, serial: one gate, wait, fix, one

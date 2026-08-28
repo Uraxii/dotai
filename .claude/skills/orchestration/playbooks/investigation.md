@@ -12,7 +12,7 @@ Copy these steps into todolist verbatim before any task-specific todo.
    settle it. Cannot state that -> ask user before reading.
 3. **Fan out the reading.** Broad sweeps go to `Explore` agents, one question
    each, several parallel. They return conclusions and paths. Load
-   `guard-the-context-window`: file dumps stay out of main thread, synthesis
+   `principle-guard-the-context-window`: file dumps stay out of main thread, synthesis
    stays with you.
 4. **Evidence over memory.** Every claim carries `path:line` or quoted real
    output you actually ran. Recall is hypothesis, not finding.

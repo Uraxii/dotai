@@ -1,5 +1,5 @@
 ---
-name: redesign-from-first-principles
+name: principle-redesign-from-first-principles
 description: Use when a new requirement lands on a design that already exists and the cheap move is to bolt it on beside the current shape with a flag, an extra branch, or a second registry. Rebuilds the design as if the requirement had been known on day one, then delivers that in increments.
 ---
 
@@ -34,7 +34,7 @@ would have built knowing it on day one.
 ## Boundary
 
 Design exist and requirement is new -> this skill. No precedent at all and the
-shape itself unknown -> `exhaust-the-design-space` first, then come back here.
+shape itself unknown -> `principle-exhaust-the-design-space` first, then come back here.
 
 This is the method for preserving option value when integrating change into an
 existing design.

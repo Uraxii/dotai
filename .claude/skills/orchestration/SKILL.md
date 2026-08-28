@@ -46,16 +46,16 @@ Craft and behaviour skills:
 |---|---|
 | Any code written, changed, reviewed | `code-quality` |
 | Any step that WRITES code. Mandatory, no exception | `ponytail` |
-| About to call something done, or checking delegate's claim | `prove-it-works` |
-| Step about to dump bulk (logs, many files, images, big JSON) | `guard-the-context-window` |
-| Ponytail ran, diff STILL grows layers, or fix is mass deletion | `laziness-protocol` |
-| Tempted to stop and ask permission on reversible work | `never-block-on-the-human` |
-| Writing same instruction twice, or same bug class returning | `encode-lessons-in-structure` |
-| Picking core types, data shapes, what to build first | `foundational-thinking` |
-| Planned rewrite or migration with phases, tempted to add shims | `outcome-oriented-execution` |
-| Cutting a feature list, picking a default, or reaching for a config knob | `experience-first` |
-| Decision with no precedent, needs competing prototypes | `exhaust-the-design-space` |
-| New requirement landing on design that already exists | `redesign-from-first-principles` |
+| About to call something done, or checking delegate's claim | `principle-prove-it-works` |
+| Step about to dump bulk (logs, many files, images, big JSON) | `principle-guard-the-context-window` |
+| Ponytail ran, diff STILL grows layers, or fix is mass deletion | `principle-laziness-protocol` |
+| Tempted to stop and ask permission on reversible work | `principle-never-block-on-the-human` |
+| Writing same instruction twice, or same bug class returning | `principle-encode-lessons-in-structure` |
+| Picking core types, data shapes, what to build first | `principle-foundational-thinking` |
+| Planned rewrite or migration with phases, tempted to add shims | `principle-outcome-oriented-execution` |
+| Cutting a feature list, picking a default, or reaching for a config knob | `principle-experience-first` |
+| Decision with no precedent, needs competing prototypes | `principle-exhaust-the-design-space` |
+| New requirement landing on design that already exists | `principle-redesign-from-first-principles` |
 | Any prose surface, including your own reply | `unslop` |
 | Register for every agent's output and reasoning | `caveman` |
 | Hard bug, broken thing, perf regression | `diagnose` |

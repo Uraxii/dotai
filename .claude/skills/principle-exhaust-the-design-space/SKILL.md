@@ -1,5 +1,5 @@
 ---
-name: exhaust-the-design-space
+name: principle-exhaust-the-design-space
 description: Use when two or three plausible designs must be built and judged side by side before one is committed to, and no precedent in the codebase settles it, for instance a novel interaction, a mechanic that lives or dies on feel, a look-dev direction, or an architecture with several viable shapes. Requires competing candidates and an explicit comparison. One throwaway sketch answering a single design question is the `prototype` skill instead.
 ---
 
