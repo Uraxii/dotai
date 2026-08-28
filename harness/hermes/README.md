@@ -5,7 +5,6 @@ This subtree stores repo-versioned Hermes profile prompts, skills, skins, and ho
 ## Current stance
 
 - Pipeline port removed.
-- Profile prompts mirror `https://github.com/omerxx/dotfiles/tree/master/opencode/agent`.
 - Default `.hermes/SOUL.md` mirrors upstream `tech-lead.md`.
 - Reusable non-pipeline skills such as `caveman` remain.
 
@@ -14,7 +13,6 @@ This subtree stores repo-versioned Hermes profile prompts, skills, skins, and ho
 ```text
 .hermes/
 ├── SOUL.md                    # default prompt, mirrored from omerxx tech-lead
-├── profiles/*/SOUL.md         # omerxx agent prompts as Hermes profiles
 ├── skills/caveman/            # output-style skill
 └── skins/
 ```
