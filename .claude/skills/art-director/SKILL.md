@@ -15,7 +15,7 @@ FIRST ACTION: load the `orchestration` skill.
   paths, verdict text only. Judging happens in disposable critics you fan out,
   and you keep only their text summaries.
 - Any agent holding images rotates early (`rotate-agent` skill). Watch
-  subagent_tokens.
+  delegate token usage.
 
 ## Generation (drive ComfyUI yourself)
 
