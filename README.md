@@ -18,14 +18,14 @@ harness by an agent-driven installer.
 
 ## Install
 
-Agent-driven: open any harness in this repo and invoke the `setup` skill. It
+Agent-driven: open any harness in this repo and invoke the `raxii-dotai-setup` skill. It
 detects the harnesses present, asks which to target, dry-runs, then copies.
 
 No agent yet (fresh machine):
 
 ```
-bash skills/setup/scripts/install.sh --harness all --dry-run
-bash skills/setup/scripts/install.sh --harness all --prune
+bash skills/raxii-dotai-setup/scripts/install.sh --harness all --dry-run
+bash skills/raxii-dotai-setup/scripts/install.sh --harness all --prune
 ```
 
 Modes: `claude`, `codex`, `copilot`, `opencode`, `hermes`, `all`. Copies,

@@ -102,6 +102,7 @@ for harness in "$@"; do
       [ -d "$srcdir" ] || die "missing repo dir: $srcdir"
       find "$srcdir" \
         \( -name __pycache__ -o -name .pytest_cache -o -name .ruff_cache \
+           -o -name raxii-dotai-setup \
            -o -name .git \) -prune \
         -o -type f ! -name '*.pyc' -print |
       while IFS= read -r f; do
