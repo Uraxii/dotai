@@ -8,7 +8,9 @@ User-level skills, harness-neutral, in the Agent Skills format. Source of truth 
 | Skill | Description |
 |-------|-------------|
 | [caveman](caveman/SKILL.md) | Terse smart-caveman output style; pin in the harness's persistent instructions to keep it on. |
+| [grilling](grilling/SKILL.md) | Interview the user relentlessly about a plan or idea until understanding is shared. |
 | [handoff](handoff/SKILL.md) | Compact the current conversation into a durable handoff doc in `$TMPDIR` for another session. |
+| [wayfinder](wayfinder/SKILL.md) | Plan work too big for one session as a map of investigation tickets on the tracker; resolve them one at a time. |
 | [diagnose](diagnose/SKILL.md) | Disciplined diagnosis loop for hard bugs / perf regressions. |
 | [tdd](tdd/SKILL.md) | Red-green-refactor TDD loop. |
 | [prototype](prototype/SKILL.md) | Throwaway prototype to flesh out a design before committing to it. |
