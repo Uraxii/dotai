@@ -24,7 +24,7 @@ Hermes-equivalent skills live under `.hermes/skills/` with omerxx-style frontmat
 | [research](research/SKILL.md) | Background agent investigates a question against primary sources into a cited Markdown file. |
 | [domain-modeling](domain-modeling/SKILL.md) | Build / sharpen the project's ubiquitous language; record ADRs. |
 | [codebase-design](codebase-design/SKILL.md) | Shared vocabulary for designing deep modules and placing seams. |
-| [code-review](code-review/SKILL.md) | Two-axis review (Standards + Spec) of a diff or branch. |
+| [interrogate](interrogate/SKILL.md) | Adversarial multi-model review of a diff; lead synthesizes a verdict. |
 | [resolving-merge-conflicts](resolving-merge-conflicts/SKILL.md) | Resolve an in-progress git merge / rebase conflict. |
 
 ### Orchestration and role skills

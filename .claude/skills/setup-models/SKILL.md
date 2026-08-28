@@ -23,7 +23,8 @@ and `luna` are NEVER assigned without explicit user permission.
 Read the target file. Its table is the current choice. Missing file -> start
 from defaults: opus for architect-designer, skeptic-gate, tech-lead;
 sonnet for art-director, implementation-specialist, requirements-clarifier,
-test-automation-engineer; haiku for big-pickle-simple-tasks.
+test-automation-engineer; haiku for big-pickle-simple-tasks; `opus, sonnet`
+for the `interrogate reviewers` list (one reviewer per entry, repeats allowed).
 
 ### 2. Interview
 

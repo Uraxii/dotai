@@ -18,6 +18,7 @@ and `luna` are NEVER assigned without explicit user permission.
 | requirements-clarifier | sonnet |
 | test-automation-engineer | sonnet |
 | big-pickle-simple-tasks | haiku |
+| interrogate reviewers (list, one subagent each) | opus, sonnet |
 
 Role absent from table -> omit `model`, child inherits parent.
 

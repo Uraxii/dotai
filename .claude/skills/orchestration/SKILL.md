@@ -63,7 +63,7 @@ Craft and behaviour skills:
 | Session must be picked up by another agent | `handoff` |
 | Subagent bloated, tokens high, needs fresh successor | `rotate-agent` |
 | Reading legwork against primary sources, delivered as file | `research` |
-| Review changes since a fixed point on standards plus spec | `code-review` |
+| Review a diff: several models try to break it, lead judges | `interrogate` |
 | Pin domain vocabulary, ubiquitous language, decision record | `domain-modeling` |
 | Design a deep module, place a seam, make code navigable | `codebase-design` |
 | Throwaway sketch to settle a design question | `prototype` |
