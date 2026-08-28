@@ -1,6 +1,6 @@
 # Hermes Agent harness
 
-This subtree stores repo-versioned Hermes profile prompts, skills, skins, and hooks that are safe to stow into `$HOME/.hermes/`.
+This subtree stores repo-versioned Hermes profile prompts, skills, skins, and hooks that the `setup` skill copies into `$HOME/.hermes/`.
 
 ## Current stance
 

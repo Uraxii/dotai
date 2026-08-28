@@ -1,9 +1,3 @@
-# Global patterns only. Packages mirror $HOME and deploy as leaf symlinks
-# (stow --no-folding), so harness runtime state lands in $HOME, not here.
-# The rules below catch the few live files that DO sit inside the repo
-# (global CLAUDE.md, settings.json, opencode.json) plus anything
-# secret- or state-shaped at any depth.
-
 # build / tooling
 __pycache__/
 *.pyc
@@ -13,12 +7,10 @@ __pycache__/
 .venv/
 node_modules/
 *.egg-info/
-.installed-by-*
 
-# local-only and secrets, any depth
+# secrets and machine-local state, any depth
 *.local
 *local*
-!.stow-local-ignore
 .env
 .env.*
 auth.json
@@ -30,45 +22,5 @@ config.yaml
 CLAUDE.md
 settings.json
 opencode.json
-mcp-config.json
-mcp-needs-auth-cache.json
-
-# runtime state, any depth
-*.db
-*.db-shm
-*.db-wal
-*.sqlite*
-history.jsonl
-session_index.jsonl
-sessions/
-session-env/
-session-state/
-session-store.db*
-shell-snapshots/
-shell_snapshots/
-file-history/
-backups/
-cache/
-plugins/
-installed-plugins/
-statsig/
-todos/
-plans/
-projects/
-memory/
-inbox/
-logs/
-log/
-tmp/
-debug/
-telemetry/
-cron/
-ide/
-pastes/
-audio_cache/
-image_cache/
-sandboxes/
-messages.md
-configstore
-uv
-.system/
+.dotai-manifest
+.installed-by-*

@@ -1,77 +1,49 @@
 # dotai
 
-Stow-managed repo for every AI-harness config on this machine: Claude Code,
-Codex, Hermes, opencode, GitHub Copilot CLI. Split out of `dotfiles`, which
-now keeps only system/shell/desktop config (it still owns
-`~/.claude/{hooks,themes,statusline.sh}`, see below). LOCAL ONLY, no remote.
+Skills, agents, and per-harness config for every AI harness on this machine:
+Claude Code, Codex, GitHub Copilot CLI, opencode, Hermes. Layout follows
+pstack: one skills tree in the open Agent Skills format, copied into each
+harness by an agent-driven installer. LOCAL ONLY, no remote.
 
 ## Layout
 
-The repo root mirrors `$HOME`, so the whole repo is one stow package.
+| Dir                | What                                                        |
+|--------------------|-------------------------------------------------------------|
+| `skills/`          | Every skill, `skills/<name>/SKILL.md`. Source of truth.     |
+| `agents/`          | Agent definitions (`zakia`, `subagent`, impeccable fleet).  |
+| `harness/codex/`   | `AGENTS.md`, `rules/`, `schemas/` for `~/.codex`.           |
+| `harness/copilot/` | instructions, refs, agents for `~/.copilot`.                |
+| `harness/opencode/`| `agent/`, `command/`, `tui.json` for `~/.config/opencode`.  |
+| `harness/hermes/`  | `SOUL.md`, profiles, skins, patches for `~/.hermes`.        |
 
-| Dir                 | Deploys to             |
-|---------------------|------------------------|
-| `.claude/`          | `~/.claude` (skills source of truth) |
-| `.agents/skills`    | `~/.agents/skills` -> `.claude/skills`; read natively by codex, copilot, opencode |
-| `.codex/`           | `~/.codex` (allowlist) |
-| `.hermes/`          | `~/.hermes`            |
-| `.config/opencode/` | `~/.config/opencode`   |
-| `.copilot/`         | `~/.copilot`           |
+## Install
 
-One `.stow-local-ignore` at the root covers every harness.
+Agent-driven: open any harness in this repo and invoke the `setup` skill. It
+detects the harnesses present, asks which to target, dry-runs, then copies.
 
-Hermes needs one config line to see the shared skills (`~/.hermes/config.yaml`):
-
-```yaml
-skills:
-  external_dirs:
-    - ~/.agents/skills
-```
-
-## Usage
+No agent yet (fresh machine):
 
 ```
-cd ~/dotai
-stow -t ~ --no-folding .
+bash skills/setup/scripts/install.sh --harness all --dry-run
+bash skills/setup/scripts/install.sh --harness all --prune
 ```
 
-Add `-R` to restow after a rename, `-n -v1` to preview, `-D` to remove.
-After a restow, prune links whose source moved:
-`find ~/.claude ~/.codex ~/.hermes ~/.config/opencode ~/.copilot -xtype l -delete`.
-`--no-folding` links files, never dirs, so live runtime state (copilot's sqlite
-store, codex sessions) sits beside the links untouched.
+Modes: `claude`, `codex`, `copilot`, `opencode`, `hermes`, `all`. Copies,
+never symlinks. Each target root gets a `.dotai-manifest` listing what was
+written; `--prune` removes files from an earlier install that the repo no
+longer has and touches nothing else. Re-run after any edit here.
 
-Adding another harness later is one more `$HOME`-shaped dir at the root.
+Where skills land: Claude `~/.claude/skills`; Codex `~/.agents/skills`;
+Copilot `~/.copilot/skills`; opencode `~/.config/opencode/skills`; Hermes
+`~/.hermes/skills`.
 
-## The `.codex` allowlist
+## Not in this repo, on purpose
 
-`~/.codex` is ~155M of live runtime (sessions, caches, sqlite state,
-`auth.json` OAuth credentials). `.gitignore` ignores `.codex/*` wholesale and
-un-ignores only `AGENTS.md`, `rules/`, `schemas/`, `skills/`. Within
-`skills/`, `skills/.system/` (imagegen, openai-docs, plugin-creator,
-review-agent, skill-creator, skill-installer) is vendor-managed; the Codex
-CLI regenerates it on upgrade, so tracking it would be permanent churn. It
-stays live and untracked by design, same as `~/.claude/skills/krita`.
-
-## Deliberately gitignored
-
-- `~/.claude/settings.json` and `settings.local.json` are gitignored. A
-  fresh machine must recreate `~/.claude/settings.json` by hand; it's not
-  in this repo.
-- `~/.claude/skills/krita` stays live/untracked by design (341 files, 14M).
-
-## agent-workbench: two sources of truth
-
-`~/.claude/skills/agent-workbench` is tracked here AND has its own upstream
-repo + installer at `/var/home/nicole/Projects/agent-workbench`. Keep them
-in sync by hand; this repo does not automate that.
-
-## `~/.hermes` is mostly not this repo
-
-`~/.hermes` is 1.9G, almost all of it live upstream runtime:
-`hermes-agent/` (1.9G), `bin/` (63M), `config.yaml`, a 74K
-`config.yaml.bak.*`, `.env` (secrets), and ~20 upstream-bundled skill trees
-under `~/.hermes/skills/`, of which only `caveman` and
-`productivity/session-transfer` come from this repo. The dotai `hermes`
-package deploys exactly 19 leaf symlinks into that directory; nothing
-outside those 19 leaves is ever touched by stow or this repo.
+- `~/.claude/settings.json`, `CLAUDE.md`, every `auth.json`, `.env`,
+  `config.*`: user prefs and secrets, recreated by hand.
+- `~/.claude/skills/krita` (14M) and `~/.codex/skills/.system`: vendor or
+  live trees the harness manages.
+- `skills/agent-workbench` is tracked here AND has its own upstream at
+  `~/Projects/agent-workbench`; sync by hand.
+- `~/.hermes` is 1.9G of runtime; the installer writes only the files listed
+  in its manifest.
