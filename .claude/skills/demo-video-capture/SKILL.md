@@ -41,7 +41,7 @@ recapture.
 1. Read `references/harness.md`. Generate/refresh the harness into
    `src/debug/gauntlet/` (gitignored by design; regenerate, never hand-copy
    between worktrees).
-2. Harness rules (non-negotiable, from project CLAUDE.md): real services
+2. Harness rules (non-negotiable, from the project instructions file): real services
    only. Host instance runs `Net.host()`; clients join over loopback or
    netem; actors spawn via `ActorService.spawn`; bot pilots submit through
    the real client input path. A bot that teleports actors or writes

@@ -3,6 +3,8 @@ name: snyk
 description: Query Snyk REST API orgs, token identity, projects, targets, issues, issue details, and Early Access findings for read-only inventory and vulnerability prioritization.
 ---
 
+Paths below are relative to this skill's directory (where this SKILL.md lives).
+
 # snyk
 
 Thin Snyk REST reader. It is read-only, GET only, and cannot change anything
@@ -61,28 +63,28 @@ examples below (`--ids`/`--names`/`--types`/`--target-reference`/
 ## Use it
 
 ```bash
-python3 ~/.claude/skills/snyk/snyk.py orgs --slug platform
+python3 ./snyk.py orgs --slug platform
 # illustrative output:
 id	name	slug
 org-1	Platform	platform
 ```
 
 ```bash
-python3 ~/.claude/skills/snyk/snyk.py self
+python3 ./snyk.py self
 # illustrative output:
 id	type	name	user
 user-1	user	Example User	-
 ```
 
 ```bash
-python3 ~/.claude/skills/snyk/snyk.py projects --org $ORG_ID --target-id target-1
+python3 ./snyk.py projects --org $ORG_ID --target-id target-1
 # illustrative output:
 id	name	origin	branch	manifest	repo	repo_url
 p1	api	github	main	package.json	org/api	https://github.com/org/api
 ```
 
 ```bash
-python3 ~/.claude/skills/snyk/snyk.py targets --org $ORG_ID --limit 10
+python3 ./snyk.py targets --org $ORG_ID --limit 10
 # illustrative output:
 id	display_name	url	private
 t1	org/api	https://github.com/org/api	false
@@ -93,7 +95,7 @@ which silently drops every target with zero projects). Pass
 `--exclude-empty true` to restore the server default.
 
 ```bash
-python3 ~/.claude/skills/snyk/snyk.py issues --org $ORG_ID --severity high --severity critical
+python3 ./snyk.py issues --org $ORG_ID --severity high --severity critical
 # illustrative output:
 id	severity	status	type	problem	risk	risk_model	factors	reachability	fixable	scan_item_id
 i1	high	open	package_vulnerability	CVE-2026-0001	891	riskScore	deployed,loaded_package	function	true	p1
@@ -110,13 +112,13 @@ are sent as one comma-joined parameter (`effective_severity_level=high,critical`
 per how each parameter is declared in the spec.
 
 ```bash
-python3 ~/.claude/skills/snyk/snyk.py issue --org $ORG_ID --id issue-1 --raw
+python3 ./snyk.py issue --org $ORG_ID --id issue-1 --raw
 # illustrative output:
 {"jsonapi":{"version":"1.0"},"data":{"id":"issue-1"}}
 ```
 
 ```bash
-python3 ~/.claude/skills/snyk/snyk.py findings --org $ORG_ID --test test-1
+python3 ./snyk.py findings --org $ORG_ID --test test-1
 # illustrative output:
 id	problem	epss_probability
 finding-1	CVE-2026-0001	0.0042
@@ -127,7 +129,7 @@ returns a relative path (no `/rest` prefix, already carrying `version` and
 `starting_after`), so pass it as-is, quoted:
 
 ```bash
-python3 ~/.claude/skills/snyk/snyk.py issues --next '/orgs/org-1/issues?version=2026-03-25&starting_after=opaque&limit=20'
+python3 ./snyk.py issues --next '/orgs/org-1/issues?version=2026-03-25&starting_after=opaque&limit=20'
 ```
 
 No scope flags (`--org`/`--group`/`--id`/`--test`) are needed alongside

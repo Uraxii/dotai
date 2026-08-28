@@ -3,6 +3,8 @@ name: cloudflare
 description: Query Cloudflare accounts, zones, DNS exposure, rulesets, WAF managed ruleset posture, and Workers routes from the public Cloudflare API.
 ---
 
+Paths below are relative to this skill's directory (where this SKILL.md lives).
+
 # cloudflare
 
 Thin Cloudflare API reader. It is read-only, GET only, and cannot change
@@ -38,28 +40,28 @@ Optional env: none.
 ## Use it
 
 ```bash
-python3 ~/.claude/skills/cloudflare/cloudflare.py accounts
+python3 ./cloudflare.py accounts
 # illustrative output:
 id	name
 a1	Example Inc
 ```
 
 ```bash
-python3 ~/.claude/skills/cloudflare/cloudflare.py zones --account.name "Example Inc"
+python3 ./cloudflare.py zones --account.name "Example Inc"
 # illustrative output:
 id	name	status	type	paused	account
 z1	example.com	active	full	false	Example Inc
 ```
 
 ```bash
-python3 ~/.claude/skills/cloudflare/cloudflare.py dns --zone z1 --proxied false
+python3 ./cloudflare.py dns --zone z1 --proxied false
 # illustrative output:
 name	type	content	proxied	ttl
 origin.example.com	A	192.0.2.10	false	1
 ```
 
 ```bash
-python3 ~/.claude/skills/cloudflare/cloudflare.py rulesets --zone z1 \
+python3 ./cloudflare.py rulesets --zone z1 \
   --phase http_request_firewall_custom
 # illustrative output:
 id	name	kind	phase	version	last_updated
@@ -70,14 +72,14 @@ Ruleset list responses omit rules by design. Fetch one ruleset by id to see its
 rules:
 
 ```bash
-python3 ~/.claude/skills/cloudflare/cloudflare.py ruleset --zone z1 --id rs1
+python3 ./cloudflare.py ruleset --zone z1 --id rs1
 # illustrative output:
 id	name	kind	phase	version	rules
 rs1	Custom WAF	zone	http_request_firewall_custom	3	12
 ```
 
 ```bash
-python3 ~/.claude/skills/cloudflare/cloudflare.py waf --zone z1
+python3 ./cloudflare.py waf --zone z1
 # illustrative output:
 id	name	paranoia	sensitivity	threshold	enabled
 4814384a9e5d4991b9815dcfc25d2f1f	OWASP Core Ruleset	PL2	Medium	40	True
@@ -94,7 +96,7 @@ stderr. Run `rulesets --zone ZONE_ID` on the same zone to see what is
 deployed.
 
 ```bash
-python3 ~/.claude/skills/cloudflare/cloudflare.py routes --zone z1
+python3 ./cloudflare.py routes --zone z1
 # illustrative output:
 pattern	script
 example.com/app/*	app-worker

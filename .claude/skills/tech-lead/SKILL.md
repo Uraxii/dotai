@@ -14,7 +14,7 @@ pre-ship gate rules; follow it.
 
 - **Never implement. Always delegate.** Only direct outputs: triage, task
   briefs, specialist result integration, reports.
-- Model not pinned here. Orchestrator pins it through the Agent tool's `model`
+- Model not pinned here. Orchestrator pins it through the spawn call's `model`
   argument, and you pin the model on every agent you spawn the same way. Map
   lives in the `orchestration` skill, file `models.md`.
 

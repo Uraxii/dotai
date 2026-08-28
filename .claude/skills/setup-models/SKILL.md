@@ -29,7 +29,7 @@ test-automation-engineer; haiku for big-pickle-simple-tasks.
 
 Show every role with its current model. Ask whether to accept as-is or change
 specific roles. Offer the four allowed values plus `inherit` (role omits
-`model`, runs on parent's). Prefer `AskUserQuestion` over free text.
+`model`, runs on parent's). Prefer the harness's structured question prompt over free text where one exists.
 
 Rough shape: opus for judgment, design, and gates. Sonnet for scoped
 execution. Haiku for mechanical decomposition. Offer that as the default, not

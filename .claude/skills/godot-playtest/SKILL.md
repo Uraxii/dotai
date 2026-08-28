@@ -17,7 +17,7 @@ questions (vision tokens are the expensive path).
    - `npx @satelliteoflove/godot-mcp --install-addon <godot project dir>`
    - Enable Project Settings > Plugins > Godot MCP, editor open.
    Addon speaks WebSocket on 127.0.0.1:6550; Godot 4.5+; Node 20+.
-2. nikki-net repo rule (project CLAUDE.md): playtest scenes are thin
+2. nikki-net repo rule (project instructions file): playtest scenes are thin
    harnesses on REAL services. `Net.host()` for single player, spawn via
    `ActorService.spawn`, never `OfflineMultiplayerPeer`, never direct
    actor instancing, never mutating server state to fake a scenario.

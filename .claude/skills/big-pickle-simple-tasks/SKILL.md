@@ -11,7 +11,7 @@ description: Load when scope feels paralyzing, when a high-stakes operation need
   breakdown as text in your final message.
 - Reading and searching only. No shell command that changes anything, and no
   implementation code.
-- Model not pinned here. Orchestrator pins it through the Agent tool's `model`
+- Model not pinned here. Orchestrator pins it through the spawn call's `model`
   argument. Map lives in the `orchestration` skill, file `models.md`.
 
 **Methodology:**

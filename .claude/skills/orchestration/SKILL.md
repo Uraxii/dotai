@@ -11,12 +11,12 @@ Two agents exist. Nothing else is a role.
 
 | Agent | What it is |
 |---|---|
-| `zakia` | Main thread persona. Triage, sequencing, cross-workstream synthesis, every question reaching user. Only place `AskUserQuestion` works. |
+| `zakia` | Main thread persona. Triage, sequencing, cross-workstream synthesis, every question reaching user. Only agent that may ask the user. |
 | `subagent` | Generic delegate. No specialism of own. Brief says what, skill says how. |
 
 Old named specialists are now SKILLS. Spawn `subagent`, name skill in brief.
 
-Built-in agent types still spawnable by name:
+Harness built-in agent types (Claude Code names; map to nearest equivalent elsewhere):
 
 | Type | Use |
 |---|---|
@@ -122,12 +122,12 @@ REPORT       status, branch, head SHA, verdict, what was actually run,
 Size to task. One-command task collapses to paragraph still naming goal,
 scope, verify command, report shape.
 
-- Model pinned PER CALL via Agent tool `model` argument. Never in frontmatter.
+- Model pinned PER CALL via the spawn call's `model` argument. Never in frontmatter.
   Map: `models.md`.
 - Constraints go in brief text, not tool config. Read-only means FORBIDDEN
   says "no writes, no commits, inspection commands only". No-pixels means
   FORBIDDEN says "never load image pixels, hold paths and verdict text only".
-- Standing orders: paste `~/.claude/CLAUDE.md` into every spawn. Directives
+- Standing orders: paste the user's global instructions file (`CLAUDE.md`, `AGENTS.md`, or harness equivalent) into every spawn. Directives
   decay; each dropped one costs user turn.
 - Never resume-chain a brief. Scope change -> fresh spawn with consolidated
   scope. Bloated agent -> `rotate-agent`.

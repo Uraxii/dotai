@@ -2,7 +2,7 @@
 
 Generated into `src/debug/gauntlet/` (gitignored). Regenerate per
 worktree from this spec; adapt node/service names to the demo. All of
-it obeys the project CLAUDE.md playground rules: real services, real
+it obeys the project instructions file's playground rules: real services, real
 session, real input path.
 
 ## Files

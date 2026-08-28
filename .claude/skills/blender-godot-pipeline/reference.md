@@ -21,8 +21,8 @@ flatpak run --filesystem=host org.blender.Blender --background --python <s>.py -
   `--filesystem=host` (symptom: `Python file ... could not be opened`). Keep
   script and I/O paths under the project tree or your home dir, not `/tmp`.
 
-Godot 4.6 runs via the "Godots" flatpak manager (see the global CLAUDE.md for
-the versioned binary path). The `.gd` here is an EditorScript run from inside
+Godot 4.6 runs via the "Godots" flatpak manager (see the user's global instructions
+file for the versioned binary path). The `.gd` here is an EditorScript run from inside
 the open editor, or via godot-mcp; it is not a headless CLI script.
 
 ## retarget_bake.py CLI

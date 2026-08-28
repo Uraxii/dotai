@@ -3,6 +3,8 @@ name: ox-security
 description: Query OX Security as a connector aggregator for issues, apps, prioritization, and repo-to-runtime paths; use it for OX plus Snyk, Sysdig, Azure Repos, Azure Pipelines, ACR, and AKS questions via Issue.sourceTools and Application.applicationFlows, but never for Cloudflare WAF/CDN/DNS.
 ---
 
+Paths below are relative to this skill's directory (where this SKILL.md lives).
+
 # ox-security
 
 Thin OX Security GraphQL reader. It sends only allowlisted read-only `query`
@@ -20,7 +22,7 @@ append `.md` to any OX docs page.
 ## Use it
 
 ```bash
-python3 ~/.claude/skills/ox-security/ox_security.py issues --limit 10 --severity Critical --app Org/repo
+python3 ./ox_security.py issues --limit 10 --severity Critical --app Org/repo
 # illustrative output:
 name	app	severity	tool_severity	tools	priority	epss	pct	wild	fix
 Secret in code	api	Critical	High	Snyk	high	0.91	99	yes	yes
@@ -31,19 +33,19 @@ Secret in code	api	Critical	High	Snyk	high	0.91	99	yes	yes
 assigned. The two can legitimately disagree on the same row.
 
 ```bash
-python3 ~/.claude/skills/ox-security/ox_security.py issues --filter tags=pci --filter tags=pii
+python3 ./ox_security.py issues --filter tags=pci --filter tags=pii
 # repeats append into filters.tags == ["pci", "pii"]
 ```
 
 ```bash
-python3 ~/.claude/skills/ox-security/ox_security.py apps --search api
+python3 ./ox_security.py apps --search api
 # illustrative output:
 appId	repo	branch	prod	priority	matched
 a1	api	main	yes	high	Snyk
 ```
 
 ```bash
-python3 ~/.claude/skills/ox-security/ox_security.py app-flows app-id
+python3 ./ox_security.py app-flows app-id
 # illustrative output:
 repo	branch	prod	repository	cicd	artifact	k8s	cloud
 api	main	yes	Azure Repos	Azure Pipelines	sha256:abc	api-prod	api:latest

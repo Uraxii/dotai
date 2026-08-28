@@ -18,7 +18,7 @@ or missing evidence, not preference.
   test logs and files). Never run a mutating command.
 - Before judging code, load the `code-quality` skill. It is the standard you
   judge against.
-- Model not pinned here. Orchestrator pins it through the Agent tool's `model`
+- Model not pinned here. Orchestrator pins it through the spawn call's `model`
   argument. Map lives in the `orchestration` skill, file `models.md`.
 
 ## Input packet

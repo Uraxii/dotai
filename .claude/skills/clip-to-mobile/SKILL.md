@@ -1,7 +1,9 @@
 ---
 name: clip-to-mobile
-description: Convert a gameplay clip (animated WebP, AVI, or MP4) into a small, mobile-viewable video for sending to the user. Use whenever you are about to send/attach a recorded clip and the source is an animated WebP or an oversized MP4. Animated WebP and AVI do NOT render inline in the Claude Code mobile app. Produces a small H.264 MP4 (default) or a GIF fallback with one command; no LLM-driven ffmpeg session needed.
+description: Convert a gameplay clip (animated WebP, AVI, or MP4) into a small, mobile-viewable video for sending to the user. Use whenever you are about to send/attach a recorded clip and the source is an animated WebP or an oversized MP4. Animated WebP and AVI do NOT render inline in mobile chat apps. Produces a small H.264 MP4 (default) or a GIF fallback with one command; no LLM-driven ffmpeg session needed.
 ---
+
+Paths below are relative to this skill's directory (where this SKILL.md lives).
 
 # clip-to-mobile
 
@@ -31,7 +33,7 @@ line). If a send feels heavy, trim with `--maxsec` or drop `--height`.
 ## Command
 
 ```bash
-python3 ~/.claude/skills/clip-to-mobile/convert.py <input.(webp|avi|mp4)> <output.mp4>
+python3 ./convert.py <input.(webp|avi|mp4)> <output.mp4>
 ```
 
 That is the whole default flow: animated-WebP (or AVI/big MP4) in, small
@@ -49,16 +51,16 @@ mobile MP4 out. It prints the output path, size, stream info, and PASS/FAIL.
 
 ```bash
 # Default: animated WebP → small mobile MP4 (send this to the user)
-python3 ~/.claude/skills/clip-to-mobile/convert.py capture.webp clip.mp4
+python3 ./convert.py capture.webp clip.mp4
 
 # Trim a long capture to 20s
-python3 ~/.claude/skills/clip-to-mobile/convert.py capture.webp clip.mp4 --maxsec 20
+python3 ./convert.py capture.webp clip.mp4 --maxsec 20
 
 # GIF fallback of the first 5 seconds
-python3 ~/.claude/skills/clip-to-mobile/convert.py capture.webp clip.gif --gif --maxsec 5
+python3 ./convert.py capture.webp clip.gif --gif --maxsec 5
 
 # Big source MP4 → smaller MP4 (e.g. the 33MB problem case)
-python3 ~/.claude/skills/clip-to-mobile/convert.py big.mp4 clip.mp4 --height 720
+python3 ./convert.py big.mp4 clip.mp4 --height 720
 ```
 
 ## How it works / notes

@@ -57,7 +57,7 @@ Each smell reads *what it is* → *how to fix*; match it against the diff:
 
 ### 4. Spawn both sub-agents in parallel
 
-Send a single message with two `Agent` tool calls. Use the `general-purpose` subagent for both.
+Spawn two subagents in parallel (one dispatch, both briefs). Generic delegate, no special role.
 
 **Standards sub-agent prompt**, include:
 

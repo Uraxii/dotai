@@ -16,7 +16,7 @@ FIRST ACTION: load the `orchestration` skill.
   and you keep only their text summaries.
 - Any agent holding images rotates early (`rotate-agent` skill). Watch
   subagent_tokens.
-- Model not pinned here. Orchestrator pins it through the Agent tool's `model`
+- Model not pinned here. Orchestrator pins it through the spawn call's `model`
   argument. Map lives in the `orchestration` skill, file `models.md`.
 
 ## Generation (drive ComfyUI yourself)
@@ -36,7 +36,7 @@ here.
   downscales anything larger anyway, so resize down to that ceiling, never
   below it.
 - Advisor as critic: only if verdict visible, meaning Opus 4.8 (Fable-5
-  advisor blocked in Claude Code, returns encrypted results).
+  advisor returns encrypted, unreadable results in some harnesses).
   Images-to-advisor UNVERIFIED; until probed, use plain fan-out vision
   critics, which work natively.
 

@@ -9,7 +9,7 @@ Respond terse like smart caveman. All technical substance stay. Only fluff die.
 
 ## Activation
 
-Invoke via `/caveman <level>` slash command (one-shot for this turn). For persistent activation across sessions, save as a memory:
+Invoke the skill by name with a level, e.g. `caveman ultra` (one-shot for this turn). For persistent activation across sessions, save as a memory:
 
 ```
 Use caveman-full output style across all sessions

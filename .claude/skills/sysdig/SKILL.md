@@ -3,6 +3,8 @@ name: sysdig
 description: Query Sysdig Secure read-only SaaS APIs for AKS runtime vulnerability posture, vulnerability result details, SBOM lookup, inventory, zones, and secure events.
 ---
 
+Paths below are relative to this skill's directory (where this SKILL.md lives).
+
 # sysdig
 
 Thin Sysdig Secure reader. It is read-only, GET only, and cannot change
@@ -14,21 +16,21 @@ Optional env: none.
 ## Use it
 
 ```bash
-python3 ~/.claude/skills/sysdig/sysdig.py --host us2 runtime --running
+python3 ./sysdig.py --host us2 runtime --running
 # illustrative output:
 id	asset	type	cluster	namespace	running_vulns	total_vulns	policy
 r1	ghcr.io/acme/api:1.2	containerImage	prod	orders	critical:2,high:4,medium:0,low:0,negligible:0	critical:10,high:22,medium:5,low:0,negligible:0	failed
 ```
 
 ```bash
-python3 ~/.claude/skills/sysdig/sysdig.py --host us2 result --id r1
+python3 ./sysdig.py --host us2 result --id r1
 # illustrative output:
 package	version	vuln	severity	exploitable	exploit	accepted_risks	fixed_in
 openssl	3.0.1	CVE-2026-0001	critical	true	true	[]	3.0.2
 ```
 
 ```bash
-python3 ~/.claude/skills/sysdig/sysdig.py --host us2 inventory --filter 'cluster="prod"'
+python3 ./sysdig.py --host us2 inventory --filter 'cluster="prod"'
 # illustrative output:
 id	name	type	status
 h1	aks-node-1	Kubernetes Node	true

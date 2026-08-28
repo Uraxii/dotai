@@ -3,6 +3,8 @@ name: azure-devops
 description: Query Azure DevOps projects, repos, builds, pipelines, releases, environments, Kubernetes resources, and WIQL work item ids through read-only public REST APIs for CI, release, repository, and deployment inventory questions.
 ---
 
+Paths below are relative to this skill's directory (where this SKILL.md lives).
+
 # azure-devops
 
 Thin Azure DevOps REST reader. It only reads. Most commands are GET; `wiql` is
@@ -46,35 +48,35 @@ The CLI accepts that token from env; it does not shell out to `az`.
 ## Use it
 
 ```bash
-python3 ~/.copilot/skills/azure-devops/azure_devops.py projects
+python3 ./azure_devops.py projects
 # illustrative output:
 id	name	state	visibility	description
 p1	api	wellFormed	private	Service API
 ```
 
 ```bash
-python3 ~/.copilot/skills/azure-devops/azure_devops.py builds --project api
+python3 ./azure_devops.py builds --project api
 # illustrative output:
 id	number	status	result	repo_id	repo_name	repo_type	repo_url	default_branch	source_version
 7	20260101.1	completed	succeeded	r1	api	TfsGit	https://example	refs/heads/main	abc123
 ```
 
 ```bash
-python3 ~/.copilot/skills/azure-devops/azure_devops.py releasedefs --project api --expand artifacts
+python3 ./azure_devops.py releasedefs --project api --expand artifacts
 # illustrative output:
 id	name	artifact_source_id	artifact_type
 9	api-release	project-guid:42	Build
 ```
 
 ```bash
-python3 ~/.copilot/skills/azure-devops/azure_devops.py k8s --project api --envId 1 --resourceId 2
+python3 ./azure_devops.py k8s --project api --envId 1 --resourceId 2
 # illustrative output:
 cluster_name	namespace	service_endpoint_id	tags	environment_reference
 aks-prod	prod	svc1	['prod']	{'id': 1}
 ```
 
 ```bash
-python3 ~/.copilot/skills/azure-devops/azure_devops.py wiql --project api --query "Select [System.Id] From WorkItems"
+python3 ./azure_devops.py wiql --project api --query "Select [System.Id] From WorkItems"
 # illustrative output:
 id	url
 123	https://dev.azure.com/org/_apis/wit/workItems/123

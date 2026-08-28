@@ -3,6 +3,8 @@ name: comfyui
 description: Drive a local ComfyUI instance headlessly over its HTTP API to run any exported workflow graph (txt2img, img2img, or other generation pipelines), inject parameters such as prompt text and seed into the workflow JSON, and save the resulting image(s) to disk. Use when the user asks to generate, render, or produce an image via ComfyUI, mentions txt2img, Stable Diffusion rendering, or wants to run/submit a ComfyUI workflow.
 ---
 
+Paths below are relative to this skill's directory (where this SKILL.md lives).
+
 # comfyui
 
 Drive ComfyUI over HTTP. Mechanical only, no vision, no judgment: submit ->
@@ -11,7 +13,7 @@ poll -> save.
 ## Run it
 
 ```bash
-python3 ~/.claude/skills/comfyui/comfyui.py \
+python3 ./comfyui.py \
   --template <project>/art-workflows/txt2img.json \
   --set 6.inputs.text="a red fox in snow, photograph" \
   --set 3.inputs.seed=$RANDOM \
@@ -22,7 +24,7 @@ python3 ~/.claude/skills/comfyui/comfyui.py \
 graph, no hardcoded node ids baked in. Host default
 `http://127.0.0.1:8188`, override via `COMFY_HOST` env or `--host`.
 
-Full flag list: `python3 ~/.claude/skills/comfyui/comfyui.py --help`.
+Full flag list: `python3 ./comfyui.py --help`.
 
 ## Rules
 

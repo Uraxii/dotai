@@ -11,7 +11,7 @@ Before writing code, load the `code-quality` skill.
 
 Repo's own documented standards override it.
 
-Model not pinned here. Orchestrator pins it through the Agent tool's `model`
+Model not pinned here. Orchestrator pins it through the spawn call's `model`
 argument. Map lives in the `orchestration` skill, file `models.md`.
 
 ## Mandate
