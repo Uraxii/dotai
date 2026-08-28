@@ -88,6 +88,19 @@ encode as type, runtime check, test, or lint, then delete it. Suppression is
 comment too; correctness or safety suppression must die, not be silenced. Keep
 only comment about thing outside our control.
 
+Sweeping comments out of a diff: hand the diff to a FRESH reviewer with no
+stake in the code. Authoring agent always defend own comments; defer to the
+fresh read. Judging its report: reject application-code edits, scope escapes,
+and kills whose stated reason is wrong. Restore a deleted comment only with
+exact proof it names something we cannot change. Ambiguous kill stay killed;
+ambiguous keep die. Audit its misses too: scoped lint and type suppressions it
+skipped. Second bad report -> stop the sweep, report it open.
+
+Encode-then-delete, the offer: name the cheapest in-scope type, runtime check,
+test, or lint that enforce the constraint, then wait for approval. Unattended
+run need that approval in its brief up front. Approved -> encode, then delete
+the comment. Not approved -> delete anyway, report the constraint unenforced.
+
 ## Subtract first
 
 - Remove before construct. Cut before polish. Leave design simpler behind same
@@ -111,10 +124,12 @@ only comment about thing outside our control.
 
 ## Debugging
 
-- Reproduce first. Ask why until root cause; nil-check silencing crash is
-  symptom fix. Fix pattern not instance: grep same shape, fix all. Stuck ->
-  instrument, read actual error, never guess. "Broke after restart": suspect
-  stale persistent state before code. Code not change between runs, state do.
+Loop lives in the `diagnose` skill: build feedback loop, reproduce, minimise,
+hypothesise, instrument, regression test. Two rules it does not carry:
+
+- Fix pattern not instance: grep same shape, fix all of them.
+- "Broke after restart" -> suspect stale persistent state before code. Code not
+  change between runs, state do.
 
 ## Sequencing work
 

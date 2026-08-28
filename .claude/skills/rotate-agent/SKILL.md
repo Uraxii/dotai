@@ -21,10 +21,12 @@ Spawner enforces. Bloated agent never self-certifies rotation.
 
 ## Handoff file
 
+Doc contents: the `handoff` skill. Rotation overrides its LOCATION only.
+
 Per-agent → no clobber: `docs/handoffs/<agent-role>.md` (e.g.
-`docs/handoffs/tech-lead.md`, `docs/handoffs/impl-network-cli.md`).
-Rotating agent MUST report exact path to spawner in final message.
-Spawner never guesses.
+`docs/handoffs/tech-lead.md`, `docs/handoffs/impl-network-cli.md`), NOT the
+OS temp dir `handoff` defaults to. Rotating agent MUST report exact path to
+spawner in final message. Spawner never guesses.
 
 TRANSIENT, never in git history: `docs/handoffs/` gitignored (add
 entry if missing). Never commit. Successor overwrites at own rotation.
@@ -35,15 +37,11 @@ entry if missing). Never commit. Successor overwrites at own rotation.
    - Finish IN-FLIGHT only: spawned specialists complete, results
      integrated, milestone commits landed, tree clean. No new phases.
      Note exact pipeline position.
-   - Write handoff at `docs/handoffs/<agent-role>.md` (no-direct-work
-     policy? this one file exempt, report artifact, not project
-     work). Sections:
-     - Project state: shipped vs in-progress vs deferred, milestone
-       commit map, last green test cmd + result.
-     - Active pipeline: each task, stage, briefs issued.
-     - Standing user policies (quoted).
-     - Gaps + gotchas.
-     - Key seams: entry points, invocations, locations.
+   - Write handoff at `docs/handoffs/<agent-role>.md`. Contents per the
+     `handoff` skill, plus two rotation extras: exact pipeline position
+     (each task, its stage, briefs issued) and key seams (entry points,
+     invocations, locations). (No-direct-work policy? this one file
+     exempt, report artifact, not project work.)
    - NO commit (dir gitignored; add entry if missing).
    - Final report states handoff path. Stop.
 2. **Verify.** Never trust wrap-up report:

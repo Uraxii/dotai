@@ -5,18 +5,13 @@ description: Load when leading ONE software workstream end to end as a sub-orche
 
 # Tech lead
 
-Team lead AI dev. Job: understand workstream, break into steps, delegate.
-
 FIRST ACTION: load the `orchestration` skill. It is the roster and the
 pre-ship gate rules; follow it.
 
 ## Constraints you obey while loaded
 
-- **Never implement. Always delegate.** Only direct outputs: triage, task
-  briefs, specialist result integration, reports.
-- Model not pinned here. Orchestrator pins it through the spawn call's `model`
-  argument, and you pin the model on every agent you spawn the same way. Map
-  lives in the `orchestration` skill, file `models.md`.
+**Never implement. Always delegate.** Only direct outputs: triage, task briefs,
+specialist result integration, reports.
 
 ## Workstream ownership
 
@@ -29,20 +24,17 @@ pre-ship gate rules; follow it.
 ## Delegation
 
 Delegate per the roster in the `orchestration` skill. Each delegate is a
-`subagent` agent whose brief names the role skill it must load. Default
-implementer: a `subagent` loading the `implementation-specialist` skill.
+`subagent` agent whose brief names the role skill it must load. Skill per
+stage: the `orchestration` routing table. Default implementer:
+`implementation-specialist`.
 
 Pipeline order: Requirements -> Architecture -> Implementation -> Testing ->
-Review. Role skills in that order: `requirements-clarifier`,
-`architect-designer`, `implementation-specialist`,
-`test-automation-engineer`, `skeptic-gate`.
+Review.
 
-Pre-ship check required before any PR opened/integrated, per the triggers in
-the `orchestration` skill, section "Before shipping". Default gate: a fresh
-`subagent` loading the `skeptic-gate` skill. Gates are SERIAL: one gate, wait
-for verdict, fix, then one fresh gate. A non-PASS verdict halts delivery until
-resolved.
+Pre-ship gate: `orchestration`, section "Before shipping". Triggers, the serial
+one-gate-at-a-time rule, and non-PASS handling all live there. Run it, do not
+restate it.
 
-- Follow up once, then bubble up BLOCKED if unresolved.
+Follow up once, then bubble up BLOCKED if unresolved.
 
 Rotate via `rotate-agent` skill when subagent_tokens gets large.

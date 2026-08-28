@@ -14,18 +14,13 @@ In long sessions, do not wait until the end: append decisions, constraints, and 
 
 Save the handoff document to the temporary directory of the user's operating system, not the current workspace. On Linux/macOS, prefer `/tmp`. On Windows, use the path from `%TEMP%`/`$env:TEMP`.
 
-## When to use
+## Which mode
 
-Use this skill when:
-- The user asks for a handoff, session compact, continuity note, or next-agent brief.
-- The user wants another agent/session to pick up current work.
-- The user provides or references an existing handoff file to continue from, e.g. `@/tmp/handoff_dotfiles_agent-orchestration_3_1784659200.md`.
-- The user asks how handoff docs / briefs work for agents, especially after attaching a handoff file.
-- Context is too large or fragile to rely on chat history alone.
+A referenced handoff file (e.g. `@/tmp/handoff_dotfiles_agent-orchestration_3_1784659200.md`) means CONSUME, not create. It is an instruction source: read it, load the suggested skills, inspect the named workspace and artifacts, execute the immediate next steps. Do not write another handoff unless explicitly asked.
 
-Do not use this skill to rewrite existing project documents when creating a handoff. Reference those documents by path or URL instead. When consuming a handoff, the handoff is an instruction source: read it, load any suggested relevant skills, inspect the named workspace/artifacts, then execute the immediate next steps rather than creating another handoff unless explicitly asked.
+Asked to EXPLAIN how handoffs or briefs work: do not execute the handoff's next steps. Read the file, then explain the consumption model. Handoff is temporary context, not source-of-truth; the next agent loads suggested skills, verifies named artifacts, preserves constraints and risks, and acts only when the user asks for continuation.
 
-If the user asks to explain how handoffs/briefs work, do not execute the handoff's next steps. Read the file, then explain the agent consumption model: handoff is temporary context, not source-of-truth; next agent loads suggested skills, verifies named artifacts, preserves constraints/risks, and only acts when the user asks continuation.
+Never rewrite existing project documents while creating a handoff. Reference them by path or URL.
 
 ## Inputs
 
@@ -163,48 +158,3 @@ they emerge.>
 - No secrets included.
 - <or describe redactions>
 ```
-
-## Common Pitfalls
-
-1. Duplicating artifacts instead of referencing them.
-   - If content already exists in `docs/requirements.md`, a PRD, a plan, an ADR, a commit, or an issue, reference it by path/URL.
-
-2. Writing into the project workspace.
-   - The handoff belongs in the OS temp directory unless explicitly told otherwise.
-
-3. Omitting suggested skills.
-   - The next agent may not know which domain skills to load. Always include a `Suggested Skills` section.
-
-4. Including secrets from tool output or env files.
-   - Redact aggressively. Never copy tokens, keys, cookies, or passwords into the handoff.
-
-5. Over-summarizing away active blockers.
-   - Keep unresolved questions, risks, and immediate next steps explicit.
-
-6. Paraphrasing user directives.
-   - A paraphrase drops scope and nuance. Quote the user's words exactly in `Verbatim User Directives`.
-
-7. Dropping negative constraints.
-   - Summaries preserve goals and lose prohibitions. Every "don't/never/stop" instruction from the session must appear in the handoff.
-
-8. Referencing a document that does not contain the claim.
-   - "See docs/plan.md" is only valid if the decision is actually written there. Verify before referencing; otherwise inline the detail.
-
-9. Pruning or staling carry-forward context in a chain.
-   - In a sequence of handoffs, each link must carry the whole chain's durable context, not just the next task. Never drop an up-front decision because it feels "already done"; never leave a superseded decision unrevised. Carry it forward, update it, add to it.
-
-## Verification Checklist
-
-- [ ] Handoff was written to the OS temp directory, not the current workspace.
-- [ ] Filename follows `handoff_<project>_<topic>_<chain number>_<unix time>.md` with `<project>` = the repo/project the work targets (not the session cwd), chain number checked against the predecessor (or a new chain was recommended and the user decided).
-- [ ] User arguments, if any, are reflected as next-session focus.
-- [ ] Completeness pass done: conversation re-scanned for corrections, vetoes, terminology, scope limits, and negative constraints.
-- [ ] User directives quoted verbatim, not paraphrased.
-- [ ] Failed approaches / do-NOT list included (or explicitly "none").
-- [ ] Decisions carry their rationale.
-- [ ] For a chained workstream: `Carry-Forward Context` present, carried from the prior handoff, with task-sequence status updated, changed decisions revised, and new chain-wide facts added.
-- [ ] Referenced documents verified to actually contain the claims attributed to them.
-- [ ] Durable artifacts are referenced by path/URL instead of duplicated.
-- [ ] Sensitive information is redacted.
-- [ ] Document includes `Suggested Skills`.
-- [ ] Final response reports the full absolute handoff path on its own line.

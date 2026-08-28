@@ -56,7 +56,9 @@ Craft and behaviour skills:
 | Cutting a feature list, picking a default, or reaching for a config knob | `principle-experience-first` |
 | Decision with no precedent, needs competing prototypes | `principle-exhaust-the-design-space` |
 | New requirement landing on design that already exists | `principle-redesign-from-first-principles` |
+| Non-trivial edits, migrations, analyses, checks: build the rerunnable tool | `principle-build-the-lever` |
 | Any prose surface, including your own reply | `unslop` |
+| Writing or reviewing docs, RFCs, readmes, PR descriptions, commit messages | `technical-writing` |
 | Register for every agent's output and reasoning | `caveman` |
 | Hard bug, broken thing, perf regression | `diagnose` |
 | Behaviour is testable, want red-green-refactor | `tdd` |
@@ -64,6 +66,7 @@ Craft and behaviour skills:
 | Subagent bloated, tokens high, needs fresh successor | `rotate-agent` |
 | Reading legwork against primary sources, delivered as file | `research` |
 | Review a diff: several models try to break it, lead judges | `interrogate` |
+| What could this change break elsewhere, before it ships | `blast-radius` |
 | Pin domain vocabulary, ubiquitous language, decision record | `domain-modeling` |
 | Design a deep module, place a seam, make code navigable | `codebase-design` |
 | Throwaway sketch to settle a design question | `prototype` |

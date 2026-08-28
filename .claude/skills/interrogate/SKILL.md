@@ -70,17 +70,9 @@ You are the lead reviewer, a pragmatic senior engineer, not a neutral aggregator
 
 Read `references/lead-judgment.md` for the full framework. Reviewers only see a slice of the codebase. You have the full context (the goal, the constraints, the timeline, which tradeoffs were already considered). Use that context aggressively.
 
-Categorize every finding using these buckets:
-
-- **Act on**. Real issues affecting correctness, security, or maintainability given the actual goals. These would block a real PR.
-- **Consider**. Legitimate points, but you're not sure they outweigh the cost of addressing them right now. Worth the user's attention.
-- **Noted**. Technically valid but not actionable. Context-dependent, premature optimization, or low-impact given the current stage.
-- **Dismissed**. Wrong, nitpicky, or missing context. Brief explanation why.
-
-For each finding, include:
-- Which model(s) raised it
-- The category (act on / consider / noted / dismissed)
-- A one-line rationale for the categorization
+Sort every finding into one of the four buckets defined in Output Format below.
+For each, record which model(s) raised it and a one-line rationale for the
+categorization.
 
 ## Output Format
 
@@ -93,16 +85,16 @@ Present the verdict in this structure:
 - Reviewer [label]: [model name], [N findings] (one bullet per reviewer)
 
 ### Act On
-[Findings that should be addressed. For each: description, which models raised it, why it matters.]
+[Real issues in correctness, security, or maintainability given the actual goals: these would block a real PR. Each: description, which models raised it, why it matters.]
 
 ### Consider
-[Findings worth thinking about. For each: description, which models raised it, tradeoff involved.]
+[Legitimate, but you are unsure the fix outweighs its cost right now. Each: description, which models raised it, the tradeoff.]
 
 ### Noted
-[Valid but low-priority. Brief list.]
+[Technically valid, not actionable: context-dependent, premature optimization, or low-impact at this stage. Brief list.]
 
 ### Dismissed
-[Rejected findings with brief rationale. This shows the user what was filtered out and why, so they can override your judgment if they disagree.]
+[Wrong, nitpicky, or missing context. Brief rationale each, so the user can override your judgment if they disagree.]
 
 ### Agreement Map
 [Where did models agree, where did they diverge, and what does the pattern of agreement/disagreement tell us?]

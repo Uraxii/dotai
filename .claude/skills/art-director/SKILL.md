@@ -16,8 +16,6 @@ FIRST ACTION: load the `orchestration` skill.
   and you keep only their text summaries.
 - Any agent holding images rotates early (`rotate-agent` skill). Watch
   subagent_tokens.
-- Model not pinned here. Orchestrator pins it through the spawn call's `model`
-  argument. Map lives in the `orchestration` skill, file `models.md`.
 
 ## Generation (drive ComfyUI yourself)
 

@@ -5,9 +5,9 @@ description: Test-driven development. Use when the user wants to build features 
 
 # Test-Driven Development
 
-TDD is the red → green loop. This skill is the reference that makes that loop produce tests worth keeping: what a good test is, where tests go, the anti-patterns, and the rules of the loop. Every section applies on every cycle. Consult them before and during the loop, not after.
+Every section applies on every cycle. Consult them before and during the loop, not after.
 
-When exploring the codebase, read `CONTEXT.md` (if it exists) so test names and interface vocabulary match the project's domain language, and respect ADRs in the area you're touching.
+Read `CONTEXT.md` and the ADRs for the area you're touching, when they exist, so test names and interface vocabulary match the project's domain language. Layout and format: the `domain-modeling` skill.
 
 ## What a good test is
 
@@ -28,6 +28,20 @@ Ask: "What's the public interface, and which seams should we test?"
 - **Implementation-coupled.** Mocks internal collaborators, tests private methods, or verifies through a side channel (querying the database instead of using the interface). The tell: the test breaks when you refactor but behavior hasn't changed.
 - **Tautological.** The assertion recomputes the expected value the way the code does (`expect(add(a, b)).toBe(a + b)`, a snapshot derived by hand the same way, a constant asserted equal to itself), so it passes by construction and can never disagree with the code. Expected values must come from an independent source of truth: a known-good literal, a worked example, the spec.
 - **Horizontal slicing.** Writing all tests first, then all implementation. Bulk tests verify _imagined_ behavior: you test the _shape_ of things rather than user-facing behavior, the tests go insensitive to real changes, and you commit to test structure before understanding the implementation. Work in **vertical slices** instead: one test, one implementation, repeat, each test a **tracer bullet** that responds to what the last cycle taught you.
+
+## When a failing test is impractical
+
+Do not silently skip the red step. Say WHY first (broad harness setup, brittle
+mocks, slow end-to-end infra, production-only state, vague reproduction steps,
+large unrelated fixture churn), then run the closest executable check instead:
+targeted script, manual reproduction command, browser automation, snapshot
+diff, log assertion, focused integration check. Report which one you used and
+what it showed.
+
+Prefer no new test over a bad test. Bad test = mostly tests mocks, encodes
+current implementation details, depends on timing or unrelated global state,
+needs expensive infrastructure for a small fix, or gets deleted right after
+proving the fix.
 
 ## Rules of the loop
 

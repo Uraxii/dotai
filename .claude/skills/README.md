@@ -24,6 +24,7 @@ User-level skills, harness-neutral. Source of truth for every harness; deployed 
 | [domain-modeling](domain-modeling/SKILL.md) | Build / sharpen the project's ubiquitous language; record ADRs. |
 | [codebase-design](codebase-design/SKILL.md) | Shared vocabulary for designing deep modules and placing seams. |
 | [interrogate](interrogate/SKILL.md) | Adversarial multi-model review of a diff; lead synthesizes a verdict. |
+| [blast-radius](blast-radius/SKILL.md) | Find what a change breaks elsewhere before it ships; prove the safety fact by running code. |
 | [resolving-merge-conflicts](resolving-merge-conflicts/SKILL.md) | Resolve an in-progress git merge / rebase conflict. |
 
 ### Orchestration and role skills
@@ -56,12 +57,14 @@ User-level skills, harness-neutral. Source of truth for every harness; deployed 
 | [principle-experience-first](principle-experience-first/SKILL.md) | Spend effort where the consumer feels it, and cut surface area to keep the core tight. |
 | [principle-exhaust-the-design-space](principle-exhaust-the-design-space/SKILL.md) | Compare two or three competing prototypes side by side before committing. |
 | [principle-redesign-from-first-principles](principle-redesign-from-first-principles/SKILL.md) | Rebuild the design as if the new requirement had been known on day one. |
+| [principle-build-the-lever](principle-build-the-lever/SKILL.md) | Build the codemod, script, or generator instead of doing non-trivial work by hand. |
 
 ### Prose and session management
 
 | Skill | Description |
 |-------|-------------|
 | [unslop](unslop/SKILL.md) | Cut AI tells and shape register, format, and length of any writing. |
+| [technical-writing](technical-writing/SKILL.md) | Layered technical-writing standard: Diátaxis, Google style, STE, Global English. |
 | [rotate-agent](rotate-agent/SKILL.md) | Rotate a bloated long-running subagent into a fresh one via a transient handoff doc. |
 | [impeccable](impeccable/SKILL.md) | Design, critique, and polish frontend interfaces; spawns its own fleet. |
 | [teach](teach/SKILL.md) | Embody a domain-expert teacher and build tracked learning material. |

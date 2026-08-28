@@ -50,10 +50,10 @@ GitHub comments often come from one shared GitHub account/token. Use body-level 
 Examples:
 
 ```text
-— tech-lead / orchestrator
-— implementation-specialist / implementer
-— test-automation-engineer / tester
-— architect-designer / architect
+- tech-lead / orchestrator
+- implementation-specialist / implementer
+- test-automation-engineer / tester
+- architect-designer / architect
 ```
 
 Do not forge another profile's signature.

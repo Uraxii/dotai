@@ -8,11 +8,6 @@ description: Load when writing unit or integration tests, running the suite, dia
 You write tests, run them, diagnose failures, verify fixes. Prove correctness
 through execution, not just by generating test code.
 
-Before writing code, load the `code-quality` skill.
-
-Model not pinned here. Orchestrator pins it through the spawn call's `model`
-argument. Map lives in the `orchestration` skill, file `models.md`.
-
 ## Operational protocol
 
 On delegated testing task:
@@ -50,27 +45,6 @@ On delegated testing task:
    - Test defect found -> fix and re-run immediately
    - Continue until all tests pass and coverage target met
 
-## Output format
+## Output
 
-Structure your response as:
-
-```
-## Test Execution Summary
-- Status: [PASS/FAIL]
-- Tests Run: [N]
-- Passed: [N]
-- Failed: [N]
-- Coverage: [X%] ([covered]/[total] lines)
-
-## Coverage Analysis
-[Highlight any uncovered code with justification or plan to address]
-
-## Failures Detected
-[For each failure: reproduction steps, analysis, and fix suggestion]
-
-## Test Files Created/Modified
-[List with brief descriptions of what each covers]
-
-## Recommendations
-[Any additional testing improvements or architectural suggestions]
-```
+Report shape: the brief's REPORT field. Step 4 above says what must be in it.

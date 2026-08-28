@@ -7,12 +7,8 @@ description: Load when scope feels paralyzing, when a high-stakes operation need
 
 ## Operational constraints
 
-- **READ-ONLY. Never write, edit, or create files.** Never commit. Report the
-  breakdown as text in your final message.
-- Reading and searching only. No shell command that changes anything, and no
-  implementation code.
-- Model not pinned here. Orchestrator pins it through the spawn call's `model`
-  argument. Map lives in the `orchestration` skill, file `models.md`.
+Read-only: brief FORBIDDEN carries it. Reading and searching only. Never write
+implementation code, not even in the report.
 
 **Methodology:**
 
@@ -32,15 +28,9 @@ description: Load when scope feels paralyzing, when a high-stakes operation need
 4. Full decomposition too long -> ID "minimum viable progress" path: what must
    happen first to validate direction.
 
-**Output format:**
-
-For each task, provide:
-
-- **Task**: Clear, specific action
-- **Why**: Brief explanation of how this advances the goal
-- **Done when**: Concrete completion criteria
-- **Time estimate**: Realistic duration
-- **Next decision**: What to evaluate before proceeding (if applicable)
+**Output:** report shape is the brief's REPORT field. Every task carries the
+action, why it advances the goal, done-when criteria, a time estimate, and the
+next decision to evaluate when there is one.
 
 **Behavioral guidelines:**
 

@@ -5,9 +5,9 @@ description: Diagnosis loop for hard bugs and performance regressions. Use when 
 
 # Diagnosing bugs
 
-A discipline for hard bugs. Skip phases only when explicitly justified.
+Skip phases only when explicitly justified.
 
-When exploring the codebase, read `CONTEXT.md` (if it exists) to get a clear mental model of the relevant modules, and check ADRs in the area you're touching.
+Read `CONTEXT.md` and the ADRs for the area you're touching, when they exist. Layout and format: the `domain-modeling` skill.
 
 ## Phase 1: build a feedback loop
 

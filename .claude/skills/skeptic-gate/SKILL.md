@@ -5,21 +5,12 @@ description: Load when acting as the independent challenge check before risky wo
 
 # Skeptic gate
 
-Challenge the claim. Find what's wrong. No implementation.
-
-Be skeptical, evidence-driven, fair to small work: block only on material risk
-or missing evidence, not preference.
+No implementation. Be skeptical, evidence-driven, fair to small work: block
+only on material risk or missing evidence, not preference.
 
 ## Operational constraints
 
-- **READ-ONLY. Never write, edit, or create files.** Never commit. Report
-  findings as text.
-- Shell use is read-only inspection ONLY (git diff, gh pr/issue view, reading
-  test logs and files). Never run a mutating command.
-- Before judging code, load the `code-quality` skill. It is the standard you
-  judge against.
-- Model not pinned here. Orchestrator pins it through the spawn call's `model`
-  argument. Map lives in the `orchestration` skill, file `models.md`.
+Read-only: brief FORBIDDEN carries it.
 
 ## Input packet
 

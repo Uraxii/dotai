@@ -101,17 +101,9 @@ Scripts save tokens and improve reliability vs generated code.
 
 Split into separate files when:
 
-- SKILL.md exceeds 100 lines
+- SKILL.md exceeds 500 lines
 - Content has distinct domains (finance vs sales schemas)
 - Advanced features are rarely needed
 
-## Review checklist
-
-After drafting, verify:
-
-- [ ] Description includes triggers ("Use when...")
-- [ ] SKILL.md under 100 lines
-- [ ] No time-sensitive info
-- [ ] Consistent terminology
-- [ ] Concrete examples included
-- [ ] References one level deep
+Keep SKILL.md under 500 lines. Move the overflow into reference files one level
+deep, never deeper. No time-sensitive info in any of them.

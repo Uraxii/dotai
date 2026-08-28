@@ -16,11 +16,12 @@ End-of-task ship flow. Single PR per branch. Conventional commit format.
 
 1. **Branch.** If on `main`/`master`/default, create `git checkout -b <type>/<scope-or-summary>` using the repo's existing branch-prefix convention (check `git log --oneline -20` for examples). Otherwise stay on current branch.
 2. **Stage.** Show `git status -sb` to user. Default to `git add -A`. If the working tree has pre-existing dirty files unrelated to this ship, warn and ask before staging them.
-3. **Commit.** Conventional commit format: `<type>(<scope>): <subject>`. Types: `feat`, `fix`, `refactor`, `docs`, `style`, `test`, `chore`. Scope optional. Subject terse, present tense.
-4. **Push.** `git push -u origin $(git branch --show-current)`. If rejected for non-fast-forward + branch already tracks remote, ask before force-push.
+3. **Commit.** Repo has a known build/test command (`go build ./...`, `npm test`, etc.) -> run it first, abort on failure. Conventional commit format: `<type>(<scope>): <subject>`. Types: `feat`, `fix`, `refactor`, `docs`, `style`, `test`, `chore`. Scope optional. Subject terse, present tense.
+4. **Push.** Rebase onto the default branch first: `git fetch origin && git rebase origin/<default-branch>`, resolving conflicts rather than skipping. Then `git push -u origin $(git branch --show-current)`. If rejected for non-fast-forward + branch already tracks remote, ask before force-push.
 5. **PR.** Check existing PR for branch: `gh pr view $(git branch --show-current) --json number,url`.
    - **Exists**: update title + body in place via `gh pr edit --title ... --body-file ...`. Never flip draft↔ready.
    - **New**: open ready-for-review via `gh pr create --base <default-branch> --head $(git branch --show-current) --title ... --body-file ...`.
+6. **Review bot (optional).** Repo wired to opencode -> trigger its review: `gh pr comment <number> --body "/oc please review this PR and approve if you find it ready to merge"`. Skip when the repo has no opencode action.
 
 ## Title
 
