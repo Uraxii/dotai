@@ -7,7 +7,7 @@ description: Test-driven development. Use when the user wants to build features 
 
 Every section applies on every cycle. Consult them before and during the loop, not after.
 
-Read `CONTEXT.md` and the ADRs for the area you're touching, when they exist, so test names and interface vocabulary match the project's domain language. Layout and format: the `domain-modeling` skill.
+Read the project's instructions file and any glossary or decision notes for the area you're touching, when they exist, so test names and interface vocabulary match the project's domain language.
 
 ## What a good test is
 

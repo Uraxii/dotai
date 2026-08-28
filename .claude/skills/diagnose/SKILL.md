@@ -7,7 +7,7 @@ description: Diagnosis loop for hard bugs and performance regressions. Use when 
 
 Skip phases only when explicitly justified.
 
-Read `CONTEXT.md` and the ADRs for the area you're touching, when they exist. Layout and format: the `domain-modeling` skill.
+Read the project's instructions file and any glossary or decision notes for the area you're touching, when they exist.
 
 ## Phase 1: build a feedback loop
 

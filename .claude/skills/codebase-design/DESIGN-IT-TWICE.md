@@ -28,7 +28,7 @@ not a variant of one shape.
 Each brief is technical and independent of the user-facing writeup above: file
 paths, coupling details, dependency category from [DEEPENING.md](DEEPENING.md),
 what sits behind the seam. Include both [SKILL.md](SKILL.md) vocabulary and
-CONTEXT.md vocabulary so every agent names things consistently with the
+the project's domain vocabulary so every agent names things consistently with the
 architecture language and the project's domain language.
 
 One design constraint per agent:

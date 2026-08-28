@@ -21,17 +21,18 @@ User-level skills, harness-neutral. Source of truth for every harness; deployed 
 | Skill | Description |
 |-------|-------------|
 | [research](research/SKILL.md) | Background agent investigates a question against primary sources into a cited Markdown file. |
-| [domain-modeling](domain-modeling/SKILL.md) | Build / sharpen the project's ubiquitous language; record ADRs. |
 | [codebase-design](codebase-design/SKILL.md) | Shared vocabulary for designing deep modules and placing seams. |
 | [interrogate](interrogate/SKILL.md) | Adversarial multi-model review of a diff; lead synthesizes a verdict. |
 | [blast-radius](blast-radius/SKILL.md) | Find what a change breaks elsewhere before it ships; prove the safety fact by running code. |
 | [resolving-merge-conflicts](resolving-merge-conflicts/SKILL.md) | Resolve an in-progress git merge / rebase conflict. |
+| [why](why/SKILL.md) | Investigate why code was built this way from source control, tickets, docs, chat, and telemetry; returns a cited, confidence-calibrated read. |
 
 ### Orchestration and role skills
 
 | Skill | Description |
 |-------|-------------|
 | [orchestration](orchestration/SKILL.md) | Agent roster, situation-to-skill routing, spawn contract, playbooks, pre-ship gate, verdict ledger. |
+| [show-me-your-work](show-me-your-work/SKILL.md) | Keep a reviewable TSV decision trail for long-running or unattended work, cross-model reviewed at the end. |
 | [setup-models](setup-models/SKILL.md) | Interview the user role by role, then rewrite the orchestration model map. |
 | [code-quality](code-quality/SKILL.md) | Cross-language standard for writing, reviewing, and refactoring code, with per-language references. |
 | [architect-designer](architect-designer/SKILL.md) | Settle system structure and author the code skeleton before any logic is written. |

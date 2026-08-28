@@ -67,13 +67,14 @@ Craft and behaviour skills:
 | Reading legwork against primary sources, delivered as file | `research` |
 | Review a diff: several models try to break it, lead judges | `interrogate` |
 | What could this change break elsewhere, before it ships | `blast-radius` |
-| Pin domain vocabulary, ubiquitous language, decision record | `domain-modeling` |
 | Design a deep module, place a seam, make code navigable | `codebase-design` |
 | Throwaway sketch to settle a design question | `prototype` |
 | Creating or editing a SKILL.md | `write-a-skill` |
 | Durable notes, sources, boards, artifacts for human review | `agent-workbench` |
 | Citing or relying on a web page | `capture-source` |
 | Stage, commit, push, open PR | `yeet` |
+| Log the decision trail of a run, audit it at end | `show-me-your-work` |
+| Recover why something was built this way, nothing recorded | `why` |
 
 ## Skill vs playbook
 
@@ -145,6 +146,7 @@ verdict AND its resolution as bd note on tracking issue via `agent-workbench`:
 - CI green is input to verdict, not verdict.
 - BLOCK gets fix task, not re-gate of same SHA.
 - Before shipping: every change on branch has PASS for current SHA.
+- When a `show-me-your-work` trail is active, the gate verdict also goes in as a row on that trail, not just the bd note.
 
 ## Before shipping
 

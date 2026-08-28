@@ -10,8 +10,7 @@ Copy these steps into todolist verbatim before any task-specific todo.
    at end. Never build then ask what was wanted. Tracked work -> record in bd
    via `agent-workbench`.
 2. **Name the data shape first.** Load `principle-foundational-thinking`. Before any
-   logic: what is stored, what keys it, who owns it. `domain-modeling` for
-   vocabulary. Data-shape change late is a rewrite, early it is a one-line diff.
+   logic: what is stored, what keys it, who owns it. Data-shape change late is a rewrite, early it is a one-line diff.
 3. **Model state in types, not booleans.** Invalid states unconstructable. Two
    booleans that cannot both be true are one enum. Parse at boundary, do not
    validate at every use.
