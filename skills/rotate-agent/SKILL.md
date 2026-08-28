@@ -1,6 +1,6 @@
 ---
 name: rotate-agent
-description: Rotate a bloated long-running subagent (orchestrator, specialist, any persistent delegate) into a fresh one via a gitignored transient handoff doc. Use when a delegate's token usage passes ~250k, when the user says "rotate the agent" / "context is bloated" / "start a fresh agent", or before handing a long pipeline to a successor agent. Applies to ALL subagents; orchestrators apply it to their own specialists.
+description: Rotate a bloated long-running subagent (orchestrator, specialist, any persistent delegate) into a fresh one via a chained handoff doc in the OS temp dir. Use when a delegate's token usage passes ~250k, when the user says "rotate the agent" / "context is bloated" / "start a fresh agent", or before handing a long pipeline to a successor agent. Applies to ALL subagents; orchestrators apply it to their own specialists.
 ---
 
 # Rotate agent
