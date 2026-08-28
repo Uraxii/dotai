@@ -1,110 +1,83 @@
 ---
 name: orchestration
-description: Load when work is big enough to hand off, when phases must run in a set order, or when several subagents run at once. Carries the two-agent roster, the situation-to-skill routing table, the spawn contract every brief fills, the playbook index, the serial pre-ship gate rule, the verdict ledger, and the drain and liveness rules for children.
+description: The mode loaded at the start of any non-trivial task, before the first tool call. Carries the trigger list mapping situation to skill, the principle index, the autonomy rules, the subagent roster and spawn contract, and the playbook index. Use for any multi-step work, any change to code or prose, any delegation, and any task big enough to hand off or run in phases.
 ---
 
-# Orchestration
+# Orchestration mode
 
-## Roster
+## Non-negotiables
 
-Two roles. Nothing else is a role.
+**Start every multi-step task with a todolist whose first item read the Principles section below in full.** Principles ground every trigger here. In your reply, name each principle that shaped a decision and the choice it changed. Citation with no decision behind it mean the leaf skill got skipped.
 
-| Role | What it is |
-|---|---|
-| main thread | Triage, sequencing, cross-workstream synthesis. Only role that may ask the user. |
-| `subagent` | Generic delegate. No specialism of own. Brief says what, skill says how. |
+Rest of triggers:
 
-A harness may ship its own agent types (read-only explorer, planner). Use
-them only where a brief-scoped `subagent` cannot do the job. The `impeccable`
-skill spawns its own fleet; invoke the skill, never its agents direct.
+- Vague task, no acceptance criteria yet -> `requirements-clarifier`. Scope paralyzing, or step order high stakes -> `big-pickle-simple-tasks`.
+- Structure, pattern choice, ADR, skeleton of types and stubs -> `architect-designer`. Scoped implementation -> `implementation-specialist`.
+- Write tests, run suite, diagnose failures, verify fix -> `test-automation-engineer`. Hard bug, broken thing, perf regression -> `diagnose`. Behaviour testable, want red-green-refactor -> `tdd`.
+- One software workstream end to end -> `tech-lead`. One image generation or editing workstream -> `art-director`.
+- Before any PR opened or integrated -> `skeptic-gate`. Serial, one gate at a time, never batched.
+- Any code written, changed, reviewed -> `code-quality`. Deep module, seam placement, navigable code -> `codebase-design`.
+- Any step that WRITES code, or reach for a new dependency -> `ponytail`, mandatory, no exception. Stdlib and native platform before any new dep.
+- About to ask the user a "which approach" or "what should this do" fork -> classify it first. Answer observable by running something is not the human's to give: sketch it with `prototype` and let the result decide. Save the ask for a taste call no experiment settle.
+- Parallel fan-out -> `swarm` for coverage matrices, races, exploration partitions. `arena` for design or code bakeoffs.
+- Contested design -> `interrogate` before shipping. Change might break something outside its diff -> `blast-radius`.
+- Any prose surface, own reply included -> `unslop`. Register for every agent, output and reasoning -> `caveman`.
+- Docs, RFCs, readmes, PR descriptions, commit messages -> `technical-writing`.
+- Long, autonomous, or unattended work the user review later -> `show-me-your-work`.
+- Reading legwork against primary sources -> `research`. Citing or relying on a web page -> `capture-source`. Why built this way, nothing recorded -> `why`.
+- Gameplay-affecting change in a Godot project -> `godot-playtest`. Frontend interface designed, critiqued, polished -> `impeccable`.
+- Creating or editing a SKILL.md -> `write-a-skill`. Durable notes, sources, boards, artifacts for human review -> `agent-workbench`. Stage, commit, push, open PR -> `yeet`.
+- Session picked up by another agent -> `handoff`. Subagent bloated, tokens high -> `rotate-agent`.
+- Broken skill mid-task -> fix it in its own change. Do not block. Do not work around it silently.
 
-External dependency: `ponytail` is a plugin (`ponytail:ponytail`), not a
-skill in this tree. Harness without it -> `code-quality` plus
-`principle-laziness-protocol` stand in wherever a step names `ponytail`.
+## Principles
 
-## Routing: situation -> skill subagent loads
+Read the leaf skill in full for any principle you apply. Each entry name when it applies.
 
-Role skills:
+**Core**
 
-| Situation | Skill |
-|---|---|
-| Vague task needs user stories, acceptance criteria, edge cases | `requirements-clarifier` |
-| Scope feels paralyzing, or high-stakes op where step order matters | `big-pickle-simple-tasks` |
-| Structure, pattern choice, ADRs, skeleton (types, contracts, stubs) | `architect-designer` |
-| Scoped, well-defined implementation | `implementation-specialist` |
-| Write tests, run suite, diagnose failures, verify fix | `test-automation-engineer` |
-| Pre-ship challenge check, before any PR opened or integrated | `skeptic-gate` |
-| Own one software workstream end to end, delegate onward | `tech-lead` |
-| Own one image generation or editing workstream | `art-director` |
+- **Laziness Protocol** (`principle-laziness-protocol`). Ponytail ran, diff still grow layers, or the fix is mass deletion.
+- **Foundational Thinking** (`principle-foundational-thinking`). Core types, data shapes, what to build first, what concurrent actors share.
+- **Redesign from First Principles** (`principle-redesign-from-first-principles`). New requirement landing on a design that already exist.
+- **Outcome-Oriented Execution** (`principle-outcome-oriented-execution`). Planned rewrite or migration with phases, tempted to add shims.
+- **Experience First** (`principle-experience-first`). Cutting a feature list, picking a default, reaching for a config knob.
+- **Exhaust the Design Space** (`principle-exhaust-the-design-space`). Decision with no precedent, needs competing prototypes judged side by side.
+- **Build the Lever** (`principle-build-the-lever`). Non-trivial edits, migrations, analyses, checks. Build the rerunnable tool, not hand work.
 
-Craft and behaviour skills:
+**Architecture**
 
-| Situation | Skill |
-|---|---|
-| Any code written, changed, reviewed | `code-quality` |
-| Any step that WRITES code. Mandatory, no exception | `ponytail` |
-| About to call something done, or checking delegate's claim | `principle-prove-it-works` |
-| Step about to dump bulk (logs, many files, images, big JSON) | `principle-guard-the-context-window` |
-| Ponytail ran, diff STILL grows layers, or fix is mass deletion | `principle-laziness-protocol` |
-| Tempted to stop and ask permission on reversible work | `principle-never-block-on-the-human` |
-| Writing same instruction twice, or same bug class returning | `principle-encode-lessons-in-structure` |
-| Picking core types, data shapes, what to build first | `principle-foundational-thinking` |
-| Planned rewrite or migration with phases, tempted to add shims | `principle-outcome-oriented-execution` |
-| Cutting a feature list, picking a default, or reaching for a config knob | `principle-experience-first` |
-| Decision with no precedent, needs competing prototypes | `principle-exhaust-the-design-space` |
-| New requirement landing on design that already exists | `principle-redesign-from-first-principles` |
-| Non-trivial edits, migrations, analyses, checks: build the rerunnable tool | `principle-build-the-lever` |
-| Any prose surface, including your own reply | `unslop` |
-| Writing or reviewing docs, RFCs, readmes, PR descriptions, commit messages | `technical-writing` |
-| Register for every agent's output and reasoning | `caveman` |
-| Hard bug, broken thing, perf regression | `diagnose` |
-| Behaviour is testable, want red-green-refactor | `tdd` |
-| Session must be picked up by another agent | `handoff` |
-| Subagent bloated, tokens high, needs fresh successor | `rotate-agent` |
-| Reading legwork against primary sources, delivered as file | `research` |
-| Review a diff: several models try to break it, lead judges | `interrogate` |
-| What could this change break elsewhere, before it ships | `blast-radius` |
-| Design a deep module, place a seam, make code navigable | `codebase-design` |
-| Throwaway sketch to settle a design question | `prototype` |
-| Creating or editing a SKILL.md | `write-a-skill` |
-| Durable notes, sources, boards, artifacts for human review | `agent-workbench` |
-| Citing or relying on a web page | `capture-source` |
-| Stage, commit, push, open PR | `yeet` |
-| Log the decision trail of a run, audit it at end | `show-me-your-work` |
-| Recover why something was built this way, nothing recorded | `why` |
+- The rest live in `code-quality`, loaded on any code: domain modelling, boundary and type discipline, idempotence, caller migration, shared state, reader load, subtract before add, root causes, verifiable units.
 
-## Skill vs playbook
+**Verification**
 
-- Capability any step might reach for -> SKILL.
-- Sequence picked once per task, up front -> PLAYBOOK.
-- Anything user types by name -> SKILL, always.
+- **Prove It Works** (`principle-prove-it-works`). About to call something done, or checking a delegate's claim.
 
-Skill already owns the shape -> route to skill, no playbook.
+**Delegation**
 
-## Playbooks
+- **Guard the Context Window** (`principle-guard-the-context-window`). Step about to dump bulk: logs, many files, images, big JSON, fan-out planning.
+- **Never Block on the Human** (`principle-never-block-on-the-human`). Tempted to stop and ask permission on reversible work.
 
-Match task, open file, copy steps into todolist VERBATIM before any
-task-specific todo and before reasoning about task. Failure mode: read
-playbook, then write bespoke plan quietly dropping its steps. Step you skip
-stays in list with one-line `skip: <reason>`. Silent skip not allowed.
+**Meta**
 
-| Task shape | Playbook |
-|---|---|
-| Read-only question: how X works, why Y built that way, is Z true | `playbooks/investigation.md` |
-| Reported defect to reproduce, root-cause, fix | `playbooks/bug-fix.md` |
-| New or changed behaviour | `playbooks/feature.md` |
-| Behaviour-preserving structural change | `playbooks/refactoring.md` |
-| Program outliving one agent: many units, phases, standing coordinator | `playbooks/orchestrate.md` |
+- **Encode Lessons in Structure** (`principle-encode-lessons-in-structure`). Writing the same instruction twice, or same bug class returning.
 
-`playbooks/autonomous-run.md` is a MODIFIER. Layers onto any of the five when
-no human awake. Never picked alone.
+## Autonomy
 
-No playbook fits -> say so, write steps you will follow, hold to them same way.
+**Just do it.** Reversible work and external actions proceed without asking.
 
-## Spawn contract
+**Always pause** for irreversible writes: force-push to a shared branch, deploy, data deletion, message sent to another human.
 
-Every spawn carries all of these. Field you cannot fill = task not scoped:
-scope it or do not spawn.
+**Session overrides.** "Do not stop", "going to bed", "run until done", "be fully autonomous" -> keep going.
+
+**No is an acceptable answer.** Asked whether to do something, or shown an approach, give real judgment. Decline, push back, say "this does not earn its place" when true. Candor over sycophancy.
+
+**Hard rule.** NEVER spawn `fable`, `sol`, or `luna` without explicit user permission. No exceptions, no inference from silence.
+
+## Subagents
+
+Two roles, nothing else is a role. Main thread: triage, sequencing, cross-workstream synthesis, and the only role that may ask the user. `subagent`: generic delegate with no specialism of own, brief say what and skill say how.
+
+Every spawn carry all of these. Field you cannot fill = task not scoped: scope it or do not spawn.
 
 ```text
 GOAL         one sentence outcome, executable by stranger with no chat access
@@ -120,63 +93,25 @@ REPORT       status, branch, head SHA, verdict, what was actually run,
              deviations, suggested follow-ups
 ```
 
-Size to task. One-command task collapses to paragraph still naming goal,
-scope, verify command, report shape.
+- Size to task. One-command task collapse to a paragraph still naming goal, scope, verify command, report shape.
+- Model pinned PER CALL via the spawn call's model argument, never in frontmatter. Map: `models.md`.
+- Constraints go in brief text, not tool config. Read-only means FORBIDDEN says "no writes, no commits, inspection commands only". No-pixels means FORBIDDEN says "never load image pixels, hold paths and verdict text only".
+- Standing orders: paste the user's global instructions file into every spawn. Directives decay, and each dropped one cost a user turn.
+- Fresh spawn over resume-chain, always. Scope change -> fresh spawn with consolidated scope. Bloated agent -> `rotate-agent`.
+- You own every subagent's work. Review the diff, write your own summary, never pass through what it said.
+- `principle-guard-the-context-window`: file pointers not inlined context, bulk to subagents, summaries in the main thread.
 
-- Model pinned PER CALL via the spawn call's `model` argument. Never in frontmatter.
-  Map: `models.md`.
-- Constraints go in brief text, not tool config. Read-only means FORBIDDEN
-  says "no writes, no commits, inspection commands only". No-pixels means
-  FORBIDDEN says "never load image pixels, hold paths and verdict text only".
-- Standing orders: paste the user's global instructions file (`CLAUDE.md`, `AGENTS.md`, or harness equivalent) into every spawn. Directives
-  decay; each dropped one costs user turn.
-- Never resume-chain a brief. Scope change -> fresh spawn with consolidated
-  scope. Bloated agent -> `rotate-agent`.
+## Playbooks
 
-## Verdict ledger
+Your first todolist actions are the matched playbook's steps, copied in VERBATIM, before any task-specific todo and before you reason about the task. Failure mode: read the playbook, then write a bespoke plan quietly dropping its steps. A step you skip stay in the list with a one-line `skip: <reason>`. Silent skip not allowed.
 
-Verdict pinned to commit SHA, never to memory or transcript. Record every gate
-verdict AND its resolution as bd note on tracking issue via `agent-workbench`:
-`verdict=<X> sha=<head> by=skeptic-gate ran=<cmd> resolution=<fix|accepted|open>`.
+Large or cross-cutting effort, or no bundled playbook fits -> `figure-it-out`, which design a bespoke rigorous playbook for the task. Standing multi-day program with many stacked units and a fleet of subagents under one coordinator -> Orchestrate playbook instead.
 
-- New head SHA voids verdict. Re-gate after any commit, rebase, amend.
-- CI green is input to verdict, not verdict.
-- BLOCK gets fix task, not re-gate of same SHA.
-- Before shipping: every change on branch has PASS for current SHA.
-- When a `show-me-your-work` trail is active, the gate verdict also goes in as a row on that trail, not just the bd note.
+Capability any step might reach for -> SKILL. Sequence picked once per task up front -> PLAYBOOK. Anything the user type by name -> SKILL, always. Skill already own the shape -> route to skill, no playbook.
 
-## Before shipping
-
-Gate required before any PR opened or integrated. Spawn `subagent` loading
-`skeptic-gate`. Any ONE trigger is enough:
-
-- Architecture change.
-- Security or trust-boundary change.
-- Netcode, shared state, or replication change.
-- Migration.
-- Public API or schema change.
-- Large cross-cutting change.
-- Verification weak or missing.
-- Tests passed but result looks suspicious.
-
-Serial rule: spawn ONE gate. Wait for verdict. Fix. Spawn ONE FRESH gate.
-Never batch, never parallel. Gate calls are dependency chain, not independent
-tool calls. Non-PASS verdict halts delivery until resolved.
-
-## Drain and liveness
-
-- Never resume child just to check on it. Resume restarts an idle agent.
-  Probe read-only instead.
-- Account for every child spawned. Completion is queue event, not interrupt;
-  note it, keep working, drain queue before declaring done. Unaccounted child
-  is unfinished work.
-- Retry by failure mode, never blindly. Cap-hit or OOM -> respawn smaller
-  scope. Network -> retry as is. Tool error -> different model. Unknown ->
-  once.
-- Bound own retries: two, then mark unit blocked and replan around it.
-  Cannot replan -> bubble up BLOCKED naming exactly what stuck.
-
-## Hard rule
-
-NEVER spawn `fable`, `sol`, or `luna` agents without explicit user permission.
-No exceptions, no inference from silence.
+- **Investigation.** Read-only question: how X works, why Y built that way, is Z true. `playbooks/investigation.md`.
+- **Bug fix.** Reported defect to reproduce, root-cause, fix. `playbooks/bug-fix.md`.
+- **Feature.** New or changed behaviour. `playbooks/feature.md`.
+- **Refactoring.** Behaviour-preserving structural change. `playbooks/refactoring.md`.
+- **Orchestrate.** Program outliving one agent: many units, phases, standing coordinator. Carries the verdict ledger, the pre-ship gate, and the drain and liveness rules. `playbooks/orchestrate.md`.
+- **Autonomous run.** MODIFIER. Layers onto any of the five when no human is awake. Never picked alone. `playbooks/autonomous-run.md`.

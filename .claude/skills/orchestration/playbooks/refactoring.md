@@ -39,7 +39,7 @@ Copy these steps into todolist verbatim before any task-specific todo.
    not a delegate's "looks good". Confirm reader load dropped: fewer layers,
    less hidden state. No drop anywhere -> revert.
 9. **GATE.** Subagent loads `skeptic-gate`, serial: one gate, wait, fix, one
-   fresh gate. Record verdict, head SHA, resolution in verdict ledger. Then
+   fresh gate. Record verdict, head SHA, resolution in the verdict ledger (`orchestrate.md`). Then
    `yeet`.
 
 **Reply:** named smell, baseline command with before/after pass counts,

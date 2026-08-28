@@ -25,15 +25,15 @@ specialist result integration, reports.
 
 Delegate per the roster in the `orchestration` skill. Each delegate is a
 `subagent` agent whose brief names the role skill it must load. Skill per
-stage: the `orchestration` routing table. Default implementer:
+stage: the `orchestration` trigger list. Default implementer:
 `implementation-specialist`.
 
 Pipeline order: Requirements -> Architecture -> Implementation -> Testing ->
 Review.
 
-Pre-ship gate: `orchestration`, section "Before shipping". Triggers, the serial
-one-gate-at-a-time rule, and non-PASS handling all live there. Run it, do not
-restate it.
+Pre-ship gate: `orchestration/playbooks/orchestrate.md`, section "Before
+shipping". Triggers, the serial one-gate-at-a-time rule, and non-PASS handling
+all live there. Run it, do not restate it.
 
 Follow up once, then bubble up BLOCKED if unresolved.
 

@@ -31,7 +31,7 @@ User-level skills, harness-neutral. Source of truth for every harness; deployed 
 
 | Skill | Description |
 |-------|-------------|
-| [orchestration](orchestration/SKILL.md) | Agent roster, situation-to-skill routing, spawn contract, playbooks, pre-ship gate, verdict ledger. |
+| [orchestration](orchestration/SKILL.md) | The mode for any non-trivial task: triggers, principle index, autonomy, subagent contract, playbook index. |
 | [show-me-your-work](show-me-your-work/SKILL.md) | Keep a reviewable TSV decision trail for long-running or unattended work, cross-model reviewed at the end. |
 | [setup-models](setup-models/SKILL.md) | Interview the user role by role, then rewrite the orchestration model map. |
 | [code-quality](code-quality/SKILL.md) | Cross-language standard for writing, reviewing, and refactoring code, with per-language references. |
@@ -43,6 +43,9 @@ User-level skills, harness-neutral. Source of truth for every harness; deployed 
 | [skeptic-gate](skeptic-gate/SKILL.md) | Independent pre-ship challenge check on a plan or diff. Read-only. |
 | [tech-lead](tech-lead/SKILL.md) | Sub-orchestrator for one software workstream, delegating every piece of work. |
 | [test-automation-engineer](test-automation-engineer/SKILL.md) | Write and run tests, diagnose failures, verify fixes by execution. |
+| [arena](arena/SKILL.md) | Fan out N parallel candidates at the same task, pick a base, graft in the best of the losers. |
+| [swarm](swarm/SKILL.md) | Fan out N parallel workers, drain them, return one consolidated report. |
+| [figure-it-out](figure-it-out/SKILL.md) | Design an auditable playbook for a large migration or ambitious change when no narrower one fits. |
 
 ### Principle skills
 
