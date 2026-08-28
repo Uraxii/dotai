@@ -114,7 +114,7 @@ Aim for a complete **coverage map**, not a minimal one. A null result from an is
 Launch all matching investigators in a single message so they run concurrently. One investigator per category lets each specialize in one tool's query vocabulary and result shape. Don't ask one agent to cover multiple MCPs.
 
 Subagent config (each):
-- `subagent_type`: `subagent`
+- role: `subagent`
 - `model`: model from the `orchestration` skill's `models.md`; absent -> omit `model`
 - Investigators shouldn't write anything. That's a posture, not a sandbox restriction.
 
@@ -160,7 +160,7 @@ If your scope assessment suggests a single-commit trivial target where the PR de
 
 Spawn one synthesizer subagent:
 
-- `subagent_type`: `subagent`
+- role: `subagent`
 - `model`: model from the `orchestration` skill's `models.md`; absent -> omit `model`
 - The synthesizer's quality check spot-verifies citations, which can require connector access.
 

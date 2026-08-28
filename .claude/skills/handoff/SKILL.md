@@ -16,7 +16,7 @@ Save the handoff document to the temporary directory of the user's operating sys
 
 ## Which mode
 
-A referenced handoff file (e.g. `@/tmp/handoff_dotfiles_agent-orchestration_3_1784659200.md`) means CONSUME, not create. It is an instruction source: read it, load the suggested skills, inspect the named workspace and artifacts, execute the immediate next steps. Do not write another handoff unless explicitly asked.
+A referenced handoff file (e.g. `/tmp/handoff_dotfiles_agent-orchestration_3_1784659200.md`) means CONSUME, not create. It is an instruction source: read it, load the suggested skills, inspect the named workspace and artifacts, execute the immediate next steps. Do not write another handoff unless explicitly asked.
 
 Asked to EXPLAIN how handoffs or briefs work: do not execute the handoff's next steps. Read the file, then explain the consumption model. Handoff is temporary context, not source-of-truth; the next agent loads suggested skills, verifies named artifacts, preserves constraints and risks, and acts only when the user asks for continuation.
 

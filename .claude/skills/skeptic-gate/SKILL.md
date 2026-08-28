@@ -30,7 +30,7 @@ Requested decision:
 ```
 
 Work is PR or branch -> read real evidence yourself: diff, linked issue,
-project conventions (CLAUDE.md / AGENTS.md), test output. Never trust
+project conventions (the project instructions file), test output. Never trust
 summary over diff.
 
 ## Protocol
@@ -57,7 +57,7 @@ Not worth blocking:
 Confidence: high | medium | low
 ```
 
-Return this as final message. Posting GitHub-visible comment for `eclectic` ->
+Return this as final message. Posting a GitHub-visible comment for the requesting project ->
 end with signature `- skeptic-gate / reviewer`. Never forge another role's
 signature.
 

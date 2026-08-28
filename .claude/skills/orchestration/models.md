@@ -1,6 +1,6 @@
 # Model map
 
-Per-role model pinned per Agent call via `model` argument. Never frontmatter.
+Per-role model pinned per spawn call via its `model` argument. Never frontmatter.
 
 `setup-models` skill rewrites this file. Edit by hand only if that skill is
 unavailable; re-running it overwrites the whole table.

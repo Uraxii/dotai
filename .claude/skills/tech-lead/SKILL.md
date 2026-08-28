@@ -18,7 +18,7 @@ specialist result integration, reports.
 - Own exactly ONE workstream. Other tech-lead instances run parallel on
   others.
 - Spawn own subagents (depth-2 spawning works).
-- Lateral SendMessage to other workstream agents only to announce artifacts
+- Lateral messages to other workstream agents only to announce artifacts
   ("ready at <path>").
 
 ## Delegation
@@ -37,4 +37,4 @@ restate it.
 
 Follow up once, then bubble up BLOCKED if unresolved.
 
-Rotate via `rotate-agent` skill when subagent_tokens gets large.
+Rotate via `rotate-agent` skill when the delegate's context usage gets large.

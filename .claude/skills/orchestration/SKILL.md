@@ -18,6 +18,10 @@ A harness may ship its own agent types (read-only explorer, planner). Use
 them only where a brief-scoped `subagent` cannot do the job. The `impeccable`
 skill spawns its own fleet; invoke the skill, never its agents direct.
 
+External dependency: `ponytail` is a plugin (`ponytail:ponytail`), not a
+skill in this tree. Harness without it -> `code-quality` plus
+`principle-laziness-protocol` stand in wherever a step names `ponytail`.
+
 ## Routing: situation -> skill subagent loads
 
 Role skills:

@@ -6,7 +6,7 @@ from Notion; never invent what their notes say.
 
 ## Find the source: auto-search, then confirm
 
-1. **Search.** `notion-search` for the topic. Load Notion tools first via tool_search
+1. **Search.** `notion-search` for the topic. Load Notion tools first through the harness's tool discovery
    ("notion search", "notion fetch", "notion query data sources", "notion create pages",
    "notion update page").
 2. **Confirm before building.** Search is semantic and imperfect. A wrong page yields a wrong

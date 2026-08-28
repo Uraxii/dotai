@@ -7,7 +7,7 @@ User-level skills, harness-neutral. Source of truth for every harness; deployed 
 
 | Skill | Description |
 |-------|-------------|
-| [caveman](caveman/SKILL.md) | Terse smart-caveman output style; pin via memory for persistent activation. |
+| [caveman](caveman/SKILL.md) | Terse smart-caveman output style; pin in the harness's persistent instructions to keep it on. |
 | [handoff](handoff/SKILL.md) | Compact the current conversation into a durable handoff doc in `$TMPDIR` for another session. |
 | [diagnose](diagnose/SKILL.md) | Disciplined diagnosis loop for hard bugs / perf regressions. |
 | [tdd](tdd/SKILL.md) | Red-green-refactor TDD loop. |
@@ -16,7 +16,7 @@ User-level skills, harness-neutral. Source of truth for every harness; deployed 
 | [write-a-skill](write-a-skill/SKILL.md) | Author new skills with proper structure. |
 | [capture-source](capture-source/SKILL.md) | Store a web source's content + metadata into the project knowledgebase (deterministic, no model spend) instead of dropping a bare link. |
 
-### Matt Pocock engineering set (v1.1.0)
+### Engineering set
 
 | Skill | Description |
 |-------|-------------|
@@ -96,4 +96,4 @@ User-level skills, harness-neutral. Source of truth for every harness; deployed 
 
 | Skill | Description |
 |-------|-------------|
-| [build-software](archived/build-software/SKILL.md) | Superseded phased feature-build pipeline. Kept for reference, not routed to. |
+| [build-software](archived/build-software/SKILL.md) | Phased feature-build pipeline. Not routed to. |

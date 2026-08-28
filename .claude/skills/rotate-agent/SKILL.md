@@ -1,6 +1,6 @@
 ---
 name: rotate-agent
-description: Rotate a bloated long-running subagent (orchestrator, specialist, any persistent delegate) into a fresh one via a gitignored transient handoff doc. Use when a task notification shows subagent_tokens above ~250k, when the user says "rotate the agent" / "context is bloated" / "start a fresh agent", or before handing a long pipeline to a successor agent. Applies to ALL subagents; orchestrators apply it to their own specialists.
+description: Rotate a bloated long-running subagent (orchestrator, specialist, any persistent delegate) into a fresh one via a gitignored transient handoff doc. Use when a delegate's token usage passes ~250k, when the user says "rotate the agent" / "context is bloated" / "start a fresh agent", or before handing a long pipeline to a successor agent. Applies to ALL subagents; orchestrators apply it to their own specialists.
 ---
 
 # Rotate agent
@@ -13,7 +13,7 @@ session rotates own delegates; orchestrator rotates own specialists.
 
 ## When
 
-- subagent_tokens >~250k in task notification.
+- Delegate token usage >~250k.
 - Replies degrade (forgets policies, repeats work).
 - User asks.
 
@@ -33,7 +33,7 @@ entry if missing). Never commit. Successor overwrites at own rotation.
 
 ## Workflow
 
-1. **Wrap-up order.** SendMessage to bloated agent:
+1. **Wrap-up order.** Message the bloated agent:
    - Finish IN-FLIGHT only: spawned specialists complete, results
      integrated, milestone commits landed, tree clean. No new phases.
      Note exact pipeline position.

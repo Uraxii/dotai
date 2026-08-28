@@ -33,8 +33,8 @@ here.
 - Critique images at or under 2576 px long edge (~1914 px square). API server
   downscales anything larger anyway, so resize down to that ceiling, never
   below it.
-- Advisor as critic: only if verdict visible, meaning Opus 4.8 (Fable-5
-  advisor returns encrypted, unreadable results in some harnesses).
+- Advisor as critic: only if its verdict is readable; some harnesses return
+  advisor output encrypted, and such an advisor cannot judge.
   Images-to-advisor UNVERIFIED; until probed, use plain fan-out vision
   critics, which work natively.
 
