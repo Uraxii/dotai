@@ -21,12 +21,13 @@ where the evidence is the trace.
    fixed.
 2. Binary-search the cause. Form candidate hypotheses, then rule them out
    until one survives. Seed with `how` over the affected subsystem and `why`
-   for regression history; a `developer` subagent drives the hunt. Each pass, take the split that cuts the most remaining problem space,
-   get runtime evidence, eliminate. State unclear -> add instrumentation or
-   logging and read it as the code runs. Do not guess. Confirm the surviving
-   mechanism with runtime evidence before the step-3 fan-out; a design grounded
-   on a plausible-but-unconfirmed cause can be unanimously wrong while the real
-   cause sits one subsystem over.
+   for regression history; a `developer` subagent drives the hunt. Each pass,
+   take the split that cuts the most remaining problem space, get runtime
+   evidence, eliminate. State unclear -> add instrumentation or logging and read
+   it as the code runs. Do not guess. Confirm the surviving mechanism with
+   runtime evidence before the step-3 fan-out; a design grounded on a plausible-
+   but-unconfirmed cause can be unanimously wrong while the real cause sits one
+   subsystem over.
 3. Plan the fix. Crosses a function boundary -> `architect` first.
    Delegate implementation to a `developer` subagent with a specific scope;
    review the diff.

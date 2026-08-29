@@ -61,7 +61,7 @@ handlers.
   boolean must stay in sync with first.
 - Aim for a deep module: much behaviour behind a small interface. Put the seam
   (where behaviour can change without editing there) only where two adapters
-  actually exist; full vocabulary in `codebase-design`.
+  actually exist.
 
 ## Reader load
 
