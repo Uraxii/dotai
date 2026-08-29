@@ -47,7 +47,7 @@ in: `-s /abs/path/inspect_resource.gd -- <target>`. Args after Godot's own `--`
 arrive via `OS.get_cmdline_user_args()`.
 `_init()` runs immediately; there is no scene, no rendering. Contrast with an
 `EditorScript` (`extends EditorScript`, `_run()`), which needs `--editor` and
-full editor context (used by blender-godot-pipeline's `extract_tracks.gd`).
+full editor context.
 
 ## Runtime GLB/GLTF load (no import pipeline)
 
@@ -145,7 +145,5 @@ pass through. The exit code is always the source of truth.
 
 ## Cross-reference
 
-Blender retargeting, GLB authoring, and the `extract_tracks.gd` EditorScript
-(standalone `.tres` extraction) belong to the
-[blender-godot-pipeline](../blender-godot-pipeline/SKILL.md) skill. This skill
-covers driving the Godot engine itself from the CLI.
+Blender retargeting and GLB authoring are out of scope. This skill covers
+driving the Godot engine itself from the CLI.

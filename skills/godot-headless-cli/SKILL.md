@@ -7,9 +7,8 @@ description: Drive the Godot 4.x engine from the command line headless, without 
 
 Invoke the Godot engine directly from a shell. Generic across any Godot 4.x
 project: every project path is a CLI arg or an editable top-of-file const. For
-Blender-side retargeting and the `extract_tracks` EditorScript step, use the
-[blender-godot-pipeline](../blender-godot-pipeline/SKILL.md) skill instead; this
-skill is about driving Godot itself.
+Blender-side retargeting is out of scope; this skill is about driving Godot
+itself.
 
 ## Binary discovery
 
