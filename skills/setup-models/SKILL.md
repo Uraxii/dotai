@@ -16,8 +16,7 @@ loaded from; never hardcode an install layout or guess a home directory.
    parameter, or its documented model list). That set, plus the harness
    aliases `models.md` maps to full names, is the only set you may write.
    Never write a name outside it, and never write one unconfirmed by the
-   user. `fable`, `sol`, and `luna` need explicit permission stated in words
-   this turn; silence is not permission, leave the name out and say so.
+   user.
 
 2. **Load current state.** Read `models.md`; its rows are the current
    preference lists, one per label.

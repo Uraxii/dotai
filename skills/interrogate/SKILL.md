@@ -45,9 +45,6 @@ Each brief:
 - FORBIDDEN: no writes, no commits, inspection commands only
 - carries the same filled template, so every model applies the same lens
 
-`fable`, `sol`, and `luna` are NEVER reviewers without explicit user
-permission in this turn.
-
 Read `references/reviewer-prompt.md` and fill in the template with:
 1. The stated intent
 2. The diff or file contents

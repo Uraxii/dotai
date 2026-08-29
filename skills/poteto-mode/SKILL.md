@@ -51,8 +51,6 @@ Read the leaf skill in full for any principle you apply. Each entry name when it
 
 **No is an acceptable answer.** Asked whether to do something, or shown an approach, give real judgment. Decline, push back, say "this does not earn its place" when true. Candor over sycophancy.
 
-**Hard rule.** NEVER spawn `fable`, `sol`, or `luna` without explicit user permission. No exceptions, no inference from silence.
-
 ## Agents
 
 Main thread triage, sequence, synthesize. Only the main thread may ask the user.
@@ -74,6 +72,7 @@ Every spawn carry the brief fields in `references/brief.md`. Field you cannot fi
 - Fresh spawn over resume-chain, always. Scope change -> fresh spawn. Bloated agent -> `rotate-agent`.
 - You own every agent's work. Review the diff, write your own summary, never pass through what it said.
 - `principle-guard-the-context-window`: file pointers not inlined context, bulk to agents, summaries in the main thread.
+- Leaf agents (all but `orchestrator`) do one kind of work and never spawn. Two kinds in one brief (read + build, fan-out over N targets, build + verify) -> spawn `orchestrator` instead.
 
 ## Roles
 
