@@ -91,8 +91,8 @@ For changes touching existing code, apply
 requirement on day one, what would it look like? Redesign holistically;
 deliver incrementally.
 
-A phase that creates or edits a skill instructs the implementer to use
-`write-a-skill`.
+A phase that creates or edits a skill instructs the implementer to follow
+the Authoring a skill role (`roles/authoring-a-skill.md`).
 
 ## 5. Verification per phase
 
