@@ -20,8 +20,8 @@ PRs use whatever stacking tool the team uses: small, ordered slices, stack
 visible to reviewers. `gh pr view <number>` before referencing PR status.
 Rebase on `main` before substantial stack work. No `## Summary` /
 `## Test plan` boilerplate on small PRs; commit bodies do not restate the
-subject. `yeet` covers stage-commit-push-PR. After opening, run Babysit
-(`roles/babysit.md`); push back when feedback drifts.
+subject. After opening, run Babysit (`roles/babysit.md`); push back when
+feedback drifts.
 
 A subagent that opens a PR runs `interrogate` and `unslop`, returns the URL,
 and does NOT babysit. Return to the parent.
