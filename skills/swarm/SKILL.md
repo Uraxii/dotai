@@ -26,7 +26,7 @@ Open a todolist with one entry per phase before launching anything.
 
 ## Phase B: Fan out
 
-Spawn all N workers in one message, one agent per worker. Pick the agent type from the work: any of the seven in the `poteto-mode` agent table, or an `orchestrator` running a role when a worker's slice is a whole workstream. Spawn them run in the background where the harness allows, using the configured model. Run remote when available; fall back to local only when the worker needs access to something on the user's computer.
+Spawn all N workers in one message, one agent per worker. Pick the agent type from the work: any of the seven in the `poteto-mode` agent table, or an `orchestrator` running a role when a worker's slice is a whole workstream. Run them in the background where the harness allows, using the configured model. Run remote when available; fall back to local only when the worker needs access to something on the user's computer.
 
 When a worker must start from a non-default branch, tell it which branch to check out first.
 
