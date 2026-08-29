@@ -1,86 +1,13 @@
 ---
 name: setup-dotai
-description: "User invokes by name to install this repo's skills and agents into the harness dirs under $HOME. Deploys by copy, tracks a manifest, prunes stale files. Use when user say install, deploy, sync, set up dotai, push skills to harnesses, or after moving/renaming/deleting skill in repo."
+description: The user invokes this by name after installing dotai, or to change which models delegated work runs on. Offers the harness preamble, then interviews them per label in the poteto-mode skill's models.md, validates each name against what the current harness can pin, and rewrites the confirmed rows so later spawns pick the new preferences.
 ---
 
-# Setup
+# Setup dotai
 
-Deploy repo -> `$HOME`. Copies, never symlinks. Script is lever; you drive it.
+## Preamble
 
-Script: `<repo>/skills/setup-dotai/scripts/install.sh`
-Repo root = script's own repo unless `--repo` given.
-
-## Steps
-
-### 1. Detect
-
-Which harness dirs exist:
-
-```sh
-for d in ~/.claude ~/.agents ~/.codex ~/.copilot ~/.config/opencode ~/.hermes; do
-  [ -d "$d" ] && echo "present: $d"
-done
-```
-
-Map dir -> mode: `~/.claude`=claude, `~/.agents`+`~/.codex`=codex,
-`~/.copilot`=copilot, `~/.config/opencode`=opencode, `~/.hermes`=hermes.
-
-### 2. Ask mode
-
-Ask user which mode. Default = all detected. Use harness's structured
-question prompt if it have one, else plain question. Options: each detected
-mode, plus `all`.
-
-### 3. Dry run first
-
-```sh
-bash <repo>/skills/setup-dotai/scripts/install.sh --harness <mode> --dry-run --prune
-```
-
-Show user summary lines (one per harness: written / pruned / skipped). Also
-surface any `unlink-dir` line: that is old symlink deploy getting replaced by
-real dir. Big prune count or surprise unlink -> stop, ask.
-
-### 4. Run real
-
-```sh
-bash <repo>/skills/setup-dotai/scripts/install.sh --harness <mode> --prune
-```
-
-`--prune` deletes only files listed in previous manifest and absent now.
-Manifest lives at `<target-root>/.dotai-manifest`. Files script never wrote
-are never touched.
-
-### 5. Verify
-
-Count + frontmatter parse:
-
-```sh
-for d in ~/.claude/skills ~/.agents/skills ~/.copilot/skills \
-         ~/.config/opencode/skills ~/.hermes/skills; do
-  [ -d "$d" ] && echo "$d $(find "$d" -name SKILL.md | wc -l) skills"
-done
-find ~/.claude/skills -name SKILL.md | while read -r f; do
-  { head -1 "$f" | grep -qx -- '---'; } && grep -qm1 '^name:' "$f" \
-    && grep -qm1 '^description:' "$f" || echo "BAD $f"
-done
-```
-
-Repo count must match target count. Any `BAD` line -> broken frontmatter,
-fix in repo, rerun.
-
-### 6. Post steps per harness
-
-- claude: nothing. Reads `~/.claude/skills` and `~/.claude/agents` live.
-- codex: nothing. Reads `~/.agents/skills` natively.
-- copilot: nothing.
-- opencode: nothing.
-- hermes: no `external_dirs` config needed. Skills copied straight into
-  `~/.hermes/skills`.
-
-### 7. Offer preamble
-
-Show user these lines. Offer to add them to the harness's global
+Show the user these lines. Offer to add them to the harness's global
 instructions file (`CLAUDE.md`, `AGENTS.md`, or equivalent). Append only
 on a yes, skip lines already present, never edit anything else in that
 file.
@@ -92,36 +19,30 @@ Use `caveman` ultra register for reasoning and for every message to or from
 another agent.
 ```
 
-### 8. Offer setup-models
+## Models
 
-Ask if user want to run `setup-models` to repin per-role models. Only offer,
-never auto-run.
+You edit the `poteto-mode` skill's `models.md` on the user's request. One
+row per label, an ordered preference list of model names; a spawner walks
+the list and pins the first name its harness accepts, so one row serves
+every harness. Locate the file through the skills install this skill was
+loaded from; never hardcode an install layout or guess a home directory.
 
-## Bootstrap
+1. **Discover the pinnable set.** Enumerate the model names the current
+   harness accepts on a spawned agent this session (its spawn tool's model
+   parameter, or its documented model list). That set, plus the harness
+   aliases `models.md` maps to full names, is the only set you may write.
+   Never write a name outside it, and never write one unconfirmed by the
+   user.
 
-Fresh machine, no agent, no skills installed yet:
+2. **Load current state.** Read `models.md`; its rows are the current
+   preference lists, one per label.
 
-```sh
-bash <repo>/skills/setup-dotai/scripts/install.sh --harness all
-```
+3. **Interview, per row.** Show the label and its current list. Ask which
+   name goes first for this harness and whether any entry should move or go.
+   No inline defaults, no assumed answer.
 
-Script standalone. Needs bash, find, cmp, comm, sort. Nothing else.
+4. **Validate.** Reject any name outside the discovered set.
 
-## What lands where
-
-| mode | source | destination |
-|---|---|---|
-| claude | `skills/*` | `~/.claude/skills/` |
-| claude | `agents/*` | `~/.claude/agents/` |
-| codex | `skills/*` | `~/.agents/skills/` |
-| copilot | `skills/*` | `~/.copilot/skills/` |
-| opencode | `skills/*` | `~/.config/opencode/skills/` |
-| hermes | `skills/*` | `~/.hermes/skills/` |
-
-Excluded always: `__pycache__`, `.pytest_cache`, `.ruff_cache`, `*.pyc`,
-`.git`.
-
-Existing symlink at destination (old stow deploy, maybe dangling) -> removed,
-real copy written. Symlinked parent dir -> removed, real dir made.
-
-Idempotent. Second run writes nothing, reports everything skipped.
+5. **Write.** Overwrite only the confirmed rows, in the same
+   `label: comma-separated list` format. Leave every other line untouched.
+   Report the path written and the rows changed.

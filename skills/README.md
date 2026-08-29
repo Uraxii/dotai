@@ -1,6 +1,6 @@
 # Skills
 
-User-level skills, harness-neutral, in the Agent Skills format. Source of truth for every harness; the `setup-dotai` skill copies them into each harness. Each skill is a directory with a `SKILL.md` (frontmatter + body) plus optional bundled resources.
+User-level skills, harness-neutral, in the Agent Skills format. Source of truth for every harness. Each skill is a directory with a `SKILL.md` (frontmatter + body) plus optional bundled resources.
 
 
 ## Skills
@@ -33,7 +33,7 @@ User-level skills, harness-neutral, in the Agent Skills format. Source of truth 
 |-------|-------------|
 | [poteto-mode](poteto-mode/SKILL.md) | The mode for any non-trivial task: triggers, principle index, autonomy, role contract, playbook index. |
 | [show-me-your-work](show-me-your-work/SKILL.md) | Keep a reviewable TSV decision trail for long-running or unattended work, cross-model reviewed at the end. |
-| [setup-models](setup-models/SKILL.md) | Interview the user role by role, then rewrite the poteto-mode model map. |
+| [setup-dotai](setup-dotai/SKILL.md) | Post-install: offer the harness preamble, then set per-role models. |
 | [principle-code-quality](principle-code-quality/SKILL.md) | Cross-language standard for writing, reviewing, and refactoring code, with per-language references. |
 | [architect](architect/SKILL.md) | Settle system structure and author the code skeleton before any logic is written. |
 | [arena](arena/SKILL.md) | Fan out N parallel candidates at the same task, pick a base, graft in the best of the losers. |
@@ -74,7 +74,7 @@ User-level skills, harness-neutral, in the Agent Skills format. Source of truth 
 
 | Skill | Description |
 |-------|-------------|
-| [agent-workbench](agent-workbench/SKILL.md) | One CLI over the knowledgebase vault, bd board hub, and artifact review service. |
+| [beads](beads/SKILL.md) | Track issues in a repo with bd: create, claim, link, close, and find ready work. |
 | [proton-pass-cli](proton-pass-cli/SKILL.md) | Retrieve credentials from Proton Pass via pass-cli. |
 | [azure-devops](azure-devops/SKILL.md) | Read-only queries against Azure DevOps repos, pipelines, and work items. |
 | [cloudflare](cloudflare/SKILL.md) | Query Cloudflare zones, DNS exposure, rulesets, WAF posture, and Workers routes. |
