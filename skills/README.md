@@ -39,7 +39,6 @@ User-level skills, harness-neutral, in the Agent Skills format. Source of truth 
 | [setup-models](setup-models/SKILL.md) | Interview the user role by role, then rewrite the poteto-mode model map. |
 | [principle-code-quality](principle-code-quality/SKILL.md) | Cross-language standard for writing, reviewing, and refactoring code, with per-language references. |
 | [architect](architect/SKILL.md) | Settle system structure and author the code skeleton before any logic is written. |
-| [big-pickle-simple-tasks](big-pickle-simple-tasks/SKILL.md) | Turn paralyzing scope into small sequenced action items. Read-only. |
 | [requirements-clarifier](requirements-clarifier/SKILL.md) | Turn a vague task into user stories, acceptance criteria, and edge cases. Read-only. |
 | [arena](arena/SKILL.md) | Fan out N parallel candidates at the same task, pick a base, graft in the best of the losers. |
 | [swarm](swarm/SKILL.md) | Fan out N parallel workers, drain them, return one consolidated report. |
