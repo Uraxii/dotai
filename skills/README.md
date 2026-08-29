@@ -24,7 +24,6 @@ User-level skills, harness-neutral, in the Agent Skills format. Source of truth 
 | [research](research/SKILL.md) | Investigate against primary sources, clip every cited web page into the knowledgebase, write the findings to a Markdown file. |
 | [interrogate](interrogate/SKILL.md) | Adversarial multi-model review of a diff; lead synthesizes a verdict. |
 | [blast-radius](blast-radius/SKILL.md) | Find what a change breaks elsewhere before it ships; prove the safety fact by running code. |
-| [resolving-merge-conflicts](resolving-merge-conflicts/SKILL.md) | Resolve an in-progress git merge / rebase conflict. |
 | [why](why/SKILL.md) | Investigate why code was built this way from source control, tickets, docs, chat, and telemetry; returns a cited, confidence-calibrated read. |
 | [how](how/SKILL.md) | Explain how a subsystem works, or critique its architecture with multi-model critics. |
 
