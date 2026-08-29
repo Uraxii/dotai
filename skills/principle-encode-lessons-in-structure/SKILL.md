@@ -32,3 +32,11 @@ structural -> use ONLY the structural fix. The instruction IS the symptom.
 - Record without routing. Note about a lint rule that should exist is wasted
   until the rule exist.
 - Fix without generalising. One instance patched, pattern left alive.
+
+## Procedure
+
+Lesson from the session just finished, or the human corrected the same thing
+twice in a transcript -> run `reflect`. It reviews the transcript and routes
+each learning to an edit on an existing skill, the strongest rung that fits.
+A skill edit is the mechanism for agents; a type, lint, or CI rule is the
+mechanism for code.
