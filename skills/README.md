@@ -66,7 +66,6 @@ User-level skills, harness-neutral, in the Agent Skills format. Source of truth 
 | [technical-writing](technical-writing/SKILL.md) | Layered technical-writing standard: Diátaxis, Google style, STE, Global English. |
 | [rotate-agent](rotate-agent/SKILL.md) | Rotate a bloated long-running subagent into a fresh one via a transient handoff doc. |
 | [teach](teach/SKILL.md) | Embody a domain-expert teacher and build tracked learning material. |
-| [excalidraw-diagrams](excalidraw-diagrams/SKILL.md) | House standard for Excalidraw diagrams, including Obsidian-embedded ones. |
 
 ### Godot and demo work
 
