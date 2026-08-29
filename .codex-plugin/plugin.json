@@ -1,0 +1,6 @@
+{
+  "name": "dotai",
+  "version": "1.0.0",
+  "description": "Skills and thin named agents: poteto-mode, principles, roles, tools.",
+  "skills": "./skills/"
+}

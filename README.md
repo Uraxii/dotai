@@ -20,7 +20,10 @@ Claude Code:
 /plugin install dotai@Uraxii
 ```
 
-Codex, Copilot CLI, Cursor, and the other targets skills.sh lists:
+Codex: `/plugins`, add this repo as a marketplace (it carries
+`.agents/plugins/marketplace.json`), install `dotai`.
+
+Copilot CLI, Cursor, and the other targets skills.sh lists:
 
 ```
 npx skills@latest add Uraxii/dotai
