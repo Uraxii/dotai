@@ -42,8 +42,7 @@ body at every call or change site (`raise NotImplementedError`, `throw new
 Error("not impl")`) marks where logic goes.
 
 Use `arena runners` from the `poteto-mode` skill's `models.md` when present;
-row absent -> omit `model`. `fable`, `sol`, and `luna` are never runners
-without explicit user permission.
+row absent -> omit `model`.
 
 Design it twice. Require at least two structurally distinct candidates before
 synthesis, even when the first looks sufficient, per

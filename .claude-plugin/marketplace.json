@@ -1,0 +1,10 @@
+{
+  "name": "Uraxii",
+  "plugins": [
+    {
+      "name": "dotai",
+      "source": "Uraxii/dotai",
+      "description": "Skills and thin named agents: poteto-mode, principles, roles, tools."
+    }
+  ]
+}

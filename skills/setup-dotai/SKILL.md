@@ -1,9 +1,25 @@
 ---
-name: setup-models
-description: The user invokes this by name to change which models delegated work runs on. Interviews them per label in the poteto-mode skill's models.md, validates each name against what the current harness can pin, and rewrites the confirmed rows so later spawns pick the new preferences.
+name: setup-dotai
+description: The user invokes this by name after installing dotai, or to change which models delegated work runs on. Offers the harness preamble, then interviews them per label in the poteto-mode skill's models.md, validates each name against what the current harness can pin, and rewrites the confirmed rows so later spawns pick the new preferences.
 ---
 
-# Setup models
+# Setup dotai
+
+## Preamble
+
+Show the user these lines. Offer to add them to the harness's global
+instructions file (`CLAUDE.md`, `AGENTS.md`, or equivalent). Append only
+on a yes, skip lines already present, never edit anything else in that
+file.
+
+```
+Load the `poteto-mode` skill before any non-trivial work.
+Apply the `unslop` skill to every reply.
+Use `caveman` ultra register for reasoning and for every message to or from
+another agent.
+```
+
+## Models
 
 You edit the `poteto-mode` skill's `models.md` on the user's request. One
 row per label, an ordered preference list of model names; a spawner walks
@@ -16,8 +32,7 @@ loaded from; never hardcode an install layout or guess a home directory.
    parameter, or its documented model list). That set, plus the harness
    aliases `models.md` maps to full names, is the only set you may write.
    Never write a name outside it, and never write one unconfirmed by the
-   user. `fable`, `sol`, and `luna` need explicit permission stated in words
-   this turn; silence is not permission, leave the name out and say so.
+   user.
 
 2. **Load current state.** Read `models.md`; its rows are the current
    preference lists, one per label.

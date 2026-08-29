@@ -1,27 +1,27 @@
 # Skills
 
-User-level skills, harness-neutral, in the Agent Skills format. Source of truth for every harness; the `dotai-setup` skill copies them into each harness. Each skill is a directory with a `SKILL.md` (frontmatter + body) plus optional bundled resources.
+User-level skills, harness-neutral, in the Agent Skills format. Source of truth for every harness. Each skill is a directory with a `SKILL.md` (frontmatter + body) plus optional bundled resources.
 
 
 ## Skills
 
 | Skill | Description |
 |-------|-------------|
+| [bro](bro/SKILL.md) | Restate the last reply in plain human language, with no jargon. |
 | [caveman](caveman/SKILL.md) | Terse smart-caveman output style; pin in the harness's persistent instructions to keep it on. |
 | [domain-modeling](domain-modeling/SKILL.md) | Build and sharpen the project's ubiquitous language; record decisions. |
 | [grilling](grilling/SKILL.md) | Interview the user relentlessly about a plan or idea until understanding is shared. |
 | [handoff](handoff/SKILL.md) | Compact the current conversation into a durable handoff doc in `$TMPDIR` for another session. |
+| [reflect](reflect/SKILL.md) | Mine the session transcript with three parallel reviewers, then route each learning to a concrete skill edit. |
 | [wayfinder](wayfinder/SKILL.md) | Plan work too big for one session as a map of investigation tickets on the tracker; resolve them one at a time. |
 | [tdd](tdd/SKILL.md) | Red-green-refactor TDD loop. |
 | [prototype](prototype/SKILL.md) | Throwaway prototype to flesh out a design before committing to it. |
-| [yeet](yeet/SKILL.md) | Stage + commit + push + open PR in one flow. |
-| [write-a-skill](write-a-skill/SKILL.md) | Author new skills with proper structure. |
 
 ### Engineering set
 
 | Skill | Description |
 |-------|-------------|
-| [research](research/SKILL.md) | Investigate against primary sources, clip every cited web page into the knowledgebase, write the findings to a Markdown file. |
+| [research](research/SKILL.md) | Investigate against primary sources, write the findings to a Markdown file with cited urls. |
 | [interrogate](interrogate/SKILL.md) | Adversarial multi-model review of a diff; lead synthesizes a verdict. |
 | [blast-radius](blast-radius/SKILL.md) | Find what a change breaks elsewhere before it ships; prove the safety fact by running code. |
 | [why](why/SKILL.md) | Investigate why code was built this way from source control, tickets, docs, chat, and telemetry; returns a cited, confidence-calibrated read. |
@@ -33,7 +33,7 @@ User-level skills, harness-neutral, in the Agent Skills format. Source of truth 
 |-------|-------------|
 | [poteto-mode](poteto-mode/SKILL.md) | The mode for any non-trivial task: triggers, principle index, autonomy, role contract, playbook index. |
 | [show-me-your-work](show-me-your-work/SKILL.md) | Keep a reviewable TSV decision trail for long-running or unattended work, cross-model reviewed at the end. |
-| [setup-models](setup-models/SKILL.md) | Interview the user role by role, then rewrite the poteto-mode model map. |
+| [setup-dotai](setup-dotai/SKILL.md) | Post-install: offer the harness preamble, then set per-role models. |
 | [principle-code-quality](principle-code-quality/SKILL.md) | Cross-language standard for writing, reviewing, and refactoring code, with per-language references. |
 | [architect](architect/SKILL.md) | Settle system structure and author the code skeleton before any logic is written. |
 | [arena](arena/SKILL.md) | Fan out N parallel candidates at the same task, pick a base, graft in the best of the losers. |
@@ -74,7 +74,8 @@ User-level skills, harness-neutral, in the Agent Skills format. Source of truth 
 
 | Skill | Description |
 |-------|-------------|
-| [agent-workbench](agent-workbench/SKILL.md) | One CLI over the knowledgebase vault, bd board hub, and artifact review service. |
+| [beads](beads/SKILL.md) | Track issues in a repo with bd: create, claim, link, close, and find ready work. |
+| [codebase-memory](codebase-memory/SKILL.md) | Query the codebase-memory code graph from a shell: callers, dependencies, impact, dead code, ADRs. |
 | [proton-pass-cli](proton-pass-cli/SKILL.md) | Retrieve credentials from Proton Pass via pass-cli. |
 | [azure-devops](azure-devops/SKILL.md) | Read-only queries against Azure DevOps repos, pipelines, and work items. |
 | [cloudflare](cloudflare/SKILL.md) | Query Cloudflare zones, DNS exposure, rulesets, WAF posture, and Workers routes. |

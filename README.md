@@ -1,8 +1,8 @@
 # dotai
 
 Skills and agents for Claude Code, Codex, GitHub Copilot CLI, opencode, and
-Hermes. One skills tree in the open Agent Skills format, copied into each
-harness by an agent-driven installer. Layout follows pstack.
+Hermes. One skills tree in the open Agent Skills format, shipped as a Claude
+Code plugin and installable elsewhere through skills.sh. Layout follows pstack.
 
 ## Layout
 
@@ -13,22 +13,30 @@ harness by an agent-driven installer. Layout follows pstack.
 
 ## Install
 
-Open a harness inside this repo and invoke `dotai-setup`. It detects
-the harnesses present, asks which to target, dry-runs, then copies.
-
-Without an agent:
+Claude Code:
 
 ```
-bash skills/dotai-setup/scripts/install.sh --harness all --prune
+/plugin marketplace add Uraxii/dotai
+/plugin install dotai@Uraxii
 ```
 
-Modes: `claude`, `codex`, `copilot`, `opencode`, `hermes`, `all`. Add
-`--dry-run` to preview. Copies only, never symlinks. Each target root gets a
-`.dotai-manifest`; `--prune` removes files from an earlier install that the
-repo no longer has and touches nothing else. Re-run after any edit.
+Codex: `/plugins`, add this repo as a marketplace (it carries
+`.agents/plugins/marketplace.json`), install `dotai`.
 
-Skills land in `~/.claude/skills`, `~/.agents/skills` (Codex),
-`~/.copilot/skills`, `~/.config/opencode/skills`, `~/.hermes/skills`.
+Copilot CLI, Cursor, and the other targets skills.sh lists:
+
+```
+npx skills@latest add Uraxii/dotai
+```
+
+Hermes: `hermes skills tap add Uraxii/dotai`. opencode: clone the repo
+and point `~/.config/opencode/skills` at `skills/`.
+
+Then run `/setup-dotai` once: it offers the preamble lines for your global
+instructions file and sets per-role models.
+
+The named agents in `agents/` ship with the Claude Code plugin only; other
+harnesses read `skills/` and do not use them.
 
 Harness prefs (`CLAUDE.md`, `AGENTS.md`, `settings.json`, secrets) are not
 tracked here.

@@ -1,6 +1,6 @@
 # Models
 
-You define models here. Edit by hand or through `setup-models`, which fills rows from what your harness can pin. One row per label, an ordered preference list; the spawner uses the first name its harness accepts. Absent row -> omit model, child inherits. Panel rows spawn one agent per entry. `fable`, `sol`, `luna` never written without explicit user permission.
+You define models here. Edit by hand or through `setup-dotai`, which fills rows from what your harness can pin. One row per label, an ordered preference list; the spawner uses the first name its harness accepts. Absent row -> omit model, child inherits. Panel rows spawn one agent per entry.
 
 feature, refactoring: claude-sonnet-5, gpt-5.5, gpt-5.4, claude-opus-5
 judgment and prose: claude-opus-5, gpt-5.5, claude-sonnet-5, gpt-5.4
