@@ -1,5 +1,5 @@
 ---
-name: raxii-dotai-setup
+name: dotai-setup
 description: "User invokes by name to install this repo's skills and agents into the harness dirs under $HOME. Deploys by copy, tracks a manifest, prunes stale files. Use when user say install, deploy, sync, set up dotai, push skills to harnesses, or after moving/renaming/deleting skill in repo."
 ---
 
@@ -7,7 +7,7 @@ description: "User invokes by name to install this repo's skills and agents into
 
 Deploy repo -> `$HOME`. Copies, never symlinks. Script is lever; you drive it.
 
-Script: `<repo>/skills/raxii-dotai-setup/scripts/install.sh`
+Script: `<repo>/skills/dotai-setup/scripts/install.sh`
 Repo root = script's own repo unless `--repo` given.
 
 ## Steps
@@ -34,7 +34,7 @@ mode, plus `all`.
 ### 3. Dry run first
 
 ```sh
-bash <repo>/skills/raxii-dotai-setup/scripts/install.sh --harness <mode> --dry-run --prune
+bash <repo>/skills/dotai-setup/scripts/install.sh --harness <mode> --dry-run --prune
 ```
 
 Show user summary lines (one per harness: written / pruned / skipped). Also
@@ -44,7 +44,7 @@ real dir. Big prune count or surprise unlink -> stop, ask.
 ### 4. Run real
 
 ```sh
-bash <repo>/skills/raxii-dotai-setup/scripts/install.sh --harness <mode> --prune
+bash <repo>/skills/dotai-setup/scripts/install.sh --harness <mode> --prune
 ```
 
 `--prune` deletes only files listed in previous manifest and absent now.
@@ -88,7 +88,7 @@ never auto-run.
 Fresh machine, no agent, no skills installed yet:
 
 ```sh
-bash <repo>/skills/raxii-dotai-setup/scripts/install.sh --harness all
+bash <repo>/skills/dotai-setup/scripts/install.sh --harness all
 ```
 
 Script standalone. Needs bash, find, cmp, comm, sort. Nothing else.

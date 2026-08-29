@@ -13,13 +13,13 @@ harness by an agent-driven installer. Layout follows pstack.
 
 ## Install
 
-Open a harness inside this repo and invoke `raxii-dotai-setup`. It detects
+Open a harness inside this repo and invoke `dotai-setup`. It detects
 the harnesses present, asks which to target, dry-runs, then copies.
 
 Without an agent:
 
 ```
-bash skills/raxii-dotai-setup/scripts/install.sh --harness all --prune
+bash skills/dotai-setup/scripts/install.sh --harness all --prune
 ```
 
 Modes: `claude`, `codex`, `copilot`, `opencode`, `hermes`, `all`. Add
