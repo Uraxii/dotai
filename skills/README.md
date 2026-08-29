@@ -12,7 +12,6 @@ User-level skills, harness-neutral, in the Agent Skills format. Source of truth 
 | [grilling](grilling/SKILL.md) | Interview the user relentlessly about a plan or idea until understanding is shared. |
 | [handoff](handoff/SKILL.md) | Compact the current conversation into a durable handoff doc in `$TMPDIR` for another session. |
 | [wayfinder](wayfinder/SKILL.md) | Plan work too big for one session as a map of investigation tickets on the tracker; resolve them one at a time. |
-| [diagnose](diagnose/SKILL.md) | Disciplined diagnosis loop for hard bugs / perf regressions. |
 | [tdd](tdd/SKILL.md) | Red-green-refactor TDD loop. |
 | [prototype](prototype/SKILL.md) | Throwaway prototype to flesh out a design before committing to it. |
 | [yeet](yeet/SKILL.md) | Stage + commit + push + open PR in one flow. |

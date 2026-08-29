@@ -101,7 +101,7 @@ change.
   any point. Scan state, clean stale artifact, adopt live session, PID-based
   stale lock. "Depends what was left behind" -> add reconciliation step.
 
-**Debugging.** Loop lives in the `diagnose` skill. Two rules it does not
+**Debugging.** Loop lives in the Bug fix role. Two rules it does not
 carry: fix pattern not instance (grep the shape, fix all of them), and "broke
 after restart" -> suspect stale persistent state first, code not change between
 runs, state do.

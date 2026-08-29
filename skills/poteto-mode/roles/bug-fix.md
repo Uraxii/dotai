@@ -21,8 +21,7 @@ where the evidence is the trace.
    fixed.
 2. Binary-search the cause. Form candidate hypotheses, then rule them out
    until one survives. Seed with `how` over the affected subsystem and `why`
-   for regression history; a `developer` subagent loading `diagnose` drives the
-   hunt. Each pass, take the split that cuts the most remaining problem space,
+   for regression history; a `developer` subagent drives the hunt. Each pass, take the split that cuts the most remaining problem space,
    get runtime evidence, eliminate. State unclear -> add instrumentation or
    logging and read it as the code runs. Do not guess. Confirm the surviving
    mechanism with runtime evidence before the step-3 fan-out; a design grounded
