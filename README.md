@@ -13,13 +13,13 @@ harness by an agent-driven installer. Layout follows pstack.
 
 ## Install
 
-Open a harness inside this repo and invoke `dotai-setup`. It detects
+Open a harness inside this repo and invoke `setup-dotai`. It detects
 the harnesses present, asks which to target, dry-runs, then copies.
 
 Without an agent:
 
 ```
-bash skills/dotai-setup/scripts/install.sh --harness all --prune
+bash skills/setup-dotai/scripts/install.sh --harness all --prune
 ```
 
 Modes: `claude`, `codex`, `copilot`, `opencode`, `hermes`, `all`. Add
