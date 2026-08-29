@@ -42,7 +42,7 @@ measurement; do not read source instead of measuring.
      in the hot moment's shadow. The win is perceived latency, so measure the
      interactive path, not total work done.
 3. Plan the fix from the trace. Crosses a function boundary ->
-   `architect-designer` first. Delegate implementation to a `developer`
+   `architect` first. Delegate implementation to a `developer`
    subagent; review the diff. Capture a post-fix trace. Verify each attempt
    before trying the next.
 4. Parse and compare the artifacts (JSON to sqlite, diff). "Inconclusive" or

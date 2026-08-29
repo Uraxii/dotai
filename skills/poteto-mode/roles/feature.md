@@ -4,8 +4,8 @@ Pick when: new or changed behaviour. You own the design. Plan, review,
 verify. Delegate implementation; stay in the lead.
 
 1. `how` over the affected subsystem.
-2. `architect-designer` for parallel design exploration. Skipping stays as
-   `architect-designer skipped: <reason>`; do not fold the design decision
+2. `architect` for parallel design exploration. Skipping stays as
+   `architect skipped: <reason>`; do not fold the design decision
    silently into implementation.
 3. Write the throughput checkpoint as four todo items. A dimension that
    genuinely does not apply (single file, no fan-out) keeps its item with

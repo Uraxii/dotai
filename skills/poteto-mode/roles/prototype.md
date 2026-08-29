@@ -34,7 +34,7 @@ ask for, throw an approach away and try another.
    assertion.
 6. Present alternatives, tradeoffs, and a recommendation. The output is the
    decision plus the throwaway artifact, not shippable code. Hand the chosen
-   direction to Feature (or `architect-designer` for the shape) for the real
+   direction to Feature (or `architect` for the shape) for the real
    build.
 
 **Reply:** the variants explored, the evidence (screenshots for a visual

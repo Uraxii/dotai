@@ -28,7 +28,7 @@ where the evidence is the trace.
    mechanism with runtime evidence before the step-3 fan-out; a design grounded
    on a plausible-but-unconfirmed cause can be unanimously wrong while the real
    cause sits one subsystem over.
-3. Plan the fix. Crosses a function boundary -> `architect-designer` first.
+3. Plan the fix. Crosses a function boundary -> `architect` first.
    Delegate implementation to a `developer` subagent with a specific scope;
    review the diff.
 4. Verify on the same surface; the original repro now passes. "Inconclusive"

@@ -1,5 +1,5 @@
 ---
-name: architect-designer
+name: architect
 description: Load when a task needs system structure settled before anyone writes logic. Covers new-system design, refactoring direction, technology evaluation, architectural trade-off analysis, ADRs, and authoring the code skeleton (data structures, types, interface signatures with contracts, TODO-stub bodies) that implementation later fills in.
 ---
 

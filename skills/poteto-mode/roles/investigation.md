@@ -14,7 +14,7 @@ explanation or a recommendation, never a code change. You own the answer.
    the request is a decision between alternatives.
 4. Apply `unslop` to the reply.
 
-No PR, no babysit, no `architect-designer` unless the investigation precedes a
+No PR, no babysit, no `architect` unless the investigation precedes a
 code change. If it does, hand back and re-route to Bug fix or Feature.
 
 **Reply:** the investigation output. For "are we sure?", include real

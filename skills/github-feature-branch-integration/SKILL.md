@@ -52,7 +52,7 @@ Examples:
 ```text
 - tech-lead / orchestrator
 - test-automation-engineer / tester
-- architect-designer / architect
+- architect / architect
 ```
 
 Do not forge another profile's signature.

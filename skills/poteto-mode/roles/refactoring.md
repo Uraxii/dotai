@@ -26,7 +26,7 @@ belongs to `figure-it-out`; this role is the focused-to-medium change.
 3. Name the target shape. State what the module layout, types, and call graph
    should be if built today (`principle-foundational-thinking`,
    `principle-redesign-from-first-principles`). Target crosses a function
-   boundary -> run `architect-designer` for parallel design exploration of the
+   boundary -> run `architect` for parallel design exploration of the
    shape before the move.
 4. Subtract before you add. Delete dead weight, collapse one-caller wrappers,
    drop redundant validators, remove orphan references before introducing the
