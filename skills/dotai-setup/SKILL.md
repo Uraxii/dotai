@@ -78,7 +78,21 @@ fix in repo, rerun.
 - hermes: no `external_dirs` config needed. Skills copied straight into
   `~/.hermes/skills`.
 
-### 7. Offer setup-models
+### 7. Offer preamble
+
+Show user these lines. Offer to add them to the harness's global
+instructions file (`CLAUDE.md`, `AGENTS.md`, or equivalent). Append only
+on a yes, skip lines already present, never edit anything else in that
+file.
+
+```
+Load the `poteto-mode` skill before any non-trivial work.
+Apply the `unslop` skill to every reply.
+Use `caveman` ultra register for reasoning and for every message to or from
+another agent.
+```
+
+### 8. Offer setup-models
 
 Ask if user want to run `setup-models` to repin per-role models. Only offer,
 never auto-run.

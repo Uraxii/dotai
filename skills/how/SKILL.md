@@ -67,7 +67,7 @@ Then proceed to Step 3.
 Spawn a single explorer agent that explores and explains in one pass:
 
 - `agent`: `explorer`
-- `model`: your configured how-explainer model (default `claude-fable-5-thinking-max`)
+- `model`: first pinnable name in the `judgment and prose` row of the `poteto-mode` skill's `models.md`; row absent -> omit
 - `readonly`: `true`
 
 The agent does its own exploration (file search, text search, reading) and writes the explanation directly. Read `references/explainer-prompt.md` for the communication style and output format. Same structure, just no explorer findings as input.
@@ -79,7 +79,7 @@ Proceed to Step 4.
 Once all explorers return, spawn a single explorer agent to synthesize their findings into one coherent explanation:
 
 - `agent`: `explorer`
-- `model`: your configured how-explainer model (default `claude-fable-5-thinking-max`)
+- `model`: first pinnable name in the `judgment and prose` row of the `poteto-mode` skill's `models.md`; row absent -> omit
 - `readonly`: `true`
 
 The explainer gets all explorers' findings and writes the human-facing explanation (output format below). Read `references/explainer-prompt.md` for the full prompt template. The explainer reconciles overlapping findings, resolves contradictions, and weaves the slices into a unified picture.
@@ -112,11 +112,11 @@ Run the full explain flow above (Steps 1-4). You must understand the architectur
 
 ### Step 2. Spawn Critics
 
-After the explanation is complete, spawn one architectural critic per model in your configured how-critics list (defaults `claude-fable-5-thinking-max`, `gpt-5.6-sol-max`, `grok-4.6-fast-xhigh`, `claude-opus-5-thinking-xhigh`), all in a single message.
+After the explanation is complete, spawn one architectural critic per pinnable model in the `interrogate reviewers` row of the `poteto-mode` skill's `models.md`, all in a single message.
 
 For each critic:
 - `agent`: `explorer`
-- `model`: one model from the configured how-critics list. These are minimum reasoning levels. The lead should escalate any model when the architecture warrants deeper analysis.
+- `model`: one entry from that row.
 - `readonly`: `true`
 
 Read `references/critic-prompt.md` for the prompt template. Each critic gets:
