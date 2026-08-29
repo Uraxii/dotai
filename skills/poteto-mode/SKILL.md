@@ -19,7 +19,7 @@ Triggers a skill description alone would not fire:
 - Any prose surface, own reply included -> `unslop`. Register for every agent -> `caveman`.
 - Docs, RFCs, readmes, PR bodies, commit messages -> `technical-writing`.
 - Long, autonomous, or unattended work -> `show-me-your-work`.
-- Citing a web page -> `capture-source`, never a bare link.
+- Citing a web page -> `research` (store the source), never a bare link.
 - Broken skill mid-task -> fix it in its own change. Do not block. Do not work around it silently.
 
 Everything else routes by skill description. Read the catalog, load what matches.

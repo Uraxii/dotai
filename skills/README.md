@@ -17,13 +17,12 @@ User-level skills, harness-neutral, in the Agent Skills format. Source of truth 
 | [prototype](prototype/SKILL.md) | Throwaway prototype to flesh out a design before committing to it. |
 | [yeet](yeet/SKILL.md) | Stage + commit + push + open PR in one flow. |
 | [write-a-skill](write-a-skill/SKILL.md) | Author new skills with proper structure. |
-| [capture-source](capture-source/SKILL.md) | Store a web source's content + metadata into the project knowledgebase (deterministic, no model spend) instead of dropping a bare link. |
 
 ### Engineering set
 
 | Skill | Description |
 |-------|-------------|
-| [research](research/SKILL.md) | Background agent investigates a question against primary sources into a cited Markdown file. |
+| [research](research/SKILL.md) | Investigate against primary sources, clip every cited web page into the knowledgebase, write the findings to a Markdown file. |
 | [interrogate](interrogate/SKILL.md) | Adversarial multi-model review of a diff; lead synthesizes a verdict. |
 | [blast-radius](blast-radius/SKILL.md) | Find what a change breaks elsewhere before it ships; prove the safety fact by running code. |
 | [resolving-merge-conflicts](resolving-merge-conflicts/SKILL.md) | Resolve an in-progress git merge / rebase conflict. |
