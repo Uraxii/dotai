@@ -101,8 +101,8 @@ Each phase needs both:
 **Static.** Type check, lint, project tests pass.
 
 **Runtime.** Exercise the feature on the matching surface: a browser for web
-UIs, the terminal for CLIs and TUIs, `godot-playtest` for Godot, a simulator
-for native mobile. No way to drive the touched surface -> flag it in the plan.
+UIs, the terminal for CLIs and TUIs, the live editor for a game engine, a
+simulator for native mobile. No way to drive the touched surface -> flag it in the plan.
 
 For bug fixes, the loop is reproduce on the surface, fix, verify on the same
 surface. Unit tests show a branch behaves a certain way; they do not prove the

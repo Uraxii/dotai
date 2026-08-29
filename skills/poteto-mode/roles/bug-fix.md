@@ -12,8 +12,7 @@ where the evidence is the trace.
 
 1. Reproduce it yourself on the matching surface. Do not hand the repro to the
    user. A debug protocol that says to ask the user does not override this;
-   you drive the instrumented runtime. Godot runtime symptom ->
-   `godot-playtest`.
+   you drive the instrumented runtime.
    Ask the user only with a stated, specific reason the surface cannot reach
    the target, and only after driving it as far as it goes. Will not reproduce
    directly -> force it: synthesize the trigger, tighten conditions, or
