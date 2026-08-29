@@ -37,7 +37,7 @@ If a candidate fails to produce output, proceed with N-1 and note the dropout in
 
 ## Phase C: Cross-judge
 
-After all Phase B candidates complete, choose one model from the `arena cross-judge pool` in the `poteto-mode` skill's `models.md` when present; absent -> omit `model`. Prefer a different model family from the parent's. Spawn one judge `developer` on that model. FORBIDDEN: no writes, no commits, inspection only. It sees the rubric and the candidates by path label, scores each criterion, and recommends a base with rationale. It runs in parallel with the parent's reading in Phase D, not with the candidates themselves. Spawning while candidates are still writing means the judge sees partial or empty outputs and reports them as dropouts.
+After all Phase B candidates complete, choose one model from the `arena cross-judge pool` in the `poteto-mode` skill's `models.md` when present; absent -> omit `model`. Prefer a different model family from the parent's. Spawn one judge `reviewer` on that model. FORBIDDEN: no writes, no commits, inspection only. It sees the rubric and the candidates by path label, scores each criterion, and recommends a base with rationale. It runs in parallel with the parent's reading in Phase D, not with the candidates themselves. Spawning while candidates are still writing means the judge sees partial or empty outputs and reports them as dropouts.
 
 ## Phase D: Pick a base
 
