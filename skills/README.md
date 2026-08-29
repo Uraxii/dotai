@@ -75,6 +75,7 @@ User-level skills, harness-neutral, in the Agent Skills format. Source of truth 
 | Skill | Description |
 |-------|-------------|
 | [beads](beads/SKILL.md) | Track issues in a repo with bd: create, claim, link, close, and find ready work. |
+| [codebase-memory](codebase-memory/SKILL.md) | Query the codebase-memory code graph from a shell: callers, dependencies, impact, dead code, ADRs. |
 | [proton-pass-cli](proton-pass-cli/SKILL.md) | Retrieve credentials from Proton Pass via pass-cli. |
 | [azure-devops](azure-devops/SKILL.md) | Read-only queries against Azure DevOps repos, pipelines, and work items. |
 | [cloudflare](cloudflare/SKILL.md) | Query Cloudflare zones, DNS exposure, rulesets, WAF posture, and Workers routes. |
