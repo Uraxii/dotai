@@ -96,4 +96,3 @@ User-level skills, harness-neutral, in the Agent Skills format. Source of truth 
 
 | Skill | Description |
 |-------|-------------|
-| [build-software](archived/build-software/SKILL.md) | Phased feature-build pipeline. Not routed to. |
