@@ -75,7 +75,6 @@ User-level skills, harness-neutral, in the Agent Skills format. Source of truth 
 |-------|-------------|
 | [godot-headless-cli](godot-headless-cli/SKILL.md) | Drive Godot 4.x from the shell without opening the editor. |
 | [godot-playtest](godot-playtest/SKILL.md) | Drive a running Godot game through godot-mcp to verify a change in-game. |
-| [clip-to-mobile](clip-to-mobile/SKILL.md) | Convert a gameplay clip into a small mobile-viewable video. |
 
 ### Tools and integrations
 
