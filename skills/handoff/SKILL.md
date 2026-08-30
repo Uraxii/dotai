@@ -11,6 +11,8 @@ Write it to `.handoffs/` at the project root, gitignored (add the entry if missi
 
 In a long session, append decisions, constraints, and verbatim user directives to the handoff file as they are established. A handoff reconstructed from an already-degraded context is the main cause of lost detail.
 
+A hook can flag context pressure before the agent notices it. Optional, not installed, setup in `references/hook-setup.md`.
+
 ## Which mode
 
 A referenced handoff file means CONSUME, not create. Read it, load its suggested skills, inspect the named artifacts, execute its next steps. Do not write another handoff unless asked.
