@@ -31,7 +31,7 @@ User-level skills, harness-neutral, in the Agent Skills format. Source of truth 
 
 | Skill | Description |
 |-------|-------------|
-| [poteto-mode](poteto-mode/SKILL.md) | The mode for any non-trivial task: triggers, principle index, autonomy, role contract, playbook index. |
+| [poteto-mode](poteto-mode/SKILL.md) | The mode for any non-trivial task: triggers, principle index, autonomy, role contract, role index. |
 | [show-me-your-work](show-me-your-work/SKILL.md) | Keep a reviewable TSV decision trail for long-running or unattended work, cross-model reviewed at the end. |
 | [setup-dotai](setup-dotai/SKILL.md) | Post-install: offer the harness preamble, then set per-role models. |
 | [principle-code-quality](principle-code-quality/SKILL.md) | Cross-language standard for writing, reviewing, and refactoring code, with per-language references. |

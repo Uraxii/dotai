@@ -1,6 +1,6 @@
 ---
 name: swarm
-description: "Fan out N parallel workers, drain them, and return one report. Use for /swarm, 'swarm this', or parallel coverage, races, gauntlets, and exploration."
+description: "Fan out N parallel workers over separate slices or racing one brief, drain them, and return one report. Use for /swarm, 'swarm this', or parallel coverage, races, gauntlets, and exploration. For N attempts at the same artifact where a base is picked and the losers grafted in, use `arena` instead."
 ---
 
 # Swarm
