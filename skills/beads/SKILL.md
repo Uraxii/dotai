@@ -16,6 +16,11 @@ with its own `.beads/` database per project; nothing else to configure.
 - `bd update -d "..."` replaces the whole description. To add context
   without losing history, use `bd note <id> "text"`, which appends.
 - Deletion is a human, out-of-band decision. Never run `bd delete`.
+- The user never reads the tracker, so a bare ID names nothing to them. In
+  anything the user reads, including replies, summaries, commit messages, PR
+  titles and bodies, and handoffs, say what the work is and put the ID in
+  parentheses: `closed the retry-loop fix (abc.12)`, not `closed abc.12`.
+  IDs stay bare in `bd` commands, notes, links, and messages between agents.
 - Link types: `blocks`, `tracks`, `related`, `parent-child`,
   `discovered-from`.
 - Status values: `open`, `in_progress`, `blocked`, `deferred`, `closed`,
