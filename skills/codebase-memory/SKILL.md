@@ -64,6 +64,7 @@ Cypher for anything else: `cbm query_graph '{"project":"P","query":"MATCH (f:Fun
 - `get_architecture.languages` omits GDScript (fps-mp-test reports Bash/YAML). The .gd symbols are indexed; trust `node_labels`.
 - Repos containing nested git worktrees get those indexed too (qualified names under `worktrees.*`). Filter with `file_pattern`, a glob anchored at the repo root: `"file_pattern":"src/**"` excludes them, `"*.gd"` does not.
 - Never run `codebase-memory-mcp install` to "fix" things: it rebuilds every index and writes hooks into user settings.
+- If a call fails with `command not found`, follow `references/SETUP.md`, then rerun `codebase-memory-mcp --version` before retrying.
 - Snippet line numbers not matching the file = stale index. `detect_changes` can still say 0 changed (seen on lodestar). Re-run `index_repository` on that repo.
 - `delete_project`, `index_repository`, `manage_adr update`, `ingest_traces` write. Everything else is read-only.
 
