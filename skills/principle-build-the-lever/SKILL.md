@@ -1,6 +1,6 @@
 ---
 name: principle-build-the-lever
-description: "Apply to any non-trivial work, not just bulk work: edits, migrations, analyses, checks. Build the tool that does it or proves it (codemod, script, generator, or a skill your subagents follow) instead of working by hand. The tool is the artifact a reviewer can rerun."
+description: "Use when the same edit lands on many files, when you are about to repeat a change by hand, and on any migration, bulk rename, or sweep across a directory. Applies to any non-trivial work besides, not just bulk work: edits, migrations, analyses, checks. Build the tool that does it or proves it (codemod, script, generator, or a skill your subagents follow) instead of working by hand. The tool is the artifact a reviewer can rerun."
 ---
 # Build the Lever
 
