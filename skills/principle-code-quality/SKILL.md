@@ -21,6 +21,8 @@ config, test patterns, and use the utilities already there.
 - No magic numbers. Named constants carry domain + units.
 - Guard clauses over deep nesting. Nesting >3 -> extract function.
 - Compute or mutate, never both in same function.
+- No second language in a string past one line (Python heredoc in shell, SQL
+  in a string, shell in YAML). It escape every linter; give it its own file.
 - YAGNI. No dependency added without explicit approval.
 
 ## Types and boundaries
@@ -100,6 +102,12 @@ change.
 - State-mutating op must converge: same end state run twice, or after crash at
   any point. Scan state, clean stale artifact, adopt live session, PID-based
   stale lock. "Depends what was left behind" -> add reconciliation step.
+- Unowned value: load-bearing value seeded from an ephemeral source
+  (self-populated default, first-boot snapshot, mirrored copy,
+  hand-enumerated file list) that nothing re-asserts. Declare one source of
+  truth and re-assert it every run, or derive instead of copy: sweep the
+  directory, do not maintain the list. The defect is the silent drift, not
+  the stale string; drift must fail loudly.
 
 **Debugging.** Loop lives in the Bug fix role. Two rules it does not
 carry: fix pattern not instance (grep the shape, fix all of them), and "broke
