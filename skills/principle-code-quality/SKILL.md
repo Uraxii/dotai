@@ -22,6 +22,8 @@ config, test patterns, and use the utilities already there.
 - Guard clauses over deep nesting. Nesting >3 -> extract function.
 - Compute or mutate, never both in same function.
 - YAGNI. No dependency added without explicit approval.
+- No second language in a string past one line (Python heredoc in shell, SQL
+  in a string, shell in YAML). It escape every linter; give it its own file.
 
 ## Types and boundaries
 
@@ -74,12 +76,26 @@ handlers.
 - Test: new reader answer "where X come from?" and "what can change X?" in
   under 30 seconds. No -> cut layers or cut state.
 
-**Comments.** Comment restating code, narrating change, or apologizing for a
-workaround: delete, fix the code instead. Constraint comment ("do not remove",
-"ask X first") is an unenforced rule: encode as type, runtime check, test, or
-lint, then delete it. Suppression is a comment too; correctness or safety
-suppression must die, not be silenced. Keep only comment about thing we cannot
-change.
+**Comments.** Default is delete. A comment survives only on this list:
+
+- License or legal header.
+- Doc comment defining a public API contract.
+- Issue or RFC link for a constraint code cannot express.
+- Behaviour forced by an external dependency, platform, vendor, or protocol
+  we cannot reshape, verified on a live path today (`how` / `why` on the
+  named symbol before judging, never from the comment's own claim).
+- Style-only suppression (`prettier-ignore`, a pedantic lint rule).
+
+Everything else goes: narration, banners, commented-out code, restated code,
+change history, workaround apologies. Surprise in OUR code is not a keep:
+rename, extract, type, or restructure the symbol until the prose is
+unneeded, then delete it. Constraint comment ("do not remove", "ask X first",
+"too risky", "fine for now") is an unenforced rule: encode as type, runtime
+check, test, or lint, then delete. Correctness or safety suppression
+(`eslint-disable`, `@ts-ignore`, `@ts-expect-error`, `noqa`) dies and the
+guilty symbol gets fixed, never silenced. Long justification is a confession,
+not a keep; never shorten it into a tidier alibi. Unsure which clause
+applies -> delete.
 
 ## Subtract first
 
@@ -100,6 +116,12 @@ change.
 - State-mutating op must converge: same end state run twice, or after crash at
   any point. Scan state, clean stale artifact, adopt live session, PID-based
   stale lock. "Depends what was left behind" -> add reconciliation step.
+- Unowned value: load-bearing value seeded from an ephemeral source (self-
+  populated default, first-boot snapshot, mirrored copy, hand-enumerated
+  file list) that nothing re-asserts. Declare one source of truth and
+  re-assert it every run, or derive instead of copy: sweep the directory,
+  do not maintain the list. The defect is the silent drift, not the stale
+  string; drift must fail loudly.
 
 **Debugging.** Loop lives in the Bug fix role. Two rules it does not
 carry: fix pattern not instance (grep the shape, fix all of them), and "broke

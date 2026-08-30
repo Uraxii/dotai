@@ -15,6 +15,9 @@ After every task ask: how do I prove this actually work?
 - Process alive -> query process, not derived state file.
 - Value correct -> read actual value at runtime, not cached or derived copy.
 - Verification fail -> suspect observation method BEFORE suspecting system.
+- Diagnosis is an output too. Read the system's own log and source before
+  theorising from config plus plausible mechanism; the system usually names
+  its refusal.
 
 ## Full chain
 
@@ -24,6 +27,19 @@ with no gap trusted.
 
 **Delegation.** Trust artifacts, not reports. Inspect diff, file content, runtime behaviour.
 Agent report what it INTENDED, not always what happened.
+
+## Watch the check fail
+
+Guard never seen failing prove nothing. Before trusting any check (lint,
+verify script, monitoring probe, CI gate, review pass), feed it one
+known-bad input and watch it go red. Only then trust its green.
+
+- New or changed guard -> negative control first: the EICAR file, the
+  planted syntax error, the downed target, the rejected API response.
+- Reviewing a diff -> run the linter on it. Eyeball catch style, not defect.
+  No linter cover the defect class -> that gap is itself a finding.
+- Check that cannot fail is worse than no check: it manufacture confidence
+  and schedule its own discovery for the outage.
 
 ## Script the check
 
