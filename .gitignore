@@ -25,3 +25,6 @@ opencode.json
 .dotai-manifest
 .installed-by-*
 .handoffs/
+
+# Agent worktree scratch. Holds stale skill copies; never publish.
+.claude/
