@@ -15,18 +15,18 @@ A hook can flag context pressure before the agent notices it. Optional, not inst
 
 ## Which mode
 
-A referenced handoff file means CONSUME, not create. Read it, load its suggested skills, inspect the named artifacts, execute its next steps. Do not write another handoff unless asked.
+A referenced handoff file means CONSUME, not create. Read it, load its suggested skills, inspect the named artifacts. The invocation argument is the work order; the handoff is context for it. An argument naming one task (an answer, a fact, one step) authorizes that task only: do it, then report the remaining next steps as status, not as a backlog to start. No argument means the full `Immediate Next Steps` list is the work order. Do not write another handoff unless asked.
 
 Asked to EXPLAIN handoffs: read the file, explain the consumption model, execute nothing.
 
-Arguments passed to this skill are the next session's focus. Absent, infer the focus from the conversation and label it inferred.
+When creating, the invocation argument names the next session's focus to record in the handoff. Absent, infer the focus from the conversation and label it inferred.
 
 ## Consuming
 
 1. Read the handoff file first and treat it as the session brief. Do not ask what to do next when it names `Immediate Next Steps`.
 2. Invoke the `Suggested Skills` relevant to the current step; defer the rest until needed.
 3. Verify branch and status before editing. Read the artifacts named as sources of truth rather than trusting the summary.
-4. Execute the next steps. Update durable project docs with distilled decisions, not transcripts. Commit or push only when the handoff or the user makes that the expected continuation and you verified the diff.
+4. Execute the next steps inside the work order, in listed order. Update durable project docs with distilled decisions, not transcripts. Commit or push only when the handoff or the user makes that the expected continuation and you verified the diff.
 5. Verify completion: check `git status`/`log` after a commit, and search for stale or conflicting wording when the task was to update decisions.
 
 ## Creating

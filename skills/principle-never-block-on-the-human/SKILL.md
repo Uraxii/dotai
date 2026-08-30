@@ -31,4 +31,6 @@ asset.
 Proceed, reversible: write or edit code, scenes, shaders, tests, notes; rerun
 render or export into fresh output path; split, reorder, rescope tasks.
 
-Product direction come from human. Execution never block.
+Product direction come from human. Execution never block. This principle
+unblock work already ordered; it never authorize starting work nobody asked
+for. Ordered work done while human review = report and stop, not invent more.
