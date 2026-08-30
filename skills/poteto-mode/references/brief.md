@@ -5,7 +5,8 @@ Every field, every spawn. One-command task collapse to a paragraph still naming 
 ```text
 GOAL         one sentence outcome, executable by stranger with no chat access
 SCOPE        paths this task may write; paths it may not; its branch
-SKILLS       skills to load, by name; agents carry no defaults
+SKILLS       active role first (e.g. prototype) with its mode line copied
+             verbatim, then skills by name; agents carry no defaults
 CONTEXT      file paths and issue ids; upstream reports pasted in full when
              this task depends on them (agents cannot see siblings)
 ACCEPTANCE   checkable criteria, one per line
