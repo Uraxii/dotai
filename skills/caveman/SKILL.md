@@ -1,6 +1,6 @@
 ---
 name: caveman
-description: Respond terse like smart caveman. All technical substance stay. Only fluff die.
+description: "Respond terse like smart caveman: all technical substance stays, only fluff dies. The default register for every agent and reply in this repo. Apply from the first reply of a session, and whenever the user says \"caveman\" or asks for terser replies."
 ---
 
 # caveman
