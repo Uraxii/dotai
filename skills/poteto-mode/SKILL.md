@@ -22,7 +22,14 @@ Triggers a skill description alone would not fire:
 - Citing a web page -> `research` (store the source), never a bare link.
 - Broken skill mid-task -> fix it in its own change. Do not block. Do not work around it silently.
 
-Everything else routes by skill description. Read the catalog, load what matches.
+## Skill selection
+
+**Before the first task action, pick your skills, write the picks down, read each one in full.** Every agent get the full catalog at spawn. Skipping it raise no error and leave no trace, so selection is a step with an output, not a private thought.
+
+- Match the task against the trigger list above, then against every catalog description. Both, not either.
+- One todolist item per selected skill, sitting with the Principles item ahead of the role's steps. A pick nobody can see did not happen.
+- Read the selected skill in full before acting on the task. Not while acting, not skimmed, and never the description standing in for the body.
+- Considered and dropped is fine. Say which and why in one clause, `skip: <reason>`, same shape the Roles section use. Silent omission is not.
 
 ## Principles
 
