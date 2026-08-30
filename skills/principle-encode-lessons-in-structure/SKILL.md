@@ -1,6 +1,6 @@
 ---
 name: principle-encode-lessons-in-structure
-description: Recurrence is the trigger. Use on the SECOND occurrence of a lesson, when the human corrects the same thing twice, when about to write an instruction already written elsewhere, or when a class of bug returns after being fixed one instance at a time. Never fires on a first-time rule or on any single comment. Converts the repeated correction into a mechanism (type, lint rule, CI check, canonical helper, runtime assert, script) and deletes the prose.
+description: Use when you pick up a brief that reports recurrence ("this keeps happening", "third time we have fixed this", "stop this class of bug coming back"), and when a brief asks you to fix many instances of one bug class. Recurrence is the trigger. Use on the SECOND occurrence of a lesson, when the human corrects the same thing twice, when about to write an instruction already written elsewhere, or when a class of bug returns after being fixed one instance at a time. Never fires on a first-time rule or on any single comment. Converts the repeated correction into a mechanism (type, lint rule, CI check, canonical helper, runtime assert, script) and deletes the prose.
 ---
 
 # Encode lessons in structure

@@ -1,6 +1,6 @@
 ---
 name: principle-experience-first
-description: Use when cutting a feature list or scope, when choosing between one more option and polishing what already exists, when picking a default or preset someone else must live with, when the thing is easier to write than to call or operate, or when the answer to a design question is turning into make it configurable. Picks the tight core loop and the consumer's experience over more surface area.
+description: Use when you pick up a brief asking you to add an option, a flag, a default, or a preset, or to say what gets cut from a feature list, and when cutting a feature list or scope, when choosing between one more option and polishing what already exists, when picking a default or preset someone else must live with, when the thing is easier to write than to call or operate, or when the answer to a design question is turning into make it configurable. Picks the tight core loop and the consumer's experience over more surface area.
 ---
 
 # Experience first

@@ -1,6 +1,6 @@
 ---
 name: principle-laziness-protocol
-description: The deeper treatment the `ponytail` skill escalates to, never a first-pass substitute for it. Use after ponytail has already been applied and the change still grows layers, wrappers, config options, or parameters threaded through many files, or when the fix is to delete existing code rather than to keep one new diff small. Inventories what can be removed outright and re-sequences the work around subtraction.
+description: Use when you pick up a brief describing sprawl, layers, or wrappers, or asking for something to be cut back or deleted, and run the `ponytail` skill on it first. This is the deeper treatment the `ponytail` skill escalates to, never a first-pass substitute for it. Use after ponytail has already been applied and the change still grows layers, wrappers, config options, or parameters threaded through many files, or when the fix is to delete existing code rather than to keep one new diff small. Inventories what can be removed outright and re-sequences the work around subtraction.
 ---
 
 # Laziness protocol

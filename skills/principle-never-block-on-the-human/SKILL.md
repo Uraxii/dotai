@@ -1,6 +1,6 @@
 ---
 name: principle-never-block-on-the-human
-description: Use when about to stop and ask the human for permission or a preference on work that can be undone, such as writing code, editing a scene, renaming things, restructuring notes, or splitting tasks, while the human reviews on their own schedule. Proceed and present the result; keep confirmation for actions that cannot be taken back.
+description: Use when you pick up a brief that hands you reversible work with a choice left open, and on any brief for delegated or autonomous work where you have no channel to the user, and when about to stop and ask the human for permission or a preference on work that can be undone, such as writing code, editing a scene, renaming things, restructuring notes, or splitting tasks, while the human reviews on their own schedule. Proceed and present the result; keep confirmation for actions that cannot be taken back.
 ---
 
 # Never block on human
