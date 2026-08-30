@@ -1,6 +1,6 @@
 ---
 name: principle-guard-the-context-window
-description: Use when a step is about to pull bulk into the conversation, such as dumping a long log or stack trace, reading many files to answer one question, capturing screenshots or rendered frames, pasting a big JSON graph or plan output, or fanning work out across phases. Routes bulk to subagents and keeps only summaries in the main thread.
+description: Use when you pick up a brief whose work spans many files, a large log, or a fan-out across phases, before any of that bulk has been read, and when a step is about to pull bulk into the conversation, such as dumping a long log or stack trace, reading many files to answer one question, capturing screenshots or rendered frames, pasting a big JSON graph or plan output, or fanning work out across phases. Routes bulk to subagents and keeps only summaries in the main thread.
 ---
 
 # Guard context window
