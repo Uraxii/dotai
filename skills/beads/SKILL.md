@@ -22,6 +22,20 @@ with its own `.beads/` database per project; nothing else to configure.
   `pinned`, `hooked`.
 - Priority (`-p`): `0` (critical) to `4` (backlog). Default `2`.
 
+## Scope
+
+Beads is the local issue tracker, nothing more.
+
+Use it for:
+
+- Tickets: `create`, `update --claim`, `close`, `note`, `search`, `show`,
+  `children`.
+- Dependency edges and the frontier: `link`, `dep`, `ready`.
+- The wayfinder map: a parent issue with child tickets.
+
+Not for: memory, session recovery, rules injection, workflow templates, or
+git.
+
 ## Invocation
 
 Run `bd` from the project root. Add `--json` only when a script parses
