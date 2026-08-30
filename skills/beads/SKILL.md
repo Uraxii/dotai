@@ -34,9 +34,7 @@ Use it for:
 - The wayfinder map: a parent issue with child tickets.
 
 Not for: memory, session recovery, rules injection, workflow templates, or
-git. Never run `bd remember`, `bd memories`, `bd prime`, `bd setup`, or
-`bd formula`; durable context goes on the ticket with `bd note`, in the
-knowledgebase, or through the `why` skill.
+git.
 
 ## Invocation
 
