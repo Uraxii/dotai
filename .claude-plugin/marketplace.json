@@ -1,9 +1,12 @@
 {
   "name": "Uraxii",
+  "owner": {
+    "name": "Uraxii"
+  },
   "plugins": [
     {
       "name": "dotai",
-      "source": "Uraxii/dotai",
+      "source": "./",
       "description": "Skills and thin named agents: poteto-mode, principles, roles, tools."
     }
   ]

@@ -26,7 +26,14 @@ Claude Code:
 Codex: `/plugins`, add this repo as a marketplace (it carries
 `.agents/plugins/marketplace.json`), install `dotai`.
 
-Copilot CLI, Cursor, and the other targets skills.sh lists:
+Copilot CLI:
+
+```
+copilot plugin marketplace add Uraxii/dotai
+copilot plugin install dotai@Uraxii
+```
+
+Cursor and the other targets skills.sh lists:
 
 ```
 npx skills@latest add Uraxii/dotai
@@ -38,8 +45,8 @@ and point `~/.config/opencode/skills` at `skills/`.
 Then run `/setup-dotai` once: it offers the preamble lines for your global
 instructions file and sets per-role models.
 
-The named agents in `agents/` ship with the Claude Code plugin only; other
-harnesses read `skills/` and do not use them.
+The named agents in `agents/` ship with the Claude Code and Copilot CLI
+plugin installs. skills.sh and opencode targets read `skills/` only.
 
 Harness prefs (`CLAUDE.md`, `AGENTS.md`, `settings.json`, secrets) are not
 tracked here.
