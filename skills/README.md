@@ -55,6 +55,7 @@ User-level skills, harness-neutral, in the Agent Skills format. Source of truth 
 | [principle-exhaust-the-design-space](principle-exhaust-the-design-space/SKILL.md) | Compare two or three competing prototypes side by side before committing. |
 | [principle-redesign-from-first-principles](principle-redesign-from-first-principles/SKILL.md) | Rebuild the design as if the new requirement had been known on day one. |
 | [principle-build-the-lever](principle-build-the-lever/SKILL.md) | Build the codemod, script, or generator instead of doing non-trivial work by hand. |
+| [principle-output-to-user](principle-output-to-user/SKILL.md) | One short outcome-first reply per turn, copy-paste values in code blocks with full paths. |
 
 ### Prose and session management
 
