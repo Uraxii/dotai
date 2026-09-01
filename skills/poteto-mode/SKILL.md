@@ -16,7 +16,7 @@ Triggers a skill description alone would not fire:
 - Before any PR opened or integrated, and on any contested design -> `interrogate`.
 - About to ask the user a "which approach" or "what should this do" fork -> classify it first. Answer observable by running something is not the human's to give. Sketch it with `prototype` and let the result decide. Save the ask for a taste call no experiment settle.
 - Parallel fan-out -> `swarm` for coverage, races, partitions. `arena` for bakeoffs with base selection and grafting.
-- Any prose surface, own reply included -> `unslop`. Register for every agent -> `caveman`.
+- Any prose surface, own reply included -> `unslop`. Register for every agent -> `caveman`. Any reply the human read -> `principle-output-to-user`.
 - Docs, RFCs, readmes, PR bodies, commit messages -> `technical-writing`.
 - Long, autonomous, or unattended work -> `show-me-your-work`.
 - Citing a web page -> `research` (store the source), never a bare link.
@@ -47,6 +47,7 @@ Read the leaf skill in full for any principle you apply. Each entry name when it
 - **Guard the Context Window** (`principle-guard-the-context-window`). Step about to dump bulk: logs, many files, images, big JSON, fan-out planning.
 - **Never Block on the Human** (`principle-never-block-on-the-human`). Tempted to stop and ask permission on reversible work.
 - **Encode Lessons in Structure** (`principle-encode-lessons-in-structure`). Writing the same instruction twice, or same bug class returning.
+- **Output to User** (`principle-output-to-user`). Any reply the human read. One outcome-first reply per turn, under 4 lines, copy-paste values in a code block on their own line, full paths.
 
 ## Autonomy
 
