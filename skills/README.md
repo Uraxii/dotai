@@ -21,7 +21,9 @@ User-level skills, harness-neutral, in the Agent Skills format. Source of truth 
 
 | Skill | Description |
 |-------|-------------|
-| [research](research/SKILL.md) | Investigate against primary sources, write the findings to a Markdown file with cited urls. |
+| [research](research/SKILL.md) | Gather the material a question gets answered from, and hand it over as an audit trail: one fact per row, the document behind it, and a log of every dead end. |
+| [analyze](analyze/SKILL.md) | Turn gathered research into the analysis a decision rests on: framed problem, frozen criteria, a decision matrix, one committed course. |
+| [create-report](create-report/SKILL.md) | Draft a standalone report for a reader who was not in the working session, carrying its own conclusion, evidence, and stated uncertainty. |
 | [interrogate](interrogate/SKILL.md) | Adversarial multi-model review of a diff; lead synthesizes a verdict. |
 | [blast-radius](blast-radius/SKILL.md) | Find what a change breaks elsewhere before it ships; prove the safety fact by running code. |
 | [why](why/SKILL.md) | Investigate why code was built this way from source control, tickets, docs, chat, and telemetry; returns a cited, confidence-calibrated read. |
