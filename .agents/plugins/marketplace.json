@@ -16,6 +16,19 @@
         "authentication": "ON_INSTALL"
       },
       "category": "Productivity"
+    },
+    {
+      "name": "report-pipeline",
+      "source": {
+        "source": "url",
+        "url": "https://github.com/Uraxii/report-pipeline.git",
+        "ref": "main"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
     }
   ]
 }
