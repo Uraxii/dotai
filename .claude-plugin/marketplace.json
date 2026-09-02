@@ -8,6 +8,14 @@
       "name": "dotai",
       "source": "./",
       "description": "Skills and thin named agents: poteto-mode, principles, roles, tools."
+    },
+    {
+      "name": "report-pipeline",
+      "source": {
+        "source": "github",
+        "repo": "Uraxii/report-pipeline"
+      },
+      "description": "Report pipeline skills: research, analyze, create-report."
     }
   ]
 }
