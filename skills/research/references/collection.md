@@ -33,7 +33,7 @@ collection turns out to support.
 
 ## Plan the collection
 
-Two lists, written before the first document is opened.
+Full mode. Two lists, written before the first document is opened.
 
 **What would answer it.** For each candidate answer, name the observable that
 would establish it. Not a topic to read about: a thing that either is or is not
@@ -84,9 +84,9 @@ its own right.
 
 ## When you are refused
 
-Access failures are normal and they are findings. ATP 2-22.9's collection
-chapter treats an unavailable source as an outcome to report back against the
-requirement, not as a silent hole. Three kinds, three responses.
+Full mode. Access failures are normal and they are findings. ATP 2-22.9's
+collection chapter treats an unavailable source as an outcome to report back
+against the requirement, not as a silent hole. Three kinds, three responses.
 
 **The host refuses the client.** A page a browser serves and a script does not.
 Try the same document from another host that carries it: another arm of the
