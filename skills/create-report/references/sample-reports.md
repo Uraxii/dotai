@@ -1,21 +1,23 @@
 # Sample reports: one bad, one good
 
-A worked example of the report contract. Below are two versions of the same
-internal recommendation, written from the same facts. The first breaks the
-contract on purpose. The second obeys it. After each, a list ties specific
-lines to the rule they break or satisfy. The pair is original writing, not
-reproduced from any source.
+Worked example of the report contract. Two versions of the same internal
+recommendation, written from the same facts. First breaks the contract on
+purpose. Second obeys it. After each, a list ties specific lines to the rule
+they break or satisfy. The pair is original writing, not reproduced from any
+source.
 
-The report shapes referenced below live in references/structure.md. The
-likelihood ladder and the weasel list live in references/style.md. The
-numbered checks live in references/checklist.md.
+Report shapes referenced below: references/structure.md. Likelihood ladder and
+weasel list: references/style.md. Numbered checks:
+references/checklist.md.
 
 ## The facts both versions use
 
-Scaffolding for this example, not part of either report. RadixParts ships
-about 8,000 regional parcels a month. Its carrier contract is expiring and one
-carrier must be chosen for the coming year. Three candidates, from the same
-data both versions draw on:
+Scaffolding for this example, not part of either report. Both report bodies
+below are written as business prose, the register this skill produces, not the
+register this file's own commentary uses. RadixParts ships about 8,000
+regional parcels a month. Its carrier contract is expiring and one carrier
+must be chosen for the coming year. Three candidates, from the same data both
+versions draw on:
 
 - Meridian Freight: $7.20 per parcel, 94 percent on time, 2.1 days transit.
 - Coastal Parcel: $6.40 per parcel, 89 percent on time, 2.8 days transit.
@@ -73,31 +75,17 @@ the cost picture, but I will leave that note here at the end.
 
 ## What the bad report breaks
 
-Failure modes (from the skill's four named modes):
+Failure modes, the skill's four named ones:
 
 - Context bleed: "in Tuesday's standup," "As I said in Slack this morning."
-  Session talk pasted in instead of transformed notes.
+  Session talk pasted in, not transformed notes.
 - Agent narration: "I completed a review," "Just to restate the problem," the
-  step-by-step multiplication, and the footnote on its own conclusion.
-- Revision as append: the "P.S." bolts a cost fact onto the end, outside the
-  order the opening never promised.
+  step-by-step multiplication, the footnote on its own conclusion.
+- Revision as append: "P.S." bolts a cost fact onto the end, outside an order
+  the opening never promised.
 - False confidence: "Meridian will keep its 94 percent on-time rate" states an
   inference as a fact; "highly confident it is very likely" gives a conclusion
   with no calibrated likelihood.
-
-Contract and exclusions:
-
-- Buried conclusion. "Meridian is the best value" arrives last, not in the
-  first paragraph (contract: thesis in the first paragraph).
-- No announced order, so the body follows none (contract: the first paragraph
-  announces the order).
-- Topic-only subheads. "Background," "The Carriers," "Costs," "Other Factors"
-  name a topic and state no sub-conclusion (contract: every container
-  announces its point).
-- Exclusion list, all tripped in the first paragraph and the body: restated
-  problem, announced that research was completed, summarized background,
-  defined a term ("On-time rate, which means..."), explained a calculation,
-  footnoted its own conclusion, and stated an inference as a fact.
 
 Checklist coverage. Each check catches at least the line named here.
 
@@ -107,8 +95,9 @@ Checklist coverage. Each check catches at least the line named here.
 | 2 | No order announced, so the body follows none |
 | 3 | Subheads name topics, state no sub-conclusion |
 | 4 | Conclusion sits in the last line, not the first paragraph |
-| 5 | Restated problem, research announcement, background, term |
-|   | definition, explained calculation, self-footnote, all present |
+| 5 | Restated problem, research announcement, background summary, term |
+|   | definition, explained calculation, self-footnote, and an inference |
+|   | stated in the form of a fact, all present |
 | 6 | "$7.20. Coastal is $6.40. Union is $7.90" listed, not compared |
 | 7 | "significantly," "appears," "substantial" |
 | 8 | "Figure 1: Costs" titled by topic, no thesis |
@@ -136,13 +125,13 @@ Checklist coverage. Each check catches at least the line named here.
 | 23 | The report misses most of the checks above and records not one of |
 |    | them as an authorised deviation |
 
-Checks 18, 19 and 23 are process checks, not lines of report text. The bad
-report fails them by evidence: the unmarked volume figure shows no assumptions
-check informed it, no "if X is wrong, Y breaks" line shows the sensitivity
-test ran, the blind-spot typos plus the append show the edit passes never ran,
-and the absent deviations block shows nothing was authorised. Check 22 is half
-a text check and half a process check: the pasted session talk is on the page,
-and the missing notes file is not.
+Checks 18, 19 and 23 are process checks, not lines of report text. Bad report
+fails them by evidence: unmarked volume figure shows no assumptions check
+informed it, no "if X is wrong, Y breaks" line shows the sensitivity test ran,
+blind-spot typos plus the append show the edit passes never ran, absent
+deviations block shows nothing was authorised. Check 22 is half text check,
+half process check: pasted session talk is on the page, missing notes file is
+not.
 
 ## The good report, as written
 
@@ -223,31 +212,25 @@ carrier's own marketing.
 
 ## What the good report satisfies
 
-- First paragraph carries the conclusion and its reasons grouped into three
-  categories, cost, reliability, and one risk, and announces the order the
-  body follows (contract: thesis first, order announced; checks 1 and 2).
-- The title states the conclusion, and each subhead states a sub-conclusion
-  that carries the argument read alone (contract: every container announces
-  its point; checks 3 and 4).
-- Every number is compared: $7.20 against $7.90, $6.40 against $7.20, 94
-  against 96 against 89, and each figure carries its context (check 6). No
-  vague evaluative terms stand in for the comparison (check 7).
-- The recommendation commits to one course and leaves the reader to approve or
-  decline (check 17); the options were compared to reach it (check 16); and it
-  carries a stated falsifier, the 92 percent trigger (contract: a stated
-  falsifier; check 21).
-- The likelihood judgment names its term and numeric band, "likely (55 to 80
-  percent)," and states confidence in a separate sentence, so likelihood and
-  confidence never share one (contract: likelihood and confidence separate;
-  checks 13 and 14, no weasels).
-- The volume assumption is marked as an assumption and says what follows if it
-  is wrong in either direction (contract: assumptions marked with their
-  consequence; check 15). The visible assumption is the residue of the
-  assumptions check (check 18); the clean prose is the residue of the edit
-  passes (check 19).
-- The decision matrix shows the criteria, the weights with their rationale,
-  and both the unweighted and weighted totals, and the result is summarized in
-  the body so the reader never opens an attachment (check 16).
-- Sources are precise, dated, and varied in kind, with a note on why the
-  on-time figures come from the scorecard rather than the carriers' own
-  marketing (check 9).
+| Check | Where the good report satisfies it |
+|---|---|
+| 1, 2 | First paragraph carries the conclusion plus reasons in three |
+|   | categories, cost, reliability, and one risk, and announces the |
+|   | order the body follows |
+| 3, 4 | The title states the conclusion; every subhead states a |
+|   | sub-conclusion that carries the argument read alone |
+| 6 | Every number compared: $7.20 against $7.90, $6.40 against $7.20, 94 |
+|   | against 96 against 89 |
+| 7 | No vague evaluative terms stand in for the comparison |
+| 9 | Sources precise, dated, and varied in kind, with the note on why the |
+|   | on-time figures come from the scorecard and not carrier marketing |
+| 13, 14 | "likely (55 to 80 percent)" with confidence in its own |
+|   | sentence, and no weasels |
+| 15 | The volume assumption is marked, and its consequence stated in both |
+|   | directions |
+| 16 | Criteria, the weights with their rationale, and both totals |
+|   | summarized in the body |
+| 17 | Commits to one course; the reader approves or declines |
+| 18 | The visible assumption is the assumptions check's residue |
+| 19 | The clean prose is the edit passes' residue |
+| 21 | The 92 percent falsifier |

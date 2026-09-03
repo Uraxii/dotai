@@ -1,27 +1,29 @@
 # style.md: sentences, numbers, and uncertainty
 
-The sentence layer, the numbers rules, table typography, the likelihood
-ladder, and the weasel list. Load when drafting or revising sentences, when
-placing numbers, or when stating how sure you are.
+Sentence layer, numbers rules, table typography, likelihood ladder, weasel
+list. Load when drafting or revising sentences, placing numbers, or stating
+how sure you are.
 
 Every sentence rule and word rule ships as a bad/good pair. Read the bad half
-first, then the fix. The uncertainty rules pair themselves: the weasel phrase
-is the bad half, the ladder term is the good half.
+first, then the fix. Uncertainty rules pair themselves: weasel phrase is the
+bad half, ladder term is the good half.
 
 Owned elsewhere, referenced here, never duplicated:
 
-- Paragraph template (Say it, Explain it, Detail it, Say it again), skeletons,
-  cover letter, paper formats: references/structure.md.
-- Steps, audience, options, the decision matrix: references/planning.md.
-- Graphs, footnotes, source credibility, the citation template, evidence
-  tests: references/evidence.md.
-- The three-pass edit, the connective sweep as a check, the structured
-  challenge: references/checklist.md.
+- Paragraph template (Say it, Explain it, Detail it, Say it again), cover
+  letter, paper formats: references/structure.md; skeletons,
+  references/skeletons.md.
+- Steps and audience: references/planning.md; options and the decision matrix,
+  references/recommendation.md.
+- Graphs, footnotes, source credibility, citation template, evidence tests:
+  references/evidence.md.
+- Three-pass edit, connective sweep as a check, structured challenge:
+  references/checklist.md.
 
 ## The sentence layer
 
-Carter A. Daniel, Part II. Each rule is a bad half then a good half. The good
-half is the one to write.
+Carter A. Daniel, Part II. Each rule is a bad half then a good half. Good half
+is the one to write.
 
 - Active verbs over be-verbs. "I am in favor of" becomes "I favor".
 - Active voice over passive. "The stock was bought by us" becomes "We bought
@@ -64,9 +66,9 @@ verbatim:
 > watch for these forms of the verb to be (am, is, are, was, were, be, being,
 > been) and a main verb usually ending in -ed or -en.
 
-The rule in two moves: find the verb, then find the actor. If the actor comes
-after the verb, or a form of "to be" sits with a main verb ending in -ed or
--en, the sentence is passive. Three cures, each a verbatim pair:
+Rule in two moves: find the verb, then find the actor. Actor after the verb,
+or a form of "to be" sitting with a main verb ending in -ed or -en -> passive.
+Three cures, each a verbatim pair:
 
 - Put the actor before the verb. "The part must have been broken by the
   handlers" becomes "The handlers must have broken the part".
@@ -86,9 +88,9 @@ near 17 words. Treat anything over 20 as a sentence to split.
 
 ## The three Strunk supplements
 
-Marked AS supplements to the Daniel layer. Daniel has no equivalent for these
-three. Author is Strunk, *The Elements of Style*, 1918. Every pair below is
-copied verbatim from the source files, never reconstructed from memory.
+Supplements to the Daniel layer, which has no equivalent for these three.
+Strunk, *The Elements of Style*, 1918; every pair below copied verbatim from
+the source files. Three, no more.
 
 ### Supplement 1: put statements in positive form
 
@@ -118,7 +120,7 @@ Strunk, Chapter V, entry "Very" [source hash
 `38a1e40c2e7e`, lines 512 to 513]. Verbatim, in full: "Use this word
 sparingly. Where emphasis is necessary, use words strong in themselves."
 
-The source gives this entry no example pair, so the illustration below is
+Source gives this entry no example pair, so the illustration below is
 skill-authored, not Strunk's, and marked so: "The results were very good"
 becomes "The results were excellent".
 
@@ -147,30 +149,30 @@ Carter A. Daniel, Part II. Pairs.
 ## Table typography
 
 DESIGN DEFAULT, skill-authored. No source in the corpus teaches table
-typography, so this is a house convention, not an attributed rule. Keep it
+typography, so this is house convention, not an attributed rule. Keep it
 minimal.
 
 - Caption states the table's point, not its topic, and sits above the table.
-  The four-level container law applies: a table is a container and announces
-  its conclusion. "Table 1: Costs" becomes "Table 1: Option B costs 40 percent
+  Four-level container law applies: a table is a container and announces its
+  conclusion. "Table 1: Costs" becomes "Table 1: Option B costs 40 percent
   less than Option A".
 - Left-align text columns. Right-align numeric columns so digits line up;
   align on the decimal point where the column has one.
-- One header row. No vertical rules. Use whitespace and at most a single
+- One header row. No vertical rules. Whitespace and at most a single
   horizontal rule under the header, not a grid.
-- A table resting on assumptions carries the caveat in its own caption. That
-  rule is sourced, not design; it lives in the uncertainty layer below.
+- Table resting on assumptions carries the caveat in its own caption. Sourced,
+  not design; it lives in the uncertainty layer below.
 
 ## The likelihood ladder
 
-Owned by this file and published by every report. The report prints the ladder
-it uses, because estimative words drift badly between readers: one reader's
-"probable" sits where another hears "almost certain". A reader who distrusts
-the words has the numbers, and the reverse.
+Owned by this file, published by every report. Report prints the ladder it
+uses, because estimative words drift badly between readers: one reader's
+"probable" sits where another hears "almost certain". Reader who distrusts the
+words has the numbers, and the reverse.
 
-The published ladder is ICD 203's word row A paired with its numeric bands,
-shown together [ICD-D / `4b0f9a500133`, lines 88 to 93]. Reproduce this table
-in the report:
+Published ladder is ICD 203's word row A paired with its numeric bands, shown
+together [ICD-D / `4b0f9a500133`, lines 88 to 93]. Reproduce this table in the
+report:
 
 | Likelihood         | Probability |
 |--------------------|-------------|
@@ -184,9 +186,9 @@ in the report:
 
 ICD 203 gives a second word row, verbatim [ICD-D / `4b0f9a500133`, line 92]:
 "Remote | Highly improbable | Improbable (improbably) | Roughly even odds |
-Probable (probably) | Highly probable | Nearly certain". Do not mix rows
-within one judgment. If a report ever mixes them, ICD 203 requires a
-disclaimer noting the terms mark the same probability.
+Probable (probably) | Highly probable | Nearly certain". Never mix rows within
+one judgment. Report mixes them anyway -> ICD 203 requires a disclaimer noting
+the terms mark the same probability.
 
 Corroboration only, never published as the ladder: Kent's odds table [WEP-odds
 / `fd7e456fe8be`, lines 9 to 21] gives certainty 100%, almost certain 93 give
@@ -203,10 +205,10 @@ and is two.
 
 ## The weasel list
 
-Kent, *Words of Estimative Probability*. This is a word list, not a category.
-Each entry carries a flavor of odds while committing to none, or blurs who
-observed a thing. Scan the draft for these and replace each with a ladder term
-or a plain source attribution.
+Kent, *Words of Estimative Probability*. Word list, not a category. Each entry
+carries a flavor of odds while committing to none, or blurs who observed a
+thing. Scan the draft for these, replace each with a ladder term or a plain
+source attribution.
 
 Odds-flavored, committing to nothing [WEP-weasel / `aeb42b8d8272`, line 7;
 WEP-aes / `1b1b76ab767d`, lines 7 and 9]:
@@ -233,18 +235,17 @@ Source-blurring words [WEP-weasel / `aeb42b8d8272`, line 9], verbatim run:
 "apparently", "seemingly", "appears", "seems", "suggests", "indicates",
 "presumably", "ostensibly", and "most serious of all, 'reportedly' otherwise
 unmodified". Bare "reportedly" "carries no evaluative weight whatsoever". Each
-of these generalizes away who observed the thing and how much the observation
-weighs. Use them sparingly and never near a key estimate.
+generalizes away who observed the thing and how much the observation weighs.
+Use sparingly, never near a key estimate.
 
 Do not double up probability markers [WEP-notes / `9c7195c6fd33`; inventory
-rule 200]. "We believe it is likely" stacks two. The adverb carries the odds;
-"we believe" and "we estimate" only soften tone, so keep one marker per
-judgment.
+rule 200]. "We believe it is likely" stacks two. Adverb carries the odds; "we
+believe" and "we estimate" only soften tone. One marker per judgment.
 
 ### The uncertainty pair
 
-The rules pair themselves. Weasel phrase is the bad half, ladder term is the
-good half:
+Rules pair themselves. Weasel phrase is the bad half, ladder term is the good
+half:
 
 - "it would appear costs may possibly rise" becomes "costs are likely (55 to
   80 percent) to rise".
@@ -265,10 +266,10 @@ Do not refuse and do not weasel. Structure your way through it [WEP-noest /
 
 Daniel's sentence-connective chapter is the mechanism behind "every sentence
 relates to the ones before it". Tagwords tell the reader in advance what is
-coming: a "but" warns of a turn, a "for example" warns of an instance, an
-"also" warns of one more item in a list.
+coming: "but" warns of a turn, "for example" warns of an instance, "also"
+warns of one more item in a list.
 
-The revision sweep looks for the three places a connective is missing: where a
-paragraph turns, where it gives an example, and where it adds to a list.
-Missing the tagword forces the reader to read the sentence twice to learn its
-job. The three-pass edit that runs this sweep lives in references/checklist.md.
+Revision sweep looks for the three places a connective is missing: where a
+paragraph turns, where it gives an example, where it adds to a list. Missing
+tagword -> reader reads the sentence twice to learn its job. Three-pass edit
+that runs this sweep: references/checklist.md.
