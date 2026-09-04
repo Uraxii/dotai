@@ -28,3 +28,6 @@ opencode.json
 
 # Agent worktree scratch. Holds stale skill copies; never publish.
 .claude/
+
+# Per-project agent scratch (decision logs, gates). Never publish.
+.nikki-agents/
