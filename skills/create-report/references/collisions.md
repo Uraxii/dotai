@@ -23,9 +23,43 @@ a named paper format, whoever chose it. One ruling each.
   defines terms. Where the report uses a named format, whoever chose it, the
   format wins for exactly the elements its skeleton requires, and the exclusion
   list governs everything else. Name in one line, in the format-elements note
-  (the end matter check 2 defines), every excluded element the format claimed,
-  by their names on the exclusion list, not by the format's part names. Every
-  one the skeleton claimed, not the ones you noticed first; a subset fails
-  check 5. The conclusion still leads: put it in the first paragraph whatever
-  number the skeleton gives it. This is a tie-break, so it needs no deviation
-  record.
+  (an admissible end-matter item, check 2), every excluded element the format
+  claimed, by their names on the exclusion list, not by the format's part
+  names. Every one the skeleton claimed, not the ones you noticed first; a
+  subset fails check 5. The conclusion still leads: put it in the first
+  paragraph whatever number the skeleton gives it. This is a tie-break, so it
+  needs no deviation record.
+
+## Excluded elements each format claims
+
+| format | excluded elements claimed |
+|---|---|
+| point, talking, position paper | none |
+| background paper, bullet background paper | summarize background |
+| staff study | restate the problem; define terms; summarize background; explain calculations |
+| running estimate | restate the problem; summarize background; explain calculations |
+
+Design mark: skill-authored, not source-quoted. `scripts/check-report.sh`
+reads this table for check 5. Each row's derivation, so an auditor can check
+it without redoing it:
+
+- Point, talking, position paper claim nothing: none of the three has a
+  skeleton in references/skeletons.md, and none of their descriptions in
+  references/structure.md (point paper, talking, and position paper) name an
+  excluded element.
+- Background paper, bullet background paper claim "summarize background":
+  both job descriptions in references/structure.md say so directly — bullet
+  background paper's job is to "summarize an attached package," background
+  paper's job is to "condense a complex issue... for the reasoning" — and
+  both are background by construction, per the ruling above; neither has a
+  references/skeletons.md skeleton.
+- Staff study claims four: references/skeletons.md:19 (Part 1, "the
+  statement of the problem" -> restate the problem), :24-26 (Part 2,
+  "assumptions, criteria and definitions" -> define terms), :35-37 (Part 3,
+  "some background information is necessary" -> summarize background),
+  :41-46 (Part 3, "show how you tested," "show how you weighed" -> explain
+  calculations). Confirmed at four by case 8.
+- Running estimate claims three: references/skeletons.md:121 (section 2,
+  "the restated mission" -> restate the problem), :97-120 (section 1,
+  "situation and considerations" -> summarize background), :130-137
+  (sections 4-5, "analyze," "use a decision matrix" -> explain calculations).
