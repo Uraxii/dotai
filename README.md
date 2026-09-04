@@ -11,6 +11,7 @@ Code plugin and installable elsewhere through skills.sh. Layout follows pstack.
 | `skills/` | Every skill, `skills/<name>/SKILL.md`. Source of truth. |
 | `agents/` | Named thin agents for graph readability, land in `~/.claude/agents`. |
 | `themes/` | Editor themes. Source of truth only. Nothing installs them, so copy one into `~/.claude/themes/` yourself. |
+| `output-styles/` | Output styles, `output-styles/<name>.md`. Nothing installs them, so copy one into `~/.claude/output-styles/` and select it with `/output-style` yourself. |
 | `statusline.sh` | Statusline command: usage bars and tokens per minute. Nothing installs it, so copy it to `~/.claude/statusline.sh` and set `statusLine` yourself. |
 | `hooks/` | Hook scripts. `cap_bash_timeout.py` is a `PreToolUse` gate on long Bash timeouts; it is registered nowhere and does not run. Nothing installs them, so copy one into `~/.claude/hooks/` and wire it yourself. |
 
