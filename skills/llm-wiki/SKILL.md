@@ -42,7 +42,15 @@ In order:
 3. Otherwise the global store, `~/.local/share/llm-wiki`.
 
 `llmwiki where` prints the one that resolved. Run it first when you are
-unsure, and before any verb that writes.
+unsure, and before any verb that writes. When resolution falls all the
+way through to the global store from inside a repository, every verb
+prints one stderr line naming that repository, because the alternative
+is project knowledge landing in the global store with nothing said.
+
+`llmwiki --version` prints the version and the directory the package
+ran from. Use it when a change to a checkout does not show up at the
+command line: an installed copy on `PATH` does not track a checkout, and
+the path is the half of that line that tells them apart.
 
 **Which one to reach for.** Knowledge about one project lives in that
 project's `.kb`, at the repo root, one per project, the way `.beads/`
@@ -54,10 +62,24 @@ If you are in a repo, the knowledge belongs to it, and there is no
 llmwiki init
 ```
 
-`init` writes `.kb/.gitignore` excluding `vectors/`, which is the
-rebuildable part, so the rest of the kb can be committed with the
-project. Sources and pages are worth keeping in history; the vector
-store is not.
+`init` writes `.kb/.gitignore` containing `*`, so the whole kb stays out
+of the project's history. A kb is local working knowledge that grows on
+its own clock, not project source.
+
+**Keeping the kb outside the repo root.** Some projects put every agent
+scratch directory in one place. The upward search looks for a directory
+named `.kb`, so a kb kept anywhere else needs a symlink at the repo
+root:
+
+```
+mkdir -p .agent-scratch
+llmwiki --kb .agent-scratch/.kb init
+ln -s .agent-scratch/.kb .kb
+```
+
+Skip the symlink and every verb run from the repo root falls through to
+the global store, with the stderr note above as the only warning. There
+is no `init --path`; those three commands are the whole feature.
 
 ## Starting a kb
 
@@ -94,40 +116,100 @@ forever and never warns you about anything. Declare at least one key
 that genuinely discriminates, and declare no key you cannot write a
 real pattern for.
 
-**3. Point at an endpoint and name the models.**
+**3. Name a provider and the models it serves.**
 
 ```toml
 [models]
-summarize = "<chat model id>"
-embed = "<embedding model id>"
+summarize = "hosted:<chat model id>"
+embed = "hosted:<embedding model id>"
 # dedup is optional. See "How summaries join into stories" below.
 
-[endpoint]
+[providers.hosted]
 url = "https://api.example.com/v1"
+key_env = "LLM_WIKI_API_KEY_HOSTED"
+```
+
+Every id under `[models]` is `"<provider>:<model>"`. The prefix names a
+table under `[providers]` and is always required. `init` ships one
+commented `[providers.hosted]` table and points every id at it, so
+uncommenting that table and setting its `url` is the whole edit.
+`hosted` is only the name the stub picked; rename it, or add more
+tables, as your endpoints require.
+
+A provider table takes four keys:
+
+| Key | What it is |
+|---|---|
+| `url` | The endpoint base url. Required. |
+| `key_env` | The environment variable holding this provider's API key. |
+| `key_file_env` | An environment variable holding a path to read the key from. |
+| `pdf_part` | How this endpoint takes a PDF: `file`, `image_url`, or `none`. Defaults to `file`. |
+
+Set neither `key_env` nor `key_file_env` and no `Authorization` header is
+sent, which is what a server on your own machine usually wants.
+
+An older kb whose `config.toml` still has an `[endpoint]` table is
+refused. `llmwiki lint` names the fault in one line; `llmwiki status`
+prints the exact replacement to write, table by table.
+
+**Check the config before you trust it.** `llmwiki lint` resolves every
+id under `[models]` against `[providers]` and prints one line per fault,
+so a kb that cannot make a single model call fails `lint` instead of
+passing it:
+
+```
+/path/.kb/config.toml	config	[models].embed names provider 'hosted', but [providers.hosted] is not in config.toml
 ```
 
 ## The credential
 
-Read from the environment and nowhere else: `LLM_WIKI_API_KEY` as a
-value, or `LLM_WIKI_API_KEY_FILE` as a path to one.
+Read from the environment and nowhere else. `config.toml` holds the NAME
+of the variable, never a key value, and each provider carries its own:
+`key_env` names a variable holding the key, `key_file_env` names one
+holding a path to read the key out of. A local endpoint that needs no
+key and a hosted one that does can therefore both be named from the same
+`[models]` block.
 
-**Nothing sets it for you.** A fresh shell has no key, and every verb
-that calls a model then stops with
+**Nothing sets the variable for you.** A fresh shell has no key, and
+every verb that calls a model then stops with
 
 ```
-llmwiki: search: no API key: set LLM_WIKI_API_KEY or LLM_WIKI_API_KEY_FILE
+llmwiki: embed: LLM_WIKI_API_KEY_HOSTED is unset or empty
 ```
 
-and exit 2. Fetch the key from wherever this machine keeps its secrets,
+and exits 1. Fetch the key from wherever this machine keeps its secrets,
 this user has a skill for it, and pass it inline to the one command
 that needs it. Never write it to a file, never put it in
 `config.toml`, never print it, never leave it exported in a shell other
 agents share.
 
-A shell may already do this for you: a wrapper function that fetches the
-key per command and passes it to that one process. If a plain `llmwiki
-search` works without you handling a key, that is why, and you should
-not go looking for one.
+A shell may already do this for you: a wrapper that fetches the key per
+command and passes it to that one process. If a plain `llmwiki search`
+works without you handling a key, that is why, and you should not go
+looking for one.
+
+**A wrapper defined as a shell function may not reach you.** A function
+lives in the shell that sourced it, so a non-login or snapshotted shell,
+which is what most agents run in, can inherit the wrapper's name and
+none of the helpers it calls. The symptom is a `command not found` for a
+name you never typed. To get past it now, source the file that defines
+the function, then rerun the verb.
+
+The durable fix belongs to whoever owns the shell configuration, not to
+this CLI. Move the wrapper out of the shell startup file and into an
+executable on `PATH`:
+
+```
+#!/usr/bin/env bash
+# ~/.local/bin/llmwiki-with-key, or any name earlier on PATH
+exec env LLM_WIKI_API_KEY_HOSTED="$(your-secret-tool read llm-wiki)" \
+  /path/to/real/llmwiki "$@"
+```
+
+Every shell inherits a file on `PATH`, login or not, snapshotted or not,
+so the failure above cannot happen again. There is no `key_command`
+setting in `config.toml`, and there will not be: it would make a config
+file executable, which is a much worse trade than one script.
 
 Which verbs need it: `ingest`, `summarize`, `embed`, `search`, and
 `dedup` when `[models] dedup` is configured. `init`, `where`, `lint`
@@ -209,9 +291,9 @@ mode = "read"
 `url` must be `https`, with no userinfo, query, or fragment.
 `token_env` names an environment variable holding that remote's
 credential, read fresh on every call; a remote with no `token_env`
-sends no credential. That credential is separate from
-`LLM_WIKI_API_KEY`, which only ever talks to this kb's own model
-endpoint. `mode` is advisory; `read` is the only value accepted today.
+sends no credential. That credential is separate from every provider's
+`key_env`, which only ever talks to this kb's own model endpoints.
+`mode` is advisory; `read` is the only value accepted today.
 
 ```
 llmwiki search "query" --remote otherwiki
@@ -267,13 +349,15 @@ Give the page real identifiers if you want `ingest` to tell you when a
 new source touches it. Then:
 
 ```
-llmwiki lint            # seven mechanical checks, one line per finding
+llmwiki lint            # config plus seven page checks, one per line
 llmwiki embed           # so search can find what you just wrote
 llmwiki status          # pages without a vector, sources without a summary
 ```
 
 `lint` has no severities, no warnings, and no auto-fix. A finding is a
-thing to go fix.
+thing to go fix. A finding whose check column reads `config` points at
+`config.toml`, not at a page, and means no model-calling verb will run
+at all until you fix it.
 
 ## What the CLI will never do
 
