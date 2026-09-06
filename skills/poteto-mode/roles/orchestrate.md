@@ -35,11 +35,11 @@ the parent idles. It owns its track's units, authors its workers' briefs,
 spawns its own workers and verifiers, and rolls up aggregates at wave
 boundaries, never raw child reports. Cap in-flight children at what one drain
 can process, roughly ten, as a rolling window; blocking batches cost the
-slowest child of every batch. Take at most three units per spawn: a longer
-queue is chained, each link a fresh spawn seeded from `units.tsv` plus the
-previous child's inbox note, never a resume. It reads no bulk itself, not a
-log, a diff, or a transcript; that reading is a `reviewer` or `tester` unit
-that returns a summary.
+slowest child of every batch. Queue length per spawn follows
+`principle-decomposition`; a longer queue chains as fresh spawns, each seeded
+from `units.tsv` plus the previous child's inbox note, never a resume. It
+reads no bulk itself, not a log, a diff, or a transcript; that reading is a
+`reviewer` or `tester` unit that returns a summary.
 
 **Worker / verifier.** `developer`, `tester`, `reviewer`, `researcher`, or
 `explorer` as the unit demands. A worker cannot read the store, so its brief

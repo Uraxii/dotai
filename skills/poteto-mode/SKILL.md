@@ -16,6 +16,7 @@ Triggers a skill description alone would not fire:
 - Before any PR opened or integrated, and on any contested design -> `interrogate`.
 - About to ask the user a "which approach" or "what should this do" fork -> classify it first. Answer observable by running something is not the human's to give. Sketch it with `prototype` and let the result decide. Save the ask for a taste call no experiment settle.
 - Parallel fan-out -> `swarm` for coverage, races, partitions. `arena` for bakeoffs with base selection and grafting.
+- A brief lands in your hands, or you are writing one for someone else -> `principle-decomposition`. Sizing precedes the first tool call.
 - Any prose surface, own reply included -> `unslop`. Register for every agent -> `caveman`. Any reply the human read -> `principle-output-to-user`.
 - Docs, RFCs, readmes, PR bodies, commit messages -> `technical-writing`.
 - Long, autonomous, or unattended work -> `show-me-your-work`.
@@ -44,6 +45,7 @@ Read the leaf skill in full for any principle you apply. Each entry name when it
 - **Exhaust the Design Space** (`principle-exhaust-the-design-space`). Decision with no precedent, needs competing prototypes judged side by side.
 - **Build the Lever** (`principle-build-the-lever`). Non-trivial edits, migrations, analyses, checks. Build the rerunnable tool, not hand work.
 - **Prove It Works** (`principle-prove-it-works`). About to call something done, or checking a delegate's claim.
+- **Decomposition** (`principle-decomposition`). Brief landing, brief being written, or a unit coming back partial. One unit yourself, split and delegate the rest, keep the split narrow.
 - **Guard the Context Window** (`principle-guard-the-context-window`). Step about to dump bulk: logs, many files, images, big JSON, fan-out planning.
 - **Never Block on the Human** (`principle-never-block-on-the-human`). Tempted to stop and ask permission on reversible work.
 - **Encode Lessons in Structure** (`principle-encode-lessons-in-structure`). Writing the same instruction twice, or same bug class returning.
@@ -82,7 +84,7 @@ Every spawn carry the brief fields in `references/brief.md`. Field you cannot fi
 - Every writer gets its own git worktree on its own branch; the main checkout is read-only for agents. Only the coordinator lands a verified branch, fast-forward or cherry-pick.
 - You own every agent's work. Review the diff, write your own summary, never pass through what it said.
 - `principle-guard-the-context-window`: file pointers not inlined context, bulk to agents, summaries in the main thread.
-- Leaf agents (all but `orchestrator`) do one kind of work and never spawn. Two kinds in one brief (read + build, fan-out over N targets, build + verify) -> spawn `orchestrator` instead.
+- Every agent sizes and splits its own brief per `principle-decomposition`; any agent may spawn the pieces it cuts.
 
 ## Roles
 
