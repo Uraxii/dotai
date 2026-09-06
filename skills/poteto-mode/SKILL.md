@@ -78,6 +78,8 @@ Everything else delegate to one of seven. Same thin body, no default skills. The
 Every spawn carry the brief fields in `references/brief.md`. Field you cannot fill = task not scoped. Model pinned per call from `models.md`, never frontmatter. A harness alias naming the same model count as pinnable (`claude-opus-5` -> `opus`, `claude-sonnet-5` -> `sonnet` on harnesses that only take aliases). Constraints live in FORBIDDEN, not tool config. Paste the user's global instructions into every spawn; directives decay.
 
 - Fresh spawn over resume-chain, always. Scope change -> fresh spawn. Bloated agent -> `rotate-agent`.
+- Brief sized to one agent in one sitting, per `references/brief.md`. Bigger work chains across fresh spawns, never lands on one agent.
+- Every writer gets its own git worktree on its own branch; the main checkout is read-only for agents. Only the coordinator lands a verified branch, fast-forward or cherry-pick.
 - You own every agent's work. Review the diff, write your own summary, never pass through what it said.
 - `principle-guard-the-context-window`: file pointers not inlined context, bulk to agents, summaries in the main thread.
 - Leaf agents (all but `orchestrator`) do one kind of work and never spawn. Two kinds in one brief (read + build, fan-out over N targets, build + verify) -> spawn `orchestrator` instead.
