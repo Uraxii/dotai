@@ -55,12 +55,28 @@ Same filename, incompatible contents: Copilot wants camelCase events and a
 `bash` key, Claude wants PascalCase events and a nested `hooks` array with a
 `command` key.
 
-Resolved by splitting the filenames. Copilot keeps the default
-`hooks/hooks.json`, because Copilot has no way to point somewhere else. Claude
-is pointed at `hooks/claude-hooks.json` through the `hooks` key in
-`.claude-plugin/plugin.json`. That override is a real, shipping pattern: the
-installed `ponytail` plugin on this machine uses
-`"hooks": "./hooks/claude-codex-hooks.json"`.
+Resolved by giving each harness its own file, with no manifest edit at all.
+Measured: Copilot reads a `hooks.json` at the PLUGIN ROOT, reads
+`hooks/hooks.json` when that is the only one present, and when BOTH exist reads
+only the root file and silently ignores `hooks/hooks.json`. Claude's default is
+`hooks/hooks.json`, auto-discovered, and it does not read a root `hooks.json`.
+
+| File | Read by | Ignored by |
+|---|---|---|
+| `hooks.json` at repo root | Copilot CLI | Claude Code |
+| `hooks/hooks.json` | Claude Code | Copilot, because the root file wins |
+
+`.claude-plugin/plugin.json` needs no `hooks` key. The override key exists (the
+installed `ponytail` plugin uses `"hooks": "./hooks/claude-codex-hooks.json"`)
+but this split does not need it.
+
+Do not "simplify" this back into one shared file. Copilot supports a PascalCase
+dialect of event names for Claude-plugin compatibility, so a merged file
+carrying both `sessionStart` and `SessionStart` fired the hook TWICE in one
+run, once per casing, with two different payload shapes: camelCase
+`sessionId` / `initialPrompt` against snake_case `session_id` /
+`initial_prompt`. Copilot raises no error on unknown keys, so the merged file
+looks healthy and misbehaves quietly.
 
 ## Claude Code
 
@@ -185,6 +201,8 @@ From the stored Copilot hooks reference (kb source S7):
 - Built-in tools: `ask_user, bash, create, edit, glob, grep, powershell, task,
   view, web_fetch`.
 - Deny: stdout `{"permissionDecision":"deny","permissionDecisionReason":"..."}`.
+  The reference confirms `permissionDecisionReason` is shown to the model, so a
+  denial reason is a channel the agent always reads.
 - Command hooks are fail-CLOSED on any non-zero exit, and fail-OPEN on timeout.
 
 The fail-closed rule is why every guard path exits 0 and says "deny" in JSON
@@ -196,5 +214,6 @@ in the session.
 - Copilot `toolArgs` key names per tool. Needed to know which field holds the
   path for `create`/`edit` and the command string for `bash`. Coded against the
   documented shape with a tolerant reader; re-probe after 2026-10-01.
-- Whether Claude, when `plugin.json` points its hooks at another filename,
-  still also reads a stray `hooks/hooks.json` sitting beside it.
+- Whether Claude Code ignores a repo-root `hooks.json` as expected. Copilot's
+  side of the split is measured; Claude's side is inferred from its documented
+  default path plus the absence of any doc mentioning a root file.
