@@ -16,6 +16,7 @@ User-level skills, harness-neutral, in the Agent Skills format. Source of truth 
 | [wayfinder](wayfinder/SKILL.md) | Plan work too big for one session as a map of investigation tickets on the tracker; resolve them one at a time. |
 | [tdd](tdd/SKILL.md) | Red-green-refactor TDD loop. |
 | [prototype](prototype/SKILL.md) | Throwaway prototype to flesh out a design before committing to it. |
+| [design-method](design-method/SKILL.md) | Derive type, colour, spacing and motion values for a web page or artifact, then critique the render against named AI tells. |
 
 ### Engineering set
 
