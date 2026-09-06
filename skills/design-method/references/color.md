@@ -51,14 +51,24 @@ references/evidence.md; the ramp is the definition and the column follows it.
 The ramp shape is credited to Radix. The chroma curve follows from gamut
 behaviour rather than from a stated rule.
 
-## The same ramp on a dark ground, our ruling
+## The same ramp on a dark ground, our selection
 
-No source derives a dark form of the twelve-step ramp. Both packs derive dark
-paper, ink, accent and elevation, and stop there. Used unchanged on a 12 to 18%
-paper, step 4 is a near-white hover background and step 12 is invisible as text,
-so the ramp has to be rebuilt rather than reused.
+No design pack derives a dark form of the twelve-step ramp. Both packs derive
+dark paper, ink, accent and elevation, and stop there. Used unchanged on a 12 to
+18% paper, step 4 is a near-white hover background and step 12 is invisible as
+text, so the ramp has to be rebuilt rather than reused.
 
-Our ruling: walk the ramp from the dark end. The step numbers and their roles do
+Radix, which the light ramp's shape is credited to, does publish dark
+twelve-step scales. Its `blueDark` converts to lightness 0.19, 0.21, 0.27, 0.32,
+0.37, 0.42, 0.47, 0.54, 0.65, 0.69, 0.76, 0.91, with chroma peaking at step 9.
+Ours sits within 0.04 lightness of that at every step and peaks chroma in the
+same place, so the walk below is a selection consistent with Radix rather than
+an invention. Two honest gaps: our chroma runs lower than Radix's at steps 3 to
+5, and Radix's own role map makes step 8 a strong border where the map we carry
+from anti-slop-design makes it a badge solid. Values captured at
+`.nikki-agents/research/design-skills-eval/sources/radix-dark-scale.txt`.
+
+The selection: walk the ramp from the dark end. The step numbers and roles do
 not move, so every rule written against the light ramp still reads. Hold H.
 Sweep lightness up instead of down, from the dark paper band at step 1 to the
 ink band at step 12. Keep the chroma peak at steps 8 and 9, and take that peak

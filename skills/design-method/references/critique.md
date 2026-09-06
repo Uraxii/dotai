@@ -1,8 +1,9 @@
 # Critique the render
 
-Produce pixels, load the pixels, write a verdict. A critique that never opens
-an image is not a critique, and a pack that claims one while never instructing
-the agent to look is the failure this file exists to avoid.
+Produce pixels, hand them to someone who did not write the page, take back a
+verdict. A critique that never opens an image is not a critique, and one the
+author writes about its own page is not independent. This file exists to avoid
+both.
 
 ## 1. Produce pixels
 
@@ -68,19 +69,50 @@ HTML rather than an image and cannot serve as the critique; the
 binary is on `PATH`, so the flatpak is the browser. On a machine with no local
 browser the fallback is the `agent-lab` skill, untested here.
 
-## 2. Load the pixels
+## 2. Hand the captures to a fresh critic
 
-Read each PNG with the file-reading tool so the image itself enters context.
-Reading the HTML again instead is the exact substitution this step forbids.
+You wrote the page, so you are the worst available reader of it. The text model
+drives convergence: one study put language-model choice at roughly 13.6% of
+semantic-drift variance against 0.2% for the image model. The model that picked
+this layout is the one whose defaults produced it, so asking it whether the
+layout is a tell is asking an author to mark its own paper.
+
+Spawn a fresh agent to fill in the table in section 3. Give it exactly this and
+nothing more:
+
+- The four PNG paths from section 1, each labelled with its capture size.
+- The path to this file, for the tell list and the evidence rule.
+- The code-facts block below, which you fill in first.
+
+Withhold all of this:
+
+- The HTML and the CSS, quoted, attached, or by path.
+- The values emitted in steps 1 to 7, and the brief they came from.
+- Your intent, your reasoning, anything you fixed in an earlier round.
+- Any hint of the verdict you expect.
+
+The critic reads each PNG with its file-reading tool, so the image enters its
+context; reading HTML instead is the substitution this step forbids. It returns
+the filled table and nothing else.
+
+Rows 5, 6 and 9 are part code question and the critic has no code. Measure
+these and hand them over as facts, not judgments:
+
+| Fact | Value |
+|---|---|
+| `h1` character count | |
+| heading weight, then body weight | |
+| font families, in declaration order | |
 
 Guard the context window: four captures per round is the budget, which is the
 three sizes above plus the other-theme frame. A long page gets one tall
-capture, not eight scrolled ones.
+capture, not eight scrolled ones. Those images land in the critic's context,
+not in yours.
 
-## 3. Write the verdict
+## 3. The verdict, written by the critic
 
 One row per tell. Verdict is `present` or `absent`. Evidence names what in the
-image decided it, or the CSS line where the tell is a code fact rather than a
+image decided it, or the code fact from section 2 where the tell is not a
 visible one. An empty evidence cell voids the row.
 
 | # | Tell | Verdict | Evidence |
@@ -99,8 +131,9 @@ visible one. An empty evidence cell voids the row.
 | 12 | Anything else in the frame you can see and do not like | | |
 
 Row 7 is a judgment, not a measurement. The 3% figure in SKILL.md step 4 is a
-budget for writing the CSS; nobody can read 3% off an image, so answer row 7 on
-whether the accent is highlighting or flooding and say what you looked at.
+budget the author spends while writing the CSS, and no one can read 3% off an
+image. Answer row 7 on whether the accent is highlighting or flooding, and say
+what you looked at.
 
 Row 12 is open on purpose and carries the same evidence discipline as the
 others. Name the element, say where it is, say what is wrong with it. A fixed
@@ -108,20 +141,24 @@ list that returns all-absent on a page with a visibly stretched chip is
 self-scoring wearing a checklist. If nothing is wrong, write `absent` and say
 what you checked.
 
-Rows 5, 6 and 9 are partly answered from your own CSS. Answer them anyway, and
-say which source you used.
+Rows 5, 6 and 9 lean on the code-facts block from section 2. Say for each
+whether the image or that block decided it.
 
 Rows 2, 3, 8, 9 and 11 restate prohibitions `artifact-design` already carries.
-They add no new rule. What they add is a place to write the verdict and the
-evidence down, which prose cannot hold.
+What they add is a place to write down the verdict and the evidence.
 
-Never write a numeric self-score. A page scored by the model that wrote it
-reports a pass it did not earn. One pack's 58 gates were run over that pack's
-own `site/examples/` and returned 61 hard failures across 11 of its 18 example
-pages, every one of which stamped `gates: all-pass` in its own CSS.
+Never judge your own page, by a number or by a word. This table is not the
+author's to fill; section 2 says who fills it. A page judged by the model that
+wrote it reports a pass it did not earn. One pack's 58 gates were run over that
+pack's own `site/examples/` and returned 61 hard failures across 11 of its 18
+example pages, every one of which stamped `gates: all-pass` in its own CSS. A
+fresh agent in the same model family is a weaker guarantee than a human or a
+different model; references/evidence.md scores how much weaker.
 
 ## 4. Fix and recapture
 
-Every `present` row gets a fix. Recapture, rewrite the table, and stop after
-two rounds. Anything still present at that point ships with the row carried
-into the report, so the reader knows what was seen and left.
+Every `present` row gets a fix. Recapture, hand the new captures to a critic
+that is fresh again, and stop after two rounds. The second critic is told
+nothing about the first round either, so it cannot ratify a fix it was shown.
+Anything still present at that point ships with the row carried into the
+report, so the reader knows what was seen and left.

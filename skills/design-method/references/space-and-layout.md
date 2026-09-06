@@ -85,10 +85,11 @@ spacing to both.
 
 `repeat(auto-fit, minmax(min(280px, 100%), 1fr))` responds continuously instead
 of snapping at two or three breakpoints, so there are no intermediate widths
-nobody designed. That exact line is ours. One source ships `auto-fit` with a
-bare `minmax(280px, 1fr)`, the other ships `auto-fill` with the `min()` guard
-at 300px, and this line puts the guard on the smaller track. `auto-fill`
-behaves the same way but keeps empty tracks.
+nobody designed. anti-slop-design already ships this exact track, guard and all,
+as `repeat(auto-fill, minmax(min(280px, 100%), 1fr))`, and at 300px elsewhere in
+the same file. hallmark ships `auto-fit` with a bare `minmax(280px, 1fr)` and no
+guard. Taking `auto-fit` onto the guarded track is the whole of our choice, and
+`auto-fill` behaves the same way except that it keeps empty tracks.
 
 Auto-fit is for an open-ended list. A fixed set of items takes an explicit
 column count that divides it, because auto-fit leaves the last item alone in
