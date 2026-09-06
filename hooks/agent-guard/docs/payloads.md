@@ -217,3 +217,20 @@ in the session.
 - Whether Claude Code ignores a repo-root `hooks.json` as expected. Copilot's
   side of the split is measured; Claude's side is inferred from its documented
   default path plus the absence of any doc mentioning a root file.
+
+## Decisions coded
+
+- **Copilot applies to every call (open).** Copilot's `preToolUse` payload
+  carries no agent id, so `guard.py` cannot tell a helper's call from the
+  user's own. It denies main-checkout writes and counts the tool-call cap on
+  every call, keyed on `sessionId`. Revisit if a Copilot payload with an
+  agent id ever turns up.
+- **Bash mutation check is a blocklist (hypothesis).** `guard.py` denies a
+  `Bash`/`bash`/`powershell` call in the main checkout only when the command
+  matches a mutating pattern: a redirect, `rm`/`mv`/`cp`/`touch`/`mkdir`/
+  `tee`, `sed -i`, or a mutating `git` subcommand. Everything else passes,
+  so a read-heavy agent (`git log`, `grep`, `cat`) never gets blocked.
+  Extend the pattern set if a real mutating command slips through.
+- **Tool-call cap defaults to 400.** No measurement backs this number; it is
+  a round ceiling meant to catch a runaway job, overridable with
+  `AGENT_GUARD_MAX_TOOL_CALLS`.
