@@ -21,6 +21,7 @@ Six rulings are ours, not extracted method. Each is labelled where it appears:
 | Cuuper22/anti-slop-design | MIT | fluid ladders, twelve-step ramp and role map, token tiers, dark derivation, density table, motion tokens |
 | Owl-Listener/designer-skills | MIT | duration and easing tables, choreography, density as an operator |
 | anthropics/skills | Apache-2.0 | nothing; no method carried, so the notice obligation does not bite |
+| radix-ui/colors | MIT | no values copied; its published `blueDark` scale is the benchmark our dark walk is checked against, captured from `src/dark.ts` on 2026-09-06 |
 
 Both MIT packs give a dark derivation and agree where both speak, but they do
 not both speak everywhere. Two of the six operations are hallmark's alone:
@@ -29,9 +30,17 @@ state holding hue unchanged as a rule. The numbers this skill carries are
 hallmark's column throughout: paper 12 to 18%, ink 92 to 96%, chroma down 0.02
 to 0.04, lightness up 5 to 10%, body weight down 50 units, and hue unchanged.
 
-Neither pack derives a dark form of the twelve-step ramp. Radix does, and
-references/color.md reconciles our values against it. The walk is a selection,
-not an invention.
+Neither MIT pack derives a dark form of the twelve-step ramp; both derive dark
+paper, ink, accent and elevation, then stop. Radix, credited with the light
+ramp's shape, does publish dark twelve-step scales. Its `blueDark` converts to
+lightness 0.19, 0.21, 0.27, 0.32, 0.37, 0.42, 0.47, 0.54, 0.65, 0.69, 0.76,
+0.91, chroma peaking at step 9. The dark walk in references/color.md sits
+within 0.04 lightness of that at every step and peaks chroma in the same place,
+so it is a selection consistent with Radix, not an invention. Two honest gaps:
+our chroma runs lower than Radix's at steps 3 to 5, and Radix's own role map
+makes step 8 a strong border where the map we carry from anti-slop-design
+makes it a badge solid. Values captured at
+`.nikki-agents/research/design-skills-eval/sources/radix-dark-scale.txt`.
 
 All three MIT packs are credited by name. Methods and numbers are not
 copyrightable; the expression is. No pack's prose is reproduced here. Several

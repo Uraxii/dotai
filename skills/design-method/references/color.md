@@ -91,30 +91,19 @@ peaking at steps 8 and 9. No `lighten()` call, no opacity trick.
 Interaction states are already in the ramp: hover background step 4, active 5,
 focus border 7, primary solid 9, solid hover 10.
 
-The lightness column is read off the worked ramp above. The source prints a
-different column beside that identical ramp, so the two contradict each other.
-references/evidence.md carries both sets. The ramp is the definition, the
-column follows it.
+The lightness column is read off the worked ramp above. Where the source's own
+role-map column disagrees, the ramp wins. references/evidence.md carries both
+sets and the reason.
 
 The ramp shape is credited to Radix. The chroma curve follows from gamut
 behaviour, not from a stated rule.
 
 ## The same ramp on a dark ground, our selection
 
-No design pack derives a dark form of the twelve-step ramp. Both packs derive
-dark paper, ink, accent and elevation, then stop. Used unchanged on 12 to 18%
-paper, step 4 is a near-white hover background and step 12 is invisible as
-text, so the ramp has to be rebuilt, not reused.
-
-Radix, credited with the light ramp's shape, does publish dark twelve-step
-scales. Its `blueDark` converts to lightness 0.19, 0.21, 0.27, 0.32, 0.37,
-0.42, 0.47, 0.54, 0.65, 0.69, 0.76, 0.91, chroma peaking at step 9. Ours sits
-within 0.04 lightness of that at every step and peaks chroma in the same place,
-so the walk below is a selection consistent with Radix, not an invention. Two
-honest gaps: our chroma runs lower than Radix's at steps 3 to 5, and Radix's
-own role map makes step 8 a strong border where the map we carry from
-anti-slop-design makes it a badge solid. Values captured at
-`.nikki-agents/research/design-skills-eval/sources/radix-dark-scale.txt`.
+Used unchanged on 12 to 18% paper, step 4 is a near-white hover background and
+step 12 is invisible as text, so the ramp is rebuilt, not reused. No pack
+derives a dark form of it, so references/evidence.md reconciles the walk below
+against Radix's published `blueDark` scale and names the two gaps it leaves.
 
 The selection: walk the ramp from the dark end. Step numbers, roles and
 interaction states do not move, so every rule written against the light ramp
