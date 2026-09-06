@@ -1,5 +1,47 @@
 # Colour
 
+Work in OKLCH. One lightness number means the same apparent brightness across
+hues, and hue holds as you lighten. HSL does neither.
+
+## Anchor hue H
+
+A colour named in the brief, a brand hex included, converts to OKLCH and its
+hue is H, with chroma clamped to 0.12 to 0.20.
+
+With no colour named, read H off the mood word and clamp chroma tighter, to
+0.12 to 0.16: warm 30 to 60, technical or industrial 220 to 250, botanical 130
+to 160, late night or neon 280 to 320, sun-drenched or market 60 to 80 amber.
+Verified at source.
+
+No mood word, or one off that list: the job row from references/type.md sets H.
+There is no default hue, because a default hue is how every page comes out
+blue.
+
+| Job row | H |
+|---|---|
+| dashboard, admin, analytics, monitoring, developer tool | 235 |
+| app, tool, SaaS, fintech, e-commerce | 145 |
+| landing page, portfolio, editorial, healthcare, luxury | 45 |
+| report, review, postmortem, status page | 70 |
+| none | name one outside 200 to 280, and the brief line it came from |
+
+The bands are the source's; assigning a job to one is ours, and the spread is
+the point. Two more fallbacks, ours: a word naming a light level, such as dark
+or night, sets the default theme and never the hue; two hue words, take the
+first.
+
+## The four layers
+
+Emit four layers at constant H, and never chroma 0 on a neutral, because flat
+grey beside a tinted accent looks wrong.
+
+| Layer | Light | Dark |
+|---|---|---|
+| Paper, base | `oklch(96-98% 0.005-0.015 H)` | `oklch(12-18% 0.008-0.015 H)` |
+| Ink, text | `oklch(16-22% 0.005-0.015 H)` | `oklch(92-96% 0.005-0.01 H)` |
+| Neutrals, 5 to 9 steps, 6 to 10% lightness apart | chroma 0.005-0.018 | same |
+| Accent, exactly one | chroma 0.12-0.22 | see the dark derivation below |
+
 ## Worked four-layer palette, anchor hue 80, light mode
 
 ```css
@@ -36,6 +78,9 @@ Neutral steps move 6 to 10% in lightness and keep chroma between 0.005 and
 }
 ```
 
+Hold H, sweep lightness from 0.99 down to 0.25, keep chroma low at both ends
+and peak it at steps 8 and 9. No `lighten()` call, no opacity trick.
+
 | Steps | Role | Lightness |
 |---|---|---|
 | 1 to 5 | backgrounds: app, subtle, element, hover, active | 0.99 down to 0.86 |
@@ -43,10 +88,13 @@ Neutral steps move 6 to 10% in lightness and keep chroma between 0.005 and
 | 8 to 10 | solids: badge, primary, primary hover | 0.64 down to 0.49 |
 | 11 to 12 | text: low contrast, then high contrast | 0.43 down to 0.25 |
 
-The lightness column is read off the worked ramp above. The source states the
-same role map with a different column, 0.97 to 0.83, 0.78 to 0.71, 0.64 to 0.44
-and 0.43 to 0.22, next to that identical ramp. See the entry in
-references/evidence.md; the ramp is the definition and the column follows it.
+The interaction states are already in there: hover background step 4, active 5,
+focus border 7, primary solid 9, solid hover 10.
+
+The lightness column is read off the worked ramp above. The source prints a
+different column beside that identical ramp, so the two contradict each other;
+references/evidence.md carries both sets of numbers. The ramp is the definition
+and the column follows it.
 
 The ramp shape is credited to Radix. The chroma curve follows from gamut
 behaviour rather than from a stated rule.
@@ -94,8 +142,18 @@ which is the other half of that same operation.
 ```
 
 Roles, unchanged: 1 to 5 backgrounds, 6 to 7 borders, 8 to 10 solids, 11 to 12
-text. Hover background is still step 4, active 5, focus border 7, primary solid
-9, solid hover 10. Only the direction of the sweep is ours.
+text, and the interaction states sit on the same steps as on light. Only the
+direction of the sweep is ours.
+
+## The accent budget
+
+One accent, spent on about 3% of the viewport. It is a highlighter, and
+overusing it is the default this file exists to stop. Budget it while writing
+the CSS: 3% is an author's figure, not something readable off a screenshot.
+
+Semantic colour, good, warning and critical, is a separate set from the accent
+ramp. It does not spend the one-accent budget and does not count toward the 3%
+viewport figure. `artifact-design` says the same thing.
 
 ## The eight states
 
@@ -117,12 +175,8 @@ colour. No single channel carries the whole meaning, so a user who misses one
 still gets the state. One source's summary table says 0.5 and its own detailed
 recipe says 0.55; take 0.55.
 
-Hover styles go inside `@media (hover: hover)`, or a hover style sticks after a
-tap on a touch device.
-
-Semantic colour, good, warning and critical, is a separate set from the accent
-ramp. It does not spend the one-accent budget and does not count toward the 3%
-viewport figure. `artifact-design` says the same thing.
+Hover styles carry the `@media (hover: hover)` guard in
+references/motion.md.
 
 ## Second hue by rotation
 
@@ -175,4 +229,4 @@ one for the values.
 
 Check contrast in OKLCH. sRGB hex checkers drift near the extremes. Padding
 counts toward a tap target, so a 16px icon inside a 44px hit area passes while
-a bare 16px icon link fails.
+a bare 16px icon link fails. The floors are in references/thresholds.md.

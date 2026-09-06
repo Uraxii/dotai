@@ -21,8 +21,13 @@ hover and focus, 250 to 300ms for a modal or sheet, 400 to 500ms for a toast or
 a section reveal, and 0ms for focus states, keyboard navigation and errors,
 because plenty of things should simply not animate.
 
+The fixed table wins over the bands because a band still leaves a number to
+pick and this file hands one over. Every token bar 50ms and 600ms sits inside
+the matching band, so only the choice goes.
+
 An alternative token set, if you prefer round numbers over the table above:
-100ms, 160ms, 240ms, 360ms, 500ms. Pick one set. Do not ship both.
+100ms, 160ms, 240ms, 360ms, 500ms. Pick one set. Do not ship both, and do not
+mix the fixed set with the bands.
 
 ## Easing by case
 

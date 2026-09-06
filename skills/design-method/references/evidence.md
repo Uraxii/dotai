@@ -2,6 +2,18 @@
 
 Read this before quoting any number in this skill as established fact.
 
+## Rulings that are ours
+
+Six rulings are decisions rather than extracted method, and each is labelled
+where it appears:
+
+- The treatment tiebreak on seriousness, in SKILL.md.
+- The two added rows of the ratio table, in references/type.md.
+- The job-to-hue fallback, in references/color.md.
+- The dark walk of the twelve-step ramp, in references/color.md.
+- `auto-fit` on the guarded grid track, in references/space-and-layout.md.
+- The overshoot ban, in references/motion.md.
+
 ## Sources and licences
 
 | Pack | Licence | What was taken |
@@ -65,7 +77,8 @@ moves" and "reads as drama rather than weight".
   section B.1. The fetch recovered one number the second-hand copy lost: a hue
   derived from a mood clamps chroma to 0.12 to 0.16, not the 0.12 to 0.20 that
   applies to a named anchor. The source gives no fallback at all for a mood it
-  does not recognise, which is why step 4's job table is labelled ours.
+  does not recognise, which is why the job-to-hue table in
+  references/color.md is labelled ours.
 - **Our own verification loop.** The correction that cut hallmark's
   verification score from 4 to 2 held that a self-attested gate with a
   demonstrated false-pass rate is nearer to no verification than to
@@ -99,8 +112,9 @@ one changes the output at all. The corpus answers that question worst.
   The other holds that slop is not a bug you prompt your way out of, and that
   the missing ingredient is a human pause rather than a better rule set.
   Judgments, not measurements: `11-slop-taxonomy.md` F27 and F28. This skill is
-  a rule set with a critique bolted on, so both are aimed at it. Step 8's fresh
-  critic is the nearest thing here to that pause, and a machine is not a human.
+  a rule set with a critique bolted on, so both are aimed at it. The critique
+  step's fresh critic is the nearest thing here to that pause, and a machine is
+  not a human.
 
 ## Areas with no method, deliberately left empty
 
@@ -118,7 +132,8 @@ one changes the output at all. The corpus answers that question worst.
   a coloured glow on a light ground, and remember a drop shadow on a dark card
   renders as a glow. Depth on dark comes from lightness, not shadow.
 
-Nothing has been invented to fill these three. Treat them as judgment calls.
+Nothing has been invented to fill these three. Treat them as judgment calls
+and spend them by role, per `artifact-design`.
 
 ## Audit of `artifact-design` for the three unaudited areas
 

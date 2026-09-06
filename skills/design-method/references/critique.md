@@ -105,7 +105,7 @@ nothing more:
 Withhold all of this:
 
 - The HTML and the CSS, quoted, attached, or by path.
-- The values emitted in steps 1 to 7, and the brief they came from.
+- The values you emitted, and the brief they came from.
 - Your intent, your reasoning, anything you fixed in an earlier round.
 - Any hint of the verdict you expect.
 
@@ -166,8 +166,8 @@ tell is not a visible one. An empty evidence cell voids the row.
 | 11 | Nothing readable in the first frame: a full-viewport hero, or content parked at opacity 0 | | |
 | 12 | Anything else in the frame you can see and do not like | | |
 
-Row 7 is a judgment, not a measurement. The 3% figure in SKILL.md step 4 is a
-budget the author spends while writing the CSS, and no one reads 3% off an
+Row 7 is a judgment, not a measurement. The 3% figure in references/color.md is
+a budget the author spends while writing the CSS, and no one reads 3% off an
 image. Answer it on whether the accent highlights or floods, and say what you
 looked at.
 

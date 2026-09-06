@@ -1,5 +1,19 @@
 # Type
 
+## Ratio and density by job
+
+| Job | Ratio | Density |
+|---|---|---|
+| dashboard, admin, analytics, monitoring, developer tool | 1.2 | dense |
+| app, tool, SaaS, fintech, e-commerce | 1.25 | medium |
+| landing page, portfolio, editorial, healthcare, luxury | 1.333 | spacious |
+| report, review, postmortem, status page | 1.25 | medium |
+| no row above matches | 1.25 | medium |
+
+The last two rows are ours. The source names no ratio for an unclear job and
+defaults to 1.25 by habit. The density column feeds
+references/space-and-layout.md.
+
 ## The ratio set
 
 1.2, 1.25, 1.333, 1.5, 1.618. Four of them carry names: 1.25 is the major
@@ -9,8 +23,7 @@ that a constant multiplier keeps every step distinct, where fixed increments of
 a few pixels produce a slope nobody reads as hierarchy.
 
 1.2 is conservative and suits dense data. 1.25 is balanced and suits most
-sites. 1.333 is dramatic and suits landing pages and editorial work. The
-sources give no reason for choosing 1.25 as their own default beyond habit.
+sites. 1.333 is dramatic and suits landing pages and editorial work.
 
 ## Fixed ladder, ratio 1.25 from a 16px body
 
@@ -29,10 +42,13 @@ sources give no reason for choosing 1.25 as their own default beyond habit.
 }
 ```
 
-Every step is the one before it times 1.25. Regenerate the ladder for a
-different ratio rather than hand-picking sizes near it. A list of round
-numbers such as 16, 20, 24, 32, 40 has step ratios of 1.25, 1.2, 1.333 and
-1.25, so it is a hand-picked list wearing the word ratio.
+Every step is the one before it times 1.25. Emit all nine named properties,
+`--text-xs` through `--text-4xl`, plus the display clamp, and never type a raw
+size in a rule. Body is `1rem`, 16px, which is also the floor in
+references/thresholds.md. Regenerate the ladder for a different ratio rather
+than hand-picking sizes near it. A list of round numbers such as 16, 20, 24,
+32, 40 has step ratios of 1.25, 1.2, 1.333 and 1.25, so it is a hand-picked
+list wearing the word ratio.
 
 ## Fluid ladder
 
@@ -60,10 +76,30 @@ and the fluid one about 55px, so stacking both gives two conflicting scales.
 
 ## Display cap and its exceptions
 
-88px is the cap. Above it a hero crowds itself at 1280px to 1440px and wraps in
-a way that reads as drama rather than weight. A poster-style theme may reach
-96px. A single-line, single-word display of 12 characters or fewer may reach
-7rem.
+88px, 5.5rem, is the cap. Above it a hero crowds itself at 1280px to 1440px and
+wraps in a way that reads as drama rather than weight. A 1.333 ladder
+overshoots the cap at its ninth step, so clamp rather than round the ratio
+down. The `--text-display` clamp above sits under the cap by construction.
+
+The cap is the rule and the two exceptions are the source's. A poster-style
+theme may reach 96px. A single-line, single-word display of 12 characters or
+fewer may reach 7rem.
+
+## Headline size by character count
+
+Count the characters in the `h1`, then size it. The source names a display
+headline near 100 characters as one of three tells it calls most reliable. 90
+is where this table turns over.
+
+| Characters | Size |
+|---|---|
+| 20 or fewer | display size; a single word may take the 7rem exception |
+| 21 to 50 | display size; step down if it wraps past two lines at 414px |
+| 51 to 90 | one rung down |
+| over 90 | rewrite it shorter, or cap at `--text-4xl` with tighter leading |
+
+The buckets assume a full-width track. In a narrow column the `h1` wraps
+sooner, so read the wrap off its own track.
 
 ## Leading and weight
 
@@ -98,11 +134,13 @@ Past roughly 75 the eye loses its place on the return sweep. `artifact-design`
 already carries the 65ch figure, so the useful addition here is the lower
 bound: a column under 45 characters is also wrong.
 
-## Families
+## Families and size count
 
-At most three: one display, one body, and one outlier used in at most two
-places. Two is the normal answer. Monospace counts. Weights of one family do
-not. Reach for the outlier a third time and it has stopped being an accent
-register and become a second body font.
+At most three families: one display, one body, and one outlier used in at most
+two places. Two is the normal answer. Four reads as slop. Monospace counts.
+Weights of one family do not. Reach for the outlier a third time and it has
+stopped being an accent register and become a second body font.
+
+At most five sizes on one page, for which the sources give no reason.
 
 Load the real weight file. Never rely on synthesised bold.

@@ -23,6 +23,11 @@ fixed set to pick from and forbids raw pixel values.
 
 Names are roles, so changing a value does not mean renaming every use site.
 
+`artifact-design` already says to let layout do the spacing, which makes the
+ladder usable: gaps on the container, `margin` for optical nudges. Mix small,
+medium and large gaps, because a page where every gap is 24px reads as a
+template.
+
 ## Fluid space ladder
 
 Generate spacing from the same viewport range and base size as the type ladder,
@@ -56,8 +61,8 @@ One-up pairs, for space that should grow faster than the rest:
 
 ## Density
 
-SKILL.md step 2 reads the density off the job. Three names only: dense, medium,
-spacious. Section and card padding per density:
+references/type.md reads the density off the job. Three names only: dense,
+medium, spacious. Section and card padding per density:
 
 ```css
 /* spacious */
@@ -74,12 +79,12 @@ spacious. Section and card padding per density:
 
 The source gives no reason for those numbers and ships no dense card padding.
 
-The cheaper alternative, and the one SKILL.md step 5 uses, treats density as an
-operator over the single ladder above: dense shifts every value one step down,
-spacious one step up, medium leaves it. Use one or the other on a page, not
-both. Spacing is the main signal telling a reader whether they are looking at a
-marketing page or a working tool, and the untreated default applies the same
-spacing to both.
+The cheaper alternative, and the one modes/new-page.md uses, treats density as
+an operator over the single ladder above: dense shifts every value one step
+down, spacious one step up, medium leaves it. Use one or the other on a page,
+not both. Spacing is the main signal telling a reader whether they are looking
+at a marketing page or a working tool, and the untreated default applies the
+same spacing to both.
 
 ## Grid
 
@@ -90,6 +95,13 @@ as `repeat(auto-fill, minmax(min(280px, 100%), 1fr))`, and at 300px elsewhere in
 the same file. hallmark ships `auto-fit` with a bare `minmax(280px, 1fr)` and no
 guard. Taking `auto-fit` onto the guarded track is the whole of our choice, and
 `auto-fill` behaves the same way except that it keeps empty tracks.
+
+The `min()` guard is load bearing. Without it the track cannot shrink and the
+layout overflows on a narrow screen.
+
+Break the equal-column default at least once: unequal tracks such as
+`1.2fr 1fr 0.8fr`, a differing span, or one item spanning two columns. Pick a
+primary axis, because centred is what you get when nobody chose.
 
 Auto-fit is for an open-ended list. A fixed set of items takes an explicit
 column count that divides it, because auto-fit leaves the last item alone in
