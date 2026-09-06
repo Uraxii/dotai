@@ -23,10 +23,9 @@ Read-only means FORBIDDEN says "no writes, no commits, inspection commands
 only". No-pixels means FORBIDDEN says "never load image pixels, hold paths and
 verdict text only".
 
-A brief is one unit: one agent, one sitting. Ceilings, default until measured,
-are roughly 150 tool calls, one hour, six files touched. Two units in one
-brief is a queue, and a queue belongs to a coordinator, not a worker. Cannot
-size it -> not scoped, refuse to spawn.
+A brief is one unit: one agent, one narrow objective. Ceilings, default until
+measured: ~50 tool calls to write, ~15 to read or review. More is two units, a
+queue the coordinator owns. Cannot size it -> not scoped, refuse to spawn.
 
 SCOPE names the agent's own worktree and its own branch. A brief naming the
 main checkout as a write path is a refuse-to-spawn condition.
