@@ -1,14 +1,14 @@
 # Critique the render
 
 Produce pixels, hand them to someone who did not write the page, take back a
-verdict. A critique that never opens an image is not one, and neither is a
-critique the author writes about its own page.
+verdict. A critique that never opens an image is not one, and neither is one
+the author writes about its own page.
 
 ## 1. Produce pixels (author side)
 
-Verified on this machine on 2026-09-06. Brave ships as a flatpak here, and its
-sandbox can read and write `/tmp` but not the repo, so copy the page to `/tmp`
-first. Both paths in the command must be under `/tmp`.
+Verified on this machine on 2026-09-06. Brave ships as a flatpak here. Its
+sandbox reads and writes `/tmp` but not the repo, so both paths in the command
+must be under `/tmp`.
 
 ```
 cp page.html /tmp/dm-page.html
@@ -17,9 +17,9 @@ flatpak run com.brave.Browser --headless=new --disable-gpu --no-sandbox \
   --screenshot=/tmp/dm-desktop.png file:///tmp/dm-page.html
 ```
 
-It prints `NNNNN bytes written to file /tmp/dm-desktop.png` on success. A
-`Failed to write file` line means the target sits outside the sandbox, not that
-rendering failed.
+On success it prints `NNNNN bytes written to file /tmp/dm-desktop.png`. A
+`Failed to write file` line means the target sits outside the sandbox, not
+that rendering failed.
 
 Take three captures by changing `--window-size` and `--screenshot`:
 
@@ -30,13 +30,13 @@ Take three captures by changing `--window-size` and `--screenshot`:
 | 390,844 | dm-mobile.png | wrapping, overflow, headline behaviour |
 
 There is no full-page flag. The window is the viewport, so a page sized in
-viewport units grows with it: at `--window-size=1280,3200` a
-`min-height:100vh` hero is 3200px tall and fills the frame alone, and the
-capture says nothing about what it lost.
+viewport units grows with it. At `--window-size=1280,3200` a
+`min-height:100vh` hero is 3200px tall, fills the frame alone, and says
+nothing about what it lost.
 
-Build `dm-full.png` from a second copy. Freeze the viewport units at the
-800px desktop viewport, which makes 1vh 8px, then measure that copy and size
-the window to the height it reports.
+Build `dm-full.png` from a second copy. Freeze the viewport units at the 800px
+desktop viewport, which makes 1vh 8px, then size the window to the height that
+copy reports.
 
 ```
 sed -E 's/([0-9.]+)[dsl]?vh/calc(\1 * 8px)/g' /tmp/dm-page.html \
@@ -50,15 +50,14 @@ flatpak run com.brave.Browser --headless=new --disable-gpu --no-sandbox \
 
 It printed `H=1584` on a 100vh page, so `dm-full.png` is `/tmp/dm-tall.html`
 at `--window-size=1280,1584`. No capture shows the title the probe rewrites,
-and the other three use `/tmp/dm-page.html` unchanged, so the frozen units
-decide nothing about the first frame or the phone.
+and the other three use `/tmp/dm-page.html` unchanged.
 
 The `sed` misses `vmin`, `vmax`, and a height JavaScript sets. Section 3
-catches what it misses.
+catches those.
 
 Take a fourth capture in the theme the page does not default to. Stamp
-`data-theme` on the root element of a copy: `dark` on a light-first page,
-`light` on a dark-first one, where stamping `dark` changes nothing. A browser
+`data-theme` on a copy's root element: `dark` on a light-first page, `light`
+on a dark-first one, where stamping `dark` changes nothing. A browser
 dark-mode flag does not stand in for `prefers-color-scheme`.
 
 ```
@@ -71,32 +70,30 @@ flatpak run com.brave.Browser --headless=new --disable-gpu --no-sandbox \
 md5sum /tmp/dm-desktop.png /tmp/dm-other.png
 ```
 
-The `0,/<html/` range confines the edit to the first match, so the CSS
-selector `:root[data-theme="light"]` further down survives. Rewrite that too
-and the page renders byte-identical. `head -2` shows where the attribute
-landed.
+The `0,/<html/` range edits only the first match, so the CSS selector
+`:root[data-theme="light"]` further down survives. Rewrite that too and the
+page renders byte-identical. `head -2` shows where the attribute landed.
 
-Read the two sums. Identical sums mean the stamp did not take and both
-captures show one theme, so fix the stamp and recapture before writing a theme
-row. Two renders of one unchanged file give one md5 here, so a difference is
-real. Webfonts are the exception: the fetch can fail, so a capture may show
-fallback faces. Check that before answering row 9 on the typeface.
+Identical sums mean the stamp did not take and both captures show one theme.
+Fix the stamp and recapture before writing a theme row. Two renders of one
+unchanged file give one md5 here, so a difference is real. Webfonts are the
+exception: a failed fetch shows fallback faces. Check that before answering
+row 9 on the typeface.
 
-Checked here so nobody rechecks them: the `Artifact` tool's read path returns
-HTML rather than an image; the `claude-in-chrome` MCP tools were not
-connected; no Chromium, Chrome or Firefox binary is on `PATH`. On a machine
-with no local browser the fallback is the `agent-lab` skill, untested here.
+Checked here, so nobody rechecks: the `Artifact` tool's read path returns HTML
+rather than an image; the `claude-in-chrome` MCP tools were not connected; no
+Chromium, Chrome or Firefox binary is on `PATH`. With no local browser, fall
+back to the `agent-lab` skill, untested here.
 
 ## 2. Hand the captures to a fresh critic
 
-You wrote the page, so you are the worst available reader of it. The model
-that picked this layout is the one whose defaults produced it, so asking it
-whether the layout is a tell asks an author to mark its own paper. One study
-put language-model choice at roughly 13.6% of semantic-drift variance against
-0.2% for the image model.
+You wrote the page, so you are its worst available reader. Asking the model
+whose defaults produced this layout whether the layout is a tell asks an
+author to mark its own paper. One study put language-model choice at roughly
+13.6% of semantic-drift variance against 0.2% for the image model.
 
-Spawn a fresh agent to fill in the table in section 3. Give it exactly this and
-nothing more:
+Spawn a fresh agent to fill in the table in section 3. Give it exactly this
+and nothing more:
 
 - The four PNG paths from section 1, each labelled with its capture size.
 - The path to this file, for the tell list and the evidence rule.
@@ -109,12 +106,12 @@ Withhold all of this:
 - Your intent, your reasoning, anything you fixed in an earlier round.
 - Any hint of the verdict you expect.
 
-The critic reads each PNG with its file-reading tool, so the image enters its
-context; reading HTML instead is the substitution this step forbids. It returns
-the filled table and nothing else.
+The critic reads each PNG with its file-reading tool. Reading HTML instead is
+the substitution this step forbids. It returns the filled table and nothing
+else.
 
-Rows 5, 6 and 9 are part code question and the critic has no code. Measure
-these and hand them over as facts, not judgments:
+Rows 5, 6 and 9 are part code question and the critic has no code. Hand these
+over as facts, not judgments:
 
 | Fact | Value |
 |---|---|
@@ -123,12 +120,12 @@ these and hand them over as facts, not judgments:
 | font families, in declaration order | |
 
 Guard the context window: four captures per round, the three sizes plus the
-other-theme frame. They land in the critic's context, not in yours.
+other-theme frame, landing in the critic's context, not yours.
 
 ## 3. The verdict, written by the critic (critic side)
 
 Run this before filling a single row, every round. It answers whether the tall
-capture holds anything the first frame does not, using only the two PNGs.
+capture holds anything the first frame does not, from the two PNGs alone.
 
 ```
 magick compare -metric RMSE \
@@ -136,16 +133,16 @@ magick compare -metric RMSE \
   \( /tmp/dm-desktop.png -resize 64x64! -colorspace Gray \) null:
 ```
 
-Read the bracketed number it prints. At 0.20 or more the tall capture carries
-page the first frame does not. Under 0.20 the two are near-identical, so the
-tall capture is one screen stretched and the rest of the page is missing from
-it. Measured here: 0.107 for a `min-height:100vh` page at 1280,3200, against
-0.399 for that same page captured by section 1.
+Read the bracketed number. At 0.20 or more the tall capture carries page the
+first frame does not. Under 0.20 the two are near-identical: the tall capture
+is one screen stretched, and the rest of the page is missing from it. Measured
+here: 0.107 for a `min-height:100vh` page at 1280,3200, against 0.399 for that
+same page captured by section 1.
 
 Under 0.20, stop. Write `not-captured`, never `absent`, in every row you cannot
-decide from the 1280x800 and 390x844 frames, rows 1, 3, 4, 7 and 8 at minimum,
-and put the number in the evidence cell. `not-captured` is not a pass: it sends
-the page back to section 1 for a recapture.
+decide from the 1280x800 and 390x844 frames, rows 1, 3, 4, 7 and 8 at minimum.
+Put the number in the evidence cell. `not-captured` is not a pass: it sends the
+page back to section 1 for a recapture.
 
 One row per tell. Verdict is `present`, `absent`, or `not-captured`. Evidence
 names what in the image decided it, or the code fact from section 2 where the
@@ -167,31 +164,29 @@ tell is not a visible one. An empty evidence cell voids the row.
 | 12 | Anything else in the frame you can see and do not like | | |
 
 Row 7 is a judgment, not a measurement. The 3% figure in references/color.md is
-a budget the author spends while writing the CSS, and no one reads 3% off an
-image. Answer it on whether the accent highlights or floods, and say what you
-looked at.
+a budget the author spends in the CSS, and no one reads 3% off an image. Answer
+on whether the accent highlights or floods, and say what you looked at.
 
 Row 12 is open on purpose and carries the same evidence discipline. Name the
-element, say where it is, say what is wrong with it. A fixed list that returns
+element, where it is, and what is wrong with it. A fixed list that returns
 all-absent on a page with a visibly stretched chip is self-scoring wearing a
 checklist. If nothing is wrong, write `absent` and say what you checked.
 
 Rows 5, 6 and 9 lean on the code-facts block from section 2. Say for each
 whether the image or that block decided it. Rows 2, 3, 8, 9 and 11 restate
-prohibitions `artifact-design` carries; what they add is a place to write the
-verdict and the evidence down.
+prohibitions `artifact-design` carries, and add a place to write the verdict
+and the evidence down.
 
-Never judge your own page, by a number or by a word. This table is not the
-author's to fill; section 2 says who fills it. One pack's 58 gates run over
-that pack's own `site/examples/` returned 61 hard failures across 11 of its 18
-example pages, every one stamping `gates: all-pass` in its own CSS. A fresh
-agent in the same model family is weaker than a human or a different model;
+Never judge your own page, by a number or by a word. The author never fills
+this table; section 2 says who does. One pack's 58 gates run over that pack's
+own `site/examples/` returned 61 hard failures across 11 of its 18 example
+pages, every one stamping `gates: all-pass` in its own CSS. A fresh agent in
+the same model family is weaker than a human or a different model.
 references/evidence.md scores how much weaker.
 
 ## 4. Fix and recapture
 
 Every `present` row gets a fix. Recapture, hand the new captures to a critic
 that is fresh again, and stop after two rounds. The second critic is told
-nothing about the first round either, so it cannot ratify a fix it was shown.
-Anything still present at that point ships with the row carried into the
-report, so the reader knows what was seen and left.
+nothing about the first round, so it cannot ratify a fix it was shown. Anything
+still present then ships with its row carried into the report.

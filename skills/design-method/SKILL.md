@@ -1,30 +1,29 @@
 ---
 name: design-method
 description: >-
-  Turn a brief into emitted design values before writing any web page,
-  artifact, or UI, then render it and inspect the pixels for named AI tells.
-  Use for a landing page, dashboard, report page, mockup, restyle, or any
-  complaint that a page looks machine-made. Supplies the numbers
-  `artifact-design` leaves to taste.
+  Derive design values before writing any web page, artifact, or UI, then
+  render it and inspect the pixels for named AI tells. Use for a landing page,
+  dashboard, report page, mockup, restyle, or any complaint that a page looks
+  machine-made. Supplies the numbers `artifact-design` leaves to taste.
 ---
 
 # Design method
 
-Web and artifact work only; native game UI is out of scope. Load
-`artifact-design` as well: it owns the prohibitions, the theming contract and
-the copy rules, none of them repeated here.
+Web and artifact work only. Native game UI is out of scope. Load
+`artifact-design` too. It owns the prohibitions, the theming contract and the
+copy rules, none repeated here.
 
 ## 1. Read three inputs off the brief
 
-Every mode starts here. Job: the nouns in the request, such as dashboard,
-landing page or tool. Mood: any colour word, brand hex or adjective.
-Treatment: utilitarian for a plan, memo, demo, report, review or internal
-document; editorial for a landing page, a game, or an app or tool someone keeps
-and shares. When both fit, the subject decides, and its seriousness beats the
-artifact's longevity: anything carrying an incident, outage, failure or
-severity is utilitarian however long it is kept. That tiebreak is ours. Neither
-fits: utilitarian. Job picks the type ratio and the fallback hue, mood picks
-the hue, treatment sets how far the layout goes. Write all three down first.
+Every mode starts here. Write all three down first. Job: the nouns in the
+request, such as dashboard, landing page or tool. Mood: any colour word, brand
+hex or adjective. Treatment: utilitarian for a plan, memo, demo, report,
+review or internal document, editorial for a landing page, a game, or an app
+or tool someone keeps and shares. When both fit the subject decides, and
+seriousness beats longevity: anything carrying an incident, outage, failure or
+severity is utilitarian however long it is kept. That tiebreak is ours.
+Neither fits: utilitarian. Job picks the type ratio and the fallback hue, mood
+picks the hue, treatment sets how far the layout goes.
 
 ## 2. Pick a mode
 
@@ -48,7 +47,7 @@ the hue, treatment sets how far the layout goes. Write all three down first.
 
 ## Two sanctioned overrides of `artifact-design`
 
-These two, and nothing else. The rest of that skill holds.
+These two only. The rest of that skill holds.
 
 1. It says "**Write, look once, publish**" and "Don't build a test loop around
    your own file: no repeated screenshots". The critique step overrides both:
@@ -60,16 +59,15 @@ These two, and nothing else. The rest of that skill holds.
 
 ## The critique step always runs
 
-Every mode ends at references/critique.md, and you never fill in its verdict
+Every mode ends at references/critique.md, and you never fill its verdict
 table. A fresh agent that never saw your HTML fills it from the captured PNGs,
-marking each tell present, absent, or not-captured when the frames do not show
-enough to say, and citing what in the image decided it. Never judge your own
-page: the model that chose the layout is the worst reader of whether the layout
-is a tell.
+marking each tell present, absent, or not-captured when the frames cannot say,
+and citing what in the image decided it. The model that chose the layout is
+the worst reader of whether the layout is a tell.
 
 ## What this rests on
 
 No source pack ran a controlled test, so these numbers are specific and
-internally consistent rather than measured, and the strongest output evidence
-in the corpus runs against the packs. references/evidence.md holds that, the
+internally consistent, not measured, and the strongest output evidence in the
+corpus runs against the packs. references/evidence.md holds that, the
 licences, and the six rulings that are ours rather than extracted method.

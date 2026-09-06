@@ -12,7 +12,7 @@ that came back `present`.
 2. Open one file per `present` row, from the table below, and fix that row. A
    `not-captured` row goes back to section 1 for a recapture, not to this
    table.
-3. Recapture and hand the frames to a critic that is fresh again. Stop after
+3. Recapture, hand the frames to a critic that is fresh again, and stop after
    two rounds, per section 4.
 
 | Row | Tell | Where the fix lives |
@@ -30,8 +30,8 @@ that came back `present`.
 | 11 | Nothing readable in frame one | `artifact-design`; motion.md |
 | 12 | Anything else the critic named | the reference owning what it named |
 
-Every file in the third column sits in references/, except `artifact-design`,
-which is a separate skill. Rows 3 and 8 have no method in this skill at all,
-and references/evidence.md says why row 3 is empty here. Row 11 splits: a
-full-viewport hero belongs to `artifact-design`, and content parked at
-opacity 0 to references/motion.md.
+Third-column files sit in references/, except `artifact-design`, a separate
+skill. Rows 3 and 8 have no method in this skill at all, and
+references/evidence.md says why row 3 is empty here. Row 11 splits: a
+full-viewport hero belongs to `artifact-design`, content parked at opacity 0
+to references/motion.md.

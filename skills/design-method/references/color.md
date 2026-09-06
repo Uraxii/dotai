@@ -5,13 +5,13 @@ hues, and hue holds as you lighten. HSL does neither.
 
 ## Anchor hue H
 
-A colour named in the brief, a brand hex included, converts to OKLCH and its
-hue is H, with chroma clamped to 0.12 to 0.20.
+A colour named in the brief, a brand hex included, converts to OKLCH. Its hue
+is H, chroma clamped to 0.12 to 0.20.
 
-With no colour named, read H off the mood word and clamp chroma tighter, to
-0.12 to 0.16: warm 30 to 60, technical or industrial 220 to 250, botanical 130
-to 160, late night or neon 280 to 320, sun-drenched or market 60 to 80 amber.
-Verified at source.
+No colour named: read H off the mood word, chroma tighter at 0.12 to 0.16.
+Warm 30 to 60, technical or industrial 220 to 250, botanical 130 to 160, late
+night or neon 280 to 320, sun-drenched or market 60 to 80 amber. Verified at
+source.
 
 No mood word, or one off that list: the job row from references/type.md sets H.
 There is no default hue, because a default hue is how every page comes out
@@ -32,8 +32,8 @@ first.
 
 ## The four layers
 
-Emit four layers at constant H, and never chroma 0 on a neutral, because flat
-grey beside a tinted accent looks wrong.
+Emit four layers at constant H. Never chroma 0 on a neutral, because flat grey
+beside a tinted accent looks wrong.
 
 | Layer | Light | Dark |
 |---|---|---|
@@ -56,8 +56,8 @@ grey beside a tinted accent looks wrong.
 }
 ```
 
-Neutral steps move 6 to 10% in lightness and keep chroma between 0.005 and
-0.018 toward the anchor. No source gives a reason for that step size.
+Neutral steps move 6 to 10% in lightness and keep chroma 0.005 to 0.018 toward
+the anchor. No source gives a reason for that step size.
 
 ## Twelve-step ramp, base `oklch(0.60 0.20 250)`
 
@@ -78,8 +78,8 @@ Neutral steps move 6 to 10% in lightness and keep chroma between 0.005 and
 }
 ```
 
-Hold H, sweep lightness from 0.99 down to 0.25, keep chroma low at both ends
-and peak it at steps 8 and 9. No `lighten()` call, no opacity trick.
+Hold H, sweep lightness from 0.99 down to 0.25, chroma low at both ends and
+peaking at steps 8 and 9. No `lighten()` call, no opacity trick.
 
 | Steps | Role | Lightness |
 |---|---|---|
@@ -88,41 +88,41 @@ and peak it at steps 8 and 9. No `lighten()` call, no opacity trick.
 | 8 to 10 | solids: badge, primary, primary hover | 0.64 down to 0.49 |
 | 11 to 12 | text: low contrast, then high contrast | 0.43 down to 0.25 |
 
-The interaction states are already in there: hover background step 4, active 5,
+Interaction states are already in the ramp: hover background step 4, active 5,
 focus border 7, primary solid 9, solid hover 10.
 
 The lightness column is read off the worked ramp above. The source prints a
-different column beside that identical ramp, so the two contradict each other;
-references/evidence.md carries both sets of numbers. The ramp is the definition
-and the column follows it.
+different column beside that identical ramp, so the two contradict each other.
+references/evidence.md carries both sets. The ramp is the definition, the
+column follows it.
 
 The ramp shape is credited to Radix. The chroma curve follows from gamut
-behaviour rather than from a stated rule.
+behaviour, not from a stated rule.
 
 ## The same ramp on a dark ground, our selection
 
 No design pack derives a dark form of the twelve-step ramp. Both packs derive
-dark paper, ink, accent and elevation, and stop there. Used unchanged on a 12 to
-18% paper, step 4 is a near-white hover background and step 12 is invisible as
-text, so the ramp has to be rebuilt rather than reused.
+dark paper, ink, accent and elevation, then stop. Used unchanged on 12 to 18%
+paper, step 4 is a near-white hover background and step 12 is invisible as
+text, so the ramp has to be rebuilt, not reused.
 
-Radix, which the light ramp's shape is credited to, does publish dark
-twelve-step scales. Its `blueDark` converts to lightness 0.19, 0.21, 0.27, 0.32,
-0.37, 0.42, 0.47, 0.54, 0.65, 0.69, 0.76, 0.91, with chroma peaking at step 9.
-Ours sits within 0.04 lightness of that at every step and peaks chroma in the
-same place, so the walk below is a selection consistent with Radix rather than
-an invention. Two honest gaps: our chroma runs lower than Radix's at steps 3 to
-5, and Radix's own role map makes step 8 a strong border where the map we carry
-from anti-slop-design makes it a badge solid. Values captured at
+Radix, credited with the light ramp's shape, does publish dark twelve-step
+scales. Its `blueDark` converts to lightness 0.19, 0.21, 0.27, 0.32, 0.37,
+0.42, 0.47, 0.54, 0.65, 0.69, 0.76, 0.91, chroma peaking at step 9. Ours sits
+within 0.04 lightness of that at every step and peaks chroma in the same place,
+so the walk below is a selection consistent with Radix, not an invention. Two
+honest gaps: our chroma runs lower than Radix's at steps 3 to 5, and Radix's
+own role map makes step 8 a strong border where the map we carry from
+anti-slop-design makes it a badge solid. Values captured at
 `.nikki-agents/research/design-skills-eval/sources/radix-dark-scale.txt`.
 
-The selection: walk the ramp from the dark end. The step numbers and roles do
-not move, so every rule written against the light ramp still reads. Hold H.
-Sweep lightness up instead of down, from the dark paper band at step 1 to the
-ink band at step 12. Keep the chroma peak at steps 8 and 9, and take that peak
-down 0.02 to 0.04 from the light ramp, which is the accent operation in the dark
-derivation below. Step 9 lands 5 to 10 lightness points above the light step 9,
-which is the other half of that same operation.
+The selection: walk the ramp from the dark end. Step numbers, roles and
+interaction states do not move, so every rule written against the light ramp
+still reads. Hold H. Sweep lightness up, from the dark paper band at step 1 to
+the ink band at step 12. Keep the chroma peak at steps 8 and 9, down 0.02 to
+0.04 from the light ramp, which is the accent operation in the dark derivation
+below. Step 9 lands 5 to 10 lightness points above the light step 9, the other
+half of that operation.
 
 ```css
 :root[data-theme="dark"] {
@@ -141,9 +141,7 @@ which is the other half of that same operation.
 }
 ```
 
-Roles, unchanged: 1 to 5 backgrounds, 6 to 7 borders, 8 to 10 solids, 11 to 12
-text, and the interaction states sit on the same steps as on light. Only the
-direction of the sweep is ours.
+Only the direction of the sweep is ours.
 
 ## The accent budget
 
@@ -152,38 +150,34 @@ overusing it is the default this file exists to stop. Budget it while writing
 the CSS: 3% is an author's figure, not something readable off a screenshot.
 
 Semantic colour, good, warning and critical, is a separate set from the accent
-ramp. It does not spend the one-accent budget and does not count toward the 3%
-viewport figure. `artifact-design` says the same thing.
+ramp. It spends neither the one-accent budget nor the 3% viewport figure.
+`artifact-design` says the same.
 
 ## The eight states
 
 Every interactive element gets eight states styled: default, hover, focus,
-active, disabled, loading, error, and the filled or selected state. The
-observation behind the list is that model output styles two of them, default and
-hover, and stops. Read the state colours off the ramp, per the role map above.
+active, disabled, loading, error, and the filled or selected state. Model
+output styles two, default and hover, then stops. Read the state colours off
+the ramp, per the role map above.
 
-Two rules with mechanical reasons:
-
-- Border width is identical in every state. State changes go to background
-  colour, outline or box shadow. Changing border width on focus shifts the
-  layout by a pixel and the eye catches it.
-- Never transition `border-width`, `padding` or `height`, for the same reason.
+Border width is identical in every state. State changes go to background
+colour, outline or box shadow. Changing border width on focus shifts the layout
+by a pixel and the eye catches it. Never transition `border-width`, `padding`
+or `height`, for the same reason.
 
 Disabled is three independent signals, not one: `opacity: 0.55`,
 `cursor: not-allowed` and `aria-disabled="true"`, plus a muted placeholder
-colour. No single channel carries the whole meaning, so a user who misses one
-still gets the state. One source's summary table says 0.5 and its own detailed
-recipe says 0.55; take 0.55.
+colour. A user who misses one still gets the state. One source's summary table
+says 0.5 and its own detailed recipe says 0.55; take 0.55.
 
-Hover styles carry the `@media (hover: hover)` guard in
-references/motion.md.
+Hover styles carry the `@media (hover: hover)` guard in references/motion.md.
 
 ## Second hue by rotation
 
 Complementary is H plus 180, maximum contrast. Triadic is H plus 120 and 240.
-Analogous is H plus or minus 30, low contrast and safe. Split complementary is
-H plus 150 and H plus 210, which keeps most of the complementary contrast
-without the harshness.
+Analogous is H plus or minus 30, low contrast and safe. Split complementary, H
+plus 150 and H plus 210, keeps most of the complementary contrast without the
+harshness.
 
 Two accents at the very most, and one is the normal answer.
 
@@ -194,8 +188,7 @@ Two accents at the very most, and one is the normal answer.
 3. Component: a specific binding, `--button-bg-primary`.
 
 Theme switching moves tier 2 only, re-branding moves tier 1 only, and a
-per-component exception stays in tier 3 where it cannot leak. Each kind of
-change touches one layer.
+per-component exception stays in tier 3 where it cannot leak.
 
 ## Dark derivation
 
@@ -213,9 +206,9 @@ Derive dark from light. Do not invert.
 
 Reasons: bright text on pure black smears on OLED and the extreme contrast
 tires the eye, so paper never reaches 0. A drop shadow is invisible on a dark
-surface, so lightness carries depth instead. Light text on a dark ground looks
-heavier at the same weight, which is what the 50-unit drop compensates for. An
-accent balanced against white looks garish against near-black.
+surface, so lightness carries depth. Light text on a dark ground looks heavier
+at the same weight, which the 50-unit drop compensates for. An accent balanced
+against white looks garish against near-black.
 
 One pack offers a hue-temperature preference for dark grounds with no reason
 attached: cool 250 to 270 for developer tools and fintech, warm 50 to 80 for
