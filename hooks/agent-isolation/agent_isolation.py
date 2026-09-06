@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""agent-guard — PreToolUse hook shared by Claude Code and Copilot CLI.
+"""agent-isolation — PreToolUse hook shared by Claude Code and Copilot CLI.
 
 Denies a write into the MAIN git checkout; agents work in their own
 worktree.

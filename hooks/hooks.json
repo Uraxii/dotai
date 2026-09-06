@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/agent-guard/guard.py --harness claude",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/agent-isolation/agent_isolation.py --harness claude",
             "timeout": 5
           }
         ]

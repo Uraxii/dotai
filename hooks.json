@@ -4,7 +4,7 @@
     "preToolUse": [
       {
         "type": "command",
-        "bash": "python3 hooks/agent-guard/guard.py --harness copilot",
+        "bash": "python3 hooks/agent-isolation/agent_isolation.py --harness copilot",
         "timeoutSec": 5
       }
     ]

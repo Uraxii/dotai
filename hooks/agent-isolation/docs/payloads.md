@@ -1,10 +1,10 @@
 # What the harnesses actually hand a hook
 
-In plain words: before writing the guard we installed a logging hook in both
+In plain words: before writing the hook we installed a logging hook in both
 Claude Code and GitHub Copilot CLI and looked at the real data each one sends.
 This is what we saw, and which design decisions the measurements reversed.
 
-Probed 2026-09-06. Raw captures: `/tmp/agent-guard-probe/*.jsonl`.
+Probed 2026-09-06. Raw captures: `/tmp/agent-isolation-probe/*.jsonl`.
 Claude Code via two headless runs from a scratch repo. Copilot CLI mostly
 BLOCKED, see the blocker section.
 
@@ -43,7 +43,7 @@ agent_transcript_path      .../projects/<slug>/<session>/subagents/agent-<agent_
 ```
 
 That killed any plan to measure a subagent's context size from its transcript
-during a tool call. The guard tells a subagent's calls from the main
+during a tool call. The hook tells a subagent's calls from the main
 thread's by the agent id instead, which needs nothing else.
 
 ### 3. Both harnesses read `hooks/hooks.json` out of an installed plugin, with
@@ -119,7 +119,7 @@ Keys: `agent_id`, `agent_transcript_path`, `agent_type`, `background_tasks`,
 `permission_mode`, `prompt_id`, `session_crons`, `session_id`,
 `stop_hook_active`, `transcript_path`.
 
-Recorded for completeness. The guard does not use this event: blocking a stop
+Recorded for completeness. The hook does not use this event: blocking a stop
 was cut from scope.
 
 ### Q5. Does `PostToolUse` `additionalContext` reach a subagent? Yes.
@@ -127,7 +127,7 @@ was cut from scope.
 A sentinel emitted by the hook on a subagent's own `Bash` call came back
 quoted verbatim in that subagent's final answer, and the sentinels emitted on
 main-thread calls did not. Recorded for completeness. Context injection was
-cut from scope: the guard only ever denies, and a denial reason is a channel
+cut from scope: the hook only ever denies, and a denial reason is a channel
 the model always sees.
 
 ### Claude hook wiring, measured
@@ -135,7 +135,7 @@ the model always sees.
 - Project-scope `.claude/settings.json` hooks fire for headless `claude -p`
   runs started in that directory, including for its subagents.
 - `PreToolUse` still fires for calls the sandbox later refuses, and no
-  matching `PostToolUse` follows. A guard must not assume the two pair up.
+  matching `PostToolUse` follows. A hook must not assume the two pair up.
 
 ## GitHub Copilot CLI
 
@@ -156,9 +156,9 @@ does not dodge the quota.
 
 Consequence: `preToolUse`, `postToolUse`, `subagentStart`, `subagentStop` and
 `agentStop` never fired, so their runtime shapes are UNVERIFIED here and the
-guard codes against the documented shapes instead. Re-run after 2026-10-01, or
+hook codes against the documented shapes instead. Re-run after 2026-10-01, or
 with a different token, using the ready-made configs in
-`/tmp/agent-guard-probe/hooks-main.json`.
+`/tmp/agent-isolation-probe/hooks-main.json`.
 
 ### What did fire: `sessionStart`
 
@@ -192,7 +192,7 @@ Two findings that shape the install:
   So the shipped config uses a relative path and never hardcodes the
   marketplace owner segment.
 
-### Documented shapes the guard codes against, NOT observed here
+### Documented shapes the hook codes against, NOT observed here
 
 From the stored Copilot hooks reference (kb source S7):
 
@@ -205,7 +205,7 @@ From the stored Copilot hooks reference (kb source S7):
   denial reason is a channel the agent always reads.
 - Command hooks are fail-CLOSED on any non-zero exit, and fail-OPEN on timeout.
 
-The fail-closed rule is why every guard path exits 0 and says "deny" in JSON
+The fail-closed rule is why every hook path exits 0 and says "deny" in JSON
 instead of exiting non-zero: an unexpected crash must not deny every tool call
 in the session.
 
@@ -221,15 +221,15 @@ in the session.
 ## Decisions coded
 
 - **Copilot applies to every call (open).** Copilot's `preToolUse` payload
-  carries no agent id, so `guard.py` cannot tell a helper's call from the
+  carries no agent id, so `agent_isolation.py` cannot tell a helper's call from the
   user's own; it denies a main-checkout write on every call regardless.
   Revisit if a Copilot payload with an agent id ever turns up.
-- **Bash mutation check is a blocklist (hypothesis).** `guard.py` denies a
+- **Bash mutation check is a blocklist (hypothesis).** `agent_isolation.py` denies a
   `Bash`/`bash`/`powershell` call in the main checkout only when the command
   matches a mutating pattern: a redirect, `rm`/`mv`/`cp`/`touch`/`mkdir`/
   `tee`, `sed -i`, or a mutating `git` subcommand. Everything else passes,
   so a read-heavy agent (`git log`, `grep`, `cat`) never gets blocked.
   Extend the pattern set if a real mutating command slips through.
 - **No tool-call limit.** The user decided job sizing is not a watcher's job
-  and had the guard's tool-call limit removed, so sizing is now handled by
+  and had the hook's tool-call limit removed, so sizing is now handled by
   the `principle-decomposition` skill.
