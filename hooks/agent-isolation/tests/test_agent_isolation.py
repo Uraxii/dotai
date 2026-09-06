@@ -1,4 +1,4 @@
-"""Shared behaviour matrix for guard.py, run against both harness dialects.
+"""Shared behaviour matrix for agent_isolation.py, run against both harness dialects.
 
 Each Case in CASES describes one write or Bash command in one location.
 build_payload() translates it into the Claude and the Copilot wire shape;
@@ -17,9 +17,9 @@ from types import SimpleNamespace
 import pytest
 
 TESTS_DIR = Path(__file__).parent
-GUARD_PATH = TESTS_DIR.parent / "guard.py"
-sys.path.insert(0, str(GUARD_PATH.parent))
-import guard  # noqa: E402
+AGENT_ISOLATION_PATH = TESTS_DIR.parent / "agent_isolation.py"
+sys.path.insert(0, str(AGENT_ISOLATION_PATH.parent))
+import agent_isolation  # noqa: E402
 
 
 def run_git(args: list[str], cwd: Path) -> None:
@@ -32,7 +32,7 @@ def repo(tmp_path: Path) -> SimpleNamespace:
     main.mkdir()
     run_git(["init", "-q"], main)
     run_git(["config", "user.email", "a@example.com"], main)
-    run_git(["config", "user.name", "agent-guard tests"], main)
+    run_git(["config", "user.name", "agent-isolation tests"], main)
     (main / "f.txt").write_text("x")
     run_git(["add", "."], main)
     run_git(["commit", "-q", "-m", "init"], main)
@@ -121,10 +121,10 @@ def test_matrix(harness, case, repo, tmp_path, monkeypatch):
     if case.location == "container":
         marker = tmp_path / "containerenv"
         marker.write_text("")
-        monkeypatch.setattr(guard, "CONTAINER_MARKERS", (str(marker),))
+        monkeypatch.setattr(agent_isolation, "CONTAINER_MARKERS", (str(marker),))
     target_dir = location_dir(case.location, repo, tmp_path)
     payload = build_payload(harness, case, target_dir, f"{harness}-{case.name}")
-    result = guard.process(harness, payload)
+    result = agent_isolation.process(harness, payload)
     assert is_deny(harness, result) == case.expect_deny
 
 
@@ -133,12 +133,12 @@ def test_main_thread_never_denied(repo):
         "agent_id": None, "cwd": str(repo.main),
         "tool_name": "Write", "tool_input": {"file_path": str(repo.main / "x.txt")},
     }
-    assert not is_deny("claude", guard.process("claude", payload))
+    assert not is_deny("claude", agent_isolation.process("claude", payload))
 
 
 def test_crash_path_exits_zero():
     result = subprocess.run(
-        [sys.executable, str(GUARD_PATH), "--harness", "claude"],
+        [sys.executable, str(AGENT_ISOLATION_PATH), "--harness", "claude"],
         input="not json {{{", capture_output=True, text=True, timeout=10,
     )
     assert result.returncode == 0
@@ -146,6 +146,6 @@ def test_crash_path_exits_zero():
 
 
 def test_hooks_configs_are_valid_json():
-    root = GUARD_PATH.parent.parent.parent
+    root = AGENT_ISOLATION_PATH.parent.parent.parent
     json.loads((root / "hooks" / "hooks.json").read_text())
     json.loads((root / "hooks.json").read_text())
