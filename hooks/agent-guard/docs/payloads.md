@@ -43,8 +43,8 @@ agent_transcript_path      .../projects/<slug>/<session>/subagents/agent-<agent_
 ```
 
 That killed any plan to measure a subagent's context size from its transcript
-during a tool call. The guard counts tool calls instead, which needs nothing
-but the agent id.
+during a tool call. The guard tells a subagent's calls from the main
+thread's by the agent id instead, which needs nothing else.
 
 ### 3. Both harnesses read `hooks/hooks.json` out of an installed plugin, with
 different schemas
@@ -222,15 +222,14 @@ in the session.
 
 - **Copilot applies to every call (open).** Copilot's `preToolUse` payload
   carries no agent id, so `guard.py` cannot tell a helper's call from the
-  user's own. It denies main-checkout writes and counts the tool-call cap on
-  every call, keyed on `sessionId`. Revisit if a Copilot payload with an
-  agent id ever turns up.
+  user's own; it denies a main-checkout write on every call regardless.
+  Revisit if a Copilot payload with an agent id ever turns up.
 - **Bash mutation check is a blocklist (hypothesis).** `guard.py` denies a
   `Bash`/`bash`/`powershell` call in the main checkout only when the command
   matches a mutating pattern: a redirect, `rm`/`mv`/`cp`/`touch`/`mkdir`/
   `tee`, `sed -i`, or a mutating `git` subcommand. Everything else passes,
   so a read-heavy agent (`git log`, `grep`, `cat`) never gets blocked.
   Extend the pattern set if a real mutating command slips through.
-- **Tool-call cap defaults to 400.** No measurement backs this number; it is
-  a round ceiling meant to catch a runaway job, overridable with
-  `AGENT_GUARD_MAX_TOOL_CALLS`.
+- **No tool-call limit.** The user decided job sizing is not a watcher's job
+  and had the guard's tool-call limit removed, so sizing is now handled by
+  the `principle-decomposition` skill.

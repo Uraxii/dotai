@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """agent-guard — PreToolUse hook shared by Claude Code and Copilot CLI.
 
-Denies a write into the MAIN git checkout (agents work in their own
-worktree) and denies every tool call once an agent passes a call cap.
+Denies a write into the MAIN git checkout; agents work in their own
+worktree.
 
 Every path exits 0. Copilot fails CLOSED on a non-zero exit, so a crash in
 here must never deny the whole session; a caught exception falls through to
@@ -20,14 +20,8 @@ import subprocess
 import sys
 from pathlib import Path
 
-DEFAULT_MAX_TOOL_CALLS = 400
-MAX_TOOL_CALLS_ENV = "AGENT_GUARD_MAX_TOOL_CALLS"
 CONTAINER_MARKERS = ("/run/.containerenv", "/.dockerenv")
 
-CAP_REASON = (
-    "Tool-call cap ({limit}) reached. Return your REPORT now, ending with a "
-    "RESUME line: what landed (SHAs), what did not, the exact next step."
-)
 MAIN_CHECKOUT_REASON = (
     "Main checkout ({root}) is read-only for agents. Work in your own git "
     "worktree (git worktree add ...) and report the branch."
@@ -131,28 +125,7 @@ def write_target(harness: str, tool_name: str, tool_args: dict, cwd: str) -> str
     return None
 
 
-def check_tool_call_cap(key: str | None) -> str | None:
-    if not key:
-        return None
-    limit = int(os.environ.get(MAX_TOOL_CALLS_ENV, DEFAULT_MAX_TOOL_CALLS))
-    runtime_dir = Path(os.environ.get("XDG_RUNTIME_DIR", "/tmp")) / "agent-guard"
-    runtime_dir.mkdir(parents=True, exist_ok=True)
-    counter_file = runtime_dir / f"{key}.count"
-    try:
-        count = int(counter_file.read_text().strip())
-    except (OSError, ValueError):
-        count = 0
-    count += 1
-    counter_file.write_text(str(count))
-    return CAP_REASON.format(limit=limit) if count > limit else None
-
-
-def evaluate(
-    harness: str, tool_name: str, tool_args: dict, cwd: str, actor_key: str | None,
-) -> str | None:
-    cap_reason = check_tool_call_cap(actor_key)
-    if cap_reason:
-        return cap_reason
+def evaluate(harness: str, tool_name: str, tool_args: dict, cwd: str) -> str | None:
     target = write_target(harness, tool_name, tool_args, cwd)
     root = main_checkout_root(target) if target else None
     return MAIN_CHECKOUT_REASON.format(root=root) if root else None
@@ -178,11 +151,11 @@ def process(harness: str, payload: dict) -> dict | None:
             return None
         tool_name = payload.get("tool_name", "")
         tool_args = payload.get("tool_input") or {}
-        reason = evaluate("claude", tool_name, tool_args, cwd, agent_id)
+        reason = evaluate("claude", tool_name, tool_args, cwd)
     else:
         tool_name = payload.get("toolName", "")
         tool_args = payload.get("toolArgs") or {}
-        reason = evaluate("copilot", tool_name, tool_args, cwd, payload.get("sessionId"))
+        reason = evaluate("copilot", tool_name, tool_args, cwd)
     return deny_payload(harness, reason) if reason else None
 
 

@@ -118,7 +118,6 @@ def build_payload(harness: str, case: Case, target_dir: Path, actor_key: str) ->
 @pytest.mark.parametrize("case", CASES, ids=lambda c: c.name)
 @pytest.mark.parametrize("harness", ["claude", "copilot"])
 def test_matrix(harness, case, repo, tmp_path, monkeypatch):
-    monkeypatch.setenv("XDG_RUNTIME_DIR", str(tmp_path / "runtime"))
     if case.location == "container":
         marker = tmp_path / "containerenv"
         marker.write_text("")
@@ -129,32 +128,12 @@ def test_matrix(harness, case, repo, tmp_path, monkeypatch):
     assert is_deny(harness, result) == case.expect_deny
 
 
-def test_main_thread_never_denied(repo, tmp_path, monkeypatch):
-    monkeypatch.setenv("XDG_RUNTIME_DIR", str(tmp_path / "runtime"))
+def test_main_thread_never_denied(repo):
     payload = {
         "agent_id": None, "cwd": str(repo.main),
         "tool_name": "Write", "tool_input": {"file_path": str(repo.main / "x.txt")},
     }
     assert not is_deny("claude", guard.process("claude", payload))
-
-
-@pytest.mark.parametrize("harness", ["claude", "copilot"])
-def test_cap_reached_denies(harness, tmp_path, monkeypatch):
-    monkeypatch.setenv("XDG_RUNTIME_DIR", str(tmp_path / "runtime"))
-    monkeypatch.setenv("AGENT_GUARD_MAX_TOOL_CALLS", "2")
-    key = "agent-cap-test"
-
-    def read_call() -> dict:
-        if harness == "claude":
-            return {"agent_id": key, "cwd": str(tmp_path), "tool_name": "Read", "tool_input": {}}
-        return {"sessionId": key, "cwd": str(tmp_path), "toolName": "view", "toolArgs": {}}
-
-    first = guard.process(harness, read_call())
-    second = guard.process(harness, read_call())
-    third = guard.process(harness, read_call())
-    assert not is_deny(harness, first)
-    assert not is_deny(harness, second)
-    assert is_deny(harness, third)
 
 
 def test_crash_path_exits_zero():
