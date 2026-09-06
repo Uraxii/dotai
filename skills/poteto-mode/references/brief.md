@@ -1,10 +1,12 @@
 # Spawn brief
 
-Every field, every spawn. One-command task collapse to a paragraph still naming goal, scope, verify command, report shape.
+Every field, every spawn. One-command task collapse to a paragraph still
+naming goal, scope, verify command, report shape.
 
 ```text
 GOAL         one sentence outcome, executable by stranger with no chat access
-SCOPE        paths this task may write; paths it may not; its branch
+SCOPE        paths this task may write; paths it may not; the agent's own
+             worktree and branch
 SKILLS       active role first (e.g. prototype) with its mode line copied
              verbatim, then skills by name; agents carry no defaults
 CONTEXT      file paths and issue ids; upstream reports pasted in full when
@@ -14,13 +16,34 @@ VERIFY       exact commands to run, plus known gotchas
 TIMEBOX      rough runtime cap; on expiry return partial findings and stop
 FORBIDDEN    out-of-scope edits, task-specific bans, read-only or no-pixels
 REPORT       status, branch, head SHA, verdict, what was actually run,
-             deviations, suggested follow-ups
+             deviations, suggested follow-ups, RESUME line last
 ```
 
-Read-only means FORBIDDEN says "no writes, no commits, inspection commands only". No-pixels means FORBIDDEN says "never load image pixels, hold paths and verdict text only".
+Read-only means FORBIDDEN says "no writes, no commits, inspection commands
+only". No-pixels means FORBIDDEN says "never load image pixels, hold paths and
+verdict text only".
 
-GOAL and ACCEPTANCE state outcomes. A brief that prescribes the fix's SHAPE must cite the command that proved the shape works; otherwise label the shape HYPOTHESIS, so the agent knows measurement overrides it.
+A brief is one unit: one agent, one sitting. Ceilings, default until measured,
+are roughly 150 tool calls, one hour, six files touched. Two units in one
+brief is a queue, and a queue belongs to a coordinator, not a worker. Cannot
+size it -> not scoped, refuse to spawn.
 
-Work ordered by the user -> GOAL quotes the ordering sentence verbatim. No quote to back it = your inference, not their order; confirm before commissioning a workstream on it.
+SCOPE names the agent's own worktree and its own branch. A brief naming the
+main checkout as a write path is a refuse-to-spawn condition.
 
-Child briefs narrow, never widen. An orchestrator copies its own FORBIDDEN verbatim into every child and may only add lines; child SCOPE is a subset of its own. A child authorized to write what its parent may not touch is a contradiction: resolve it before spawning, not after the write.
+REPORT ends with a RESUME line, success included: what landed with SHAs, what
+did not, the exact next step a stranger starts from. That line is the only
+channel upward. Workers write no handoff document and no side file.
+
+GOAL and ACCEPTANCE state outcomes. A brief that prescribes the fix's SHAPE
+must cite the command that proved the shape works; otherwise label the shape
+HYPOTHESIS, so the agent knows measurement overrides it.
+
+Work ordered by the user -> GOAL quotes the ordering sentence verbatim. No
+quote to back it = your inference, not their order; confirm before
+commissioning a workstream on it.
+
+Child briefs narrow, never widen. An orchestrator copies its own FORBIDDEN
+verbatim into every child and may only add lines; child SCOPE is a subset of
+its own. A child authorized to write what its parent may not touch is a
+contradiction: resolve it before spawning, not after the write.
