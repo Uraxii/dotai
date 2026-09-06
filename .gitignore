@@ -31,3 +31,7 @@ opencode.json
 
 # Per-project agent scratch (decision logs, gates). Never publish.
 .nikki-agents/
+
+# llm-wiki kb. Real bytes live in .nikki-agents/.kb; this is the symlink
+# that keeps llmwiki's upward search working from the repo root.
+.kb
