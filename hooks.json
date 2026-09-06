@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "hooks": {
+    "preToolUse": [
+      {
+        "type": "command",
+        "bash": "python3 hooks/agent-guard/guard.py --harness copilot",
+        "timeoutSec": 5
+      }
+    ]
+  }
+}
