@@ -42,7 +42,8 @@ picks the hue, treatment sets how far the layout goes.
 | spacing, density, grid, overflow | references/space-and-layout.md |
 | duration, easing, choreography, caps, reduced motion | references/motion.md |
 | contrast, text size and tap-target floors | references/thresholds.md |
-| capture, fresh critic, verdict table | references/critique.md |
+| capture, fresh critic, the fix round | references/critique.md |
+| the verdict table, for the critic only | references/verdict.md |
 | licences, weak claims, empty areas | references/evidence.md |
 
 ## Two sanctioned overrides of `artifact-design`
@@ -59,11 +60,11 @@ These two only. The rest of that skill holds.
 
 ## The critique step always runs
 
-Every mode ends at references/critique.md, and you never fill its verdict
-table. A fresh agent that never saw your HTML fills it from the captured PNGs,
-marking each tell present, absent, or not-captured when the frames cannot say,
-and citing what in the image decided it. The model that chose the layout is
-the worst reader of whether the layout is a tell.
+Every mode ends at references/critique.md, and you never fill the verdict
+table in references/verdict.md. A fresh agent that never saw your HTML fills
+it from the captured PNGs, marking each tell present, absent, or not-captured
+when the frames cannot say, and citing what in the image decided it. The model
+that chose the layout is the worst reader of whether the layout is a tell.
 
 ## What this rests on
 

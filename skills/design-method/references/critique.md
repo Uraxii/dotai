@@ -4,6 +4,9 @@ Produce pixels, hand them to someone who did not write the page, take back a
 verdict. A critique that never opens an image is not one, and neither is one
 the author writes about its own page.
 
+Sections 1, 2 and 4 are yours. Section 3, the verdict table, is the critic's:
+it lives in references/verdict.md, and you never fill or open it.
+
 ## 1. Produce pixels (author side)
 
 Verified on this machine on 2026-09-06. Brave ships as a flatpak here. Its
@@ -52,8 +55,8 @@ It printed `H=1584` on a 100vh page, so `dm-full.png` is `/tmp/dm-tall.html`
 at `--window-size=1280,1584`. No capture shows the title the probe rewrites,
 and the other three use `/tmp/dm-page.html` unchanged.
 
-The `sed` misses `vmin`, `vmax`, and a height JavaScript sets. Section 3
-catches those.
+The `sed` misses `vmin`, `vmax`, and a height JavaScript sets. Section 3, in
+references/verdict.md, catches those.
 
 Take a fourth capture in the theme the page does not default to. Stamp
 `data-theme` on a copy's root element: `dark` on a light-first page, `light`
@@ -92,11 +95,11 @@ whose defaults produced this layout whether the layout is a tell asks an
 author to mark its own paper. One study put language-model choice at roughly
 13.6% of semantic-drift variance against 0.2% for the image model.
 
-Spawn a fresh agent to fill in the table in section 3. Give it exactly this
-and nothing more:
+Spawn a fresh agent to fill in the verdict table in references/verdict.md.
+Give it exactly this and nothing more:
 
 - The four PNG paths from section 1, each labelled with its capture size.
-- The path to this file, for the tell list and the evidence rule.
+- The path to references/verdict.md, for the tell list and the evidence rule.
 - The code-facts block below, which you fill in first.
 
 Withhold all of this:
@@ -122,71 +125,10 @@ over as facts, not judgments:
 Guard the context window: four captures per round, the three sizes plus the
 other-theme frame, landing in the critic's context, not yours.
 
-## 3. The verdict, written by the critic (critic side)
-
-Run this before filling a single row, every round. It answers whether the tall
-capture holds anything the first frame does not, from the two PNGs alone.
-
-```
-magick compare -metric RMSE \
-  \( /tmp/dm-full.png -resize 64x64! -colorspace Gray \) \
-  \( /tmp/dm-desktop.png -resize 64x64! -colorspace Gray \) null:
-```
-
-Read the bracketed number. At 0.20 or more the tall capture carries page the
-first frame does not. Under 0.20 the two are near-identical: the tall capture
-is one screen stretched, and the rest of the page is missing from it. Measured
-here: 0.107 for a `min-height:100vh` page at 1280,3200, against 0.399 for that
-same page captured by section 1.
-
-Under 0.20, stop. Write `not-captured`, never `absent`, in every row you cannot
-decide from the 1280x800 and 390x844 frames, rows 1, 3, 4, 7 and 8 at minimum.
-Put the number in the evidence cell. `not-captured` is not a pass: it sends the
-page back to section 1 for a recapture.
-
-One row per tell. Verdict is `present`, `absent`, or `not-captured`. Evidence
-names what in the image decided it, or the code fact from section 2 where the
-tell is not a visible one. An empty evidence cell voids the row.
-
-| # | Tell | Verdict | Evidence |
-|---|---|---|---|
-| 1 | Three equal columns, each icon over heading over two lines | | |
-| 2 | Everything centred, no primary axis | | |
-| 3 | One radius and one shadow stamped on every block | | |
-| 4 | One gap size repeated across the whole page | | |
-| 5 | h1 over 90 characters at display size | | |
-| 6 | Heading and body weight within 200 units | | |
-| 7 | Accent drowning the frame: it fills a background panel, a full-width bar, or many marks at once, rather than picking out a few | | |
-| 8 | Emoji standing in as section markers | | |
-| 9 | One of the known clusters: cream and serif and terracotta; a near-black ground whose only colour is one or two high-chroma marks; purple-to-blue gradient hero; Inter or Space Grotesk as the safe face | | |
-| 10 | Text clipped, overlapping, or unreadable in either theme | | |
-| 11 | Nothing readable in the first frame: a full-viewport hero, or content parked at opacity 0 | | |
-| 12 | Anything else in the frame you can see and do not like | | |
-
-Row 7 is a judgment, not a measurement. The 3% figure in references/color.md is
-a budget the author spends in the CSS, and no one reads 3% off an image. Answer
-on whether the accent highlights or floods, and say what you looked at.
-
-Row 12 is open on purpose and carries the same evidence discipline. Name the
-element, where it is, and what is wrong with it. A fixed list that returns
-all-absent on a page with a visibly stretched chip is self-scoring wearing a
-checklist. If nothing is wrong, write `absent` and say what you checked.
-
-Rows 5, 6 and 9 lean on the code-facts block from section 2. Say for each
-whether the image or that block decided it. Rows 2, 3, 8, 9 and 11 restate
-prohibitions `artifact-design` carries, and add a place to write the verdict
-and the evidence down.
-
-Never judge your own page, by a number or by a word. The author never fills
-this table; section 2 says who does. One pack's 58 gates run over that pack's
-own `site/examples/` returned 61 hard failures across 11 of its 18 example
-pages, every one stamping `gates: all-pass` in its own CSS. A fresh agent in
-the same model family is weaker than a human or a different model.
-references/evidence.md scores how much weaker.
-
 ## 4. Fix and recapture
 
-Every `present` row gets a fix. Recapture, hand the new captures to a critic
-that is fresh again, and stop after two rounds. The second critic is told
-nothing about the first round, so it cannot ratify a fix it was shown. Anything
-still present then ships with its row carried into the report.
+Every `present` row gets a fix, and every `not-captured` row a recapture from
+section 1 rather than a fix. Recapture, hand the new captures to a critic that
+is fresh again, and stop after two rounds. The second critic is told nothing
+about the first round, so it cannot ratify a fix it was shown. Anything still
+present then ships with its row carried into the report.

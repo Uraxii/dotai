@@ -6,9 +6,9 @@ actually wrong before changing anything.
 This mode runs backwards. Critique first, fix second, and fix only the rows
 that came back `present`.
 
-1. Run references/critique.md sections 1 to 3: capture the four frames, hand
-   them to a fresh agent, take back the filled verdict table. You do not fill
-   it in.
+1. Run the critique's sections 1 to 3: capture the four frames per
+   references/critique.md, hand them and references/verdict.md to a fresh
+   agent, and take back the filled verdict table. You do not fill it in.
 2. Open one file per `present` row, from the table below, and fix that row. A
    `not-captured` row goes back to section 1 for a recapture, not to this
    table.
