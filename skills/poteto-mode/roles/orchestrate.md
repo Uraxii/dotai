@@ -44,8 +44,8 @@ that returns a summary.
 **Worker / verifier.** `developer`, `tester`, `reviewer`, `researcher`, or
 `explorer` as the unit demands. A worker cannot read the store, so its brief
 inlines what it needs or points at repo paths. Prefer fewer, broader workers;
-one writer per worktree or branch (`principle-code-quality`). Run a verifier on
-a different model family from its worker.
+one writer per worktree (`principle-code-quality`). Run a verifier on a
+different model family from its worker.
 
 Depth stays at coordinator, track, worker. Author the track cuts per project;
 hard-coded swarm trees were tried and parked as too rigid.
