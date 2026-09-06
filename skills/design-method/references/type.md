@@ -1,0 +1,108 @@
+# Type
+
+## The ratio set
+
+1.2, 1.25, 1.333, 1.5, 1.618. Four of them carry names: 1.25 is the major
+third, 1.333 the perfect fourth, 1.5 the perfect fifth, 1.618 the golden ratio.
+The source names no interval for 1.2. The reason for using a ratio at all is
+that a constant multiplier keeps every step distinct, where fixed increments of
+a few pixels produce a slope nobody reads as hierarchy.
+
+1.2 is conservative and suits dense data. 1.25 is balanced and suits most
+sites. 1.333 is dramatic and suits landing pages and editorial work. The
+sources give no reason for choosing 1.25 as their own default beyond habit.
+
+## Fixed ladder, ratio 1.25 from a 16px body
+
+```css
+:root {
+  --text-xs:      0.64rem;    /* 10.24px, 1.25^-2 */
+  --text-sm:      0.8rem;     /* 12.8px,  1.25^-1 */
+  --text-base:    1rem;       /* 16px,    body    */
+  --text-md:      1.25rem;    /* 20px             */
+  --text-lg:      1.5625rem;  /* 25px             */
+  --text-xl:      1.9531rem;  /* 31.25px          */
+  --text-2xl:     2.4414rem;  /* 39.06px          */
+  --text-3xl:     3.0518rem;  /* 48.83px          */
+  --text-4xl:     3.8147rem;  /* 61.04px          */
+  --text-display: clamp(2.75rem, 5vw + 1rem, 5.25rem);
+}
+```
+
+Every step is the one before it times 1.25. Regenerate the ladder for a
+different ratio rather than hand-picking sizes near it. A list of round
+numbers such as 16, 20, 24, 32, 40 has step ratios of 1.25, 1.2, 1.333 and
+1.25, so it is a hand-picked list wearing the word ratio.
+
+## Fluid ladder
+
+The alternative interpolates between a small and a large viewport, so no media
+query is needed. Carry the generating inputs in a comment beside the output, so
+a later agent regenerates the ladder instead of guessing at it. The values
+below came from 320px to 1240px viewport, 16px to 18px base, ratio drifting
+1.2 to 1.25. No source explains the drift.
+
+```css
+:root {
+  --step--2: clamp(0.69rem, 0.66rem + 0.18vw, 0.80rem);
+  --step--1: clamp(0.83rem, 0.78rem + 0.25vw, 1.00rem);
+  --step-0:  clamp(1.00rem, 0.93rem + 0.33vw, 1.13rem); /* body */
+  --step-1:  clamp(1.20rem, 1.10rem + 0.45vw, 1.41rem);
+  --step-2:  clamp(1.44rem, 1.30rem + 0.63vw, 1.76rem);
+  --step-3:  clamp(1.73rem, 1.54rem + 0.88vw, 2.20rem);
+  --step-4:  clamp(2.07rem, 1.81rem + 1.23vw, 2.75rem);
+  --step-5:  clamp(2.49rem, 2.13rem + 1.69vw, 3.43rem);
+}
+```
+
+Pick one ladder as the base. The fixed one reaches about 61px at its top step
+and the fluid one about 55px, so stacking both gives two conflicting scales.
+
+## Display cap and its exceptions
+
+88px is the cap. Above it a hero crowds itself at 1280px to 1440px and wraps in
+a way that reads as drama rather than weight. A poster-style theme may reach
+96px. A single-line, single-word display of 12 characters or fewer may reach
+7rem.
+
+## Leading and weight
+
+Body 1.5 to 1.65, headings 1.05 to 1.2. Under 1.5 body lines cramp and over 1.7
+the paragraph stops cohering. All-caps display has no descenders, so its floor
+is `line-height: 1.0` and its band 1.02 to 1.08; below 1.0 the cap tops collide
+with the baseline above.
+
+Heading and body weight differ by at least 300 units: 300/700, 350/800 or
+400/900. The model's habitual output is body 400 with headings 600, a 200-unit
+gap that is barely visible at heading sizes, so the page reads as unstyled
+rather than as having a hierarchy. Use one weight for body text and reserve
+bold for emphasis.
+
+## Tracking
+
+| Text | Tracking |
+|---|---|
+| display and large headings | `-0.02em` to `-0.04em`, by how the face behaves |
+| uppercase labels and small caps | `0.08em` to `0.14em` |
+| body copy | never above `0.05em` |
+
+Only the uppercase rule has a reason: untracked uppercase reads as cramped
+because the letterforms sit too close. The two sources disagree on the band,
+one giving 0.08 to 0.14em and the other 0.05 to 0.1em. The row above takes
+0.08em as the floor because it satisfies both.
+
+## Measure
+
+45 to 75 characters is comfortable; the default to set is `max-width: 65ch`.
+Past roughly 75 the eye loses its place on the return sweep. `artifact-design`
+already carries the 65ch figure, so the useful addition here is the lower
+bound: a column under 45 characters is also wrong.
+
+## Families
+
+At most three: one display, one body, and one outlier used in at most two
+places. Two is the normal answer. Monospace counts. Weights of one family do
+not. Reach for the outlier a third time and it has stopped being an accent
+register and become a second body font.
+
+Load the real weight file. Never rely on synthesised bold.
