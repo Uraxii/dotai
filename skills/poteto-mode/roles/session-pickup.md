@@ -19,6 +19,10 @@ check and burns context. Resist the urge to re-derive; read.
 2. Reconstruct operational state: the branch and worktree, what already landed
    (`git log`, `git diff` against the base), open todos, decisions made. The
    prior trail is authoritative input. Resist the bias to re-derive it.
+   Treat the prior session's agents as alive until you prove otherwise: run
+   `pgrep`, compare trail and lock mtimes, read `git log` on the branch for
+   commits in the last minutes. A live writer keeps its worktree; spawn into a
+   new one.
 3. Diff done vs pending. Compare what shipped against what was planned, name
    the resume point, do not re-run the prior repro or redo completed work. A
    "let me verify from scratch" pass is the tell that you are treating the

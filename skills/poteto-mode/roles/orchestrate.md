@@ -35,13 +35,17 @@ the parent idles. It owns its track's units, authors its workers' briefs,
 spawns its own workers and verifiers, and rolls up aggregates at wave
 boundaries, never raw child reports. Cap in-flight children at what one drain
 can process, roughly ten, as a rolling window; blocking batches cost the
-slowest child of every batch.
+slowest child of every batch. Queue length per spawn follows
+`principle-decomposition`; a longer queue chains as fresh spawns, each seeded
+from `units.tsv` plus the previous child's inbox note, never a resume. It
+reads no bulk itself, not a log, a diff, or a transcript; that reading is a
+`reviewer` or `tester` unit that returns a summary.
 
 **Worker / verifier.** `developer`, `tester`, `reviewer`, `researcher`, or
 `explorer` as the unit demands. A worker cannot read the store, so its brief
 inlines what it needs or points at repo paths. Prefer fewer, broader workers;
-one writer per worktree or branch (`principle-code-quality`). Run a verifier on
-a different model family from its worker.
+one writer per worktree (`principle-code-quality`). Run a verifier on a
+different model family from its worker.
 
 Depth stays at coordinator, track, worker. Author the track cuts per project;
 hard-coded swarm trees were tried and parked as too rigid.
