@@ -1,11 +1,10 @@
 # Critique the render
 
 Produce pixels, hand them to someone who did not write the page, take back a
-verdict. A critique that never opens an image is not a critique, and one the
-author writes about its own page is not independent. This file exists to avoid
-both.
+verdict. A critique that never opens an image is not one, and neither is a
+critique the author writes about its own page.
 
-## 1. Produce pixels
+## 1. Produce pixels (author side)
 
 Verified on this machine on 2026-09-06. Brave ships as a flatpak here, and its
 sandbox can read and write `/tmp` but not the repo, so copy the page to `/tmp`
@@ -27,17 +26,40 @@ Take three captures by changing `--window-size` and `--screenshot`:
 | Size | Filename | What it answers |
 |---|---|---|
 | 1280,800 | dm-desktop.png | the first frame a reader and a thumbnail get |
-| 1280,3200 | dm-full.png | the whole page, rhythm and repeated blocks |
+| measured | dm-full.png | the whole page, rhythm and repeated blocks |
 | 390,844 | dm-mobile.png | wrapping, overflow, headline behaviour |
 
-The capture is the window, so a taller window is how you see more of the page.
-There is no full-page flag.
+There is no full-page flag. The window is the viewport, so a page sized in
+viewport units grows with it: at `--window-size=1280,3200` a
+`min-height:100vh` hero is 3200px tall and fills the frame alone, and the
+capture says nothing about what it lost.
+
+Build `dm-full.png` from a second copy. Freeze the viewport units at the
+800px desktop viewport, which makes 1vh 8px, then measure that copy and size
+the window to the height it reports.
+
+```
+sed -E 's/([0-9.]+)[dsl]?vh/calc(\1 * 8px)/g' /tmp/dm-page.html \
+  > /tmp/dm-tall.html
+printf '%s' '<script>onload=()=>document.title=
+"H="+document.documentElement.scrollHeight</script>' >> /tmp/dm-tall.html
+flatpak run com.brave.Browser --headless=new --disable-gpu --no-sandbox \
+  --window-size=1280,800 --virtual-time-budget=2000 --dump-dom \
+  file:///tmp/dm-tall.html 2>/dev/null | grep -o 'H=[0-9]*' | head -1
+```
+
+It printed `H=1584` on a 100vh page, so `dm-full.png` is `/tmp/dm-tall.html`
+at `--window-size=1280,1584`. No capture shows the title the probe rewrites,
+and the other three use `/tmp/dm-page.html` unchanged, so the frozen units
+decide nothing about the first frame or the phone.
+
+The `sed` misses `vmin`, `vmax`, and a height JavaScript sets. Section 3
+catches what it misses.
 
 Take a fourth capture in the theme the page does not default to. Stamp
-`data-theme` on the root element of a copy. A light-first page is stamped
-`dark`; a dark-first page is stamped `light`, and stamping `dark` on it changes
-nothing. Do not trust a browser dark-mode flag to stand in for
-`prefers-color-scheme`.
+`data-theme` on the root element of a copy: `dark` on a light-first page,
+`light` on a dark-first one, where stamping `dark` changes nothing. A browser
+dark-mode flag does not stand in for `prefers-color-scheme`.
 
 ```
 sed '0,/<html/s/<html/<html data-theme="light"/' /tmp/dm-page.html \
@@ -49,33 +71,29 @@ flatpak run com.brave.Browser --headless=new --disable-gpu --no-sandbox \
 md5sum /tmp/dm-desktop.png /tmp/dm-other.png
 ```
 
-The `0,/<html/` range confines the edit to the first match, so the CSS selector
-`:root[data-theme="light"]` further down the file is left alone. A plain
-`sed s/data-theme="light"/.../` rewrites that selector too and renders a
-byte-identical page. `head -2` shows the attribute landed on the `<html>` tag.
+The `0,/<html/` range confines the edit to the first match, so the CSS
+selector `:root[data-theme="light"]` further down survives. Rewrite that too
+and the page renders byte-identical. `head -2` shows where the attribute
+landed.
 
-Read the two sums. Identical sums mean the stamp did not take and both captures
-show one theme. Identical file sizes alone are the trap: that is exactly how
-this failed before it was caught. Fix the stamp and recapture before writing a
-single theme row.
-
-Two renders of one unchanged file give one md5 here, so a difference is real.
-Webfonts are the exception: the fetch can fail, so a capture may show fallback
-faces. Check that before answering row 9 on the typeface.
+Read the two sums. Identical sums mean the stamp did not take and both
+captures show one theme, so fix the stamp and recapture before writing a theme
+row. Two renders of one unchanged file give one md5 here, so a difference is
+real. Webfonts are the exception: the fetch can fail, so a capture may show
+fallback faces. Check that before answering row 9 on the typeface.
 
 Checked here so nobody rechecks them: the `Artifact` tool's read path returns
-HTML rather than an image and cannot serve as the critique; the
-`claude-in-chrome` MCP tools were not connected; no Chromium, Chrome or Firefox
-binary is on `PATH`, so the flatpak is the browser. On a machine with no local
-browser the fallback is the `agent-lab` skill, untested here.
+HTML rather than an image; the `claude-in-chrome` MCP tools were not
+connected; no Chromium, Chrome or Firefox binary is on `PATH`. On a machine
+with no local browser the fallback is the `agent-lab` skill, untested here.
 
 ## 2. Hand the captures to a fresh critic
 
-You wrote the page, so you are the worst available reader of it. The text model
-drives convergence: one study put language-model choice at roughly 13.6% of
-semantic-drift variance against 0.2% for the image model. The model that picked
-this layout is the one whose defaults produced it, so asking it whether the
-layout is a tell is asking an author to mark its own paper.
+You wrote the page, so you are the worst available reader of it. The model
+that picked this layout is the one whose defaults produced it, so asking it
+whether the layout is a tell asks an author to mark its own paper. One study
+put language-model choice at roughly 13.6% of semantic-drift variance against
+0.2% for the image model.
 
 Spawn a fresh agent to fill in the table in section 3. Give it exactly this and
 nothing more:
@@ -104,16 +122,34 @@ these and hand them over as facts, not judgments:
 | heading weight, then body weight | |
 | font families, in declaration order | |
 
-Guard the context window: four captures per round is the budget, which is the
-three sizes above plus the other-theme frame. A long page gets one tall
-capture, not eight scrolled ones. Those images land in the critic's context,
-not in yours.
+Guard the context window: four captures per round, the three sizes plus the
+other-theme frame. They land in the critic's context, not in yours.
 
-## 3. The verdict, written by the critic
+## 3. The verdict, written by the critic (critic side)
 
-One row per tell. Verdict is `present` or `absent`. Evidence names what in the
-image decided it, or the code fact from section 2 where the tell is not a
-visible one. An empty evidence cell voids the row.
+Run this before filling a single row, every round. It answers whether the tall
+capture holds anything the first frame does not, using only the two PNGs.
+
+```
+magick compare -metric RMSE \
+  \( /tmp/dm-full.png -resize 64x64! -colorspace Gray \) \
+  \( /tmp/dm-desktop.png -resize 64x64! -colorspace Gray \) null:
+```
+
+Read the bracketed number it prints. At 0.20 or more the tall capture carries
+page the first frame does not. Under 0.20 the two are near-identical, so the
+tall capture is one screen stretched and the rest of the page is missing from
+it. Measured here: 0.107 for a `min-height:100vh` page at 1280,3200, against
+0.399 for that same page captured by section 1.
+
+Under 0.20, stop. Write `not-captured`, never `absent`, in every row you cannot
+decide from the 1280x800 and 390x844 frames, rows 1, 3, 4, 7 and 8 at minimum,
+and put the number in the evidence cell. `not-captured` is not a pass: it sends
+the page back to section 1 for a recapture.
+
+One row per tell. Verdict is `present`, `absent`, or `not-captured`. Evidence
+names what in the image decided it, or the code fact from section 2 where the
+tell is not a visible one. An empty evidence cell voids the row.
 
 | # | Tell | Verdict | Evidence |
 |---|---|---|---|
@@ -131,29 +167,26 @@ visible one. An empty evidence cell voids the row.
 | 12 | Anything else in the frame you can see and do not like | | |
 
 Row 7 is a judgment, not a measurement. The 3% figure in SKILL.md step 4 is a
-budget the author spends while writing the CSS, and no one can read 3% off an
-image. Answer row 7 on whether the accent is highlighting or flooding, and say
-what you looked at.
+budget the author spends while writing the CSS, and no one reads 3% off an
+image. Answer it on whether the accent highlights or floods, and say what you
+looked at.
 
-Row 12 is open on purpose and carries the same evidence discipline as the
-others. Name the element, say where it is, say what is wrong with it. A fixed
-list that returns all-absent on a page with a visibly stretched chip is
-self-scoring wearing a checklist. If nothing is wrong, write `absent` and say
-what you checked.
+Row 12 is open on purpose and carries the same evidence discipline. Name the
+element, say where it is, say what is wrong with it. A fixed list that returns
+all-absent on a page with a visibly stretched chip is self-scoring wearing a
+checklist. If nothing is wrong, write `absent` and say what you checked.
 
 Rows 5, 6 and 9 lean on the code-facts block from section 2. Say for each
-whether the image or that block decided it.
-
-Rows 2, 3, 8, 9 and 11 restate prohibitions `artifact-design` already carries.
-What they add is a place to write down the verdict and the evidence.
+whether the image or that block decided it. Rows 2, 3, 8, 9 and 11 restate
+prohibitions `artifact-design` carries; what they add is a place to write the
+verdict and the evidence down.
 
 Never judge your own page, by a number or by a word. This table is not the
-author's to fill; section 2 says who fills it. A page judged by the model that
-wrote it reports a pass it did not earn. One pack's 58 gates were run over that
-pack's own `site/examples/` and returned 61 hard failures across 11 of its 18
-example pages, every one of which stamped `gates: all-pass` in its own CSS. A
-fresh agent in the same model family is a weaker guarantee than a human or a
-different model; references/evidence.md scores how much weaker.
+author's to fill; section 2 says who fills it. One pack's 58 gates run over
+that pack's own `site/examples/` returned 61 hard failures across 11 of its 18
+example pages, every one stamping `gates: all-pass` in its own CSS. A fresh
+agent in the same model family is weaker than a human or a different model;
+references/evidence.md scores how much weaker.
 
 ## 4. Fix and recapture
 

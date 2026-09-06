@@ -183,9 +183,10 @@ so the bound is two recapture rounds, not zero. The rest of `artifact-design`
 holds. Run references/critique.md in full for the capture and theme-copy
 commands verified on this machine, the tell list and the verdict table. You do
 not fill that table in. A fresh agent that never saw your HTML does, from the
-captured PNGs, marking each tell present or absent and citing what in the image
-decided it. Never judge your own page: the model that chose the layout is the
-worst reader of whether the layout is a tell.
+captured PNGs, marking each tell present, absent, or not-captured when the
+frames do not show enough to say, and citing what in the image decided it.
+Never judge your own page: the model that chose the layout is the worst reader
+of whether the layout is a tell.
 
 ## Rulings and evidence
 
