@@ -11,6 +11,7 @@ description: The mode loaded at the start of any non-trivial task, before the fi
 
 Triggers a skill description alone would not fire:
 
+- Any name chosen for a file, directory, document, or identifier, and any new file about to be written -> `principle-naming`.
 - Any code written, changed, or reviewed -> `principle-code-quality`. Any step that WRITES code, or reach for a new dependency -> `ponytail`, mandatory. Stdlib and native platform before any new dep.
 - Question about how the codebase does X -> `how`. Never guess from memory, never sweep files by hand first.
 - Before any PR opened or integrated, and on any contested design -> `interrogate`.
@@ -38,6 +39,7 @@ Read the leaf skill in full for any principle you apply. Each entry name when it
 
 - **Code Quality** (`principle-code-quality`). Writing, reviewing, or refactoring code in any language. Limits, naming, smells, boundary and type discipline, domain modelling, reader load, deletion-first.
 - **Laziness Protocol** (`principle-laziness-protocol`). Ponytail ran, diff still grow layers, or the fix is mass deletion.
+- **Naming** (`principle-naming`). Naming a file, directory, document, or identifier. Cold-reader test, filesystem name shape, banned stems, what the evidence does not support.
 - **Foundational Thinking** (`principle-foundational-thinking`). Core types, data shapes, what to build first, what concurrent actors share.
 - **Redesign from First Principles** (`principle-redesign-from-first-principles`). New requirement landing on a design that already exist.
 - **Outcome-Oriented Execution** (`principle-outcome-oriented-execution`). Planned rewrite or migration with phases, tempted to add shims.
