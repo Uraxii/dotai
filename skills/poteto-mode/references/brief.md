@@ -26,11 +26,16 @@ verdict text only".
 A brief is one unit; `principle-decomposition` defines the unit test and how
 to split what fails it.
 
-SCOPE names the agent's own worktree and its own branch. On Claude Code the
-worktree comes from spawning with `isolation: "worktree"`, so SCOPE says
-"your worktree" rather than a hand-made path. Never under `/tmp`: it is wiped
-on reboot. A brief naming the main checkout as a write path is a
-refuse-to-spawn condition.
+SCOPE names the agent's own worktree and its own branch. A worktree lives at
+`.nikki-agents/worktrees/<name>` in the project, on branch `agent/<name>`. On
+Claude Code spawning with `isolation: "worktree"` puts it there, so SCOPE says
+"your worktree" rather than a hand-made path. On every other harness the agent
+runs `git worktree add` to that same path itself. Repo work never goes under
+`/tmp`: it is wiped on reboot, and a write from a worktree at any other
+path is denied. Scratch output that never enters the repo goes under
+`.nikki-agents/` as well, which keeps every agent artifact in one
+already-gitignored root. A brief naming the main checkout as a write path is
+a refuse-to-spawn condition.
 
 REPORT ends with a RESUME line, success included: what landed with SHAs, what
 did not, the exact next step a stranger starts from. That line is the only
