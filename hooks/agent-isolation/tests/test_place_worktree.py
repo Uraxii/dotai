@@ -53,7 +53,8 @@ def run_hook(event: str, payload: dict) -> subprocess.CompletedProcess:
 def create(repo: SimpleNamespace, name: str) -> subprocess.CompletedProcess:
     return run_hook("create", {
         "session_id": "s1", "transcript_path": "/dev/null",
-        "cwd": str(repo.root), "hook_event_name": "WorktreeCreate", "name": name,
+        "cwd": str(repo.root),
+        "hook_event_name": "WorktreeCreate", "name": name,
     })
 
 
@@ -85,11 +86,11 @@ def test_create_twice_returns_the_same_path(repo) -> None:
     assert second.stderr == ""
 
 
-def test_taken_branch_name_falls_back_to_a_sha_suffix(repo) -> None:
+def test_taken_branch_name_refuses_instead_of_renaming(repo) -> None:
     git(repo.root, "branch", "agent/agent-1")
-    dest = printed_path(create(repo, "agent-1"))
-    branch = git(dest, "rev-parse", "--abbrev-ref", "HEAD")
-    assert branch == "agent/agent-1-" + repo.head[:7]
+    done = create(repo, "agent-1")
+    assert done.returncode != 0
+    assert done.stdout == ""
 
 
 def test_create_leaves_the_main_checkout_clean(repo) -> None:
@@ -116,7 +117,8 @@ def test_git_exclude_hides_the_base_under_our_own_marker(repo) -> None:
 
 def test_base_commit_is_recorded_in_the_worktree_admin_dir(repo) -> None:
     dest = printed_path(create(repo, "agent-1"))
-    assert (worktree_git_dir(dest) / "CLAUDE_BASE").read_text().strip() == repo.head
+    recorded = (worktree_git_dir(dest) / "CLAUDE_BASE").read_text()
+    assert recorded.strip() == repo.head
 
 
 def test_local_claude_settings_are_copied_into_the_worktree(repo) -> None:
@@ -138,21 +140,26 @@ def test_symlinked_claude_settings_are_left_behind(repo, tmp_path) -> None:
     assert not (dest / ".claude" / "settings.local.json").exists()
 
 
-def test_worktreeinclude_paths_are_copied(repo) -> None:
-    (repo.root / ".worktreeinclude").write_text("notes.txt\nconf/\n")
-    (repo.root / "notes.txt").write_text("carry me")
-    (repo.root / "conf").mkdir()
-    (repo.root / "conf" / "a.ini").write_text("k=v")
-    dest = printed_path(create(repo, "agent-1"))
-    assert (dest / "notes.txt").read_text() == "carry me"
-    assert (dest / "conf" / "a.ini").read_text() == "k=v"
-
-
-def test_relative_hooks_path_becomes_absolute(repo) -> None:
+def test_create_leaves_the_repos_git_config_alone(repo) -> None:
     git(repo.root, "config", "core.hooksPath", ".githooks")
-    dest = printed_path(create(repo, "agent-1"))
-    hooks_path = git(dest, "config", "--get", "core.hooksPath")
-    assert hooks_path == str(repo.root / ".githooks")
+    before = (repo.root / ".git" / "config").read_text()
+    create(repo, "agent-1")
+    assert git(repo.root, "config", "--get", "core.hooksPath") == ".githooks"
+    assert (repo.root / ".git" / "config").read_text() == before
+
+
+def test_failed_setup_leaves_no_worktree_and_no_branch(repo, tmp_path) -> None:
+    shared = tmp_path / "shared-claude"
+    shared.mkdir()
+    (shared / "settings.local.json").write_text("{}")
+    (repo.root / ".claude").symlink_to("../shared-claude")
+    git(repo.root, "add", "-A")
+    git(repo.root, "commit", "-q", "-m", "symlinked claude dir")
+    done = create(repo, "agent-1")
+    assert done.returncode != 0
+    assert done.stdout == ""
+    assert "agent/agent-1" not in branches(repo)
+    assert "agent-1" not in git(repo.root, "worktree", "list")
 
 
 def remove(repo: SimpleNamespace, target: Path) -> subprocess.CompletedProcess:
@@ -185,7 +192,8 @@ def test_create_outside_a_repo_refuses_and_prints_no_path(tmp_path) -> None:
     loose = tmp_path / "loose"
     loose.mkdir()
     done = run_hook("create", {
-        "cwd": str(loose), "hook_event_name": "WorktreeCreate", "name": "agent-1",
+        "cwd": str(loose),
+        "hook_event_name": "WorktreeCreate", "name": "agent-1",
     })
     assert done.returncode != 0
     assert done.stdout == ""
@@ -220,3 +228,42 @@ def test_remove_keeps_a_branch_holding_unmerged_work(repo) -> None:
     git(dest, "commit", "-q", "-m", "agent work")
     remove(repo, dest)
     assert "agent/agent-1" in branches(repo)
+
+
+def test_remove_refuses_when_the_worktree_survives(repo) -> None:
+    dest = printed_path(create(repo, "agent-1"))
+    git(repo.root, "worktree", "lock", str(dest))
+    done = remove(repo, dest)
+    assert done.returncode != 0
+    assert done.stderr.strip() != ""
+    assert dest.is_dir()
+
+
+def test_create_refuses_a_directory_git_has_no_worktree_for(repo) -> None:
+    dest = worktree_location.base_for(repo.root) / "agent-9"
+    (dest / ".git").mkdir(parents=True)
+    done = create(repo, "agent-9")
+    assert done.returncode != 0
+    assert done.stdout == ""
+
+
+def test_create_refuses_a_worktree_on_a_foreign_branch(repo) -> None:
+    dest = worktree_location.base_for(repo.root) / "agent-1"
+    git(repo.root, "worktree", "add", "-q", str(dest), "-b", "someone-else")
+    done = create(repo, "agent-1")
+    assert done.returncode != 0
+    assert done.stdout == ""
+
+
+def test_reusing_a_worktree_still_sets_it_up(repo) -> None:
+    dest = printed_path(create(repo, "agent-1"))
+    (worktree_git_dir(dest) / "CLAUDE_BASE").unlink()
+    settings = repo.root / ".claude" / "settings.local.json"
+    settings.parent.mkdir()
+    settings.write_text('{"permissions": {}}')
+    done = create(repo, "agent-1")
+    assert done.returncode == 0, done.stderr
+    recorded = (worktree_git_dir(dest) / "CLAUDE_BASE").read_text()
+    assert recorded.strip() == repo.head
+    copied = dest / ".claude" / "settings.local.json"
+    assert copied.read_text() == '{"permissions": {}}'

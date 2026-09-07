@@ -24,14 +24,18 @@ import subprocess
 import sys
 from pathlib import Path
 
-from worktree_location import base_for, is_inside_base
+from worktree_location import (
+    GIT_CALL_TIMEOUT_SEC,
+    base_for,
+    is_inside_base,
+    main_checkout_root,
+    worktree_entries,
+)
 
-GIT_TIMEOUT_SEC = 55
 BRANCH_PREFIX = "agent/"
 EXCLUDE_MARKER = "# dotai-worktrees"
 BASE_COMMIT_FILE = "CLAUDE_BASE"
 LOCAL_SETTINGS = Path(".claude") / "settings.local.json"
-INCLUDE_LIST = ".worktreeinclude"
 
 
 class HookError(Exception):
@@ -42,7 +46,7 @@ def git(cwd: Path | str, *args: str) -> str:
     try:
         done = subprocess.run(
             ["git", "-C", str(cwd), *args],
-            capture_output=True, text=True, timeout=GIT_TIMEOUT_SEC,
+            capture_output=True, text=True, timeout=GIT_CALL_TIMEOUT_SEC,
         )
     except (OSError, subprocess.TimeoutExpired) as exc:
         raise HookError(f"git {' '.join(args)} failed: {exc}") from exc
@@ -53,14 +57,7 @@ def git(cwd: Path | str, *args: str) -> str:
 
 def git_common_dir(cwd: Path | str) -> Path:
     """Admin dir shared by the checkout and all its linked worktrees."""
-    return Path(git(cwd, "rev-parse", "--path-format=absolute", "--git-common-dir"))
-
-
-def config_value(cwd: Path, key: str) -> str | None:
-    try:
-        return git(cwd, "config", "--get", key) or None
-    except HookError:
-        return None
+    return Path(cwd, git(cwd, "rev-parse", "--git-common-dir")).resolve()
 
 
 def hide_base_from_git(common_dir: Path, root: Path) -> None:
@@ -75,21 +72,6 @@ def hide_base_from_git(common_dir: Path, root: Path) -> None:
         handle.write(f"\n{EXCLUDE_MARKER}\n/{top}/\n")
 
 
-def add_worktree(cwd: Path, dest: Path, name: str, base_sha: str) -> None:
-    """Add the worktree, retrying once when the branch name is taken."""
-    candidates = (
-        f"{BRANCH_PREFIX}{name}",
-        f"{BRANCH_PREFIX}{name}-{base_sha[:7]}",
-    )
-    for branch in candidates:
-        try:
-            git(cwd, "worktree", "add", "-b", branch, str(dest), base_sha)
-            return
-        except HookError as failure:
-            last = failure
-    raise last
-
-
 def copy_local_settings(root: Path, dest: Path) -> None:
     source = root / LOCAL_SETTINGS
     if not source.is_file() or source.is_symlink():
@@ -99,66 +81,61 @@ def copy_local_settings(root: Path, dest: Path) -> None:
     shutil.copy2(source, target)
 
 
-def absolutize_hooks_path(root: Path) -> None:
-    """Make a relative core.hooksPath resolve the same from a worktree.
-
-    Git keeps one config for a checkout and its linked worktrees unless
-    extensions.worktreeConfig is on, so the value is rewritten in place. It
-    names the same directory as before for the main checkout.
-    """
-    value = config_value(root, "core.hooksPath")
-    if value is None or Path(value).is_absolute():
-        return
-    git(root, "config", "core.hooksPath", str(root / value))
-
-
-def copy_included_paths(root: Path, dest: Path) -> None:
-    """Copy the plain paths listed in .worktreeinclude into the worktree.
-
-    Plain path entries only. Claude's own reader matches gitignore patterns;
-    reimplementing that matcher is out of scope, so a pattern entry is
-    treated as a path and skipped when no such path exists.
-    """
-    listing = root / INCLUDE_LIST
-    if not listing.is_file():
-        return
-    for line in listing.read_text().splitlines():
-        entry = line.strip()
-        if not entry or entry.startswith("#"):
-            continue
-        source = (root / entry).resolve()
-        if not source.exists() or not source.is_relative_to(root.resolve()):
-            continue
-        target = dest / source.relative_to(root.resolve())
-        target.parent.mkdir(parents=True, exist_ok=True)
-        if source.is_dir():
-            shutil.copytree(source, target, dirs_exist_ok=True)
-        else:
-            shutil.copy2(source, target)
-
-
 def post_create(root: Path, dest: Path, base_sha: str) -> None:
     """Redo the parts of Claude's own worktree setup that matter."""
     admin_dir = Path(git(dest, "rev-parse", "--absolute-git-dir"))
-    (admin_dir / BASE_COMMIT_FILE).write_text(f"{base_sha}\n")
+    base_file = admin_dir / BASE_COMMIT_FILE
+    if not base_file.exists():
+        base_file.write_text(f"{base_sha}\n")
     copy_local_settings(root, dest)
-    absolutize_hooks_path(root)
-    copy_included_paths(root, dest)
+
+
+def reusable(cwd: Path, dest: Path, branch: str) -> bool:
+    """True when dest is already this agent's worktree, refusing near-misses.
+
+    A directory being there proves nothing: it can be a bare "mkdir .git"
+    git owns no worktree for, a tree left behind by a failed removal, or
+    another agent's checkout. Anything but an exact match is refused, since
+    handing back an unregistered path gives the agent work it can never land.
+    """
+    if not dest.exists():
+        return False
+    resolved = dest.resolve()
+    for path, checked_out in worktree_entries(cwd):
+        if path.resolve() != resolved:
+            continue
+        if checked_out == branch:
+            return True
+        raise HookError(
+            f"refusing {dest}: on branch {checked_out}, not {branch}"
+        )
+    raise HookError(f"refusing {dest}: exists but git owns no worktree there")
+
+
+def discard_worktree(cwd: Path, dest: Path, branch: str) -> None:
+    """Undo a worktree add, so a half-finished create leaves nothing behind."""
+    git(cwd, "worktree", "remove", "--force", str(dest))
+    git(cwd, "branch", "-D", branch)
 
 
 def create(payload: dict) -> Path:
     cwd = Path(payload["cwd"])
     name = payload["name"]
-    common_dir = git_common_dir(cwd)
-    root = common_dir.parent
+    root = main_checkout_root(cwd)
+    branch = f"{BRANCH_PREFIX}{name}"
     dest = base_for(root) / name
-    if (dest / ".git").exists():
-        return dest
     base_sha = git(cwd, "rev-parse", "HEAD")
-    hide_base_from_git(common_dir, root)
+    if reusable(cwd, dest, branch):
+        post_create(root, dest, base_sha)
+        return dest
+    hide_base_from_git(git_common_dir(cwd), root)
     dest.parent.mkdir(parents=True, exist_ok=True)
-    add_worktree(cwd, dest, name, base_sha)
-    post_create(root, dest, base_sha)
+    git(cwd, "worktree", "add", "-b", branch, str(dest), base_sha)
+    try:
+        post_create(root, dest, base_sha)
+    except (HookError, OSError):
+        discard_worktree(cwd, dest, branch)
+        raise
     return dest
 
 
@@ -169,35 +146,21 @@ def head_branch(worktree: Path) -> str | None:
         return None
 
 
-def drop_merged_branch(root: Path, branch: str) -> None:
-    """Delete the agent branch only when its work is already merged.
-
-    Unmerged agent work is unrecoverable once the worktree is gone, so a
-    branch git refuses to delete with -d is left in place.
-    """
-    if not branch.startswith(BRANCH_PREFIX):
-        return
-    try:
-        git(root, "branch", "-d", branch)
-    except HookError:
-        return
-
-
 def remove(payload: dict) -> None:
     cwd = Path(payload["cwd"])
     target = Path(payload["worktree_path"])
-    root = git_common_dir(cwd).parent
+    root = main_checkout_root(cwd)
     if not is_inside_base(target, root):
         raise HookError(
             f"refusing to remove {target}: outside {base_for(root)}"
         )
     branch = head_branch(target)
-    try:
-        git(cwd, "worktree", "remove", "--force", str(target))
-    except HookError:
-        git(cwd, "worktree", "prune")
-    if branch:
-        drop_merged_branch(root, branch)
+    git(cwd, "worktree", "remove", "--force", str(target))
+    if branch and branch.startswith(BRANCH_PREFIX):
+        try:
+            git(root, "branch", "-d", branch)
+        except HookError:
+            return
 
 
 def main() -> int:
