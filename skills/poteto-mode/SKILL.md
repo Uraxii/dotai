@@ -13,6 +13,7 @@ Triggers a skill description alone would not fire:
 
 - Any name chosen for a file, directory, document, or identifier, and any new file about to be written -> `principle-naming`.
 - Any code written, changed, or reviewed -> `principle-code-quality`. Any step that WRITES code, or reach for a new dependency -> `ponytail`, mandatory. Stdlib and native platform before any new dep.
+- Any test written or changed, and any code change settling that it ships without one -> `tdd`.
 - Question about how the codebase does X -> `how`. Never guess from memory, never sweep files by hand first.
 - Before any PR opened or integrated, and on any contested design -> `interrogate`.
 - About to ask the user a "which approach" or "what should this do" fork -> classify it first. Answer observable by running something is not the human's to give. Sketch it with `prototype` and let the result decide. Save the ask for a taste call no experiment settle.
