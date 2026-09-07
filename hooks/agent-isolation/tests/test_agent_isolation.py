@@ -147,5 +147,13 @@ def test_crash_path_exits_zero():
 
 def test_hooks_configs_are_valid_json():
     root = AGENT_ISOLATION_PATH.parent.parent.parent
-    json.loads((root / "hooks" / "hooks.json").read_text())
+    claude = json.loads((root / "hooks" / "hooks.json").read_text())
     json.loads((root / "hooks.json").read_text())
+    for event in ("WorktreeCreate", "WorktreeRemove"):
+        commands = [
+            hook["command"]
+            for entry in claude["hooks"][event]
+            for hook in entry["hooks"]
+        ]
+        assert commands
+        assert all(c.startswith("${CLAUDE_PLUGIN_ROOT}/") for c in commands)
