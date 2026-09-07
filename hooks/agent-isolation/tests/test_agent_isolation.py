@@ -41,12 +41,18 @@ def repo(tmp_path: Path) -> SimpleNamespace:
     return SimpleNamespace(main=main, worktree=worktree)
 
 
-def is_deny(harness: str, result: dict | None) -> bool:
+def deny_reason(harness: str, result: dict | None) -> str | None:
     if result is None:
-        return False
+        return None
     if harness == "claude":
-        return result["hookSpecificOutput"]["permissionDecision"] == "deny"
-    return result["permissionDecision"] == "deny"
+        result = result["hookSpecificOutput"]
+    if result["permissionDecision"] != "deny":
+        return None
+    return result["permissionDecisionReason"]
+
+
+def is_deny(harness: str, result: dict | None) -> bool:
+    return deny_reason(harness, result) is not None
 
 
 @dataclass
@@ -56,19 +62,35 @@ class Case:
     command: str | None
     location: str
     expect_deny: bool
+    reason_has: str = ""
 
+
+MAIN = "Main checkout"
+MISPLACED = "every agent worktree must live"
+UNHOOKED = "WorktreeCreate hook"
 
 CASES = [
-    Case("main-root-write", "write", None, "main_root", True),
-    Case("main-subdir-write", "write", None, "main_subdir", True),
-    Case("worktree-write", "write", None, "worktree", False),
+    Case("main-root-write", "write", None, "main_root", True, MAIN),
+    Case("main-subdir-write", "write", None, "main_subdir", True, MAIN),
+    Case("stray-worktree-write", "write", None, "stray", True, MISPLACED),
+    Case("based-worktree-write", "write", None, "based", False),
+    Case("escaping-worktree-write", "write", None, "escaping", True, MISPLACED),
+    Case("claude-worktree-write", "write", None, "claude_default", True, UNHOOKED),
     Case("tmp-write", "write", None, "outside", False),
     Case("not-a-repo-write", "write", None, "not_repo", False),
     Case("container-write", "write", None, "container", False),
     Case("readonly-git-bash", "bash", "git status", "main_root", False),
     Case("merge-ffonly-bash", "bash", "git merge --ff-only other", "main_root", False),
-    Case("commit-bash", "bash", "git commit -m x", "main_root", True),
+    Case("commit-bash", "bash", "git commit -m x", "main_root", True, MAIN),
+    Case("based-commit-bash", "bash", "git commit -m x", "based", False),
 ]
+
+
+def add_worktree(repo: SimpleNamespace, path: Path, branch: str) -> Path:
+    if not path.exists():
+        path.parent.mkdir(parents=True, exist_ok=True)
+        run_git(["worktree", "add", "-q", str(path), "-b", branch], repo.main)
+    return path
 
 
 def location_dir(location: str, repo: SimpleNamespace, tmp_path: Path) -> Path:
@@ -78,8 +100,19 @@ def location_dir(location: str, repo: SimpleNamespace, tmp_path: Path) -> Path:
         sub = repo.main / "sub"
         sub.mkdir(exist_ok=True)
         return sub
-    if location == "worktree":
+    if location == "stray":
         return repo.worktree
+    if location == "based":
+        base = repo.main / ".nikki-agents" / "worktrees"
+        return add_worktree(repo, base / "ok", "based-branch")
+    if location == "escaping":
+        # Lexically under the base, actually outside it once ".." resolves.
+        add_worktree(repo, tmp_path / "escape", "escape-branch")
+        inside = location_dir("based", repo, tmp_path)
+        return inside / ".." / ".." / ".." / ".." / "escape"
+    if location == "claude_default":
+        claude = repo.main / ".claude" / "worktrees"
+        return add_worktree(repo, claude / "agent-x", "claude-branch")
     if location == "outside":
         d = tmp_path / "outside"
         d.mkdir(exist_ok=True)
@@ -125,7 +158,20 @@ def test_matrix(harness, case, repo, tmp_path, monkeypatch):
     target_dir = location_dir(case.location, repo, tmp_path)
     payload = build_payload(harness, case, target_dir, f"{harness}-{case.name}")
     result = agent_isolation.process(harness, payload)
-    assert is_deny(harness, result) == case.expect_deny
+    reason = deny_reason(harness, result)
+    assert (reason is not None) == case.expect_deny
+    if case.reason_has:
+        assert case.reason_has in reason
+
+
+def test_main_checkout_reason_names_the_destination(repo):
+    payload = {
+        "agent_id": "a", "cwd": str(repo.main),
+        "tool_name": "Write", "tool_input": {"file_path": str(repo.main / "x.txt")},
+    }
+    reason = deny_reason("claude", agent_isolation.process("claude", payload))
+    base = repo.main / ".nikki-agents" / "worktrees"
+    assert f"git worktree add {base}/" in reason
 
 
 def test_main_thread_never_denied(repo):
