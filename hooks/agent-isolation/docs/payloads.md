@@ -137,6 +137,28 @@ the model always sees.
 - `PreToolUse` still fires for calls the sandbox later refuses, and no
   matching `PostToolUse` follows. A hook must not assume the two pair up.
 
+### Worktree hooks, read out of the Claude Code 2.1.263 binary
+
+Not probed. Read from the shipped binary, because each of these three reads
+the opposite way from the obvious guess.
+
+- **A `WorktreeCreate` hook that fails does not fall back to the default
+  path.** Any non-zero exit aborts worktree creation. That is fail-closed and
+  correct: a hook that cannot place the worktree must not let the agent land
+  quietly in `.claude/worktrees/` instead.
+- **A command hook must echo a bare absolute path, never JSON.** The
+  `hookSpecificOutput.worktreePath` form is read only on the http and callback
+  branches. A command hook that prints that JSON has the JSON text itself
+  taken as the path.
+- **`WorktreeRemove` is required, not optional.** Removal of a hook-created
+  worktree routes to `WorktreeRemove`, so with none registered the directory
+  is left on disk forever.
+
+Known limitation: a subagent cannot `EnterWorktree` into a hook-placed
+worktree, because that check compares against the hardcoded `.claude/worktrees`
+path. Only mid-session switching breaks. A fresh spawn is unaffected, and the
+`poteto-mode` skill already mandates fresh spawns over resume-chains.
+
 ## GitHub Copilot CLI
 
 ### BLOCKED: account quota exhausted
