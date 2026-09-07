@@ -38,34 +38,45 @@ When creating, the invocation argument names the next session's focus to record 
 5. **Redact.** Strip API keys, tokens, passwords, cookies, SSH keys, raw auth headers, and unnecessary PII. Write `[REDACTED_SECRET]` and name what kind of credential the successor needs.
 6. **List suggested skills** with why each is relevant, by exact name.
 7. **Completeness pass, mandatory.** Re-scan the whole conversation for user corrections, vetoes, terminology preferences, scope limits, and abandoned approaches. Negative constraints are the detail summaries lose most. Anything found goes into `Verbatim User Directives` or `Failed Approaches / Do NOT`.
-8. **Write the file with the script.** Pipe the finished handoff into
-   `new-handoff.sh --stdin`. One command picks the directory, the chain
+8. **Write the file with the script.** Pass the project and the topic as bare
+   slugs, no `handoff_` prefix and no `.md`. `<project>` is the repo the work
+   targets, never the session cwd. User's rule verbatim: "When I say project I
+   mean the project being worked on. Not the base directory the session is
+   running from. Ex. bad: Claude session in Projects, Project = Projects.
+   good: working on ~/Projects/gvn, Project = gvn." Recommend a fresh chain
+   when the effort changes rather than continues, the slug has drifted, the
+   prior chain shipped, or the lineage has grown into noise. You recommend,
+   the human decides.
+
+   Pipe the finished handoff in. One command picks the directory, the chain
    number, and the filename, writes your text, and prints the absolute path:
 
    ```
-   /home/nicole/.claude/skills/handoff/scripts/new-handoff.sh --stdin <project> <topic> <<'EOF'
-   <the whole handoff document>
-   EOF
+   <this-skill-directory>/scripts/new-handoff.sh --stdin gvn dialogue-rewrite ~/Projects/gvn/.handoffs <<'__HANDOFF_BODY_END__'
+   # Handoff: gvn dialogue rewrite
+   <the rest of the handoff document>
+   __HANDOFF_BODY_END__
    ```
 
+   Use `__HANDOFF_BODY_END__` as the terminator, never `EOF`. Step 3 has you
+   quote transcripts verbatim, so a bare `EOF` line inside the body ends the
+   heredoc early and bash runs the remaining handoff lines as commands.
+
+   The third argument is the output directory. It defaults to `.handoffs/` at
+   the git root of the shell you are in, which is often not the project you
+   are handing off, so pass it whenever that shell is not already inside the
+   target repo.
+
    Drop `--stdin` to get the skeleton from `references/document-structure.md`
-   in a correctly named file, then fill it in. A third argument sets the
-   output directory, which defaults to `.handoffs/` at the repo root. Pass
-   `<project>` and `<topic>` as bare slugs, no `handoff_` prefix and no
-   `.md`.
+   in a correctly named file, then fill it in. With a body waiting on stdin
+   and no `--stdin`, the script writes nothing and fails, so a forgotten flag
+   cannot discard the handoff quietly.
 
    Name the file by hand only when you cannot run the script:
    `handoff_<project>_<topic>_<chain number>_<unix time>.md`, underscores
-   between fields, hyphens allowed inside the topic slug. `<project>` is the
-   repo the work targets, never the session cwd. User's rule verbatim: "When
-   I say project I mean the project being worked on. Not the base directory
-   the session is running from. Ex. bad: Claude session in Projects, Project
-   = Projects. good: working on ~/Projects/gvn, Project = gvn." Chain number
-   starts at 1; a successor finds the highest existing
-   `.handoffs/handoff_<project>_<topic>_*` and adds 1. Recommend a fresh
-   chain when the effort changes rather than continues, the slug has drifted,
-   the prior chain shipped, or the lineage has grown into noise. You
-   recommend, the human decides.
+   between fields, hyphens allowed inside the topic slug. Chain number starts
+   at 1; a successor finds the highest existing
+   `.handoffs/handoff_<project>_<topic>_*` and adds 1.
 9. **Report the full absolute path** on its own line. Keep the rest of the reply short, naming any assumptions or redactions.
 
 Document structure: `references/document-structure.md`.
