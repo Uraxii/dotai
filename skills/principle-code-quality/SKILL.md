@@ -75,6 +75,9 @@ handlers.
   Derive instead of sync. Name invariant once at boundary, not per consumer.
 - Test: new reader answer "where X come from?" and "what can change X?" in
   under 30 seconds. No -> cut layers or cut state.
+- Structure files for a stranger. Assume the next reader never saw this
+  codebase and cannot ask. She find what her task touches by guessing where it
+  ought to live. Guess miss -> the layout is wrong, not the reader.
 
 **Comments.** Default is delete. A comment survives only on this list:
 
