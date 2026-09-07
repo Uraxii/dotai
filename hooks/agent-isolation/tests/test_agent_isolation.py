@@ -73,6 +73,7 @@ class Case:
 MAIN = "Main checkout"
 MISPLACED = "every agent worktree must live"
 UNHOOKED = "WorktreeCreate hook"
+UNLOCATABLE = "stops this guard locating the main checkout"
 
 CASES = [
     Case("main-root-write", "write", None, "main_root", True, MAIN),
@@ -251,3 +252,19 @@ def test_hooks_configs_are_valid_json():
         ]
         assert commands
         assert all(c.startswith("${CLAUDE_PLUGIN_ROOT}/") for c in commands)
+
+
+def test_linked_worktree_of_a_separate_git_dir_repo_denies(tmp_path):
+    """Repo present, root unnameable: a rule that cannot judge must refuse."""
+    root = (tmp_path / "main").resolve()
+    root.mkdir()
+    run_git(["init", "-q", f"--separate-git-dir={tmp_path / 'admin'}"], root)
+    commit_repo(root)
+    linked = (root / ".nikki-agents" / "worktrees" / "ok").resolve()
+    linked.parent.mkdir(parents=True)
+    run_git(["worktree", "add", "-q", str(linked), "-b", "agent/ok"], root)
+    result = agent_isolation.process("claude", write_payload(linked))
+    reason = deny_reason("claude", result)
+    assert reason is not None
+    assert UNLOCATABLE in reason
+    assert str(linked) in reason

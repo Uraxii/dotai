@@ -27,7 +27,8 @@ An agent working in `repo/src/` would have walked straight through the gate.
 Rule adopted instead: resolve both to absolute paths and compare.
 `realpath(git-common-dir) == realpath(git-dir)` means main checkout. In a
 linked worktree the git dir is always `<common>/worktrees/<name>`, so they can
-never be equal. A non-zero exit means "not a repo", which passes.
+never be equal. A non-zero exit means "not a repo", which passes; a repo whose
+root cannot be named does NOT pass, see item 4.
 Both calls run with `git -C <dir>` so the verdict never depends on the hook
 process's own working directory. The compare lives in
 `worktree_location.main_checkout_root`, which every hook calls instead of
@@ -79,6 +80,35 @@ run, once per casing, with two different payload shapes: camelCase
 `sessionId` / `initialPrompt` against snake_case `session_id` /
 `initial_prompt`. Copilot raises no error on unknown keys, so the merged file
 looks healthy and misbehaves quietly.
+
+### 4. "Cannot find the root" is not "not a repo", and must deny
+
+`main_checkout_root` raises for two unrelated reasons, and the gate used to
+treat both as nothing to judge, so both allowed. Measured in a repo made with
+`git init --separate-git-dir`, from any linked worktree:
+
+| probe | result |
+|---|---|
+| `rev-parse --is-inside-work-tree` | `true` |
+| `worktree list --porcelain` entry zero | the ADMIN dir, not the checkout |
+| `rev-parse --show-toplevel` in that admin dir | `fatal: this operation must be run in a work tree` |
+| `config --get core.worktree`, in the worktree and in the admin dir | unset in both |
+
+So git records nothing that leads from a linked worktree back to that main
+checkout: `main_checkout_root` is right to refuse rather than guess, and the
+refusal is permanent, not a gap to be patched later.
+
+The gate now separates the two cases before asking. `--is-inside-work-tree`
+first: false or non-zero exit means no repo, nothing to be in the wrong half
+of, allow. True plus a refusal from `main_checkout_root` means a repo whose
+root is unknown, so the guard cannot evaluate its own rule and denies
+(`UnlocatableCheckout` and `UNLOCATABLE_ROOT_REASON`). An enforcement rule
+that cannot evaluate itself is not enforcement.
+
+Consequence, accepted deliberately: in a `--separate-git-dir` repo EVERY
+linked worktree denies, a correctly placed one included, and only the main
+checkout gets a specific reason. That layout is unusable by agents until the
+user changes it, which is what the deny message tells the agent to report.
 
 ## Claude Code
 

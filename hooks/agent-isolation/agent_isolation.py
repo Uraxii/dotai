@@ -6,8 +6,10 @@ agent's own private copy of the repo, kept in one agreed folder. Edits to
 the real project folder, and edits from a copy someone put elsewhere, are
 turned down with a message saying how to get it right.
 
-Denies a write into the MAIN git checkout, and a write from a linked
-worktree outside the base that worktree_location names.
+Denies a write into the MAIN git checkout, a write from a linked worktree
+outside the base that worktree_location names, and a write from a repo
+whose main checkout git cannot name: a rule that cannot evaluate itself
+refuses. Outside a repo there is nothing to judge, so that allows.
 
 Every path exits 0. Copilot fails CLOSED on a non-zero exit, so a crash in
 here must never deny the whole session; a caught exception falls through to
@@ -52,6 +54,13 @@ CLAUDE_DEFAULT_WORKTREE_REASON = (
     "it by moving or recreating the worktree yourself."
 )
 
+UNLOCATABLE_ROOT_REASON = (
+    "{cwd} is inside a git repository whose layout stops this guard "
+    "locating the main checkout, so it cannot judge whether writing here "
+    "is allowed, and refuses rather than guess. Report this to the user: "
+    "only she can fix the layout, and nothing you do here works around it."
+)
+
 WRITE_TOOLS = {"claude": ("Write", "Edit", "NotebookEdit"), "copilot": ("create", "edit")}
 BASH_TOOLS = {"claude": ("Bash",), "copilot": ("bash", "powershell")}
 GIT_ALWAYS_MUTATES = {
@@ -78,26 +87,42 @@ class Checkout(NamedTuple):
     is_main: bool
 
 
-def checkout_at(cwd: str) -> Checkout | None:
-    """The checkout containing cwd, or None when there is nothing to judge.
+class UnlocatableCheckout(NamedTuple):
+    """A repo whose main checkout git cannot name, so nothing can be judged."""
 
-    worktree_location.main_checkout_root owns the rule for finding the main
-    checkout, so this asks it rather than reading git's plumbing again. It
-    raises when cwd is outside a repo, and when git cannot name the main
-    checkout at all: both mean there is nothing to judge, so allow.
+    cwd: Path
+
+
+def in_a_repo(cwd: str) -> bool:
+    try:
+        return git(cwd, "rev-parse", "--is-inside-work-tree") == "true"
+    except (ValueError, OSError, subprocess.TimeoutExpired):
+        return False
+
+
+def checkout_at(cwd: str) -> Checkout | UnlocatableCheckout | None:
+    """Where cwd sits, or None when there is genuinely nothing to judge.
+
+    Outside a repo, and in a container, there is no checkout to be in the
+    wrong half of: allow. Inside a repo the guard must reach a verdict, so
+    a repo whose root worktree_location.main_checkout_root cannot name
+    (--separate-git-dir seen from a linked worktree) is unjudgeable rather
+    than uninteresting, and comes back as UnlocatableCheckout.
     """
-    if is_container():
+    if is_container() or not in_a_repo(cwd):
         return None
     try:
         root = main_checkout_root(cwd).resolve()
         top = Path(git(cwd, "rev-parse", "--show-toplevel")).resolve()
     except (ValueError, OSError, subprocess.TimeoutExpired):
-        return None
+        return UnlocatableCheckout(Path(cwd).resolve())
     return Checkout(root, top, top == root)
 
 
-def placement_reason(checkout: Checkout) -> str | None:
+def placement_reason(checkout: Checkout | UnlocatableCheckout) -> str | None:
     """Why writing from this checkout is refused, or None when it is fine."""
+    if isinstance(checkout, UnlocatableCheckout):
+        return UNLOCATABLE_ROOT_REASON.format(cwd=checkout.cwd)
     base = base_for(checkout.root)
     if checkout.is_main:
         return MAIN_CHECKOUT_REASON.format(root=checkout.root, base=base)
@@ -172,7 +197,7 @@ def write_target(harness: str, tool_name: str, tool_args: dict, cwd: str) -> str
 def evaluate(harness: str, tool_name: str, tool_args: dict, cwd: str) -> str | None:
     target = write_target(harness, tool_name, tool_args, cwd)
     checkout = checkout_at(target) if target else None
-    return placement_reason(checkout) if checkout else None
+    return placement_reason(checkout) if checkout is not None else None
 
 
 def deny_payload(harness: str, reason: str) -> dict:
