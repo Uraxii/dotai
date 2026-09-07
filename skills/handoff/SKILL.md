@@ -38,7 +38,59 @@ When creating, the invocation argument names the next session's focus to record 
 5. **Redact.** Strip API keys, tokens, passwords, cookies, SSH keys, raw auth headers, and unnecessary PII. Write `[REDACTED_SECRET]` and name what kind of credential the successor needs.
 6. **List suggested skills** with why each is relevant, by exact name.
 7. **Completeness pass, mandatory.** Re-scan the whole conversation for user corrections, vetoes, terminology preferences, scope limits, and abandoned approaches. Negative constraints are the detail summaries lose most. Anything found goes into `Verbatim User Directives` or `Failed Approaches / Do NOT`.
-8. **Write the file.** Name it `handoff_<project>_<topic>_<chain number>_<unix time>.md`, underscores between fields, hyphens allowed inside the topic slug. `<project>` is the repo the work targets, never the session cwd. User's rule verbatim: "When I say project I mean the project being worked on. Not the base directory the session is running from. Ex. bad: Claude session in Projects, Project = Projects. good: working on ~/Projects/gvn, Project = gvn." Chain number starts at 1; a successor finds the highest existing `.handoffs/handoff_<project>_<topic>_*` and adds 1. Recommend a fresh chain when the effort changes rather than continues, the slug has drifted, the prior chain shipped, or the lineage has grown into noise. You recommend, the human decides. Run `skills/handoff/scripts/new-handoff.sh <project> <topic>` to create the named, skeleton-filled file in one step instead of doing this by hand.
+8. **Write the file with the script.** Pass the project and the topic as bare
+   slugs, no `handoff_` prefix and no `.md`. `<project>` is the repo the work
+   targets, never the session cwd. User's rule verbatim: "When I say project I
+   mean the project being worked on. Not the base directory the session is
+   running from. Ex. bad: Claude session in Projects, Project = Projects.
+   good: working on ~/Projects/gvn, Project = gvn." Recommend a fresh chain
+   when the effort changes rather than continues, the slug has drifted, the
+   prior chain shipped, or the lineage has grown into noise. You recommend,
+   the human decides. Run the script as shown in "Run the script" below.
 9. **Report the full absolute path** on its own line. Keep the rest of the reply short, naming any assumptions or redactions.
+
+## Run the script
+
+`scripts/new-handoff.sh` takes exactly one mode flag, and the flag is never
+inferred. Give `--stdin` to write a finished handoff. Give `--skeleton` to get
+the blank template from `references/document-structure.md`. Neither flag, or
+both, is an error: the script reads nothing and writes nothing.
+
+The body must start with `# Handoff:`. The script strips a leading byte-order
+mark, blank lines, and spaces before it checks. A body that fails the check is
+rejected after stdin is already consumed, and the text is then unrecoverable,
+so write the heading first.
+
+The third argument is the output directory. It defaults to `.handoffs/` at the
+git root of the shell you are in, which is often not the project you are
+handing off, so pass it whenever that shell is not already inside the target
+repo.
+
+Pipe the finished handoff in. One command picks the chain number and the
+filename, writes your text, and prints the absolute path:
+
+```
+<this-skill-directory>/scripts/new-handoff.sh --stdin gvn dialogue-rewrite /path/to/gvn/.handoffs <<'__HANDOFF_BODY_END__'
+# Handoff: gvn dialogue rewrite
+<the rest of the handoff document>
+__HANDOFF_BODY_END__
+```
+
+Use `__HANDOFF_BODY_END__` as the terminator, never `EOF`. Step 3 has you
+quote transcripts verbatim, so a bare `EOF` line inside the body ends the
+heredoc early and bash runs the remaining handoff lines as commands. Put the
+terminator in column 0, or the heredoc never ends.
+
+To get the skeleton in a correctly named file and fill it in afterwards:
+
+```
+<this-skill-directory>/scripts/new-handoff.sh --skeleton gvn dialogue-rewrite /path/to/gvn/.handoffs
+```
+
+Name the file by hand only when you cannot run the script:
+`handoff_<project>_<topic>_<chain number>_<unix time>.md`, underscores between
+fields, hyphens allowed inside the topic slug. Chain number starts at 1. A
+successor finds the highest existing
+`.handoffs/handoff_<project>_<topic>_*` and adds 1.
 
 Document structure: `references/document-structure.md`.
