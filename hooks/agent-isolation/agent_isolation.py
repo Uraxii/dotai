@@ -1,8 +1,13 @@
 #!/usr/bin/env python3
 """agent-isolation — PreToolUse hook shared by Claude Code and Copilot CLI.
 
-Denies a write into the MAIN git checkout; agents work in their own
-worktree.
+In plain words: this refuses an AI agent's edits unless they come from the
+agent's own private copy of the repo, kept in one agreed folder. Edits to
+the real project folder, and edits from a copy someone put elsewhere, are
+turned down with a message saying how to get it right.
+
+Denies a write into the MAIN git checkout, and a write from a linked
+worktree outside the base that worktree_location names.
 
 Every path exits 0. Copilot fails CLOSED on a non-zero exit, so a crash in
 here must never deny the whole session; a caught exception falls through to
@@ -19,12 +24,32 @@ import shlex
 import subprocess
 import sys
 from pathlib import Path
+from typing import NamedTuple
+
+from worktree_location import base_for, is_inside_base
 
 CONTAINER_MARKERS = ("/run/.containerenv", "/.dockerenv")
+CLAUDE_DEFAULT_BASE = ".claude/worktrees"
 
 MAIN_CHECKOUT_REASON = (
-    "Main checkout ({root}) is read-only for agents. Work in your own git "
-    "worktree (git worktree add ...) and report the branch."
+    "Main checkout ({root}) is read-only for agents. Create your worktree "
+    "under {base} (git worktree add {base}/<branch> -b <branch>), work "
+    "there, and report the branch."
+)
+
+MISPLACED_WORKTREE_REASON = (
+    "This worktree ({top}) sits outside {base}, the directory every agent "
+    "worktree must live under. Redo this work in a correctly placed one: "
+    "git worktree add {base}/<branch> -b <branch>"
+)
+
+CLAUDE_DEFAULT_WORKTREE_REASON = (
+    "This worktree ({top}) is where Claude Code puts worktrees on its own, "
+    "so the WorktreeCreate hook that would have placed it under {base} "
+    "never ran: the dotai plugin is disabled, the session is in safe or "
+    "--bare mode, or hooks are disabled by policy. Tell the user that. It "
+    "is a broken setup, only she can fix it, and you must not work around "
+    "it by moving or recreating the worktree yourself."
 )
 
 WRITE_TOOLS = {"claude": ("Write", "Edit", "NotebookEdit"), "copilot": ("create", "edit")}
@@ -56,16 +81,42 @@ def run_git(cwd: str, *args: str) -> str | None:
     return result.stdout.strip() if result.returncode == 0 else None
 
 
-def main_checkout_root(cwd: str) -> Path | None:
+class Checkout(NamedTuple):
+    """Where a path sits: main checkout root, its own working tree top."""
+
+    root: Path
+    top: Path
+    is_main: bool
+
+
+def checkout_at(cwd: str) -> Checkout | None:
+    """The checkout containing cwd, or None when there is nothing to judge."""
     if is_container():
         return None
-    common = run_git(cwd, "rev-parse", "--git-common-dir")
-    gitdir = run_git(cwd, "rev-parse", "--git-dir")
-    if common is None or gitdir is None:
+    probe = run_git(
+        cwd, "rev-parse", "--git-common-dir", "--git-dir", "--show-toplevel"
+    )
+    lines = probe.splitlines() if probe else []
+    if len(lines) != 3:
         return None
-    common_path = (Path(cwd) / common).resolve()
-    gitdir_path = (Path(cwd) / gitdir).resolve()
-    return common_path.parent if common_path == gitdir_path else None
+    common, gitdir, top = ((Path(cwd) / line).resolve() for line in lines)
+    return Checkout(common.parent, top, common == gitdir)
+
+
+def placement_reason(checkout: Checkout) -> str | None:
+    """Why writing from this checkout is refused, or None when it is fine."""
+    base = base_for(checkout.root)
+    if checkout.is_main:
+        return MAIN_CHECKOUT_REASON.format(root=checkout.root, base=base)
+    if is_inside_base(checkout.top, checkout.root):
+        return None
+    claude_default = (checkout.root / CLAUDE_DEFAULT_BASE).resolve()
+    template = (
+        CLAUDE_DEFAULT_WORKTREE_REASON
+        if checkout.top.is_relative_to(claude_default)
+        else MISPLACED_WORKTREE_REASON
+    )
+    return template.format(top=checkout.top, base=base)
 
 
 def git_segment_mutates(tokens: list[str]) -> bool:
@@ -127,8 +178,8 @@ def write_target(harness: str, tool_name: str, tool_args: dict, cwd: str) -> str
 
 def evaluate(harness: str, tool_name: str, tool_args: dict, cwd: str) -> str | None:
     target = write_target(harness, tool_name, tool_args, cwd)
-    root = main_checkout_root(target) if target else None
-    return MAIN_CHECKOUT_REASON.format(root=root) if root else None
+    checkout = checkout_at(target) if target else None
+    return placement_reason(checkout) if checkout else None
 
 
 def deny_payload(harness: str, reason: str) -> dict:
