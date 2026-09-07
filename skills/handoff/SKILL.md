@@ -46,37 +46,51 @@ When creating, the invocation argument names the next session's focus to record 
    good: working on ~/Projects/gvn, Project = gvn." Recommend a fresh chain
    when the effort changes rather than continues, the slug has drifted, the
    prior chain shipped, or the lineage has grown into noise. You recommend,
-   the human decides.
-
-   Pipe the finished handoff in. One command picks the directory, the chain
-   number, and the filename, writes your text, and prints the absolute path:
-
-   ```
-   <this-skill-directory>/scripts/new-handoff.sh --stdin gvn dialogue-rewrite ~/Projects/gvn/.handoffs <<'__HANDOFF_BODY_END__'
-   # Handoff: gvn dialogue rewrite
-   <the rest of the handoff document>
-   __HANDOFF_BODY_END__
-   ```
-
-   Use `__HANDOFF_BODY_END__` as the terminator, never `EOF`. Step 3 has you
-   quote transcripts verbatim, so a bare `EOF` line inside the body ends the
-   heredoc early and bash runs the remaining handoff lines as commands.
-
-   The third argument is the output directory. It defaults to `.handoffs/` at
-   the git root of the shell you are in, which is often not the project you
-   are handing off, so pass it whenever that shell is not already inside the
-   target repo.
-
-   Drop `--stdin` to get the skeleton from `references/document-structure.md`
-   in a correctly named file, then fill it in. With a body waiting on stdin
-   and no `--stdin`, the script writes nothing and fails, so a forgotten flag
-   cannot discard the handoff quietly.
-
-   Name the file by hand only when you cannot run the script:
-   `handoff_<project>_<topic>_<chain number>_<unix time>.md`, underscores
-   between fields, hyphens allowed inside the topic slug. Chain number starts
-   at 1; a successor finds the highest existing
-   `.handoffs/handoff_<project>_<topic>_*` and adds 1.
+   the human decides. Run the script as shown in "Run the script" below.
 9. **Report the full absolute path** on its own line. Keep the rest of the reply short, naming any assumptions or redactions.
+
+## Run the script
+
+`scripts/new-handoff.sh` takes exactly one mode flag, and the flag is never
+inferred. Give `--stdin` to write a finished handoff. Give `--skeleton` to get
+the blank template from `references/document-structure.md`. Neither flag, or
+both, is an error: the script reads nothing and writes nothing.
+
+The body must start with `# Handoff:`. The script strips a leading byte-order
+mark, blank lines, and spaces before it checks. A body that fails the check is
+rejected after stdin is already consumed, and the text is then unrecoverable,
+so write the heading first.
+
+The third argument is the output directory. It defaults to `.handoffs/` at the
+git root of the shell you are in, which is often not the project you are
+handing off, so pass it whenever that shell is not already inside the target
+repo.
+
+Pipe the finished handoff in. One command picks the chain number and the
+filename, writes your text, and prints the absolute path:
+
+```
+<this-skill-directory>/scripts/new-handoff.sh --stdin gvn dialogue-rewrite /path/to/gvn/.handoffs <<'__HANDOFF_BODY_END__'
+# Handoff: gvn dialogue rewrite
+<the rest of the handoff document>
+__HANDOFF_BODY_END__
+```
+
+Use `__HANDOFF_BODY_END__` as the terminator, never `EOF`. Step 3 has you
+quote transcripts verbatim, so a bare `EOF` line inside the body ends the
+heredoc early and bash runs the remaining handoff lines as commands. Put the
+terminator in column 0, or the heredoc never ends.
+
+To get the skeleton in a correctly named file and fill it in afterwards:
+
+```
+<this-skill-directory>/scripts/new-handoff.sh --skeleton gvn dialogue-rewrite /path/to/gvn/.handoffs
+```
+
+Name the file by hand only when you cannot run the script:
+`handoff_<project>_<topic>_<chain number>_<unix time>.md`, underscores between
+fields, hyphens allowed inside the topic slug. Chain number starts at 1. A
+successor finds the highest existing
+`.handoffs/handoff_<project>_<topic>_*` and adds 1.
 
 Document structure: `references/document-structure.md`.
