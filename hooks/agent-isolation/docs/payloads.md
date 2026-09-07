@@ -29,7 +29,9 @@ Rule adopted instead: resolve both to absolute paths and compare.
 linked worktree the git dir is always `<common>/worktrees/<name>`, so they can
 never be equal. A non-zero exit means "not a repo", which passes.
 Both calls run with `git -C <dir>` so the verdict never depends on the hook
-process's own working directory.
+process's own working directory. The compare lives in
+`worktree_location.main_checkout_root`, which every hook calls instead of
+reading git's plumbing again.
 
 ### 2. A subagent's own transcript is not reachable at tool-call time
 

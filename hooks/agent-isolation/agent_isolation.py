@@ -26,7 +26,7 @@ import sys
 from pathlib import Path
 from typing import NamedTuple
 
-from worktree_location import base_for, is_inside_base
+from worktree_location import base_for, git, is_inside_base, main_checkout_root
 
 CONTAINER_MARKERS = ("/run/.containerenv", "/.dockerenv")
 CLAUDE_DEFAULT_BASE = ".claude/worktrees"
@@ -70,17 +70,6 @@ def is_container() -> bool:
     return any(Path(marker).exists() for marker in CONTAINER_MARKERS)
 
 
-def run_git(cwd: str, *args: str) -> str | None:
-    try:
-        result = subprocess.run(
-            ["git", "-C", cwd, *args],
-            capture_output=True, text=True, timeout=5,
-        )
-    except (OSError, subprocess.TimeoutExpired):
-        return None
-    return result.stdout.strip() if result.returncode == 0 else None
-
-
 class Checkout(NamedTuple):
     """Where a path sits: main checkout root, its own working tree top."""
 
@@ -90,17 +79,21 @@ class Checkout(NamedTuple):
 
 
 def checkout_at(cwd: str) -> Checkout | None:
-    """The checkout containing cwd, or None when there is nothing to judge."""
+    """The checkout containing cwd, or None when there is nothing to judge.
+
+    worktree_location.main_checkout_root owns the rule for finding the main
+    checkout, so this asks it rather than reading git's plumbing again. It
+    raises when cwd is outside a repo, and when git cannot name the main
+    checkout at all: both mean there is nothing to judge, so allow.
+    """
     if is_container():
         return None
-    probe = run_git(
-        cwd, "rev-parse", "--git-common-dir", "--git-dir", "--show-toplevel"
-    )
-    lines = probe.splitlines() if probe else []
-    if len(lines) != 3:
+    try:
+        root = main_checkout_root(cwd).resolve()
+        top = Path(git(cwd, "rev-parse", "--show-toplevel")).resolve()
+    except (ValueError, OSError, subprocess.TimeoutExpired):
         return None
-    common, gitdir, top = ((Path(cwd) / line).resolve() for line in lines)
-    return Checkout(common.parent, top, common == gitdir)
+    return Checkout(root, top, top == root)
 
 
 def placement_reason(checkout: Checkout) -> str | None:

@@ -26,16 +26,21 @@ def run_git(args: list[str], cwd: Path) -> None:
     subprocess.run(["git", *args], cwd=cwd, check=True, capture_output=True)
 
 
+def commit_repo(root: Path) -> Path:
+    run_git(["config", "user.email", "a@example.com"], root)
+    run_git(["config", "user.name", "agent-isolation tests"], root)
+    (root / "f.txt").write_text("x")
+    run_git(["add", "."], root)
+    run_git(["commit", "-q", "-m", "init"], root)
+    return root
+
+
 @pytest.fixture
 def repo(tmp_path: Path) -> SimpleNamespace:
     main = tmp_path / "main"
     main.mkdir()
     run_git(["init", "-q"], main)
-    run_git(["config", "user.email", "a@example.com"], main)
-    run_git(["config", "user.name", "agent-isolation tests"], main)
-    (main / "f.txt").write_text("x")
-    run_git(["add", "."], main)
-    run_git(["commit", "-q", "-m", "init"], main)
+    commit_repo(main)
     worktree = tmp_path / "wt"
     run_git(["worktree", "add", "-q", str(worktree), "-b", "wt-branch"], main)
     return SimpleNamespace(main=main, worktree=worktree)
@@ -172,6 +177,49 @@ def test_main_checkout_reason_names_the_destination(repo):
     reason = deny_reason("claude", agent_isolation.process("claude", payload))
     base = repo.main / ".nikki-agents" / "worktrees"
     assert f"git worktree add {base}/" in reason
+
+
+def write_payload(cwd: Path) -> dict:
+    return {
+        "agent_id": "a", "cwd": str(cwd),
+        "tool_name": "Write", "tool_input": {"file_path": str(cwd / "x.txt")},
+    }
+
+
+def test_separate_git_dir_reason_names_the_checkout(tmp_path):
+    """--separate-git-dir moves the admin directory out of the checkout."""
+    root = (tmp_path / "main").resolve()
+    root.mkdir()
+    run_git(["init", "-q", f"--separate-git-dir={tmp_path / 'admin'}"], root)
+    commit_repo(root)
+    result = agent_isolation.process("claude", write_payload(root))
+    reason = deny_reason("claude", result)
+    assert reason is not None
+    assert f"Main checkout ({root})" in reason
+    assert str(root / ".nikki-agents" / "worktrees") in reason
+
+
+def test_worktree_under_a_submodule_base_is_allowed(tmp_path):
+    """A submodule keeps its admin directory under the superproject."""
+    sub = (tmp_path / "sub").resolve()
+    sub.mkdir()
+    run_git(["init", "-q"], sub)
+    commit_repo(sub)
+    root = (tmp_path / "main").resolve()
+    root.mkdir()
+    run_git(["init", "-q"], root)
+    commit_repo(root)
+    run_git(
+        ["-c", "protocol.file.allow=always",
+         "submodule", "-q", "add", str(sub), "vendor"],
+        root,
+    )
+    run_git(["commit", "-q", "-m", "add submodule"], root)
+    vendor = root / "vendor"
+    placed = vendor / ".nikki-agents" / "worktrees" / "ok"
+    run_git(["worktree", "add", "-q", str(placed), "-b", "agent/ok"], vendor)
+    result = agent_isolation.process("claude", write_payload(placed))
+    assert deny_reason("claude", result) is None
 
 
 def test_main_thread_never_denied(repo):
