@@ -1,6 +1,6 @@
 ---
 name: tdd
-description: "Test-driven development, red-green-refactor. Use only when the user explicitly asks for TDD, a failing test, or a regression test, or when a bug has an obvious cheap local test target. Skip when the test path is unclear, expensive, integration-heavy, or not requested."
+description: "Use before writing or changing any test, when a bug reproduces cheaply against a local seam, and whenever the user asks for TDD, a failing test, or a regression test. Read it before settling that a code change ships without a test: the conditions for skipping the red step, and for preferring no test over a bad one, live here."
 ---
 
 # Test-driven development
@@ -35,10 +35,11 @@ a worked example, the spec.
 A **seam** is the public boundary you test at, the interface where behaviour is
 observed without reaching inside. Tests live at seams, never against internals.
 
-**Test only at pre-agreed seams.** Before writing any test, write down the
-seams under test and confirm them with the user. No test at an unconfirmed
-seam. You cannot test everything; agreeing the seams up front is how effort
-lands on critical paths instead of every edge case.
+**Name the seams before the first test.** Write the seams under test down and
+proceed on them: confirm with the user when you have a channel to her, name
+them at the top of your report when you do not. A seam you cannot name is a
+seam you do not test at. You cannot test everything; fixing the seams up front
+is how effort lands on critical paths instead of every edge case.
 
 Mock at system boundaries only: external APIs, time, randomness, sometimes the
 database or filesystem. Never mock your own modules or internal collaborators.
@@ -54,6 +55,9 @@ database or filesystem. Never mock your own modules or internal collaborators.
   passes by construction and can never disagree with the code.
 
 ## When a failing test is impractical
+
+A change with no executable behaviour (prose, docs, config nothing executes)
+needs no test and no justification. Do not manufacture either.
 
 Do not silently skip the red step. Say WHY first (broad harness setup, brittle
 mocks, slow end-to-end infra, production-only state, vague reproduction steps,

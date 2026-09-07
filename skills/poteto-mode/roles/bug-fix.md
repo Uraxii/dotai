@@ -34,10 +34,9 @@ where the evidence is the trace.
    or wrong-surface is not a pass; flag it. Unit tests show branch behaviour,
    not bug absence.
 5. Stage the commits so the failing repro lands before the fix in git history;
-   the diff tells the story. See `tdd` for the failing-test-first cadence when
-   the bug has a cheap local test path; skip it when the test would be
-   expensive, integration-heavy, or unclear. This is the canonical
-   verifiable-unit sequence: failing test first, fix on top.
+   the diff tells the story. See `tdd` for the failing-test-first cadence, and
+   consult it before settling that the fix ships without a test. This is the
+   canonical verifiable-unit sequence: failing test first, fix on top.
 6. Run Opening a PR (`roles/opening-a-pr.md`).
 
 Investigation fans out `how` and `why` as parallel `researcher` subagents.
