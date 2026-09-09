@@ -22,6 +22,7 @@ Triggers a skill description alone would not fire:
 - Any prose surface, own reply included -> `unslop`. Register for every agent -> `caveman`. Any reply the human read -> `principle-output-to-user`.
 - Docs, RFCs, readmes, PR bodies, commit messages -> `technical-writing`.
 - Long, autonomous, or unattended work -> `show-me-your-work`.
+- Anything settled the next session must respect: a fork the user answered, a design call made after weighing options, an approach abandoned for a named reason -> `decisions`. Record the row, never an ADR or a rules file.
 - Citing a web page -> `research` (store the source), never a bare link.
 - Broken skill mid-task -> fix it in its own change. Do not block. Do not work around it silently.
 
