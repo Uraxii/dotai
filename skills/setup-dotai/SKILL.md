@@ -19,6 +19,36 @@ Use `caveman` ultra register for reasoning and for every message to or from
 another agent.
 ```
 
+## Copilot CLI
+
+Copilot CLI keeps its own config directory and reads neither `CLAUDE.md`
+nor a home-level `AGENTS.md`. Run this section only when setting dotai up
+for Copilot CLI.
+
+Resolve the config directory once: `COPILOT_HOME` when that variable is
+set, otherwise `~/.copilot`. Never hardcode a home directory.
+
+1. **Agents.** Copilot CLI loads user-level agents from
+   `<config-dir>/agents/`, and only from files carrying an `.agent.md`
+   extension. That path is its only documented user-level agent location,
+   and a plugin install reports the skills it added and never the agents,
+   so do not rely on the plugin's own `agents/` directory registering.
+   Copy each file in this install's `agents/` directory to
+   `<config-dir>/agents/<name>.agent.md`, frontmatter preserved verbatim.
+   Create the directory when absent. Ask before overwriting a file that is
+   already there.
+
+2. **Instructions.** The global instructions file is
+   `<config-dir>/copilot-instructions.md`, loaded on every session with no
+   setting to enable. Append the Preamble lines above to it on an explicit
+   yes, skipping any line already present. Create the file when absent.
+   Change nothing else in it.
+
+3. **Invocation.** Copilot CLI has no setting for a default agent; the
+   request for one is `github/copilot-cli#2212`, still open. Tell the user
+   to start a session with `copilot --agent zakia`, and that the CLI must
+   be restarted before a newly copied agent is visible.
+
 ## Models
 
 You edit the `poteto-mode` skill's `models.md` on the user's request. One
