@@ -123,10 +123,38 @@ def test_empty_topic_or_decision_is_refused() -> None:
         assert not log.exists()
 
 
+def test_rows_sharing_a_timestamp_print_last_recorded_first() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        log = root / "d.tsv"
+        recorded = [
+            ("2026-09-09T15:50:11Z", "peer-sent-record"),
+            ("2026-09-09T15:50:11Z", "author-code-dispatch"),
+            ("2026-09-09T15:50:12Z", "component-body-scene"),
+            ("2026-09-09T15:50:12Z", "entity-template-naming"),
+            ("2026-09-09T15:50:12Z", "prediction-owner"),
+        ]
+        log.write_text(
+            "ts\ttopic\tdecision\twhy\tevidence\n"
+            + "".join(
+                f"{ts}\t{topic}\tchose {topic}\tbecause\tref\n"
+                for ts, topic in recorded
+            ),
+            encoding="utf-8",
+        )
+
+        current = run(["now", str(log)], root)
+        assert current.returncode == 0, current.stderr
+        printed = [line.split()[1] for line in
+                   current.stdout.splitlines()[1:]]
+        assert printed == [topic for _, topic in reversed(recorded)], printed
+
+
 if __name__ == "__main__":
     tests = [
         test_first_record_writes_header_then_row,
         test_newest_row_for_a_topic_is_the_one_in_force,
+        test_rows_sharing_a_timestamp_print_last_recorded_first,
         test_tabs_newlines_and_formula_leads_are_neutralised,
         test_gitignore_gains_the_log_once,
         test_missing_log_says_so_without_a_traceback,
