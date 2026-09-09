@@ -7,6 +7,7 @@ the same expect_deny lands on both, which is the "same behaviour" proof.
 
 from __future__ import annotations
 
+import io
 import json
 import subprocess
 import sys
@@ -78,6 +79,9 @@ UNLOCATABLE = "stops this guard locating the main checkout"
 CASES = [
     Case("main-root-write", "write", None, "main_root", True, MAIN),
     Case("main-subdir-write", "write", None, "main_subdir", True, MAIN),
+    Case("scratch-write", "write", None, "scratch", False),
+    Case("scratch-bash", "bash", "tee -a notes.md", "scratch", False),
+    Case("scratch-lookalike-write", "write", None, "scratch_lookalike", True, MAIN),
     Case("stray-worktree-write", "write", None, "stray", True, MISPLACED),
     Case("based-worktree-write", "write", None, "based", False),
     Case("escaping-worktree-write", "write", None, "escaping", True, MISPLACED),
@@ -108,6 +112,15 @@ def location_dir(location: str, repo: SimpleNamespace, tmp_path: Path) -> Path:
         return sub
     if location == "stray":
         return repo.worktree
+    if location == "scratch":
+        scratch = repo.main / ".nikki-agents" / ".kb" / "wiki"
+        scratch.mkdir(parents=True, exist_ok=True)
+        return scratch
+    if location == "scratch_lookalike":
+        # Same prefix, different directory: must not inherit the allowance.
+        lookalike = repo.main / ".nikki-agents-notes"
+        lookalike.mkdir(exist_ok=True)
+        return lookalike
     if location == "based":
         base = repo.main / ".nikki-agents" / "worktrees"
         return add_worktree(repo, base / "ok", "based-branch")
@@ -268,3 +281,38 @@ def test_linked_worktree_of_a_separate_git_dir_repo_denies(tmp_path):
     assert reason is not None
     assert UNLOCATABLE in reason
     assert str(linked) in reason
+
+
+def test_scratch_write_from_outside_the_scratch_directory_is_allowed(repo):
+    """The agent's cwd is the main checkout; only the target decides."""
+    scratch = repo.main / ".nikki-agents" / ".kb"
+    scratch.mkdir(parents=True)
+    payload = {
+        "agent_id": "a", "cwd": str(repo.main),
+        "tool_name": "Write", "tool_input": {"file_path": str(scratch / "note.md")},
+    }
+    assert deny_reason("claude", agent_isolation.process("claude", payload)) is None
+
+
+def test_scratch_allowance_does_not_reach_a_traversal_out_of_it(repo):
+    """A path that only looks like scratch until ".." resolves still denies."""
+    scratch = repo.main / ".nikki-agents" / ".kb"
+    scratch.mkdir(parents=True)
+    escaped = scratch / ".." / ".." / "src.txt"
+    payload = {
+        "agent_id": "a", "cwd": str(repo.main),
+        "tool_name": "Write", "tool_input": {"file_path": str(escaped)},
+    }
+    assert MAIN in deny_reason("claude", agent_isolation.process("claude", payload))
+
+
+def test_an_exception_inside_the_guard_falls_through_to_allow(monkeypatch, capsys):
+    """Copilot fails closed on a non-zero exit, so a crash must never deny."""
+    def explode(*_args, **_kwargs):
+        raise RuntimeError("guard is broken")
+
+    monkeypatch.setattr(agent_isolation, "process", explode)
+    monkeypatch.setattr(sys, "argv", ["agent_isolation.py", "--harness", "claude"])
+    monkeypatch.setattr(sys, "stdin", io.StringIO(json.dumps({"agent_id": "a"})))
+    assert agent_isolation.main() == 0
+    assert capsys.readouterr().out == ""

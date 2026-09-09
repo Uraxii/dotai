@@ -9,7 +9,9 @@ turned down with a message saying how to get it right.
 Denies a write into the MAIN git checkout, a write from a linked worktree
 outside the base that worktree_location names, and a write from a repo
 whose main checkout git cannot name: a rule that cannot evaluate itself
-refuses. Outside a repo there is nothing to judge, so that allows.
+refuses. Outside a repo there is nothing to judge, so that allows. The one
+exception is the SCRATCH_DIR scratch space, which agents are told to keep
+their notes and knowledgebase in and which is never committed.
 
 Every path exits 0. Copilot fails CLOSED on a non-zero exit, so a crash in
 here must never deny the whole session; a caught exception falls through to
@@ -32,6 +34,7 @@ from worktree_location import base_for, git, is_inside_base, main_checkout_root
 
 CONTAINER_MARKERS = ("/run/.containerenv", "/.dockerenv")
 CLAUDE_DEFAULT_BASE = ".claude/worktrees"
+SCRATCH_DIR = ".nikki-agents"
 
 MAIN_CHECKOUT_REASON = (
     "Main checkout ({root}) is read-only for agents. Create your worktree "
@@ -119,12 +122,27 @@ def checkout_at(cwd: str) -> Checkout | UnlocatableCheckout | None:
     return Checkout(root, top, top == root)
 
 
-def placement_reason(checkout: Checkout | UnlocatableCheckout) -> str | None:
-    """Why writing from this checkout is refused, or None when it is fine."""
+def is_scratch(target: Path, root: Path) -> bool:
+    """True when target is in the checkout's gitignored scratch space.
+
+    Every project here keeps agent notes, decision logs and a knowledgebase
+    under SCRATCH_DIR and never commits it, so the read-only rule over the
+    main checkout must not cover it. Both sides resolve first, so a path
+    that only looks like scratch until ".." unwinds does not qualify.
+    """
+    return target.resolve().is_relative_to((root / SCRATCH_DIR).resolve())
+
+
+def placement_reason(
+    checkout: Checkout | UnlocatableCheckout, target: Path
+) -> str | None:
+    """Why writing to target from this checkout is refused, or None if fine."""
     if isinstance(checkout, UnlocatableCheckout):
         return UNLOCATABLE_ROOT_REASON.format(cwd=checkout.cwd)
     base = base_for(checkout.root)
     if checkout.is_main:
+        if is_scratch(target, checkout.root):
+            return None
         return MAIN_CHECKOUT_REASON.format(root=checkout.root, base=base)
     if is_inside_base(checkout.top, checkout.root):
         return None
@@ -197,7 +215,9 @@ def write_target(harness: str, tool_name: str, tool_args: dict, cwd: str) -> str
 def evaluate(harness: str, tool_name: str, tool_args: dict, cwd: str) -> str | None:
     target = write_target(harness, tool_name, tool_args, cwd)
     checkout = checkout_at(target) if target else None
-    return placement_reason(checkout) if checkout is not None else None
+    if checkout is None:
+        return None
+    return placement_reason(checkout, Path(target))
 
 
 def deny_payload(harness: str, reason: str) -> dict:
