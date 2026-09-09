@@ -108,12 +108,19 @@ def render(rows: list[list[str]]) -> None:
 
 
 def show_now(path: Path) -> None:
-    """One row per topic: the decision in force right now, newest first."""
+    """One row per topic: the decision in force right now, newest first.
+
+    Timestamps have one-second resolution, so a batch recorded together
+    ties. Position in the file breaks the tie: further down is newer.
+    """
     rows = read_rows(path)
     if not rows:
         sys.exit(f"no decisions recorded yet in {path}")
-    in_force = {row[1]: row for row in rows}
-    render(sorted(in_force.values(), key=lambda row: row[0], reverse=True))
+    in_force = {
+        row[1]: (row[0], position, row)
+        for position, row in enumerate(rows)
+    }
+    render([row for _, _, row in sorted(in_force.values(), reverse=True)])
 
 
 def show_log(path: Path, topic: str) -> None:
