@@ -1,0 +1,577 @@
+"""Story membership for summary pages, and the push warning.
+
+One summary joins or starts a story by shared identifier. A judge model
+(or, unconfigured, the first candidate) picks the story; the write is
+self-linted before it is kept, same rollback pattern as `summarize`.
+`push` then warns, on stdout and in the log, when the placed summary
+shares an identifier with a page the CLI does not own.
+"""
+from __future__ import annotations
+
+import re
+import sys
+import unicodedata
+from collections.abc import Iterable, Sequence
+from pathlib import Path
+from typing import NamedTuple
+
+from llmwiki.core import (
+    LOCK_WAIT_TIMEOUT_SEC,
+    FrontmatterValue,
+    Kb,
+    Page,
+    append_log_entry,
+    as_list,
+    atomic_write_bytes,
+    atomic_write_text,
+    kb_lock,
+    parse_frontmatter,
+    read_page_text,
+    render_frontmatter,
+    slugify,
+)
+from llmwiki.lint import lint_pages
+from llmwiki.model import ModelError, ModelTarget, chat, resolve_target, step_is_configured
+from llmwiki import vectors
+
+# The judge's own contract (decision agent-kb-0zf.5): a SUMMARIZE.md
+# analogue is not needed here, this prompt is never user-editable.
+# Wording measured against the live endpoint, same spirit as
+# summarize.BUILT_IN_PROMPT: the plain "belongs to an existing story"
+# framing let a shared identifier alone justify a match, joining an
+# unrelated later report at the same place to an old story.
+#
+# Every paragraph below states one rule, a story covers ONE SUBJECT.
+# The text this replaced stated story identity as one real-world
+# occurrence, which is an incident-tracker notion of identity and
+# wrong for every other kb (agent-kb-d1w): on a recipe kb, same page,
+# same candidate, same model, that wording returned NONE and rejected
+# a correct join at cosine 0.7579, well above NEIGHBOUR_FLOOR.
+#
+# Measured 2026-09-02 through the live endpoint on
+# google/gemini-2.5-flash, one judge call per trial, over summary and
+# story pages in the shape tests/fixtures/rung1/kb/SUMMARIZE.md asks
+# for. Subject wording, the text below:
+#   two Creme Brulee pages (rung1 sources 03 and 04)  joined, 3 of 3
+#   an omelette page against the Creme Brulee story   NONE,   3 of 3
+#   a same-day duplicate incident update              joined, 3 of 3
+#   a separate later outage, identifiers identical    NONE,   3 of 3
+# The last two are the incident behaviour the occurrence wording was
+# kept for. The occurrence wording scored 3 of 3 on both of them in
+# the same run, so subject framing costs nothing there and buys the
+# join the occurrence wording refused.
+#
+# The opening paragraph names both reasons a candidate can be listed.
+# It used to assert every candidate already shared an identifier,
+# which is false on the phase 13 vector seam: on a kb with no
+# identifier vocabulary every page carries `identifiers: []`, so the
+# judge was told to discount evidence that did not exist and never
+# told the evidence that did. `candidates` unions the two sources, so
+# one sentence covering both is true on either path and needs no
+# per-candidate provenance threaded through.
+#
+# The identifier caveat keeps its old force, narrowed by "by itself"
+# so it reads as a caution and not as a claim that identifiers are
+# present. A wider draft also told the judge that similar wording is
+# not evidence; on the frozen case above that read as an instruction
+# to discount the only evidence there was, so it was dropped.
+#
+# SCHEMA.md carries any domain-specific framing a kb wants; this
+# prompt stays fixed.
+DEDUP_PROMPT = """\
+Below is a new wiki summary page, then one or more existing story \
+pages. A candidate is listed because it shares an identifier with \
+the new summary, because its text is among the nearest matches to \
+it, or both.
+
+A story covers ONE subject. Answer with a candidate only when the \
+new summary reports that SAME subject: an initial report, a later \
+update, or a follow-up investigation into it.
+
+A shared identifier is NOT by itself evidence of a match. A place, \
+product, or person can appear in many unrelated stories.
+
+Default to NONE. Answer with a candidate slug only if you are \
+confident the two pages have the SAME subject; otherwise answer NONE.
+
+Reply with exactly one line: the candidate's slug, as written in its \
+"=== CANDIDATE: <slug> ===" heading, or the literal word NONE. No \
+other text, no explanation.
+
+Before answering, ask yourself: if both pages were filed under one \
+heading, would a reader see one subject, or two subjects that merely \
+share an identifier? Two means NONE.\
+"""
+
+SLUG_SUFFIX_LEN = 8  # hex chars of the first member hash, for a title collision
+
+# The judge answers a closed classification under a one-line reply
+# contract, so sampling variance is pure noise. Replaying one frozen
+# case (same page, same single candidate, same model) three times at
+# the endpoint default returned NONE, a join, and NONE again.
+#
+# Measured 2026-09-02, not assumed: temperature 0 REDUCES variance, it
+# does not remove it. The pre-fix prompt replayed six times at
+# temperature 0 on that same frozen case still answered NONE five
+# times and joined once. What the setting buys is that a case leaning
+# one way stops flipping the other; end to end it took the vocabulary
+# config from 5 of 6 to 6 of 6 and the vector-seam config from 2 of 3
+# to 4 of 4.
+#
+# Fixed here rather than exposed in config.toml: [models].dedup stays
+# configurable because model choice is a real decision, while a kb
+# that wanted a sampled judge would only be asking for that coin flip
+# back.
+JUDGE_TEMPERATURE = 0.0
+
+
+class Story(NamedTuple):
+    path: Path
+    fields: dict[str, FrontmatterValue]  # everything except members
+    members: list[str]  # summary source hashes, arrival order
+
+
+def normalise(value: str) -> str:
+    """NFKC-normalise, casefold, strip, and collapse internal whitespace
+    runs to one space, so an identifier joins on meaning, not spelling.
+    The identifier KEY is never run through this."""
+    folded = unicodedata.normalize("NFKC", value).casefold().strip()
+    return re.sub(r"\s+", " ", folded)
+
+
+def _joined_form(ident: str) -> tuple[str, str]:
+    """An identifier's join key: its key untouched, its value
+    normalised. Split on the FIRST colon, same as `lint`."""
+    key, _, value = ident.partition(":")
+    return key, normalise(value)
+
+
+def _joined_forms(identifiers: list[str]) -> set[tuple[str, str]]:
+    return {_joined_form(ident) for ident in identifiers}
+
+
+def candidates(
+    page: Page, stories: Iterable[Story], extra: Sequence[Story] = ()
+) -> list[Story]:
+    """Every story sharing at least one identifier with `page`, unioned
+    with `extra` (the phase 13 vector seam). Sorted by shared count
+    descending, then (among vector-only candidates) `extra`'s own
+    similarity order, then `first_seen` ascending, then path name
+    ascending for a total order."""
+    page_forms = _joined_forms(as_list(page.fields.get("identifiers")))
+    extra_paths = {story.path for story in extra}
+    extra_rank = {story.path: index for index, story in enumerate(extra)}
+    by_path: dict[Path, Story] = {}
+    for story in (*stories, *extra):
+        by_path.setdefault(story.path, story)
+
+    scored = []
+    for story in by_path.values():
+        story_forms = _joined_forms(as_list(story.fields.get("identifiers")))
+        shared = len(page_forms & story_forms)
+        # A vector candidate survives with no shared identifier: being
+        # nearest IS its evidence. Identifier matches still sort first.
+        if shared or story.path in extra_paths:
+            scored.append((shared, story))
+    scored.sort(
+        key=lambda pair: (
+            -pair[0],
+            extra_rank.get(pair[1].path, len(extra)),
+            str(pair[1].fields.get("first_seen") or ""),
+            pair[1].path.name,
+        )
+    )
+    return [story for _shared, story in scored]
+
+
+def _dedup_target(kb: Kb) -> ModelTarget | None:
+    """The configured dedup judge, or `None` when `[models].dedup` is
+    unset (the deterministic-fallback path). A malformed id raises
+    rather than reading as unset."""
+    if not step_is_configured(kb.config, "dedup"):
+        return None
+    return resolve_target(kb.config, "dedup")
+
+
+def _judge_prompt(page: Page, cands: list[Story]) -> str:
+    parts = [DEDUP_PROMPT, "=== NEW SUMMARY ===", read_page_text(page.path)]
+    for story in cands:
+        parts.append(f"=== CANDIDATE: {story.path.stem} ===")
+        parts.append(read_page_text(story.path))
+    return "\n\n".join(parts)
+
+
+def judge(kb: Kb, page: Page, cands: list[Story]) -> Story | None:
+    """Pick one of `cands` for `page`, or `None` for a new story. Makes
+    no model call when `cands` is empty. A `ModelError` from `chat`
+    propagates; the caller decides what that means for the run."""
+    if not cands:
+        return None
+    target = _dedup_target(kb)
+    if target is None:
+        return cands[0]
+
+    reply = chat(target, _judge_prompt(page, cands), temperature=JUDGE_TEMPERATURE)
+    first_line = reply.split("\n", 1)[0].strip()
+    for story in cands:
+        if first_line == story.path.stem:
+            return story
+    if first_line != "NONE":
+        digest = str(page.fields.get("source", ""))
+        append_log_entry(
+            kb.log, "dedup", f"{digest}: judge reply not a candidate or NONE: {first_line!r}"
+        )
+    return None
+
+
+def _union_identifiers(members: list[str], summaries: dict[str, Page]) -> list[str]:
+    """Union of the members' identifiers, member order, first spelling
+    kept per normalised form."""
+    seen: set[tuple[str, str]] = set()
+    result: list[str] = []
+    for digest in members:
+        summary = summaries.get(digest)
+        if summary is None:
+            continue
+        for ident in as_list(summary.fields.get("identifiers")):
+            form = _joined_form(ident)
+            if form not in seen:
+                seen.add(form)
+                result.append(ident)
+    return result
+
+
+def _seen_range(members: list[str], summaries: dict[str, Page]) -> tuple[str, str]:
+    """min/max of the members' `fetched` values; a missing value, or a
+    missing member, contributes the empty string."""
+    fetched = [
+        str(summaries[d].fields.get("fetched", "")) if d in summaries else ""
+        for d in members
+    ] or [""]
+    return min(fetched), max(fetched)
+
+
+def _story_body(story: Story, summaries: dict[str, Page]) -> str:
+    """`## <member title>` then a blank line then that member's
+    abstract, one section per member, in member order. Regenerated on
+    every write, never carried over from a previous body."""
+    sections = []
+    for digest in story.members:
+        summary = summaries.get(digest)
+        if summary is None:
+            continue
+        title = str(summary.fields.get("title", ""))
+        sections.append(f"## {title}\n\n{summary.body}")
+    return "\n\n".join(sections)
+
+
+def _free_story_path(kb: Kb, digest: str, title: str) -> Path:
+    """Replaces _claim_new_story_path. Plain slug when free, else the
+    digest-suffixed fallback. CALLER MUST HOLD kb_lock."""
+    candidate = kb.wiki / f"{slugify(title)}.md"
+    if not candidate.exists():
+        return candidate
+    return kb.wiki / f"{slugify(title)}-{digest[:SLUG_SUFFIX_LEN]}.md"
+
+
+def _new_fields(
+    title: str, identifiers: list[str], first_seen: str, last_seen: str, model_id: str
+) -> dict[str, FrontmatterValue]:
+    return {
+        "kind": "story",
+        "title": title,
+        "identifiers": identifiers,
+        "first_seen": first_seen,
+        "last_seen": last_seen,
+        "model": model_id,
+    }
+
+
+def _write_story(
+    kb: Kb, story: Story, digest: str, summary: Page, sources: dict[str, Page],
+    is_new: bool,
+) -> bool:
+    """Write `story` and the summary's `story:` back-reference, self-lint
+    the pair, and roll both back on any finding (previous text restored,
+    or the file unlinked when there was none). Returns False, leaving
+    the summary story-less, when the write was dropped. `is_new` names
+    whether `story.path` is a brand-new story (its path came from
+    `_free_story_path`) rather than whether a file happens to exist
+    there right now."""
+    story_prev = None if is_new else story.path.read_bytes()
+    summary_prev = summary.path.read_bytes()
+
+    story_fields = dict(story.fields)
+    story_fields["members"] = story.members
+    atomic_write_text(
+        story.path, render_frontmatter(story_fields, _story_body(story, sources))
+    )
+
+    summary_fields = dict(summary.fields)
+    summary_fields["story"] = story.path.stem
+    atomic_write_text(summary.path, render_frontmatter(summary_fields, summary.body))
+
+    findings = lint_pages(kb.root, [story.path, summary.path])
+    if not findings:
+        return True
+
+    if story_prev is None:
+        story.path.unlink()
+    else:
+        atomic_write_bytes(story.path, story_prev)
+    atomic_write_bytes(summary.path, summary_prev)
+    finding = findings[0]
+    append_log_entry(
+        kb.log, "dedup", f"{digest}: dropped ({finding.check}: {finding.detail})"
+    )
+    return False
+
+
+def push(kb: Kb, page: Page, agent_pages: list[Page]) -> int:
+    """Warn, one stdout line and one log line per match, for every
+    agent page (kind neither `summary` nor `story`) sharing an
+    identifier with `page`. No model call, no page edit."""
+    page_forms = _joined_forms(as_list(page.fields.get("identifiers")))
+    digest = str(page.fields.get("source", ""))
+    warned = 0
+    for agent_page in agent_pages:
+        agent_idents = as_list(agent_page.fields.get("identifiers"))
+        shared_forms = page_forms & _joined_forms(agent_idents)
+        if not shared_forms:
+            continue
+        shared = sorted(
+            ident for ident in agent_idents if _joined_form(ident) in shared_forms
+        )
+        print(f"push\t{agent_page.path}\t{','.join(shared)}", file=sys.stderr)
+        append_log_entry(
+            kb.log, "push", f"{digest} touches {agent_page.path} ({len(shared)} shared)"
+        )
+        warned += 1
+    return warned
+
+
+def _load_wiki(kb: Kb) -> tuple[dict[str, Page], dict[Path, Story], list[Page]]:
+    """One pass over `wiki/*.md`: summaries keyed by source hash,
+    stories keyed by path, and every other (agent-owned) page. An
+    unparseable page is skipped, never a crash, and so is a page
+    unlinked between the glob and this read."""
+    summaries: dict[str, Page] = {}
+    stories: dict[Path, Story] = {}
+    agent_pages: list[Page] = []
+    for path in sorted(kb.wiki.glob("*.md")):
+        try:
+            text = read_page_text(path)
+        except FileNotFoundError:
+            continue  # unlinked between the glob and this read
+        parsed = parse_frontmatter(text)
+        if parsed is None:
+            continue
+        fields, body = parsed
+        kind = fields.get("kind")
+        if kind == "summary":
+            source = str(fields.get("source", ""))
+            if source:
+                summaries[source] = Page(path, fields, body)
+        elif kind == "story":
+            members = as_list(fields.pop("members", None))
+            stories[path] = Story(path, fields, members)
+        else:
+            agent_pages.append(Page(path, fields, body))
+    return summaries, stories, agent_pages
+
+
+def _pick_target(
+    kb: Kb, summary: Page, stories: dict[Path, Story]
+) -> tuple[Story | None, str]:
+    """The story `summary` should join, or `None` to start a new one,
+    plus the model id that decided it (or "none")."""
+    extra: list[Story] = []
+    # GATE (today's decision): vector neighbours are consulted only
+    # when a dedup judge model is configured. With no judge, `judge`
+    # takes cands[0] blindly and cannot answer NONE, so an unjudged
+    # vector candidate would silently merge two merely-nearby pages,
+    # and the closest unrelated pair measured in the arena corpus is
+    # 0.6922 similarity. With no dedup model, dedup must behave
+    # exactly as it does today.
+    target = _dedup_target(kb)
+    if target is not None:
+        for _score, path in vectors.neighbours(kb, summary.path, "story"):
+            story = stories.get(path)
+            if story is not None:
+                extra.append(story)
+    cands = candidates(summary, stories.values(), extra)
+    return judge(kb, summary, cands), target.id if target is not None else "none"
+
+
+def _place_summary(
+    kb: Kb, digest: str, summary: Page, summaries: dict[str, Page], stories: dict[Path, Story]
+) -> tuple[Story, str] | None:
+    """Join or start a story for `summary`. Returns `(story, action)`
+    with `action` "new" or "joined" on success, `None` when self-lint
+    dropped the write."""
+    target, model_id = _pick_target(kb, summary, stories)
+
+    is_new = target is None
+    if is_new:
+        members = [digest]
+        title = str(summary.fields.get("title", ""))
+        path = _free_story_path(kb, digest, title)
+        action = "new"
+    else:
+        members = target.members if digest in target.members else [*target.members, digest]
+        title = str(target.fields.get("title", ""))
+        path = target.path
+        action = "joined"
+
+    identifiers = _union_identifiers(members, summaries)
+    first_seen, last_seen = _seen_range(members, summaries)
+    fields = _new_fields(title, identifiers, first_seen, last_seen, model_id)
+    story = Story(path, fields, members)
+
+    sources = {**summaries, digest: summary}
+    if not _write_story(kb, story, digest, summary, sources, is_new):
+        return None
+    return story, action
+
+
+def _target_digests(digests: list[str] | None, summaries: dict[str, Page]) -> list[str]:
+    """Every requested digest, or every summary lacking a `story:`
+    field when `None`. A digest whose summary already carries a
+    non-empty `story:` field is never a target, whether it was named
+    explicitly or not: moving a summary between stories is
+    `--rebuild`'s job (phase 8), not this one's. A digest with no
+    summary page at all still passes through, so `run` logs its own
+    drop for that case."""
+    pool = list(summaries) if digests is None else digests
+    return [
+        digest
+        for digest in pool
+        if digest not in summaries or not summaries[digest].fields.get("story")
+    ]
+
+
+def _ordered(digests: list[str], summaries: dict[str, Page]) -> list[str]:
+    def key(digest: str) -> tuple[str, str]:
+        page = summaries.get(digest)
+        fetched = str(page.fields.get("fetched", "")) if page else ""
+        return fetched, digest
+
+    return sorted(digests, key=key)
+
+
+def _replay(
+    kb: Kb,
+    targets: list[str],
+    summaries: dict[str, Page],
+    stories: dict[Path, Story],
+    agent_pages: list[Page],
+) -> int:
+    """Place a story for each digest in `targets`, in order, accumulating
+    into `stories`. Returns the number placed; fewer than len(targets)
+    means something was dropped or a model error cut the run short."""
+    placed = 0
+    for digest in targets:
+        summary = summaries.get(digest)
+        if summary is None:
+            append_log_entry(kb.log, "dedup", f"{digest}: dropped (no summary page for source)")
+            continue
+        try:
+            result = _place_summary(kb, digest, summary, summaries, stories)
+        except ModelError as exc:
+            print(f"llmwiki: dedup: {exc}", file=sys.stderr)
+            break
+        except FileNotFoundError as exc:
+            # A page read while building the judge prompt (the
+            # summary itself, or a candidate story) vanished after
+            # _load_wiki snapshotted it. Unlike a reader glob that
+            # just drops a vanished row, this digest's target is
+            # gone: log it as a drop, same as any other dropped
+            # write, and move on to the next digest.
+            append_log_entry(
+                kb.log, "dedup", f"{digest}: dropped (target vanished: {exc})"
+            )
+            continue
+        if result is None:
+            continue
+        story, action = result
+        stories[story.path] = story
+        append_log_entry(kb.log, "dedup", f"{digest} -> {story.path.stem} ({action})")
+        push(kb, summary, agent_pages)
+        placed += 1
+
+    return placed
+
+
+def rebuild(root: Path) -> int:
+    """Discard every story page and replay every summary from scratch
+    (decision `.5`): the repair for a placement a lost race or ordering
+    got wrong. Returns 1 if anything was dropped on replay, else 0. Runs
+    under the kb lock for its whole span: it unlinks every story page,
+    and that window is unsafe beside any other writer."""
+    kb = Kb(root)
+    with kb_lock(kb.root):
+        summaries, stories, _agent_pages = _load_wiki(kb)
+
+        for story in stories.values():
+            story.path.unlink()
+
+        for summary in summaries.values():
+            # A summary that never carried `story:` must come back off
+            # this loop byte-identical, so only a non-None pop triggers
+            # a write.
+            removed = summary.fields.pop("story", None)
+            if removed is not None:
+                atomic_write_text(
+                    summary.path, render_frontmatter(summary.fields, summary.body)
+                )
+
+        targets = _ordered(list(summaries), summaries)
+        print(f"dedup: {len(targets)} planned")
+
+        # `rebuilt` starts empty, never seeded from `stories`: every
+        # loaded story page was just deleted above, so there is nothing
+        # to carry forward.
+        rebuilt: dict[Path, Story] = {}
+        # `[]`, not `_agent_pages`: this IS decision `.22`, push does
+        # not run at rebuild. Every summary being replayed here already
+        # had its push warning emitted the first time it was placed;
+        # firing it again on every rebuild would just be noise.
+        placed = _replay(kb, targets, summaries, rebuilt, [])
+
+        append_log_entry(
+            kb.log, "dedup", f"rebuild {placed} summaries into {len(rebuilt)} stories"
+        )
+    return 0 if placed == len(targets) else 1
+
+
+def place(kb: Kb, digests: list[str] | None) -> tuple[int, int]:
+    """Place a story for each of `digests`, or every summary lacking a
+    `story:` field when `None`. Returns (placed, attempted).
+
+    CALLER MUST HOLD kb_lock. This loads the whole wiki and writes from
+    that load; a second writer inside the span reinstates the
+    lost-update and duplicate-story races verbatim.
+
+    Prints one stderr line when [models] dedup is set: the run then
+    holds the lock across one model call per target, and a second
+    writer gets KbBusy after LOCK_WAIT_TIMEOUT_SEC."""
+    if _dedup_target(kb) is not None:
+        print(
+            "llmwiki: dedup: [models] dedup is set, so this run holds the "
+            "kb lock across one model call per target; a second writer "
+            f"gets KbBusy after {LOCK_WAIT_TIMEOUT_SEC}s",
+            file=sys.stderr,
+        )
+    summaries, stories, agent_pages = _load_wiki(kb)
+    targets = _ordered(_target_digests(digests, summaries), summaries)
+    print(f"dedup: {len(targets)} planned")
+    placed = _replay(kb, targets, summaries, stories, agent_pages)
+    return placed, len(targets)
+
+
+def run(root: Path, digests: list[str] | None) -> int:
+    """CLI `dedup`."""
+    kb = Kb(root)
+    with kb_lock(kb.root):
+        placed, attempted = place(kb, digests)
+    return 0 if placed == attempted else 1
