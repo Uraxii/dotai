@@ -39,7 +39,7 @@ a named paper format, whoever chose it. One ruling each.
 | staff study | restate the problem; define terms; summarize background; explain calculations |
 | running estimate | restate the problem; summarize background; explain calculations |
 
-Design mark: skill-authored, not source-quoted. `scripts/check-report.sh`
+Design mark: skill-authored, not source-quoted. `scripts/check_report.py`
 reads this table for check 5. Each row's derivation, so an auditor can check
 it without redoing it:
 

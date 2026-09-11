@@ -14,7 +14,7 @@ Order of the step:
 3. Run the checks (below) against the draft and the artifacts. Score every
    one of them on the scoreboard (below) as you go, before you write the
    deviations block.
-4. Run `bash <this-skill-directory>/scripts/check-report.sh <report>
+4. Run `python3 <this-skill-directory>/scripts/check_report.py <report>
    <materials-dir>`, where the materials directory is the folder the
    operator named. Fix what it names, then run it again. A report you send
    while it still fails is unfinished.
@@ -71,7 +71,7 @@ once into the deviations block.
 Your working directory is the report's, not this skill's, so run the checker
 by this skill's own path:
 
-`bash <this-skill-directory>/scripts/check-report.sh <report> <materials-dir>`
+`python3 <this-skill-directory>/scripts/check_report.py <report> <materials-dir>`
 
 The materials directory is the folder the operator named. It has to hold
 the report's own directory, so a report written into an `out/` subfolder
@@ -97,7 +97,7 @@ The numbered checks:
    fails this. Whatever sits outside the announced body is end matter, and
    every end-matter item is one of these five types. The list is closed; the
    count is not. Zero, one, or several items of a type all pass. Each item
-   carries the heading named here; that is how scripts/check-report.sh reads
+   carries the heading named here; that is how scripts/check_report.py reads
    the type.
    - The source list. `## Sources`.
    - The deviations block. `## Deviations`.
@@ -110,7 +110,7 @@ The numbered checks:
      `## Attachment: <name>`. Several attachments pass.
    An item under any other heading fails this check. A cover letter sits
    before the body, not after it: it is front matter, not end matter, and
-   scripts/check-report.sh scans from the first end-of-body heading (Sources,
+   scripts/check_report.py scans from the first end-of-body heading (Sources,
    Deviations, Format elements, or an Attachment) to EOF. A leading cover
    letter falls before that scan and is never inspected by the script; check
    11 stays a human read. [contract]
@@ -129,7 +129,7 @@ The numbered checks:
    element on that format's row. Announcing the format's parts is not naming
    them. That naming goes in the format-elements note, one end-matter item
    under the heading `## Format elements` (check 2), never in the notes file
-   and never folded into the body. scripts/check-report.sh diffs the table
+   and never folded into the body. scripts/check_report.py diffs the table
    row against the note. (The tie-break: references/collisions.md.)
    [Part I, Part III, ICD-D / `4b0f9a500133`]
 6. Every number is compared to another number, and every figure carries its
@@ -209,7 +209,7 @@ The numbered checks:
     came from. One that traces to no such line was manufactured while
     drafting, and it fails this check. The remedy is the send-back in step 5,
     never a line added to the notes to cover it.
-    scripts/check-report.sh walks the materials directory the operator
+    scripts/check_report.py walks the materials directory the operator
     named, recursively, for a 40-plus-word span that also appears in the
     report or in its notes file, whitespace and case normalized, and fails
     unless this check is scored `not-met` with the deviation recorded. The
@@ -226,7 +226,7 @@ The numbered checks:
 23. Every check this report does not meet appears in the deviations block as
     its own entry, with its authorising rule quoted and what the reader loses.
     Score every check on the scoreboard first, then transcribe.
-    scripts/check-report.sh counts the not-met rows, counts the entries, and
+    scripts/check_report.py counts the not-met rows, counts the entries, and
     fails when they differ or when a row's quoted rule does not appear in its
     entry. An entry with no quoted authoriser fails this check. This check
     records what you already found; a check you scored met
