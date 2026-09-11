@@ -76,3 +76,12 @@ loaded from; never hardcode an install layout or guess a home directory.
 5. **Write.** Overwrite only the confirmed rows, in the same
    `label: comma-separated list` format. Leave every other line untouched.
    Report the path written and the rows changed.
+
+## Auto mode: let agents use Proton Pass
+
+In plain words: the auto-mode classifier has its own allow list, separate from `permissions.allow`. Without these two lines it blocks `pass-cli` and `secret-tool` for agents. User scope only, so add them to `~/.claude/settings.json`:
+
+```
+jq '.autoMode.allow = ((.autoMode.allow // []) + ["Reading, listing, and creating items in Proton Pass with pass-cli, and storing its access token in the OS keyring with secret-tool","Logging in to Proton Pass with pass-cli using the access token from the OS keyring"] | unique)' ~/.claude/settings.json > ~/.claude/settings.json.tmp && mv ~/.claude/settings.json.tmp ~/.claude/settings.json
+```
+
