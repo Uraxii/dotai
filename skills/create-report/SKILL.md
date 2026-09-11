@@ -127,7 +127,7 @@ visibly distinct.
    order: big picture, then paragraphs, then sentences and words.
 8. **Check.** Run references/checklist.md against the finished draft. Score
    every check on `<report-name>.checks.md` beside the report, then run
-   `bash <this-skill-directory>/scripts/check-report.sh <report>
+   `python3 <this-skill-directory>/scripts/check_report.py <report>
    <materials-dir>`, passing the folder the operator named, and fix what
    it names. Run the key assumptions check a second time and run the
    sensitivity test; record both outputs. The heavy challenge techniques
