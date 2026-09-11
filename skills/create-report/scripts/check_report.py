@@ -40,7 +40,6 @@ UNREADABLE_NAMES_SHOWN = 5
 SENTENCE_ENDS = (".", "!", "?")
 VERDICTS = ("met", "not-met", "n-a")
 SCOREBOARD_CELLS = 5
-MARKDOWN_SUFFIX = ".md"
 ADMISSIBLE_END_MATTER = frozenset(
     ("Sources", "Deviations", "Format elements", "Cover letter")
 )
@@ -84,6 +83,16 @@ SKILL_DIR = absolute(__file__).parent.parent
 COLLISIONS = SKILL_DIR / "references" / "collisions.md"
 
 
+def lines_of(path: Path) -> list[str]:
+    """The file's lines, broken on newline and nothing else.
+
+    str.splitlines() also breaks on U+2028, U+0085, form feed and their
+    relatives, which arrive in text pasted out of PDFs and word processors.
+    The report contract counts those as ordinary characters inside a line.
+    """
+    return path.read_text(encoding="utf-8").split("\n")
+
+
 def fail(message: str) -> NoReturn:
     print(f"FAIL: {message}", file=sys.stderr)
     raise SystemExit(1)
@@ -91,8 +100,8 @@ def fail(message: str) -> NoReturn:
 
 def sibling(report: str, suffix: str) -> str:
     """The report's path with its '.md' tail swapped for another one."""
-    if report.endswith(MARKDOWN_SUFFIX):
-        return report[: -len(MARKDOWN_SUFFIX)] + suffix
+    if report.endswith(".md"):
+        return report[: -len(".md")] + suffix
     return report + suffix
 
 
@@ -102,11 +111,6 @@ class ScoreboardRow(NamedTuple):
     authoriser: str
     quoted_rule: str
     reader_loses: str
-
-
-class DeviationEntry(NamedTuple):
-    check: str
-    rest: str
 
 
 class SpanHit(NamedTuple):
@@ -125,7 +129,7 @@ def parse_scoreboard(scoreboard: Path) -> tuple[str, list[ScoreboardRow]]:
     """The declared format and every five-cell numbered row of the table."""
     declared_format = ""
     rows: list[ScoreboardRow] = []
-    for line in scoreboard.read_text(encoding="utf-8").splitlines():
+    for line in lines_of(scoreboard):
         declared = re.match(r"^Format:\s*(.+?)\s*$", line)
         if declared:
             declared_format = declared.group(1)
@@ -162,11 +166,15 @@ def index_rows(
     return by_check
 
 
-def parse_deviations(report: Path) -> list[DeviationEntry]:
-    """Every entry under the report's own '## Deviations' heading."""
-    entries: list[DeviationEntry] = []
+def parse_deviations(report: Path) -> list[str]:
+    """One item per entry under '## Deviations': the check number it cites.
+
+    An entry citing a rule rather than a numbered check contributes an empty
+    string, so the list still counts every entry.
+    """
+    cited: list[str] = []
     in_block = False
-    for line in report.read_text(encoding="utf-8").splitlines():
+    for line in lines_of(report):
         if re.match(r"^##\s+Deviations\s*$", line):
             in_block = True
             continue
@@ -176,25 +184,23 @@ def parse_deviations(report: Path) -> list[DeviationEntry]:
             continue
         entry = re.match(r"^-\s+(?:Check\s+(\d+)|Rule\s+.+?)\.\s*(.*)$", line)
         if entry:
-            entries.append(
-                DeviationEntry(entry.group(1) or "", entry.group(2))
-            )
-    return entries
+            cited.append(entry.group(1) or "")
+    return cited
 
 
 def check_deviations_agree(
     report: Path, report_arg: str, by_check: dict[str, ScoreboardRow]
 ) -> None:
     """Not-met rows and deviation entries must match one for one."""
-    entries = parse_deviations(report)
+    cited = parse_deviations(report)
     not_met = [
         number
         for number in range(1, CHECK_COUNT + 1)
         if by_check[str(number)].verdict == "not-met"
     ]
-    if len(not_met) != len(entries):
+    if len(not_met) != len(cited):
         fail(
-            f"{len(not_met)} checks not met, {len(entries)} deviation entries"
+            f"{len(not_met)} checks not met, {len(cited)} deviation entries"
             f" in {report_arg}"
         )
     for number in not_met:
@@ -206,16 +212,14 @@ def check_deviations_agree(
         ):
             if not value:
                 fail(f"check {number} is not-met with no {name} field")
-    for entry in entries:
-        if not entry.check:
+    for check in cited:
+        if not check:
             continue
-        row = by_check.get(entry.check)
+        row = by_check.get(check)
         scored = row.verdict if row else "missing"
         if scored != "not-met":
-            fail(
-                f"deviations entry cites check {entry.check},"
-                f" scoreboard scores it {scored}"
-            )
+            fail(f"deviations entry cites check {check},"
+                 f" scoreboard scores it {scored}")
 
 
 def is_attachment(heading: str) -> bool:
@@ -231,7 +235,7 @@ def first_inadmissible_heading(report: Path) -> str | None:
     scan runs from the first end-of-body heading to the end of the file.
     """
     headings = []
-    for line in report.read_text(encoding="utf-8").splitlines():
+    for line in lines_of(report):
         heading = re.match(r"^##\s+(.+?)\s*$", line)
         if heading:
             headings.append(heading.group(1))
@@ -255,7 +259,7 @@ def collision_rows(collisions: Path) -> list[list[str]]:
     """Every two-cell data row of the excluded-elements table."""
     rows: list[list[str]] = []
     in_table = False
-    for line in collisions.read_text(encoding="utf-8").splitlines():
+    for line in lines_of(collisions):
         if line.strip() == CLAIMS_HEADING:
             in_table = True
             continue
@@ -291,7 +295,7 @@ def named_elements(report: Path) -> list[str]:
     """Every element the report's own '## Format elements' note names."""
     named: list[str] = []
     in_block = False
-    for line in report.read_text(encoding="utf-8").splitlines():
+    for line in lines_of(report):
         if re.match(r"^##\s+Format elements\s*$", line):
             in_block = True
             continue
@@ -391,7 +395,7 @@ class ComparedSide(NamedTuple):
 
 
 def notes_path(report: Path) -> Path | None:
-    if not str(report).endswith(MARKDOWN_SUFFIX):
+    if not str(report).endswith(".md"):
         return None
     return Path(sibling(str(report), ".notes.md"))
 
@@ -464,7 +468,7 @@ def scan_verbatim(report: Path, materials: Path) -> VerbatimScan:
     """
     sides, unreadable = report_sides(report, materials)
     skip = {report}
-    if str(report).endswith(MARKDOWN_SUFFIX):
+    if str(report).endswith(".md"):
         skip.add(Path(sibling(str(report), ".checks.md")))
     compared_count = 0
     hit: SpanHit | None = None
@@ -520,7 +524,7 @@ def parse_arguments(args: list[str]) -> tuple[str, Path, Path]:
     report_arg, materials_arg = args
     if not Path(report_arg).is_file():
         fail(f"no report: {report_arg}")
-    if not Path(materials_arg).is_dir():
+    if not materials_arg or not Path(materials_arg).is_dir():
         fail(f"no materials directory: {materials_arg}")
     materials = absolute(materials_arg)
     report = absolute(report_arg)

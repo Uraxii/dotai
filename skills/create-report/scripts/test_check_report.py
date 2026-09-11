@@ -547,6 +547,68 @@ def test_every_fixture_from_the_shell_script_is_covered() -> None:
     assert len({fixture.name for fixture in FIXTURES}) == 30
 
 
+# Line-break characters other than newline, as they arrive in text pasted
+# out of a PDF or a word processor.
+LINE_SEPARATOR = "\u2028"
+NEXT_LINE = "\u0085"
+
+REGRESSIONS = (
+    Fixture(
+        "U+2028 does not start the entry under '## Deviations'",
+        1,
+        "1 checks not met, 0 deviation entries",
+        "report.md",
+        (
+            ("report.md",
+             f"{clean_report()}\n\n## Deviations{LINE_SEPARATOR}"
+             "- Check 3. It happened."),
+            ("report.checks.md",
+             board("point paper",
+                   custom={3: '| 3 | not-met | Op. | "waived" | loss |'})),
+        ),
+    ),
+    Fixture(
+        "U+0085 mid-line does not invent an end-matter heading",
+        0,
+        "no undeclared verbatim span found",
+        "report.md",
+        (
+            ("report.md", f"{clean_report()}{NEXT_LINE}## Cheese"),
+            ("report.checks.md", board("point paper")),
+        ),
+    ),
+)
+
+
+@pytest.mark.parametrize(
+    "fixture", REGRESSIONS, ids=[fixture.name for fixture in REGRESSIONS]
+)
+def test_only_a_newline_starts_a_new_line(fixture: Fixture) -> None:
+    """A report carries U+2028, U+0085 and friends whenever someone pastes
+    out of a PDF or a word processor. They are characters inside a line, not
+    line breaks, so neither one may change a verdict."""
+    status, output = run_fixture(fixture)
+    assert status == fixture.want_exit, output
+    assert fixture.want_output in output
+
+
+def test_empty_materials_argument_is_not_the_current_directory() -> None:
+    """A caller whose materials variable went unset must be refused, never
+    handed a green verdict over a tree nobody scanned."""
+    fixture = next(f for f in FIXTURES if f.name == "clean report, nothing"
+                   " to flag")
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        build_tree(root, fixture)
+        done = subprocess.run(
+            [sys.executable, str(SCRIPT), str(root / "report.md"), ""],
+            capture_output=True, text=True, cwd=root,
+        )
+    assert done.returncode == 1
+    assert done.stdout == ""
+    assert done.stderr == "FAIL: no materials directory: \n"
+
+
 def test_a_failure_names_itself_on_stderr_and_exits_one() -> None:
     """The FAIL prefix and the stream it goes to are part of the contract."""
     fixture = next(
