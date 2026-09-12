@@ -7,22 +7,19 @@ ENV DEBIAN_FRONTEND=noninteractive \
     LIBGL_ALWAYS_SOFTWARE=1 \
     GALLIUM_DRIVER=llvmpipe
 
-# TODO: one apt-get install layer, --no-install-recommends, lists removed in
-#       the same RUN. Three groups, and nothing outside them:
-#         build and test: git python3 python3-venv build-essential
-#                         ca-certificates curl unzip jq procps
-#         screenshot:     xvfb x11-utils imagemagick
-#         software GL:    mesa-vulkan-drivers libvulkan1 libgl1 libglx-mesa0
-#                         libegl1 libx11-6 libxcursor1 libxinerama1 libxrandr2
-#                         libxi6 libxext6 fontconfig libfreetype6
-# TODO: x11-apps and xdotool were in the previous base and are dropped: no
-#       code called either. Add one back only when something does.
-# TODO: audio libraries (libasound2t64, libpulse0) are dropped too. A profile
-#       whose app refuses to start without them installs them itself.
+RUN apt-get update -qq \
+    && apt-get install -y -qq --no-install-recommends \
+        git python3 python3-venv build-essential ca-certificates curl \
+        unzip jq procps \
+        xvfb x11-utils imagemagick \
+        mesa-vulkan-drivers libvulkan1 libgl1 libglx-mesa0 libegl1 \
+        libx11-6 libxcursor1 libxinerama1 libxrandr2 libxi6 libxext6 \
+        fontconfig libfreetype6 \
+    && rm -rf /var/lib/apt/lists/*
 
-# TODO: COPY lab-shot /usr/local/bin/lab-shot, chmod 755.
-# TODO: git config --global --add safe.directory '*', because the clone in the
-#       /work volume is owned by a uid git does not expect.
+COPY lab-shot /usr/local/bin/lab-shot
+RUN chmod 755 /usr/local/bin/lab-shot \
+    && git config --global --add safe.directory '*'
 
 WORKDIR /work
 CMD ["sleep", "infinity"]

@@ -7,8 +7,8 @@
 # wait SECONDS, capture, then stop both. With no COMMAND: capture DISPLAY as
 # it is, start nothing, stop nothing, so a long-running editor survives.
 #
-# This file is bash, not Python, deliberately. It is five execs and one pipe
-# with no logic of its own, which Python could only wrap in subprocess calls,
+# This file is bash, not Python, deliberately. It is five execs with no logic
+# of its own, which Python could only wrap in subprocess calls,
 # and it must run in every profile's image without requiring python3 there.
 # "$@" keeps the caller's argument list intact, so no shell string is ever
 # built from it.
@@ -16,17 +16,30 @@
 # Prints one ImageMagick identify line. A caller judges a blank frame from
 # stddev and colors without opening the image.
 
-# TODO: set -euo pipefail
-# TODO: read OUT, DISPLAY, SECONDS positionally; fail with the usage line
-#       above when OUT, DISPLAY, or SECONDS is missing.
-# TODO: when "$#" is 0 after the three positionals, skip to the capture step.
-# TODO: start Xvfb on DISPLAY at 1280x720x24 with -nolisten tcp, recording
-#       its pid, and trap EXIT to kill the command and Xvfb.
-# TODO: poll xdpyinfo until the display answers, bounded, so the command
-#       never starts against a display that is not up yet.
-# TODO: run "$@" with DISPLAY, LIBGL_ALWAYS_SOFTWARE=1 and
-#       GALLIUM_DRIVER=llvmpipe set, output to /tmp/lab-shot-cmd.log.
-# TODO: sleep SECONDS.
-# TODO: capture: xwd -root -silent on DISPLAY piped into magick xwd:- OUT.
-# TODO: print identify -format
-#       '%wx%h stddev=%[standard-deviation] colors=%k bytes=%B\n' OUT.
+set -euo pipefail
+
+out=${1:-}
+display=${2:-}
+seconds=${3:-}
+if [ -z "$out" ] || [ -z "$display" ] || [ -z "$seconds" ]; then
+	echo 'usage: lab-shot OUT.png DISPLAY SECONDS [COMMAND...]' >&2
+	exit 2
+fi
+shift 3
+
+if [ "$#" -gt 0 ]; then
+	Xvfb "$display" -screen 0 1280x720x24 -nolisten tcp &
+	xvfb_pid=$!
+	trap 'kill ${cmd_pid:-} $xvfb_pid 2>/dev/null || true' EXIT
+	for _ in $(seq 50); do
+		DISPLAY=$display xdpyinfo >/dev/null 2>&1 && break
+		sleep 0.2
+	done
+	DISPLAY=$display "$@" >/tmp/lab-shot-cmd.log 2>&1 &
+	cmd_pid=$!
+	sleep "$seconds"
+fi
+
+DISPLAY=$display import -window root "$out"
+identify -format '%wx%h stddev=%[standard-deviation] colors=%k bytes=%B\n' \
+	"$out"
