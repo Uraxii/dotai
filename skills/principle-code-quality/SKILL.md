@@ -8,7 +8,7 @@ description: Load before writing or changing code in any language, and before re
 Repo's own documented standard override this file. Skip anything the repo's
 tooling already enforce. Working in one of these languages, read the matching
 file on demand: `references/python.md`, `references/typescript.md`,
-`references/csharp.md`, `references/gdscript.md`, `references/godot.md`. Read
+`references/csharp.md`, `references/gdscript.md`. Read
 adjacent code first: match its naming, formatting, error handling, logging,
 config, test patterns, and use the utilities already there.
 
