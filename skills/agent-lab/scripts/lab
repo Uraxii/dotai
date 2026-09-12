@@ -1,0 +1,168 @@
+#!/usr/bin/env python3
+"""Command line for agent-lab: a throwaway podman container per agent.
+
+    lab up NAME [--repo PATH] [--profile NAME] [--branch BRANCH] [--port N]
+    lab exec NAME ARGV...
+    lab shot NAME [--out PATH] [--seconds N] [-- ARGV...]
+    lab down NAME
+    lab check [--profile NAME]
+
+Python standard library only, forever. No pip dependency.
+
+INVARIANT: every subprocess call in this skill takes a `list[str]` and never
+`shell=True`. This file's `git` function and `lab_container.podman` are the
+only two places a subprocess starts. A caller who wants a shell passes
+`["bash", "-lc", script]` as argv and owns that script.
+
+This file is the shell of the program: it parses argv, reads host git facts,
+calls the converge functions, and prints one machine-readable line. The
+decisions live in `lab_profile` and `lab_container`.
+"""
+
+from __future__ import annotations
+
+import argparse
+import subprocess
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
+
+import lab_container
+import lab_profile
+
+SHOT_DIR_SUBPATH = Path(".nikki-agents") / "lab" / "shots"
+SHOT_CONTAINER_PATH = "/tmp/lab-shot.png"
+DEFAULT_PROFILE = "base"
+DEFAULT_SHOT_SECONDS = 30
+
+
+class UsageError(Exception):
+    """The arguments cannot be turned into a command. Exit 2 with this text."""
+
+
+def git(args: list[str], repo: Path | None = None) -> str:
+    """Run `git` with `args` and return stdout, stripped.
+
+    Raises UsageError on a non-zero exit, because every git call here reads
+    a host fact the user named: a repo root, a branch, a commit.
+    """
+    raise NotImplementedError
+
+
+def resolve_repo(given: str | None) -> Path:
+    """Return the absolute repo root, defaulting to the working directory's.
+
+    Raises UsageError when no path was given and the working directory is
+    not inside a git repository.
+    """
+    raise NotImplementedError
+
+
+def resolve_branch(repo: Path, given: str | None) -> tuple[str, str]:
+    """Return (branch, head sha) for `given`, defaulting to the repo's HEAD."""
+    raise NotImplementedError
+
+
+def default_shot_path(repo: Path, name: str) -> Path:
+    """Return `<repo>/.nikki-agents/lab/shots/<name>-<UTC ISO>.png`.
+
+    A timestamped default means an agent never overwrites the screenshot it
+    took a minute ago, and never has to invent a path.
+    """
+    raise NotImplementedError
+
+
+def command_up(args: argparse.Namespace) -> int:
+    """Converge a lab and print one line naming everything an agent needs.
+
+    Prints to stdout:
+
+        lab name=demo container=lab-demo image=agent-lab/base:latest
+        work=/work/myrepo head=1a2b3c4d port=6551 changed=2
+
+    as one line, with `port=` omitted when the profile publishes none.
+    Progress goes to stderr, so stdout stays one parseable line.
+
+    Converge order: build the image, recreate the container if the spec
+    changed, start it, sync the clone, run the profile's setup, wait for the
+    profile's ready check. A second run with no input change prints
+    `changed=0` and rebuilds nothing.
+    """
+    raise NotImplementedError
+
+
+def command_exec(args: argparse.Namespace) -> int:
+    """Run a command in the lab and return its exit code.
+
+    The working directory is the private clone, so a caller never writes
+    `cd`. Arguments after NAME are passed through as argv, unparsed.
+    """
+    raise NotImplementedError
+
+
+def command_shot(args: argparse.Namespace) -> int:
+    """Screenshot the lab's virtual display and copy the PNG to the host.
+
+    With no `--` argv, grabs the persistent display a profile's setup hook
+    started, so a running editor is photographed and left running. With
+    `-- ARGV`, runs `lab-shot` which starts its own throwaway display,
+    leaving the persistent one untouched.
+
+    Prints:
+
+        shot path=/abs/path.png size=1280x720 stddev=10497.7 colors=4093
+        bytes=223095
+
+    as one line. Exits 1 when `stddev` is 0, which means every pixel is the
+    same colour and the capture is blank. A blank screenshot reported as a
+    success is the failure this command exists to prevent; `--allow-blank`
+    turns the gate off for a caller that wants a blank frame.
+
+    The numbers are the proof. Read them; do not open the PNG, because its
+    pixels then occupy the agent's context for the rest of the session.
+    """
+    raise NotImplementedError
+
+
+def command_down(args: argparse.Namespace) -> int:
+    """Delete the container and its volume, and print what was removed.
+
+    The clone and any uncommitted work in it are gone. Prints:
+
+        lab down name=demo container=lab-demo volume=lab-demo-work
+    """
+    raise NotImplementedError
+
+
+def command_check(args: argparse.Namespace) -> int:
+    """Check this host can run labs, printing one line per check.
+
+    Fails loudly here rather than mysteriously later. Checks, in order:
+
+    - `podman` is on PATH and `podman info` exits 0.
+    - The profile resolves to a directory holding a Containerfile, and its
+      profile.json parses.
+    - The working directory, or `--repo`, is a git repository whose HEAD
+      resolves.
+    - On Darwin: warns that the repo path must lie inside a directory the
+      podman machine shares, because a bind mount of an unshared path
+      silently mounts nothing.
+
+    Prints `ok: <what>` or `FAIL: <what>: <why>` per check, and exits 1 when
+    any check failed. Builds no image and starts no container.
+    """
+    raise NotImplementedError
+
+
+def build_parser() -> argparse.ArgumentParser:
+    """Return the parser for every subcommand."""
+    raise NotImplementedError
+
+
+def main(argv: list[str]) -> int:
+    """Dispatch one subcommand, turning UsageError into exit 2."""
+    raise NotImplementedError
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

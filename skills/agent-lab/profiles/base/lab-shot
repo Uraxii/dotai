@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# Capture the root window of a virtual display inside the container.
+#
+#   lab-shot OUT.png DISPLAY SECONDS [COMMAND...]
+#
+# With COMMAND: start Xvfb on DISPLAY, run COMMAND on it with software GL,
+# wait SECONDS, capture, then stop both. With no COMMAND: capture DISPLAY as
+# it is, start nothing, stop nothing, so a long-running editor survives.
+#
+# This file is bash, not Python, deliberately. It is five execs and one pipe
+# with no logic of its own, which Python could only wrap in subprocess calls,
+# and it must run in every profile's image without requiring python3 there.
+# "$@" keeps the caller's argument list intact, so no shell string is ever
+# built from it.
+#
+# Prints one ImageMagick identify line. A caller judges a blank frame from
+# stddev and colors without opening the image.
+
+# TODO: set -euo pipefail
+# TODO: read OUT, DISPLAY, SECONDS positionally; fail with the usage line
+#       above when OUT, DISPLAY, or SECONDS is missing.
+# TODO: when "$#" is 0 after the three positionals, skip to the capture step.
+# TODO: start Xvfb on DISPLAY at 1280x720x24 with -nolisten tcp, recording
+#       its pid, and trap EXIT to kill the command and Xvfb.
+# TODO: poll xdpyinfo until the display answers, bounded, so the command
+#       never starts against a display that is not up yet.
+# TODO: run "$@" with DISPLAY, LIBGL_ALWAYS_SOFTWARE=1 and
+#       GALLIUM_DRIVER=llvmpipe set, output to /tmp/lab-shot-cmd.log.
+# TODO: sleep SECONDS.
+# TODO: capture: xwd -root -silent on DISPLAY piped into magick xwd:- OUT.
+# TODO: print identify -format
+#       '%wx%h stddev=%[standard-deviation] colors=%k bytes=%B\n' OUT.
