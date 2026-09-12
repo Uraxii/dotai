@@ -5,8 +5,8 @@ contain a `Containerfile`. Everything else is optional.
 
 Search order, first match wins:
 
-1. `<repo>/.nikki-agents/lab/profiles/<name>/`
-2. `~/.config/agent-lab/profiles/<name>/`
+1. `<repo>/.nikki-agents/podman-sandbox/profiles/<name>/`
+2. `~/.config/podman-sandbox/profiles/<name>/`
 3. `<this skill>/profiles/<name>/`
 
 The skill ships exactly one profile, `base`. It holds no per-profile code:
@@ -35,14 +35,14 @@ from dataclasses import dataclass
 from pathlib import Path
 
 BUILTIN_PROFILES_DIR = Path(__file__).resolve().parent.parent / "profiles"
-USER_PROFILES_DIR = Path.home() / ".config" / "agent-lab" / "profiles"
-PROJECT_PROFILES_SUBPATH = Path(".nikki-agents") / "lab" / "profiles"
+USER_PROFILES_DIR = Path.home() / ".config" / "podman-sandbox" / "profiles"
+PROJECT_PROFILES_SUBPATH = Path(".nikki-agents") / "podman-sandbox" / "profiles"
 
 MANIFEST_NAME = "profile.json"
 RECIPE_NAME = "Containerfile"
 DEFAULT_READY_TIMEOUT_SEC = 180
 
-IMAGE_TAG_PREFIX = "agent-lab/"
+IMAGE_TAG_PREFIX = "podman-sandbox/"
 IMAGE_TAG_SUFFIX = ":latest"
 ARGV_KEYS = ("setup", "ready")
 INTEGER_KEYS = ("port", "ready_timeout_sec")
@@ -75,7 +75,7 @@ class Profile:
 
     @property
     def image(self) -> str:
-        """The image tag this profile builds, for example `agent-lab/base`."""
+        """The image tag this profile builds: `podman-sandbox/base`."""
         return f"{IMAGE_TAG_PREFIX}{self.name}{IMAGE_TAG_SUFFIX}"
 
 

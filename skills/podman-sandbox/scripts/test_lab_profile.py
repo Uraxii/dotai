@@ -193,7 +193,7 @@ class LoadTest(unittest.TestCase):
         profile = lab_profile.load("bare", self.repo)
         self.assertEqual(profile.port, None)
         self.assertEqual(profile.setup, ())
-        self.assertEqual(profile.image, "agent-lab/bare:latest")
+        self.assertEqual(profile.image, "podman-sandbox/bare:latest")
 
     def test_a_missing_profile_names_what_exists(self) -> None:
         write_profile(self.builtin, "base")

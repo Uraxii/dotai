@@ -1,9 +1,9 @@
 ---
-name: agent-lab
+name: podman-sandbox
 description: Give an agent its own throwaway podman container holding a private clone of a repo, published ports, and a virtual display it can screenshot. Use when work must not touch the real checkout, when several agents each need their own working tree and ports on one machine, when a test or a migration writes into the repo, or when a windowed app must run and be screenshotted with no desktop available. Covers environment profiles supplied as directories on disk, idempotent bring-up, port publishing, screenshots with a blankness check, and teardown.
 ---
 
-# Agent lab
+# Podman sandbox
 
 `scripts/lab` gives you a container with the repository mounted read-only at
 `/src-ro` and a private writable clone at `/work/<repo>`. Nothing you do
@@ -39,7 +39,7 @@ and the second run prints `changed=0` and rebuilds nothing.
 It prints one line on stdout. Progress goes to stderr.
 
 ```
-lab name=demo container=lab-demo image=agent-lab/base:latest work=/work/myrepo head=1a2b3c4d changed=4
+lab name=demo container=lab-demo image=podman-sandbox/base:latest work=/work/myrepo head=1a2b3c4d changed=4
 ```
 
 Flags:
@@ -90,12 +90,12 @@ scripts/lab shot demo
 Either form copies the PNG to the host and prints one line:
 
 ```
-shot path=/path/to/repo/.nikki-agents/lab/shots/demo-2026-09-12T14-03-11Z.png size=1280x720 stddev=10497.7 colors=4093 bytes=223095
+shot path=/path/to/repo/.nikki-agents/podman-sandbox/shots/demo-2026-09-12T14-03-11Z.png size=1280x720 stddev=10497.7 colors=4093 bytes=223095
 ```
 
 `--out PATH` names the file yourself. The default lands under the
-repository's `.nikki-agents/lab/shots/` directory with a UTC timestamp, so
-repeated shots never overwrite each other.
+repository's `.nikki-agents/podman-sandbox/shots/` directory with a UTC
+timestamp, so repeated shots never overwrite each other.
 
 **Judge the frame from `stddev` and `colors`. Do not open the PNG**, because
 its pixels then sit in your context for the rest of the session. `shot` exits

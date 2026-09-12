@@ -1,4 +1,7 @@
-# Why agent-lab is shaped this way
+# Why podman-sandbox is shaped this way
+
+This skill was called `agent-lab` until the name changed to say which
+container tool it needs. The `lab` command kept its name.
 
 The previous version was 449 lines of code, 361 of them bash, and adding an
 environment meant editing a `case` statement inside the skill. This version

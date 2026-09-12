@@ -1,4 +1,4 @@
-# The agent-lab profile contract
+# The podman-sandbox profile contract
 
 A profile is the environment a lab runs. It is a directory on your disk, not
 code inside this skill. Adding one never means editing a file the skill
@@ -18,13 +18,13 @@ A directory holding only a `Containerfile` is a complete profile.
 
 `lab` searches these directories in order and takes the first match:
 
-1. `<repo>/.nikki-agents/lab/profiles/<name>/`
-2. `~/.config/agent-lab/profiles/<name>/`
+1. `<repo>/.nikki-agents/podman-sandbox/profiles/<name>/`
+2. `~/.config/podman-sandbox/profiles/<name>/`
 3. `<this skill>/profiles/<name>/`
 
 Put a profile in the repo when it belongs to one project. Put it in
-`~/.config/agent-lab/profiles/` when you want it in every project. The skill
-ships one profile, `base`, in the third directory.
+`~/.config/podman-sandbox/profiles/` when you want it in every project. The
+skill ships one profile, `base`, in the third directory.
 
 ## profile.json
 
@@ -70,7 +70,7 @@ it into the image, and name the script.
 
 ## Rules a profile must follow
 
-- **Build from `agent-lab/base:latest` if you want screenshots.** `base`
+- **Build from `podman-sandbox/base:latest` if you want screenshots.** `base`
   installs Xvfb and ImageMagick and provides `/usr/local/bin/lab-shot`. A
   profile that starts `FROM debian:13-slim` instead is valid, and `lab shot`
   against it fails.
@@ -89,13 +89,13 @@ it into the image, and name the script.
 Add Node to a lab. The whole profile is one file:
 
 ```
-mkdir -p .nikki-agents/lab/profiles/node/
+mkdir -p .nikki-agents/podman-sandbox/profiles/node/
 ```
 
-`.nikki-agents/lab/profiles/node/Containerfile`:
+`.nikki-agents/podman-sandbox/profiles/node/Containerfile`:
 
 ```
-FROM agent-lab/base:latest
+FROM podman-sandbox/base:latest
 RUN apt-get update -qq \
 	&& apt-get install -y -qq --no-install-recommends nodejs npm \
 	&& rm -rf /var/lib/apt/lists/*
