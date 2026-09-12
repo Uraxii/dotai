@@ -70,35 +70,64 @@ which is the `ARG`/`LABEL` repetition already being deleted. And reading a
 label requires building the image first, so the tool could not know which
 port to publish until after the build.
 
-## Projected size
+## Size, measured
 
-Two numbers, because they say different things. "Statements" counts lines
-that are neither blank, a comment, nor part of a docstring, which is the code
-a reader has to follow. "Total" counts every line in the file, docstrings
-included. The old version's 449 was almost all statements: bash carried its
+Two numbers, because they say different things. "Code" counts lines that are
+neither blank, a comment, nor part of a docstring, which is the code a reader
+has to follow. "Statements" counts syntax statements, which ignores how far a
+call is wrapped to fit the line limit. "Total" counts every line, docstrings
+included. The old version's 449 was almost all code lines: bash carried its
 contracts in prose at the top of one file, not next to each function.
 
-| File | Statements | Total |
-| --- | --- | --- |
-| `scripts/lab` | ~85 | ~190 |
-| `scripts/lab_container.py` | ~120 | ~260 |
-| `scripts/lab_profile.py` | ~65 | ~150 |
-| `profiles/base/lab-shot` | ~20 | ~30 |
-| `profiles/base/Containerfile` | ~20 | ~25 |
-| Total | ~310 | ~655 |
+| File | Code | Statements | Total |
+| --- | --- | --- | --- |
+| `scripts/lab` | 220 | 188 | 395 |
+| `scripts/lab_container.py` | 165 | 143 | 338 |
+| `scripts/lab_profile.py` | 122 | 97 | 214 |
+| `profiles/base/lab-shot` | 24 | 24 | 45 |
+| `profiles/base/Containerfile` | 18 | 18 | 25 |
+| Total | 549 | 470 | 1017 |
 
-Against 449 statements before: roughly 30 percent fewer, with one engine
-instead of two, five subcommands instead of seven, and no
-application-specific code at all. The total grows because every contract is
-now written beside the function that holds it, in a docstring a type checker
-and a reader both find, instead of in a comment block at the top of a 323
-line shell script.
+The design projected 310 code lines and the implementation landed on 549.
+Three things account for the gap, and none of them is a feature the design
+did not ask for. Python wraps: an argument list that bash writes on one line
+takes three or four inside an 80 column limit, which is why the statement
+count, 470, sits so much closer to the projection than the line count does.
+argparse costs about 30 lines for five subcommands and their flags, which the
+projection did not price. And each untyped boundary, `profile.json` and the
+identify line `lab-shot` prints, pays for a parse function that rejects bad
+input rather than trusting it.
+
+Against 449 lines before: more lines, fewer moving parts. One engine instead
+of two, five subcommands instead of seven, no application-specific code at
+all, and no shell string built from user input anywhere.
+
+## What the implementation settled
+
+**A sentinel file records that setup ran, not a field on the spec.** A podman
+label cannot be changed after the container is created, so a
+`setup_sha256` field on `LabSpec` could only be written before setup ran,
+which is a lie the next `up` would believe. `/work/.lab-setup-<recipe hash>`
+sits in the volume beside the clone that setup mutated: it dies with that
+clone on `down`, and its name changes when the profile changes, so editing a
+setup script runs it again.
+
+**`check` does not test whether the port is free.** A port free when `check`
+runs can be taken by the time `up` runs, so a green line would be a promise
+the tool cannot keep. podman names the collision itself, and `up` adds the
+`--port` hint to podman's own message.
+
+**The Python floor is 3.7.** Every construct here parses under 3.7's grammar,
+and the newest standard library calls used, `dataclasses` and
+`subprocess.run(capture_output=True)`, both arrived in 3.7. SKILL.md said
+3.11, which was a guess. The floor is not raised for convenience: nothing
+here needs a newer release.
 
 ## Why `lab-shot` is bash
 
 Every other script in this skill is Python. `lab-shot` is five `exec` calls
-and one pipe, with no logic, and Python could only wrap each one in a
-`subprocess` call for more lines. It also runs inside the container, where
+with no logic, and Python could only wrap each one in a `subprocess` call for
+more lines. It also runs inside the container, where
 requiring python3 would make every profile carry a dependency it otherwise
 would not need. `"$@"` passes the caller's argument list through without a
 re-parse, so the no-shell-strings invariant holds.

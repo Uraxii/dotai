@@ -12,7 +12,7 @@ inside can write the real checkout.
 Paths below are relative to this skill's base directory, which the skill
 loader prints when it loads this file. Prefix every `lab` command with it.
 
-Requirements: podman, and Python 3.11 or later. No pip packages, no
+Requirements: podman, and Python 3.7 or later. No pip packages, no
 environment variables to set, ever. Every knob is a flag.
 
 ## When to use it
