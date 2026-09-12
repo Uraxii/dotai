@@ -36,6 +36,7 @@ SHOT_DIR_SUBPATH = Path(".nikki-agents") / "lab" / "shots"
 SHOT_CONTAINER_PATH = "/tmp/lab-shot.png"
 DEFAULT_PROFILE = "base"
 DEFAULT_SHOT_SECONDS = 30
+BLANK_MAX_COLORS = 2
 
 SHOT_COMMAND = "lab-shot"
 SHOT_COMMAND_NAME = "shot"
@@ -216,10 +217,10 @@ def command_shot(args: argparse.Namespace) -> int:
         shot path=/abs/path.png size=1280x720 stddev=10497.7 colors=4093
         bytes=223095
 
-    as one line. Exits 1 when `stddev` is 0, which means every pixel is the
-    same colour and the capture is blank. A blank screenshot reported as a
-    success is the failure this command exists to prevent; `--allow-blank`
-    turns the gate off for a caller that wants a blank frame.
+    as one line. Exits 1 when `colors` is 2 or fewer, which means nothing
+    rendered on the display. A screenshot of a window that never painted,
+    reported as a success, is the failure this command exists to prevent;
+    `--allow-blank` turns the gate off for a caller that wants such a frame.
 
     The numbers are the proof. Read them; do not open the PNG, because its
     pixels then occupy the agent's context for the rest of the session.
@@ -242,19 +243,29 @@ def command_shot(args: argparse.Namespace) -> int:
     size, _, measures = stats.strip().partition(" ")
     print(f"shot path={out} size={size} {measures}")
     if is_blank(measures) and not args.allow_blank:
-        blank = f"FAIL: {out} is blank: every pixel is the same colour"
+        blank = (f"FAIL: {out} is blank: {BLANK_MAX_COLORS} colours or "
+                 "fewer, so nothing painted")
         print(blank, file=sys.stderr)
         return 1
     return 0
 
 
 def is_blank(measures: str) -> bool:
-    """True when an identify line reports a standard deviation of zero."""
+    """True when an identify line reports BLANK_MAX_COLORS colours or fewer.
+
+    Counting colours rather than measuring spread, because a display nothing
+    painted on is not always uniform. A window that fails to come up can
+    leave one dialog box on an otherwise empty screen: two colours, 99% of
+    the frame the background, and a standard deviation far from zero. That
+    frame passed a `stddev == 0` gate, which is the silent success this
+    command exists to prevent. Nothing that really rendered on a 24-bit
+    display comes back with two colours; anti-aliasing alone spends more.
+    """
     for measure in measures.split():
         key, _, value = measure.partition("=")
-        if key == "stddev":
-            return float(value) == 0.0
-    raise lab_container.LabError(f"lab-shot printed no stddev: {measures}")
+        if key == "colors":
+            return int(value) <= BLANK_MAX_COLORS
+    raise lab_container.LabError(f"lab-shot printed no colors: {measures}")
 
 
 def command_down(args: argparse.Namespace) -> int:
@@ -359,7 +370,8 @@ def build_parser() -> argparse.ArgumentParser:
     shot.add_argument("name")
     shot.add_argument("--out", help="where to write the PNG on the host")
     shot.add_argument("--seconds", type=int, default=DEFAULT_SHOT_SECONDS)
-    shot.add_argument("--allow-blank", action="store_true")
+    shot.add_argument("--allow-blank", action="store_true",
+                      help="accept a frame nothing painted on")
     shot.set_defaults(run=command_shot, argv=[])
 
     down = sub.add_parser("down", help="delete the container and its volume")

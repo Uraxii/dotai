@@ -124,8 +124,8 @@ Run these four in order. Each one fails on a different mistake.
    in the image, not only in the build log.
 
 For a profile that starts a process, add `lab shot <labname>` and read the
-`stddev` and `colors` numbers it prints. A `stddev=0` exit 1 means the
-display is blank.
+`stddev` and `colors` numbers it prints. A `colors=2` or lower exit 1 means
+nothing rendered on the display.
 
 ## What the previous version required, and no longer does
 

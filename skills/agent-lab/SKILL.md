@@ -98,10 +98,13 @@ repository's `.nikki-agents/lab/shots/` directory with a UTC timestamp, so
 repeated shots never overwrite each other.
 
 **Judge the frame from `stddev` and `colors`. Do not open the PNG**, because
-its pixels then sit in your context for the rest of the session. A blank
-display reads `stddev=0 colors=1`, and `shot` exits 1 on it rather than
-reporting success. Pass `--allow-blank` when a blank frame is the answer you
-wanted.
+its pixels then sit in your context for the rest of the session. `shot` exits
+1 when `colors` is 2 or fewer, which is a display nothing rendered on: an
+empty screen reads `colors=1`, and a window that failed to come up and left
+one dialog box behind reads `colors=2` with a `stddev` far from zero. Two
+colours is the whole frame's budget spent, so anything that really drew,
+anti-aliased text included, comes back well above it. Pass `--allow-blank`
+when such a frame is the answer you wanted.
 
 ## Tear a lab down
 
