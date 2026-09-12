@@ -3,7 +3,7 @@
 
     lab up NAME [--repo PATH] [--profile NAME] [--branch BRANCH] [--port N]
     lab exec NAME ARGV...
-    lab shot NAME [--out PATH] [--seconds N] [-- ARGV...]
+    lab shot NAME [--out PATH] [--seconds N] [--allow-blank] [-- ARGV...]
     lab down NAME
     lab check [--profile NAME]
 
@@ -22,6 +22,8 @@ decisions live in `lab_profile` and `lab_container`.
 from __future__ import annotations
 
 import argparse
+import logging
+import platform
 import subprocess
 import sys
 from datetime import datetime, timezone
@@ -35,6 +37,15 @@ SHOT_CONTAINER_PATH = "/tmp/lab-shot.png"
 DEFAULT_PROFILE = "base"
 DEFAULT_SHOT_SECONDS = 30
 
+SHOT_COMMAND = "lab-shot"
+SHOT_COMMAND_NAME = "shot"
+THROWAWAY_DISPLAY = ":100"
+HEAD_DIGITS = 8
+MACOS_SHARE_WARNING = (
+    "on macOS the repository must sit inside a directory the podman machine "
+    "shares, $HOME by default"
+)
+
 
 class UsageError(Exception):
     """The arguments cannot be turned into a command. Exit 2 with this text."""
@@ -46,7 +57,13 @@ def git(args: list[str], repo: Path | None = None) -> str:
     Raises UsageError on a non-zero exit, because every git call here reads
     a host fact the user named: a repo root, a branch, a commit.
     """
-    raise NotImplementedError
+    done = subprocess.run(["git"] + args, capture_output=True, text=True,
+                          check=False,
+                          cwd=str(repo) if repo is not None else None)
+    if done.returncode != 0:
+        detail = done.stderr.strip() or done.stdout.strip()
+        raise UsageError(f"git {' '.join(args)} failed: {detail}")
+    return done.stdout.strip()
 
 
 def resolve_repo(given: str | None) -> Path:
@@ -55,12 +72,16 @@ def resolve_repo(given: str | None) -> Path:
     Raises UsageError when no path was given and the working directory is
     not inside a git repository.
     """
-    raise NotImplementedError
+    start = Path(given).expanduser() if given else Path.cwd()
+    if not start.is_dir():
+        raise UsageError(f"{start} is not a directory")
+    return Path(git(["rev-parse", "--show-toplevel"], start)).resolve()
 
 
 def resolve_branch(repo: Path, given: str | None) -> tuple[str, str]:
     """Return (branch, head sha) for `given`, defaulting to the repo's HEAD."""
-    raise NotImplementedError
+    branch = given or git(["rev-parse", "--abbrev-ref", "HEAD"], repo)
+    return branch, git(["rev-parse", "--verify", branch], repo)
 
 
 def default_shot_path(repo: Path, name: str) -> Path:
@@ -69,7 +90,16 @@ def default_shot_path(repo: Path, name: str) -> Path:
     A timestamped default means an agent never overwrites the screenshot it
     took a minute ago, and never has to invent a path.
     """
-    raise NotImplementedError
+    stamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H-%M-%SZ")
+    return repo / SHOT_DIR_SUBPATH / f"{name}-{stamp}.png"
+
+
+def require_spec(lab: lab_container.Lab) -> lab_container.LabSpec:
+    """Return the lab's stored spec, or explain that the lab is not up."""
+    spec = lab_container.read_spec(lab)
+    if spec is None:
+        raise UsageError(f"no lab named {lab.name}. Run `lab up {lab.name}` first")
+    return spec
 
 
 def command_up(args: argparse.Namespace) -> int:
@@ -86,9 +116,57 @@ def command_up(args: argparse.Namespace) -> int:
     Converge order: build the image, recreate the container if the spec
     changed, start it, sync the clone, run the profile's setup, wait for the
     profile's ready check. A second run with no input change prints
-    `changed=0` and rebuilds nothing.
+    `changed=0` and rebuilds nothing. The ready check never counts as a
+    change, because polling alters nothing.
     """
-    raise NotImplementedError
+    lab_container.require_podman()
+    repo = resolve_repo(args.repo)
+    branch, head = resolve_branch(repo, args.branch)
+    profile = lab_profile.load(args.profile, repo)
+    base = None
+    if profile.name != DEFAULT_PROFILE:
+        base = lab_profile.load(DEFAULT_PROFILE, repo)
+    port = args.port if args.port is not None else profile.port
+    lab = lab_container.Lab(args.name)
+    spec = lab_container.LabSpec(
+        repo=str(repo),
+        branch=branch,
+        profile=profile.name,
+        port=port,
+        image=profile.image,
+        recipe_sha256=lab_container.recipe_sha256(profile, base),
+    )
+    changed = 0
+    logging.info("converging image %s", profile.image)
+    changed += int(lab_container.build_image(profile, base))
+    if lab_container.read_spec(lab) != spec:
+        logging.info("creating container %s", lab.container)
+        lab_container.create_container(lab, spec, repo)
+        changed += 1
+    changed += int(lab_container.start_container(lab))
+    clone = lab.clone_path(repo)
+    logging.info("syncing clone %s to %s", clone, head[:HEAD_DIGITS])
+    changed += int(lab_container.sync_clone(lab, repo, branch, head))
+    changed += int(lab_container.run_setup(lab, profile, clone))
+    lab_container.wait_ready(lab, profile)
+    report = lab_container.ConvergeReport(lab, spec, clone, head, changed)
+    print(format_up(report))
+    return 0
+
+
+def format_up(report: lab_container.ConvergeReport) -> str:
+    """Return `up`'s single stdout line for a finished converge."""
+    fields = [
+        f"name={report.lab.name}",
+        f"container={report.lab.container}",
+        f"image={report.spec.image}",
+        f"work={report.clone_path}",
+        f"head={report.head[:HEAD_DIGITS]}",
+    ]
+    if report.spec.port is not None:
+        fields.append(f"port={report.spec.port}")
+    fields.append(f"changed={report.changed}")
+    return "lab " + " ".join(fields)
 
 
 def command_exec(args: argparse.Namespace) -> int:
@@ -97,7 +175,32 @@ def command_exec(args: argparse.Namespace) -> int:
     The working directory is the private clone, so a caller never writes
     `cd`. Arguments after NAME are passed through as argv, unparsed.
     """
-    raise NotImplementedError
+    argv = passthrough_argv(args.argv)
+    if not argv:
+        raise UsageError("exec needs a command to run")
+    lab = lab_container.Lab(args.name)
+    spec = require_spec(lab)
+    workdir = lab.clone_path(Path(spec.repo))
+    return lab_container.exec_argv(lab, argv, workdir)
+
+
+def passthrough_argv(argv: list[str]) -> list[str]:
+    """Return `argv` with one leading `--` separator dropped."""
+    return argv[1:] if argv[:1] == ["--"] else argv
+
+
+def split_shot_argv(argv: list[str]) -> tuple[list[str], list[str]]:
+    """Split `shot`'s own flags from the command it photographs.
+
+    argparse's REMAINDER swallows a flag written after the lab name, so
+    `shot --seconds 60 -- app` needs the separator honoured before parsing.
+    `exec` takes no flags of its own, so its REMAINDER keeps an inner `--`
+    for the command it runs.
+    """
+    if argv[:1] == [SHOT_COMMAND_NAME] and "--" in argv:
+        cut = argv.index("--")
+        return argv[:cut], argv[cut + 1:]
+    return argv, []
 
 
 def command_shot(args: argparse.Namespace) -> int:
@@ -121,7 +224,37 @@ def command_shot(args: argparse.Namespace) -> int:
     The numbers are the proof. Read them; do not open the PNG, because its
     pixels then occupy the agent's context for the rest of the session.
     """
-    raise NotImplementedError
+    argv = passthrough_argv(args.argv)
+    lab = lab_container.Lab(args.name)
+    spec = require_spec(lab)
+    repo = Path(spec.repo)
+    chosen = Path(args.out).expanduser() if args.out else None
+    out = (chosen or default_shot_path(repo, args.name)).resolve()
+    out.parent.mkdir(parents=True, exist_ok=True)
+    display = THROWAWAY_DISPLAY if argv else lab_container.PERSISTENT_DISPLAY
+    logging.info("capturing display %s", display)
+    stats = lab_container.exec_capture(
+        lab,
+        [SHOT_COMMAND, SHOT_CONTAINER_PATH, display, str(args.seconds)] + argv,
+        lab.clone_path(repo),
+    )
+    lab_container.copy_out(lab, SHOT_CONTAINER_PATH, out)
+    size, _, measures = stats.strip().partition(" ")
+    print(f"shot path={out} size={size} {measures}")
+    if is_blank(measures) and not args.allow_blank:
+        blank = f"FAIL: {out} is blank: every pixel is the same colour"
+        print(blank, file=sys.stderr)
+        return 1
+    return 0
+
+
+def is_blank(measures: str) -> bool:
+    """True when an identify line reports a standard deviation of zero."""
+    for measure in measures.split():
+        key, _, value = measure.partition("=")
+        if key == "stddev":
+            return float(value) == 0.0
+    raise lab_container.LabError(f"lab-shot printed no stddev: {measures}")
 
 
 def command_down(args: argparse.Namespace) -> int:
@@ -131,7 +264,11 @@ def command_down(args: argparse.Namespace) -> int:
 
         lab down name=demo container=lab-demo volume=lab-demo-work
     """
-    raise NotImplementedError
+    lab = lab_container.Lab(args.name)
+    lab_container.destroy(lab)
+    print(f"lab down name={lab.name} container={lab.container} "
+          f"volume={lab.volume}")
+    return 0
 
 
 def command_check(args: argparse.Namespace) -> int:
@@ -150,18 +287,108 @@ def command_check(args: argparse.Namespace) -> int:
 
     Prints `ok: <what>` or `FAIL: <what>: <why>` per check, and exits 1 when
     any check failed. Builds no image and starts no container.
+
+    It does not test whether the profile's port is free. A port free now can
+    be taken by the time `up` runs, and podman names the collision itself at
+    the only moment that matters.
     """
-    raise NotImplementedError
+    results = [report_check("podman", describe_podman),
+               report_check("repository", lambda: describe_repo(args.repo)),
+               report_check(f"profile {args.profile}",
+                            lambda: describe_profile(args.profile, args.repo))]
+    if platform.system() == "Darwin":
+        print(f"ok: macos: {MACOS_SHARE_WARNING}")
+    return 0 if all(results) else 1
+
+
+def report_check(what: str, probe) -> bool:
+    """Print one `ok:` or `FAIL:` line for `probe`. True when it passed."""
+    try:
+        print(f"ok: {what}: {probe()}")
+        return True
+    except (UsageError, OSError, lab_container.LabError,
+            lab_profile.ProfileError) as err:
+        print(f"FAIL: {what}: {err}")
+        return False
+
+
+def describe_podman() -> str:
+    """Return podman's version, having proved the daemonless engine answers."""
+    version = lab_container.require_podman()
+    lab_container.podman(["info", "--format", "{{.Host.Arch}}"])
+    return version
+
+
+def describe_repo(given: str | None) -> str:
+    """Return the repo root and head for `given`, or the working directory."""
+    repo = resolve_repo(given)
+    branch, head = resolve_branch(repo, None)
+    return f"{repo} {branch} {head[:HEAD_DIGITS]}"
+
+
+def describe_profile(name: str, given: str | None) -> str:
+    """Return where profile `name` resolves and the hash of its directory."""
+    try:
+        repo = resolve_repo(given)
+    except UsageError:
+        repo = Path.cwd()
+    profile = lab_profile.load(name, repo)
+    digest = profile.recipe_sha256[:HEAD_DIGITS]
+    return f"{profile.directory} recipe={digest}"
 
 
 def build_parser() -> argparse.ArgumentParser:
     """Return the parser for every subcommand."""
-    raise NotImplementedError
+    parser = argparse.ArgumentParser(prog="lab", description=__doc__)
+    sub = parser.add_subparsers(dest="command", required=True)
+
+    up = sub.add_parser("up", help="converge a lab and print its facts")
+    up.add_argument("name")
+    up.add_argument("--repo", help="repository to mount and clone")
+    up.add_argument("--profile", default=DEFAULT_PROFILE)
+    up.add_argument("--branch", help="branch to check out in the clone")
+    up.add_argument("--port", type=int, help="override the published port")
+    up.set_defaults(run=command_up)
+
+    run_in = sub.add_parser("exec", help="run a command in the clone")
+    run_in.add_argument("name")
+    run_in.add_argument("argv", nargs=argparse.REMAINDER)
+    run_in.set_defaults(run=command_exec)
+
+    shot = sub.add_parser(SHOT_COMMAND_NAME, help="screenshot the lab's display")
+    shot.add_argument("name")
+    shot.add_argument("--out", help="where to write the PNG on the host")
+    shot.add_argument("--seconds", type=int, default=DEFAULT_SHOT_SECONDS)
+    shot.add_argument("--allow-blank", action="store_true")
+    shot.set_defaults(run=command_shot, argv=[])
+
+    down = sub.add_parser("down", help="delete the container and its volume")
+    down.add_argument("name")
+    down.set_defaults(run=command_down)
+
+    check = sub.add_parser("check", help="check this host can run labs")
+    check.add_argument("--repo")
+    check.add_argument("--profile", default=DEFAULT_PROFILE)
+    check.set_defaults(run=command_check)
+    return parser
 
 
 def main(argv: list[str]) -> int:
     """Dispatch one subcommand, turning UsageError into exit 2."""
-    raise NotImplementedError
+    logging.basicConfig(stream=sys.stderr, format="lab: %(message)s",
+                        level=logging.INFO)
+    own, passthrough = split_shot_argv(argv)
+    args = build_parser().parse_args(own)
+    if passthrough:
+        args.argv = passthrough
+    try:
+        return args.run(args)
+    except (UsageError, lab_profile.ProfileError) as err:
+        print(f"lab: {err}", file=sys.stderr)
+        return 2
+    except lab_container.LabError as err:
+        print(f"lab: {err}", file=sys.stderr)
+        return 1
 
 
 if __name__ == "__main__":
