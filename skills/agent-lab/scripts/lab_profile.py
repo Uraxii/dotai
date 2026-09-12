@@ -30,6 +30,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import stat
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -40,6 +41,11 @@ PROJECT_PROFILES_SUBPATH = Path(".nikki-agents") / "lab" / "profiles"
 MANIFEST_NAME = "profile.json"
 RECIPE_NAME = "Containerfile"
 DEFAULT_READY_TIMEOUT_SEC = 180
+
+IMAGE_TAG_PREFIX = "agent-lab/"
+IMAGE_TAG_SUFFIX = ":latest"
+ARGV_KEYS = ("setup", "ready")
+INTEGER_KEYS = ("port", "ready_timeout_sec")
 
 
 class ProfileError(Exception):
@@ -70,12 +76,16 @@ class Profile:
     @property
     def image(self) -> str:
         """The image tag this profile builds, for example `agent-lab/base`."""
-        raise NotImplementedError
+        return f"{IMAGE_TAG_PREFIX}{self.name}{IMAGE_TAG_SUFFIX}"
 
 
 def search_path(repo: Path) -> tuple[Path, ...]:
     """Return the profile directories to search, nearest project first."""
-    raise NotImplementedError
+    return (
+        repo / PROJECT_PROFILES_SUBPATH,
+        USER_PROFILES_DIR,
+        BUILTIN_PROFILES_DIR,
+    )
 
 
 def load(name: str, repo: Path) -> Profile:
@@ -85,7 +95,36 @@ def load(name: str, repo: Path) -> Profile:
     directory has no Containerfile, or when profile.json is not an object
     whose keys match the contract.
     """
-    raise NotImplementedError
+    directory = first_match(name, repo)
+    if directory is None:
+        known = ", ".join(available(repo)) or "none"
+        raise ProfileError(f"no profile named {name}. Found: {known}")
+    if not (directory / RECIPE_NAME).is_file():
+        raise ProfileError(f"{directory} holds no {RECIPE_NAME}")
+    manifest = directory / MANIFEST_NAME
+    text = manifest.read_text(encoding="utf-8") if manifest.is_file() else ""
+    try:
+        fields = parse_manifest(text)
+    except ProfileError as err:
+        raise ProfileError(f"{manifest}: {err}") from err
+    return Profile(
+        name=name,
+        directory=directory,
+        port=fields["port"],
+        setup=fields["setup"],
+        ready=fields["ready"],
+        ready_timeout_sec=fields["ready_timeout_sec"],
+        recipe_sha256=hash_directory(directory),
+    )
+
+
+def first_match(name: str, repo: Path) -> Path | None:
+    """Return the first directory on the search path named `name`."""
+    for parent in search_path(repo):
+        candidate = parent / name
+        if candidate.is_dir():
+            return candidate
+    return None
 
 
 def parse_manifest(text: str) -> dict[str, object]:
@@ -96,7 +135,47 @@ def parse_manifest(text: str) -> dict[str, object]:
     list of strings, and an empty string inside either list. Callers past
     this point trust the Profile fields.
     """
-    raise NotImplementedError
+    fields: dict[str, object] = {
+        "port": None,
+        "setup": (),
+        "ready": (),
+        "ready_timeout_sec": DEFAULT_READY_TIMEOUT_SEC,
+    }
+    if not text.strip():
+        return fields
+    try:
+        declared = json.loads(text)
+    except ValueError as err:
+        raise ProfileError(f"not valid JSON: {err}") from err
+    if not isinstance(declared, dict):
+        raise ProfileError("must hold a JSON object")
+    unknown = sorted(set(declared) - set(fields))
+    if unknown:
+        raise ProfileError(f"unknown keys: {', '.join(unknown)}")
+    for key in INTEGER_KEYS:
+        if key in declared:
+            fields[key] = as_integer(declared[key], key)
+    for key in ARGV_KEYS:
+        if key in declared:
+            fields[key] = as_argv(declared[key], key)
+    return fields
+
+
+def as_integer(value: object, key: str) -> int:
+    """Return `value` as an int, rejecting bools and every other type."""
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise ProfileError(f"{key} must be an integer")
+    return value
+
+
+def as_argv(value: object, key: str) -> tuple[str, ...]:
+    """Return `value` as an argument list of non-empty strings."""
+    if not isinstance(value, list):
+        raise ProfileError(f"{key} must be a list of strings")
+    for element in value:
+        if not isinstance(element, str) or not element:
+            raise ProfileError(f"{key} must hold non-empty strings only")
+    return tuple(value)
 
 
 def hash_directory(directory: Path) -> str:
@@ -108,9 +187,28 @@ def hash_directory(directory: Path) -> str:
     the same on every machine. The execute bit is included because a setup
     script that loses `+x` changes behaviour without changing bytes.
     """
-    raise NotImplementedError
+    found = [
+        (path.relative_to(directory).as_posix(), path)
+        for path in directory.rglob("*")
+        if path.is_file()
+    ]
+    digest = hashlib.sha256()
+    for relative, path in sorted(found):
+        content = path.read_bytes()
+        executable = int(bool(path.stat().st_mode & stat.S_IXUSR))
+        header = f"{relative}\0{executable}\0{len(content)}\0"
+        digest.update(header.encode("utf-8"))
+        digest.update(content)
+    return digest.hexdigest()
 
 
 def available(repo: Path) -> tuple[str, ...]:
     """Return every profile name found on the search path, for error text."""
-    raise NotImplementedError
+    found = []
+    for parent in search_path(repo):
+        if not parent.is_dir():
+            continue
+        for candidate in sorted(parent.iterdir()):
+            if (candidate / RECIPE_NAME).is_file():
+                found.append(candidate.name)
+    return tuple(dict.fromkeys(found))
