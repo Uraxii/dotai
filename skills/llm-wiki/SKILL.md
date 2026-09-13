@@ -1,6 +1,6 @@
 ---
 name: llm-wiki
-description: Use at the moments knowledge is about to be lost or re-derived: before citing a source you are not keeping, when a research or investigation finding needs to outlive the session, when starting a question you suspect you answered before, and when an answer should come from accumulated notes rather than a fresh search. Also use when maintaining that knowledgebase: adding a page, checking pages, or re-embedding after edits. Covers a project-local `.kb` or the global store driven through the `llmwiki` CLI: immutable source capture with provenance, model-written summary and story pages, agent-written pages, meaning-based search, and the mechanical lint.
+description: "Use at the moments knowledge is about to be lost or re-derived: before citing a source you are not keeping, when a research or investigation finding needs to outlive the session, when starting a question you suspect you answered before, and when an answer should come from accumulated notes rather than a fresh search. Also use when maintaining that knowledgebase: adding a page, checking pages, or re-embedding after edits. Covers a project-local `.kb` or the global store driven through the `llmwiki` CLI: immutable source capture with provenance, model-written summary and story pages, agent-written pages, meaning-based search, and the mechanical lint."
 ---
 
 # llm-wiki

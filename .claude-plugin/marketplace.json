@@ -3,6 +3,7 @@
   "owner": {
     "name": "Uraxii"
   },
+  "description": "Skills and thin named agents for software development work.",
   "plugins": [
     {
       "name": "dotai",
