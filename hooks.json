@@ -1,6 +1,13 @@
 {
   "version": 1,
   "hooks": {
+    "agentStop": [
+      {
+        "type": "command",
+        "bash": "python3 hooks/handoff-token-flag.py --mode stop",
+        "timeoutSec": 5
+      }
+    ],
     "preToolUse": [
       {
         "type": "command",

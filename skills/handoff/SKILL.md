@@ -11,7 +11,9 @@ Write it to `.handoffs/` at the project root, gitignored (add the entry if missi
 
 In a long session, append decisions, constraints, and verbatim user directives to the handoff file as they are established. A handoff reconstructed from an already-degraded context is the main cause of lost detail.
 
-A hook can flag context pressure before the agent notices it. Optional, not installed, setup in `references/hook-setup.md`.
+The plugin installs a context-pressure hook for Claude Code, Codex, and
+Copilot CLI. OpenCode and Hermes skill installs do not carry plugin hooks.
+Protocol and verification details are in `references/hook-setup.md`.
 
 ## Which mode
 

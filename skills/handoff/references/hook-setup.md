@@ -1,8 +1,14 @@
-# Optional context-pressure hook
+# Context-pressure hook
 
-Nothing here is installed, and the skill works without it. Set it up only
-when you want a session to announce that it is nearing a handoff instead of
-waiting for the agent to notice.
+The dotai plugin installs `hooks/handoff-token-flag.py` for Claude Code,
+Codex, and Copilot CLI. Claude Code and Codex run it on `UserPromptSubmit`.
+Copilot CLI runs it on `agentStop`, then requests one continuation so the
+agent can offer a handoff. The per-session band file prevents a loop.
+
+OpenCode and Hermes install dotai as skills, not as this plugin. Their install
+paths do not carry the hook. Do not claim support until each integration has a
+repeating event, an external usage signal, and a verified context-injection
+path.
 
 An agent cannot measure its own context size. The measurement comes from
 outside the conversation, which is why this is a hook and not an instruction.
@@ -61,11 +67,11 @@ four steps.
 4. Restore the real threshold. Confirm a fresh session below it stays silent
    and does not error.
 
-## Worked example: Claude Code
+## Installed harnesses
 
-One harness, shown because it is concrete. None of it is required.
+Claude Code:
 
-- Event: `UserPromptSubmit`, registered in `settings.json`, which fires
+- Event: `UserPromptSubmit`, registered in the plugin's `hooks/hooks.json`, which fires
   before each user turn reaches the agent.
 - Input: a JSON envelope on stdin carrying `transcript_path` and
   `session_id`.
@@ -78,6 +84,17 @@ One harness, shown because it is concrete. None of it is required.
   holding the last band reported.
 - Emission: anything printed to stdout enters the agent's context that turn.
 - Fail-safe: always exit 0 and print nothing on error.
+
+Codex uses the same event and snake-case envelope. The hook reads the latest
+`event_msg.payload.info.last_token_usage.input_tokens` value from the rollout
+transcript. Codex requires the user to review and trust a new or changed
+plugin hook before it runs.
+
+Copilot CLI runs the hook at `agentStop`, the repeating event that includes
+`transcriptPath`. If the transcript contains no recognized usage record, the
+hook estimates context from its UTF-8 byte size. At a new band, it returns a
+single `decision: block` response whose reason asks the agent to offer a
+handoff. A repeated stop in the same band returns no decision.
 
 Another harness may expose a different event, hand over a token count
 directly, or expose no usage data at all. Check yours.
