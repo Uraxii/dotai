@@ -37,9 +37,10 @@ Install dotai on a new machine:
 
 Claude Code loads the plugin's agent files from
 [`../../agents/`](../../agents/) automatically. Do not copy them into
-`~/.claude/agents/`. Offer the Preamble for `~/.claude/CLAUDE.md`, then
-continue to Models. Tell the user to start a new session after changing the
-global instructions or agent definitions.
+`~/.claude/agents/`. It also loads the context-pressure hook from
+[`../../hooks/hooks.json`](../../hooks/hooks.json). Offer the Preamble for
+`~/.claude/CLAUDE.md`, then continue to Models. Tell the user to start a new
+session after changing the global instructions, agent definitions, or hooks.
 
 ## GitHub Copilot CLI
 
@@ -61,13 +62,17 @@ set, otherwise `~/.copilot`. Never hardcode a home directory.
    [`../../agents/`](../../agents/) automatically. Do not copy them into the
    personal `<config-dir>/agents/` directory.
 
-2. **Instructions.** The global instructions file is
+2. **Hooks.** Copilot CLI loads the context-pressure hook from
+   [`../../hooks.json`](../../hooks.json). Do not copy it into the personal
+   config directory.
+
+3. **Instructions.** The global instructions file is
    `<config-dir>/copilot-instructions.md`, loaded on every session with no
    setting to enable. Append the Preamble lines above to it on an explicit
    yes, skipping any line already present. Create the file when absent.
    Change nothing else in it.
 
-3. **Invocation.** Copilot CLI has no setting for a default agent; the
+4. **Invocation.** Copilot CLI has no setting for a default agent; the
    request for one is `github/copilot-cli#2212`, still open. Tell the user
    to start a session with `copilot --agent zakia`, and that the CLI must
    be restarted before a newly installed plugin agent is visible.
@@ -84,18 +89,22 @@ codex plugin add dotai@uraxii
 Codex loads personal custom agents from `<codex-home>/agents/`. Resolve
 `<codex-home>` from `CODEX_HOME` when set, otherwise use `~/.codex`.
 
-1. Run [the Codex agent installer](scripts/install-codex-agents.py) with
+1. Codex loads the plugin's context-pressure hook from
+   [`../../hooks/codex-hooks.json`](../../hooks/codex-hooks.json). Tell the
+   user to open `/hooks`, review the definition, and trust its current hash.
+   Codex skips a new or changed plugin hook until the user trusts it.
+2. Run [the Codex agent installer](scripts/install-codex-agents.py) with
    `--codex-home <codex-home>`. The script resolves
    [the generated agent files](assets/codex-agents/) relative to this skill and
    changes nothing when the installed files already match.
-2. If the script reports a changed personal agent, show the paths and ask
+3. If the script reports a changed personal agent, show the paths and ask
    before rerunning with `--force`. The script checks every collision before
    it writes any agent file.
-3. Offer Zakia as the main Codex persona. On a yes, add `--install-zakia`.
+4. Offer Zakia as the main Codex persona. On a yes, add `--install-zakia`.
    This adds or refreshes an owned block in `<codex-home>/AGENTS.md` while
    preserving other global instructions. Report when a non-empty
    `AGENTS.override.md` masks that file.
-4. Tell the user to start a new Codex session. Codex reads global instructions
+5. Tell the user to start a new Codex session. Codex reads global instructions
    and custom-agent files when a session starts.
 
 The generated Codex files intentionally omit `model` and

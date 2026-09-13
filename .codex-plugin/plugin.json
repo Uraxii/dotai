@@ -1,6 +1,6 @@
 {
   "name": "dotai",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Skills and thin named agents: poteto-mode, principles, roles, tools.",
   "author": {
     "name": "Uraxii",
@@ -14,6 +14,7 @@
     "software-development"
   ],
   "skills": "./skills/",
+  "hooks": "./hooks/codex-hooks.json",
   "interface": {
     "displayName": "dotai",
     "shortDescription": "Reusable skills for software development work.",
@@ -21,7 +22,8 @@
     "developerName": "Uraxii",
     "category": "Developer Tools",
     "capabilities": [
-      "Skills"
+      "Skills",
+      "Hooks"
     ],
     "defaultPrompt": [
       "Show me which dotai skills can help with this task.",
