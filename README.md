@@ -24,8 +24,15 @@ Claude Code:
 /plugin install dotai@Uraxii
 ```
 
-Codex: `/plugins`, add this repo as a marketplace (it carries
-`.agents/plugins/marketplace.json`), install `dotai`.
+Codex CLI:
+
+```
+codex plugin marketplace add Uraxii/dotai --ref main
+codex plugin add dotai@uraxii
+```
+
+In the Codex app, open `/plugins`, add `Uraxii/dotai` as a marketplace,
+then install `dotai`.
 
 Copilot CLI:
 

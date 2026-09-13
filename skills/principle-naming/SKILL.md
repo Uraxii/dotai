@@ -1,6 +1,6 @@
 ---
 name: principle-naming
-description: Use when naming or renaming anything another reader will meet later: a file, a directory, a report or document, a scratch artifact, a variable, function, type, constant, branch, or commit subject. Fires before writing any new file, whenever a name is about to carry a generic stem, a number, a date, a version word, an acronym, or a codename, and when reviewing names in a diff. Exists to stop one failure: names that only decode for someone who was in the session.
+description: "Use when naming or renaming anything another reader will meet later: a file, a directory, a report or document, a scratch artifact, a variable, function, type, constant, branch, or commit subject. Fires before writing any new file, whenever a name is about to carry a generic stem, a number, a date, a version word, an acronym, or a codename, and when reviewing names in a diff. Exists to stop one failure: names that only decode for someone who was in the session."
 ---
 
 # Naming
