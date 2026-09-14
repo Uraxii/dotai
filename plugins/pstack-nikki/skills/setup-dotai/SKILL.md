@@ -62,9 +62,12 @@ set, otherwise `~/.copilot`. Never hardcode a home directory.
    `../../agents/` automatically. Do not copy them into the
    personal `<config-dir>/agents/` directory.
 
-2. **Hooks.** Copilot CLI loads the context-pressure hook from
-   `../../hooks.json`. Do not copy it into the personal
-   config directory.
+2. **Hooks.** Copilot CLI loads the context-pressure hook and the
+   session-start reminder from `../../hooks.json`. Do not
+   copy it into the personal config directory. The reminder's
+   `additionalContext` output has a history of being dropped or replayed by
+   the CLI (see README.md's Session-start reminder section); nothing to do
+   about that here, it is wired per the current docs regardless.
 
 3. **Instructions.** The global instructions file is
    `<config-dir>/copilot-instructions.md`, loaded on every session with no
@@ -129,9 +132,27 @@ npx skills@latest add Uraxii/dotai
 OpenCode does not consume this plugin's Claude or Codex agent definitions.
 Do not copy them: OpenCode agent frontmatter and permissions have different
 semantics. Use OpenCode's native subagent mechanism and put the dotai role in
-the scoped brief. Offer the Preamble for
+the scoped brief.
+
+**Session-start reminder.** OpenCode has no hook that fires once per session
+and can inject text, so `../../hooks/opencode-reminder-plugin.ts`
+pushes the reminder onto the system prompt before every LLM request instead
+(`experimental.chat.system.transform`; see README.md's Session-start
+reminder section for the sourcing). Symlink it, do not copy it, since it
+looks up `session_start_context.py` as a sibling file at runtime:
+
+```
+mkdir -p ~/.config/opencode/plugin
+ln -s "$(pwd)/plugins/pstack-nikki/hooks/opencode-reminder-plugin.ts" ~/.config/opencode/plugin/
+```
+
+Run from the cloned repo root. LIVE-UNVERIFIED: proven by a `node
+--experimental-strip-types` load check in this repo's test suite, not by a
+live OpenCode session.
+
+Offer the Preamble for
 `~/.config/opencode/AGENTS.md`, then continue to Models. Start a new session
-after changing global instructions or installed skills.
+after changing global instructions, installed skills, or the plugin.
 
 ## Hermes
 
@@ -148,10 +169,34 @@ uses. Keep every skill with its referenced support files.
 
 Hermes has no dotai-specific named-agent files to install. Use its native
 delegation and put the role in the scoped brief. Resolve `HERMES_HOME` when
-set, otherwise use `~/.hermes`. Offer the Preamble for
+set, otherwise use `~/.hermes`.
+
+**Session-start reminder.** Hermes has no auto-discovered hook file the way
+Claude Code and Codex do; add a `hooks:` block to the active profile in
+`<hermes-home>/config.yaml` yourself, on an explicit yes (this is a user
+config file, so ask first, same as the Preamble below):
+
+```yaml
+hooks:
+  pre_llm_call:
+    - command: "python3 <path-to-clone>/plugins/pstack-nikki/hooks/session_start_context.py --harness hermes"
+```
+
+Use the absolute path to the cloned repo's copy; Hermes does not require the
+script to live under `~/.hermes/agent-hooks/`. The script reads Hermes's
+`pre_llm_call` stdin payload and only emits `{"context": ...}` on
+`extra.is_first_turn`, `{}` otherwise, so it injects once per session even
+though the event itself fires on every turn (see README.md's Session-start
+reminder section for the sourcing). The first run of this hook prompts the
+user for consent, recorded in `<hermes-home>/shell-hooks-allowlist.json`; a
+non-interactive setup can pass `--accept-hooks` or set
+`HERMES_ACCEPT_HOOKS=1` instead. LIVE-UNVERIFIED: proven by unit tests
+against the documented stdin/stdout shapes, not by a live Hermes session.
+
+Offer the Preamble for
 `<hermes-home>/SOUL.md`, preserving the rest of the user's personality file,
-then continue to Models. Start a new session after changing `SOUL.md` or
-installed skills.
+then continue to Models. Start a new session after changing `SOUL.md`,
+`config.yaml`, or installed skills.
 
 ## Models
 
