@@ -11,6 +11,7 @@ place pstack-claude keeps `plugins/pstack/`.
 | Path      | What                                                    |
 |-----------|---------------------------------------------------------|
 | `plugins/pstack-nikki/skills/` | Every skill, `skills/<name>/SKILL.md`. Source of truth. |
+| `plugins/pstack-nikki/models.json` | Model picks per role. Source of truth; stamped into skills. |
 | `plugins/pstack-nikki/agents/` | Generated Claude and Copilot agent files. |
 | `plugins/pstack-nikki/skills/setup-dotai/references/` | Platform-neutral agent definitions. |
 | `plugins/pstack-nikki/skills/setup-dotai/assets/codex-agents/` | Generated Codex agent files. |
@@ -65,7 +66,7 @@ Claude Code and Copilot CLI read the generated files in
 files copied into its user config directory; `setup-dotai` handles that.
 OpenCode and Hermes use their native delegation with dotai roles carried in
 scoped briefs. Codex agent files omit `model` and `model_reasoning_effort`,
-so the role preferences in `plugins/pstack-nikki/skills/poteto-mode/models.md`
+so the role preferences in `plugins/pstack-nikki/models.json`
 remain authoritative at spawn time. skills.sh and opencode targets read
 `plugins/pstack-nikki/skills/` only.
 
@@ -76,6 +77,15 @@ the platform files:
 ```
 python3 plugins/pstack-nikki/skills/setup-dotai/scripts/generate-agent-configs.py
 python3 plugins/pstack-nikki/skills/setup-dotai/scripts/generate-agent-configs.py --check
+```
+
+After changing `plugins/pstack-nikki/models.json`, stamp its picks into the
+skills that name a role from it, then check the tree for broken links and
+malformed skill frontmatter:
+
+```
+python3 plugins/pstack-nikki/skills/setup-dotai/scripts/generate-models.py
+python3 plugins/pstack-nikki/skills/setup-dotai/scripts/validate-skills.py plugins/pstack-nikki/skills
 ```
 
 Harness prefs (`CLAUDE.md`, `AGENTS.md`, `settings.json`, secrets) are not
