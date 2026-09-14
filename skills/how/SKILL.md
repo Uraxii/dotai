@@ -1,16 +1,52 @@
 ---
 name: how
-description: "Use for \"how does X work\", code walkthroughs before changing something, and placement / ownership / layering questions (\"where should this live\", \"which package owns this\", \"is this the right layer\"). Explains subsystem architecture, runtime flow, onboarding mental models. Can critique architecture. Use why for motivation."
+description: "Use for \"how does X work\", rich explanations of a code change, diff, branch, or PR, code walkthroughs before changing something, and placement / ownership / layering questions (\"where should this live\", \"which package owns this\", \"is this the right layer\"). Explains subsystem architecture, runtime flow, and changes in chat, HTML, or native Notion. Can critique architecture. Use why for motivation."
 ---
 
 # How
 
 Explore the codebase to answer "how does X work?" questions. Produce clear architectural explanations at the level of a senior engineer onboarding onto a subsystem. Enough to build a working mental model, not annotated source code.
 
-Two modes:
+Three modes:
 
 1. **Explain** (default). Explore the codebase and produce a clear explanation
 2. **Critique.** Explain first, then spawn multiple models to independently identify architectural issues
+3. **Change walkthrough.** Explore the existing system and the specified
+   change, then teach it through Background, Intuition, Code, and Quiz.
+
+Choose the mode from the request. A diff explanation uses Change walkthrough;
+an architectural assessment uses Critique. A request for both uses the
+Critique workflow with the change walkthrough outline before the verdict.
+Do not add a quiz to ordinary Explain
+or Critique output unless requested.
+
+## Output selection
+
+Output is separate from mode. Honor the user's chosen format or an established
+preference for this task. Otherwise use chat, including for change walkthroughs
+without a requested artifact. For a requested rich artifact with no format
+specified, ask whether the user wants HTML or Notion while continuing any
+independent exploration.
+Resolve the format before creating an artifact or publishing a page.
+
+- **Chat.** Use the mode's outline directly in the reply. For a change quiz,
+  keep answers separate from the questions so the reader can attempt them.
+- **HTML.** Read [references/html-output.md](references/html-output.md).
+- **Notion.** Read [references/notion-output.md](references/notion-output.md).
+  This creates native Notion content, with selective HTML where useful.
+
+Read only the selected output reference. Pass the chosen mode, output format,
+and applicable references to the agent writing the explanation. Codebase
+inspection is read-only; output writing is limited to the selected artifact
+or Notion destination. Inspection-only explorers do not publish pages.
+
+## Change walkthrough mode
+
+Read [references/change-walkthrough.md](references/change-walkthrough.md),
+then follow Explain Steps 1-4 using that reference's outline instead of the
+ordinary Output Format. Resolve the diff scope before exploration and pass
+the same comparison to every explorer. This mode owns its comprehension quiz;
+it does not require `teach`, a mastery database, or a quiz pass before review.
 
 ## Explain Mode
 
@@ -22,8 +58,13 @@ Parse what the user is asking about:
 - "How do we handle billing for on-demand usage?", a feature flow
 - "How is the auth service structured?", an architectural overview
 - "Walk me through what happens when a user submits a form", a runtime trace
+- "Explain this PR in HTML", a change walkthrough with HTML output
+- "Explain this diff in Notion", a change walkthrough with native Notion output
 
 Identify the scope. If ambiguous, state your best-guess interpretation before exploring. Don't ask. Let the user redirect if you're off.
+
+Exceptions: resolve material diff ambiguity as the change reference directs,
+and missing artifact choices as the output instructions direct.
 
 **Assess complexity to decide the approach:**
 
@@ -64,13 +105,9 @@ Then proceed to Step 3.
 
 ### Step 2b. Direct Explain (simple questions)
 
-Spawn a single explorer agent that explores and explains in one pass:
-
-- `agent`: `explorer`
-- `model`: first pinnable name in the `judgment and prose` row of the `poteto-mode` skill's `models.md`; row absent -> omit
-- `readonly`: `true`
-
-The agent does its own exploration (file search, text search, reading) and writes the explanation directly. Read `references/explainer-prompt.md` for the communication style and output format. Same structure, just no explorer findings as input.
+Explore and explain in one pass, without spawning an explorer. Read
+`references/explainer-prompt.md` for the communication style and selected
+output instructions. Same structure, just no explorer findings as input.
 
 Proceed to Step 4.
 
@@ -82,11 +119,18 @@ Once all explorers return, spawn a single explorer agent to synthesize their fin
 - `model`: first pinnable name in the `judgment and prose` row of the `poteto-mode` skill's `models.md`; row absent -> omit
 - `readonly`: `true`
 
-The explainer gets all explorers' findings and writes the human-facing explanation (output format below). Read `references/explainer-prompt.md` for the full prompt template. The explainer reconciles overlapping findings, resolves contradictions, and weaves the slices into a unified picture.
+The explainer gets all explorers' findings and writes the human-facing explanation in the selected mode and output format. Read `references/explainer-prompt.md` for the full prompt template. The explainer reconciles overlapping findings, resolves contradictions, and weaves the slices into a unified picture.
+
+The synthesizer returns the content to the coordinator. It does not create
+files or publish pages; the coordinator owns those writes in Step 4.
 
 ### Step 4. Present
 
 Present the explainer's output to the user. You may lightly edit for clarity or add context from the conversation, but don't substantially rewrite. The explainer's communication is the product.
+
+For HTML or Notion, the coordinator creates the selected artifact or page,
+runs the output reference's verification, and returns the artifact path or
+page URL. Report any rendering or publishing limitation.
 
 ### Output Format
 
@@ -108,7 +152,9 @@ Triggered when the user asks for architectural issues, problems, or improvements
 
 ### Step 1. Explain First
 
-Run the full explain flow above (Steps 1-4). You must understand the architecture before critiquing it.
+Run Explain Steps 1-3 before the critics. You must understand the architecture
+before critiquing it. Keep the explanation as a draft until the verdict is
+ready, then present or publish both together through Step 4.
 
 ### Step 2. Spawn Critics
 

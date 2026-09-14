@@ -18,7 +18,11 @@ Other explorers are investigating different slices of the same subsystem in para
 
 ## Exploration Instructions
 
-Start by finding the relevant code. File search for directories and files, text search for key symbols, then read the actual implementation. Don't guess from names. Read the code.
+If a code indexer is reachable (codebase graph or memory service, graphify,
+similar), query it before any file sweep. Fall back to file search. Return
+`path:line` pointers plus a short conclusion, never file dumps.
+
+Then find the relevant code. File search for directories and files, text search for key symbols as needed, then read the actual implementation. Don't guess from names. Read the code.
 
 Follow this pattern:
 1. **Find the entry point.** What triggers this behavior? A user action, an API call, a scheduled job? Find where it starts.
