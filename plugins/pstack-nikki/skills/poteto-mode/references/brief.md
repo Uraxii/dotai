@@ -26,11 +26,12 @@ verdict text only".
 A brief is one unit; `principle-decomposition` defines the unit test and how
 to split what fails it.
 
-SCOPE names the agent's own worktree and its own branch. A worktree lives at
-`.nikki-agents/worktrees/<name>` in the project, on branch `agent/<name>`. On
-Claude Code spawning with `isolation: "worktree"` puts it there, so SCOPE says
-"your worktree" rather than a hand-made path. On every other harness the agent
-runs `git worktree add` to that same path itself. Repo work never goes under
+SCOPE names the agent's own worktree and its own branch, on branch
+`agent/<name>`. On Claude Code, spawning with `isolation: "worktree"` puts it
+at Claude's own default, `.claude/worktrees/<name>`, so SCOPE says "your
+worktree" rather than a hand-made path. On every other harness the agent runs
+`git worktree add .nikki-agents/worktrees/<name> -b agent/<name>` itself, and
+SCOPE names that path directly. Repo work never goes under
 `/tmp`: it is wiped on reboot, and a write from a worktree at any other
 path breaks the rule, not a hook. Scratch output that never enters the repo goes under
 `.nikki-agents/` as well, which keeps every agent artifact in one
