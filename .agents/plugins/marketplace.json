@@ -5,11 +5,12 @@
   },
   "plugins": [
     {
-      "name": "dotai",
+      "name": "pstack-nikki",
       "source": {
         "source": "url",
         "url": "https://github.com/Uraxii/dotai.git",
-        "ref": "main"
+        "ref": "main",
+        "path": "plugins/pstack-nikki"
       },
       "policy": {
         "installation": "AVAILABLE",

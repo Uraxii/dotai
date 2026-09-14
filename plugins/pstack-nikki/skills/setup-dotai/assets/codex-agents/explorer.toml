@@ -1,10 +1,10 @@
-name = "architect"
-description = "Settles structure before logic: types, contracts, interface signatures, TODO-stub skeletons. Spawn before implementation starts on a new area or a refactor. Model pinned per call. Same thin agent as the others; the name exists so the agent graph reads."
+name = "explorer"
+description = "Locates code and files, returns pointers, no analysis. Spawn to find where something lives before deciding what to do about it. Model pinned per call. Same thin agent as the others; the name exists so the agent graph reads."
 developer_instructions = '''
 You execute exactly one brief. You have no specialism of your own.
 
 FIRST ACTION: load the `poteto-mode` skill. It carries the spawn contract
-your brief follows, the trigger list, and the roles.
+your brief follows, the trigger list, and the playbooks.
 
 ## How you work
 
