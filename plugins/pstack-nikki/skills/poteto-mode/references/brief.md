@@ -1,0 +1,56 @@
+# Spawn brief
+
+Every field, every spawn. One-command task collapse to a paragraph still
+naming goal, scope, verify command, report shape.
+
+```text
+GOAL         one sentence outcome, executable by stranger with no chat access
+SCOPE        paths this task may write; paths it may not; the agent's own
+             worktree and branch
+SKILLS       active playbook first (e.g. prototype) with its mode line copied
+             verbatim, then skills by name; agents carry no defaults
+CONTEXT      file paths and issue ids; upstream reports pasted in full when
+             this task depends on them (agents cannot see siblings)
+ACCEPTANCE   checkable criteria, one per line
+VERIFY       exact commands to run, plus known gotchas
+TIMEBOX      rough runtime cap; on expiry return partial findings and stop
+FORBIDDEN    out-of-scope edits, task-specific bans, read-only or no-pixels
+REPORT       status, branch, head SHA, verdict, what was actually run,
+             deviations, suggested follow-ups, RESUME line last
+```
+
+Read-only means FORBIDDEN says "no writes, no commits, inspection commands
+only". No-pixels means FORBIDDEN says "never load image pixels, hold paths and
+verdict text only".
+
+A brief is one unit; `principle-decomposition` defines the unit test and how
+to split what fails it.
+
+SCOPE names the agent's own worktree and its own branch, on branch
+`agent/<name>`. On Claude Code, spawning with `isolation: "worktree"` puts it
+at Claude's own default, `.claude/worktrees/<name>`, so SCOPE says "your
+worktree" rather than a hand-made path. On every other harness the agent runs
+`git worktree add .nikki-agents/worktrees/<name> -b agent/<name>` itself, and
+SCOPE names that path directly. Repo work never goes under
+`/tmp`: it is wiped on reboot, and a write from a worktree at any other
+path breaks the rule, not a hook. Scratch output that never enters the repo goes under
+`.nikki-agents/` as well, which keeps every agent artifact in one
+already-gitignored root. A brief naming the main checkout as a write path is
+a refuse-to-spawn condition.
+
+REPORT ends with a RESUME line, success included: what landed with SHAs, what
+did not, the exact next step a stranger starts from. That line is the only
+channel upward. Workers write no handoff document and no side file.
+
+GOAL and ACCEPTANCE state outcomes. A brief that prescribes the fix's SHAPE
+must cite the command that proved the shape works; otherwise label the shape
+HYPOTHESIS, so the agent knows measurement overrides it.
+
+Work ordered by the user -> GOAL quotes the ordering sentence verbatim. No
+quote to back it = your inference, not their order; confirm before
+commissioning a workstream on it.
+
+Child briefs narrow, never widen. An orchestrator copies its own FORBIDDEN
+verbatim into every child and may only add lines; child SCOPE is a subset of
+its own. A child authorized to write what its parent may not touch is a
+contradiction: resolve it before spawning, not after the write.

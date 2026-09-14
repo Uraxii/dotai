@@ -35,3 +35,4 @@ opencode.json
 # llm-wiki kb. Real bytes live in .nikki-agents/.kb; this is the symlink
 # that keeps llmwiki's upward search working from the repo root.
 .kb
+.nikki-agents/decisions.tsv

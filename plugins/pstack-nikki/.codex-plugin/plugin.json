@@ -1,0 +1,34 @@
+{
+  "name": "pstack-nikki",
+  "version": "1.0.1",
+  "description": "Skills and thin named agents: poteto-mode, principles, playbooks, tools.",
+  "author": {
+    "name": "Uraxii",
+    "url": "https://github.com/Uraxii"
+  },
+  "homepage": "https://github.com/Uraxii/dotai",
+  "repository": "https://github.com/Uraxii/dotai",
+  "keywords": [
+    "codex",
+    "skills",
+    "software-development"
+  ],
+  "skills": "./skills/",
+  "hooks": "./hooks/codex-hooks.json",
+  "interface": {
+    "displayName": "dotai",
+    "shortDescription": "Reusable skills for software development work.",
+    "longDescription": "A collection of reusable workflows, principles, playbooks, and tools for Codex and other coding agents.",
+    "developerName": "Uraxii",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Skills",
+      "Hooks"
+    ],
+    "defaultPrompt": [
+      "Show me which dotai skills can help with this task.",
+      "Use poteto-mode to work through this task.",
+      "Set up dotai for this Codex environment."
+    ]
+  }
+}
