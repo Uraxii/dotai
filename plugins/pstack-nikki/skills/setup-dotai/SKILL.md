@@ -32,7 +32,7 @@ Install dotai on a new machine:
 
 ```
 /plugin marketplace add Uraxii/dotai
-/plugin install dotai@Uraxii
+/plugin install pstack-nikki@Uraxii
 ```
 
 Claude Code loads the plugin's agent files from
@@ -48,7 +48,7 @@ Install dotai on a new machine:
 
 ```
 copilot plugin marketplace add Uraxii/dotai
-copilot plugin install dotai@Uraxii
+copilot plugin install pstack-nikki@Uraxii
 ```
 
 Copilot CLI keeps its own config directory and reads neither `CLAUDE.md`
@@ -83,7 +83,7 @@ Install dotai on a new machine:
 
 ```
 codex plugin marketplace add Uraxii/dotai --ref main
-codex plugin add dotai@uraxii
+codex plugin add pstack-nikki@uraxii
 ```
 
 Codex loads personal custom agents from `<codex-home>/agents/`. Resolve
