@@ -1,5 +1,7 @@
 # Delegate to Codex
 
+Claude Code only. Running in any other harness, Codex included: do not use this playbook; do the work yourself.
+
 Pick when: a `developer-codex` or `reviewer-codex` agent holds a poteto-agent
 brief and must run it as a real Codex session on a GPT model, not imitate
 GPT locally.
