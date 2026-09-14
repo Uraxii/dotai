@@ -97,5 +97,5 @@ Short list, no preamble:
 
 Stamped from `plugins/pstack-nikki/models.json` (edit there, rerun `generate-models.py`). Row absent -> omit `model`, child inherits. A spawner reads the entry for its own harness.
 
-- `judgment and prose`: On Claude Code: `opus`, `sonnet`. On Codex: `gpt-5.5`, `gpt-5.4`. On Copilot CLI: `claude-opus-5`, `gpt-5.5`, `claude-sonnet-5`, `gpt-5.4`.
+- `judgment and prose`: On Claude Code: `opus`, `sonnet`. On Codex: `gpt-5.6-sol`, `gpt-5.6-terra`. On Copilot CLI: `claude-opus-5`, `gpt-5.5`, `claude-sonnet-5`, `gpt-5.4`.
 <!-- dotai:models:end -->
