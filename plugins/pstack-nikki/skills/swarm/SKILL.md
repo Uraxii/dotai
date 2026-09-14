@@ -24,7 +24,7 @@ Open a todolist with one entry per phase before launching anything.
 1. State the done predicate and the artifact or report the swarm must return.
 2. Choose the shape. Partition into slices, race N workers on identical briefs, or mix both. For a race or mixed shape, declare `first pass`, `rank all`, or `best-of` before spawning.
 3. Set N from the user or derive it from the shape. N is total workers, not the cloud concurrency limit.
-4. Pick the worker model from `swarm workers` in the `poteto-mode` skill's `models.md` when present; absent -> omit `model`. For a model race, name each arm's model up front.
+4. Pick the worker model from `swarm workers` in `plugins/pstack-nikki/models.json` when present; absent -> omit `model`. For a model race, name each arm's model up front.
 5. Give each worker its own writable output when it writes. A worker that writes in the repo gets its own git worktree on its own branch, never a shared checkout; otherwise `.nikki-agents/swarm/<slug>/worker-<n>/`.
 
 ## Phase B: Fan out
@@ -46,3 +46,11 @@ Keep a compact result table, one-line evidenced issues, and explicit gaps or dro
 ## Phase D: Report
 
 Return one consolidated in-chat report with the table, issue one-liners, gaps or dropouts, and the race rule when used.
+
+<!-- dotai:models:start -->
+## Models
+
+Stamped from `plugins/pstack-nikki/models.json` (edit there, rerun `generate-models.py`). Row absent -> omit `model`, child inherits.
+
+- `swarm workers`: `claude-sonnet-5`, `gpt-5.5`, `gpt-5.4-mini`
+<!-- dotai:models:end -->

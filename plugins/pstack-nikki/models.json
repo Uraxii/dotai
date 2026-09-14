@@ -1,0 +1,20 @@
+{
+  "available": [
+    { "label": "Opus 5", "slug": "claude-opus-5" },
+    { "label": "Sonnet 5", "slug": "claude-sonnet-5" },
+    { "label": "GPT-5.5", "slug": "gpt-5.5" },
+    { "label": "GPT-5.4", "slug": "gpt-5.4" },
+    { "label": "GPT-5.4 mini", "slug": "gpt-5.4-mini" }
+  ],
+  "panels": {
+    "reviewer-panel": ["claude-opus-5", "gpt-5.5", "claude-sonnet-5"]
+  },
+  "roles": [
+    { "role": "feature, refactoring", "models": ["claude-sonnet-5", "gpt-5.5", "gpt-5.4", "claude-opus-5"] },
+    { "role": "judgment and prose", "models": ["claude-opus-5", "gpt-5.5", "claude-sonnet-5", "gpt-5.4"] },
+    { "role": "arena runners", "models": ["claude-opus-5", "claude-sonnet-5", "gpt-5.5"] },
+    { "role": "arena cross-judge pool", "models": "reviewer-panel" },
+    { "role": "interrogate reviewers", "models": "reviewer-panel" },
+    { "role": "swarm workers", "models": ["claude-sonnet-5", "gpt-5.5", "gpt-5.4-mini"] }
+  ]
+}

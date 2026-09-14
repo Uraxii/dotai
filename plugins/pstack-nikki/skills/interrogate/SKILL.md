@@ -40,7 +40,7 @@ Write one clear paragraph. Reviewers challenge whether the work achieves the int
 ## Step 3, Spawn Reviewers
 
 Spawn every reviewer at once, one `reviewer` per entry in the `interrogate
-reviewers` row of the `poteto-mode` skill's `models.md`. Label them Reviewer
+reviewers` row of `plugins/pstack-nikki/models.json`. Label them Reviewer
 A, B, C... in row order. Row absent -> two reviewers, `opus` and `sonnet`.
 
 Each brief:
@@ -102,3 +102,11 @@ Present the verdict in this structure:
 
 ### Agreement Map
 [Where did models agree, where did they diverge, and what does the pattern of agreement/disagreement tell us?]
+
+<!-- dotai:models:start -->
+## Models
+
+Stamped from `plugins/pstack-nikki/models.json` (edit there, rerun `generate-models.py`). Row absent -> omit `model`, child inherits.
+
+- `interrogate reviewers`: `claude-opus-5`, `gpt-5.5`, `claude-sonnet-5`
+<!-- dotai:models:end -->

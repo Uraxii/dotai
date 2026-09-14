@@ -44,7 +44,7 @@ sketch, signatures, module map, and the rationale derived from it. A TODO-stub
 body at every call or change site (`raise NotImplementedError`, `throw new
 Error("not impl")`) marks where logic goes.
 
-Use `arena runners` from the `poteto-mode` skill's `models.md` when present;
+Use `arena runners` from `plugins/pstack-nikki/models.json` when present;
 row absent -> omit `model`.
 
 Design it twice. Require at least two structurally distinct candidates before
@@ -119,3 +119,11 @@ new types and signatures for a small change; a module map plus type definitions
 for larger work. Bodies stay TODO stubs. The rationale ships alongside per
 `references/rationale-template.md`, with the usage sketch and synthesis
 decision.
+
+<!-- dotai:models:start -->
+## Models
+
+Stamped from `plugins/pstack-nikki/models.json` (edit there, rerun `generate-models.py`). Row absent -> omit `model`, child inherits.
+
+- `arena runners`: `claude-opus-5`, `claude-sonnet-5`, `gpt-5.5`
+<!-- dotai:models:end -->

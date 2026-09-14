@@ -120,7 +120,7 @@ Proceed to Step 4.
 Once all explorers return, spawn a single explorer agent to synthesize their findings into one coherent explanation:
 
 - `agent`: `explorer`
-- `model`: first pinnable name in the `judgment and prose` row of the `poteto-mode` skill's `models.md`; row absent -> omit
+- `model`: first pinnable name in the `judgment and prose` row of `plugins/pstack-nikki/models.json`; row absent -> omit
 - `readonly`: `true`
 
 The explainer gets all explorers' findings and writes the human-facing explanation in the selected mode and output format. Read `references/explainer-prompt.md` for the full prompt template. The explainer reconciles overlapping findings, resolves contradictions, and weaves the slices into a unified picture.
@@ -162,7 +162,7 @@ ready, then present or publish both together through Step 4.
 
 ### Step 2. Spawn Critics
 
-After the explanation is complete, spawn one architectural critic per pinnable model in the `interrogate reviewers` row of the `poteto-mode` skill's `models.md`, all in a single message.
+After the explanation is complete, spawn one architectural critic per pinnable model in the `interrogate reviewers` row of `plugins/pstack-nikki/models.json`, all in a single message.
 
 For each critic:
 - `agent`: `explorer`
@@ -185,3 +185,12 @@ Categorize findings:
 - **Dismissed.** Wrong, missing context, or style preference
 
 Present the explanation first (from Step 1), then the critique verdict below it. The explanation should stand on its own; someone who just wants to understand the system shouldn't wade through critique.
+
+<!-- dotai:models:start -->
+## Models
+
+Stamped from `plugins/pstack-nikki/models.json` (edit there, rerun `generate-models.py`). Row absent -> omit `model`, child inherits.
+
+- `judgment and prose`: `claude-opus-5`, `gpt-5.5`, `claude-sonnet-5`, `gpt-5.4`
+- `interrogate reviewers`: `claude-opus-5`, `gpt-5.5`, `claude-sonnet-5`
+<!-- dotai:models:end -->

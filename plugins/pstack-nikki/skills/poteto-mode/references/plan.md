@@ -35,7 +35,7 @@ constraints, patterns to preserve, and the definition of done.
 
 Delegate codebase exploration to `explorer` subagents
 (`principle-guard-the-context-window`). Pin the model per call from
-`models.md` in this skill.
+`plugins/pstack-nikki/models.json`.
 
 Each explorer returns file pointers, conventions, dependencies, test
 infrastructure, and entry points. No inlined dumps.
