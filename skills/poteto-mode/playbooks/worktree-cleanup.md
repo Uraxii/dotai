@@ -39,7 +39,7 @@ work.
    workspace state and snapshot roots, package caches (pnpm, uv, brew, yarn).
    Clear only caches the user has not said to keep.
 
-This is the one role that deletes user state with no code review to catch a
+This is the one playbook that deletes user state with no code review to catch a
 slip, so the gates above are the review.
 
 **Reply:** `df -h /` before and after with space reclaimed, the worktrees

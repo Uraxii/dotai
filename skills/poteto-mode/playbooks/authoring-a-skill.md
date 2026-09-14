@@ -11,7 +11,7 @@ becomes an instruction.
 2. Validate: frontmatter has `name` and `description`, referenced files exist,
    cross-skill links resolve, no em-dashes, lines reflowed to 80 columns.
 3. Test cases if structural; skip if subjective.
-4. Run Opening a PR (`roles/opening-a-pr.md`).
+4. Run Opening a PR (`playbooks/opening-a-pr.md`).
 
 When in doubt, delete. Prose earns its keep by changing a decision. Tell it to
 do the thing, skip the reason. Explain only when the rule is confusing without

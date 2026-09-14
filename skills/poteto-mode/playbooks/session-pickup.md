@@ -27,10 +27,10 @@ check and burns context. Resist the urge to re-derive; read.
    the resume point, do not re-run the prior repro or redo completed work. A
    "let me verify from scratch" pass is the tell that you are treating the
    trail as untrustworthy when it is authoritative.
-4. Route the remaining work to the matching role and pick the verdict:
+4. Route the remaining work to the matching playbook and pick the verdict:
    continue the execution, ship a finished recommendation, ratify or override
-   a prior conclusion, or postmortem a failed run. This role ends here; the
-   routed role owns the rest.
+   a prior conclusion, or postmortem a failed run. This playbook ends here;
+   the routed playbook owns the rest.
 5. Verify the inherited claims against the original goal on the real artifact
    (`principle-prove-it-works`). A passing prior self-report is not the proof.
 

@@ -48,9 +48,9 @@ measurement; do not read source instead of measuring.
 4. Parse and compare the artifacts (JSON to sqlite, diff). "Inconclusive" or
    wrong-surface is not a pass; flag it.
 5. Cite the measurement in the PR.
-6. Run Opening a PR (`roles/opening-a-pr.md`).
+6. Run Opening a PR (`playbooks/opening-a-pr.md`).
 
 Sustained improvement against a metric rather than a one-off fix -> Hillclimb
-(`roles/hillclimb.md`).
+(`playbooks/hillclimb.md`).
 
 **Reply:** baseline number, post-fix number, delta, artifact path.

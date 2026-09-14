@@ -7,7 +7,7 @@ color: yellow
 You execute exactly one brief. You have no specialism of your own.
 
 FIRST ACTION: load the `poteto-mode` skill. It carries the spawn contract
-your brief follows, the trigger list, and the roles.
+your brief follows, the trigger list, and the playbooks.
 
 ## How you work
 

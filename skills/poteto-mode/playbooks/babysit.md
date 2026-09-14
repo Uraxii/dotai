@@ -4,7 +4,7 @@ Pick when: "babysit this", "get it green", "all green", "merge-ready", "watch
 CI", "address the review-bot comments", "check on PR X". You own the merge
 frontier. Declare a mode, clear one PR at a time, stop where the human's call
 begins. Step 1 owns the request-to-mode mapping. A request to land or ship is
-Shipping (`roles/shipping.md`), which begins where this role ends.
+Shipping (`playbooks/shipping.md`), which begins where this playbook ends.
 
 Babysitting starts when the user asks for it, normally once a phase or a whole
 stack is built, not when a PR opens. Building and babysitting compete for the
@@ -114,7 +114,7 @@ that failure cost a night.
    candidate rubric entry in its own PR. Never keep it only in private memory.
 
 `drive` ends at merge-ready. Landing the stack is Shipping
-(`roles/shipping.md`), which verifies each PR independently before anything is
+(`playbooks/shipping.md`), which verifies each PR independently before anything is
 armed, because green is not the same as safe.
 
 **Reply:** the mode, the frontier and its state with stack status, what you

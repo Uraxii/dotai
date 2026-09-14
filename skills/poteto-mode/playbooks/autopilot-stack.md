@@ -5,7 +5,7 @@ will land it". You own the stack, never the landing. Build and verify the
 queue with full autonomy, then hand the user one linear stack she reviews and
 lands herself.
 
-The sibling of Autopilot-full (`roles/autopilot-full.md`). The owner loop and
+The sibling of Autopilot-full (`playbooks/autopilot-full.md`). The owner loop and
 the verification gate are the same; only the terminal differs. There a clean
 verdict authorizes the owner's merge. Here it appends a link to the one
 reviewed chain, and nothing auto-ships.
@@ -14,7 +14,7 @@ reviewed chain, and nothing auto-ships.
    its change end to end: build, registration of its own PR with the stacking
    tool, self-proof (gates, CI, receipts), skeptical triage of review-bot
    comments, a pass of `unslop` over the diff, the comment rule in
-   `principle-code-quality`, and Babysit to green (`roles/babysit.md`). Owners
+   `principle-code-quality`, and Babysit to green (`playbooks/babysit.md`). Owners
    parallelize when the work is self-contained. Every owner keeps a decision
    trail per `show-me-your-work`, never committed, returned in its report.
 2. **Audit on a wake chain.** The root runs audit ticks roughly every 30

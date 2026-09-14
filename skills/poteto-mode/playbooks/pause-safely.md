@@ -25,4 +25,4 @@ iteration.
 **Reply:** where you are in the loop, what is on disk versus still in your head
 (paths, no diff dumps), the commits you made and whether the tree is clean,
 and the first action on resume. This is a pause, not a final report. Resume is
-Session pickup (`roles/session-pickup.md`) reading this note.
+Session pickup (`playbooks/session-pickup.md`) reading this note.

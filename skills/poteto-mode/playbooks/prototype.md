@@ -8,7 +8,7 @@ You own the design decision, not the code. The prototype is a throwaway
 instrument; the real build follows Feature. Load `prototype` for the build
 mechanics.
 
-The one role where "smallest change" and the verification bar invert. Speed
+The one playbook where "smallest change" and the verification bar invert. Speed
 over polish, code quality does not matter, no planning. The rigor is in
 picking the right design cheaply. Be bold: propose variations the user did not
 ask for, throw an approach away and try another.

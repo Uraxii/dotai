@@ -19,7 +19,7 @@ you do not touch it. Equivalence is verified by image diff, not by eye.
    surface. A nonzero diff is a fail; investigate the pixel delta, do not wave
    it through. Iterate per component until the diff is zero, on a recurring
    run if the harness has one.
-5. Run Opening a PR (`roles/opening-a-pr.md`) per component or per safe batch.
+5. Run Opening a PR (`playbooks/opening-a-pr.md`) per component or per safe batch.
 
 **Reply:** components migrated, the diff for each, the baseline harness
 location, what is left.
