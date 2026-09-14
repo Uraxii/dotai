@@ -5,6 +5,9 @@ description: "Mines the active session transcript with three parallel reviewer a
 
 # Reflect
 
+On Codex, spawning a reviewer agent is `spawn_agent`; see
+`../poteto-mode/references/codex-tools.md`.
+
 Mine the conversation for durable learnings, then route each into a skill edit.
 
 ## When to invoke

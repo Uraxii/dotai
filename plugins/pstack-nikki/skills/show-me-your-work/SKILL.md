@@ -5,6 +5,9 @@ description: "Keep a reviewable decision trail for long-running or unattended wo
 
 # Show me your work
 
+On Codex, the spawn call below is `spawn_agent`; see
+`../poteto-mode/references/codex-tools.md`.
+
 For work a human reviews after the fact, a decision trail lets them reconstruct what was decided, why, and on what evidence, without rerunning the work or reading the whole transcript. Keep one canonical log so the trail is consistent and a future agent can find it.
 
 This trail covers one run and can be discarded after it. A decision that outlives the session belongs in the project's settled-decision log instead, keyed by topic: record those with the **decisions** skill.

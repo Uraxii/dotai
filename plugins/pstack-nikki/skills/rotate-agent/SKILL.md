@@ -5,6 +5,9 @@ description: Rotate a bloated long-running subagent into a fresh one via the `ha
 
 # Rotate agent
 
+On Codex, message the running agent with `send_input` and spawn its
+successor with `spawn_agent`; see `../poteto-mode/references/codex-tools.md`.
+
 Swap a bloated subagent for a fresh one with zero pipeline loss. The SPAWNER
 runs this, never the bloated agent: it cannot self-certify rotation.
 

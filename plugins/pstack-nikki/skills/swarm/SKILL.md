@@ -5,6 +5,9 @@ description: "Fan out N parallel workers over separate slices or racing one brie
 
 # Swarm
 
+On Codex, the todolist below is `update_plan` and spawning workers is
+`spawn_agent`; see `../poteto-mode/references/codex-tools.md`.
+
 Fan out N parallel cloud workers. They may cover separate slices, race the same brief, or mix both. The parent waits, aggregates, and returns one report.
 
 ## Start

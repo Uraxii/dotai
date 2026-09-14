@@ -5,6 +5,10 @@ description: "Use for \"how does X work\", rich explanations of a code change, d
 
 # How
 
+On Codex, an `Agent` call below is `spawn_agent`; `readonly` has no Codex
+field, so say it in the spawned agent's own prompt instead. See
+`../poteto-mode/references/codex-tools.md`.
+
 Explore the codebase to answer "how does X work?" questions. Produce clear architectural explanations at the level of a senior engineer onboarding onto a subsystem. Enough to build a working mental model, not annotated source code.
 
 Three modes:

@@ -5,6 +5,9 @@ description: "Use for 'why does X work this way', 'why we picked Y', design rati
 
 # Why
 
+On Codex, spawning an investigator or synthesizer is `spawn_agent`; see
+`../poteto-mode/references/codex-tools.md`.
+
 Investigate the motivation and intent behind code. Why was it built this way? What edge cases were considered? What product, business, or operational constraints shaped the design? What alternatives were rejected, and why?
 
 ## How this skill works
