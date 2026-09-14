@@ -3,43 +3,55 @@ schema_version = 1
 [agents.architect]
 description = "Settles structure before logic: types, contracts, interface signatures, TODO-stub skeletons. Spawn before implementation starts on a new area or a refactor. Model pinned per call. Same thin agent as the others; the name exists so the agent graph reads."
 color = "blue"
-instructions = "scoped-worker-contract.md"
+instructions = "poteto-agent-body.md"
 targets = ["claude", "codex"]
 
 [agents.developer]
 description = "Implements one scoped unit of code per a brief. Spawn for a feature, a fix, a refactor, or any hand-written diff. Model pinned per call. Same thin agent as the others; the name exists so the agent graph reads."
 color = "green"
-instructions = "scoped-worker-contract.md"
+instructions = "poteto-agent-body.md"
 targets = ["claude", "codex"]
+
+[agents.developer-codex]
+description = "Implements one scoped unit of code per a brief, running as a poteto-agent inside Codex on GPT. Spawn for a feature, a fix, a refactor, or any hand-written diff that should show as GPT's work. Model pinned per call. Same thin agent as the others; the name exists so the agent graph reads."
+color = "orange"
+instructions = "poteto-agent-codex-body.md"
+targets = ["claude"]
 
 [agents.explorer]
 description = "Locates code and files, returns pointers, no analysis. Spawn to find where something lives before deciding what to do about it. Model pinned per call. Same thin agent as the others; the name exists so the agent graph reads."
 color = "white"
-instructions = "scoped-worker-contract.md"
+instructions = "poteto-agent-body.md"
 targets = ["claude", "codex"]
 
 [agents.orchestrator]
-description = "Runs one workstream end to end by delegating per a poteto-mode role. Spawns the other six agents with scoped briefs, synthesizes results, never edits code directly. Model pinned per call. Same thin agent as the others; the name exists so the agent graph reads."
+description = "Runs one workstream end to end by delegating per a poteto-mode playbook. Spawns the other six agents with scoped briefs, synthesizes results, never edits code directly. Model pinned per call. Same thin agent as the others; the name exists so the agent graph reads."
 color = "purple"
-instructions = "scoped-worker-contract.md"
+instructions = "poteto-agent-body.md"
 targets = ["claude", "codex"]
 
 [agents.researcher]
 description = "Answers a question from primary sources and writes the findings down. Spawn for lookups, doc gathering, or reading legwork. Model pinned per call. Same thin agent as the others; the name exists so the agent graph reads."
 color = "cyan"
-instructions = "scoped-worker-contract.md"
+instructions = "poteto-agent-body.md"
 targets = ["claude", "codex"]
 
 [agents.reviewer]
 description = "Adversarial gate: reads a diff or artifact and returns a verdict with evidence, never edits. Spawn before ship on risky or cross-cutting work. Model pinned per call. Same thin agent as the others; the name exists so the agent graph reads."
 color = "red"
-instructions = "scoped-worker-contract.md"
+instructions = "poteto-agent-body.md"
 targets = ["claude", "codex"]
+
+[agents.reviewer-codex]
+description = "Adversarial gate run as a poteto-agent inside Codex on GPT: reads a diff or artifact and returns a verdict with evidence, never edits. Spawn before ship when the second opinion should come from GPT instead of Claude. Model pinned per call. Same thin agent as the others; the name exists so the agent graph reads."
+color = "gray"
+instructions = "poteto-agent-codex-body.md"
+targets = ["claude"]
 
 [agents.tester]
 description = "Writes and runs tests, proves a change works by executing it. Spawn after implementation or on a regression hunt. Model pinned per call. Same thin agent as the others; the name exists so the agent graph reads."
 color = "yellow"
-instructions = "scoped-worker-contract.md"
+instructions = "poteto-agent-body.md"
 targets = ["claude", "codex"]
 
 [agents.zakia]
