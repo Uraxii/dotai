@@ -120,3 +120,4 @@ Large or cross-cutting effort, or no bundled playbook fits -> `figure-it-out`. S
 - **Multi-phase plan.** Work spanning phases or stacked PRs. `playbooks/multi-phase-plan.md`.
 - **Worktree cleanup.** Reclaim disk by pruning merged or abandoned git worktrees and stale simulators. `playbooks/worktree-cleanup.md`.
 - **Opening a PR.** Invoked at the end of every other playbook. `playbooks/opening-a-pr.md`.
+- **Delegate to Codex.** Run a poteto-agent brief as a real Codex session on a GPT model (`developer-codex`, `reviewer-codex`). `playbooks/delegate-to-codex.md`.
