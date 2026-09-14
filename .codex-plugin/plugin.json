@@ -1,7 +1,7 @@
 {
   "name": "dotai",
   "version": "1.0.1",
-  "description": "Skills and thin named agents: poteto-mode, principles, roles, tools.",
+  "description": "Skills and thin named agents: poteto-mode, principles, playbooks, tools.",
   "author": {
     "name": "Uraxii",
     "url": "https://github.com/Uraxii"
@@ -18,7 +18,7 @@
   "interface": {
     "displayName": "dotai",
     "shortDescription": "Reusable skills for software development work.",
-    "longDescription": "A collection of reusable workflows, principles, roles, and tools for Codex and other coding agents.",
+    "longDescription": "A collection of reusable workflows, principles, playbooks, and tools for Codex and other coding agents.",
     "developerName": "Uraxii",
     "category": "Developer Tools",
     "capabilities": [

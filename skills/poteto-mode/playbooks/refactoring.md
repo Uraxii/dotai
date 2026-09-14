@@ -10,7 +10,7 @@ reveals a missing feature or a real bug -> split it out and ship the
 structural change first against the pinned contract. A redesign is allowed,
 but name it and route to Feature. Large or cross-cutting structural work (a
 migration across many call sites, a coordinated reshape of many subsystems)
-belongs to `figure-it-out`; this role is the focused-to-medium change.
+belongs to `figure-it-out`; this playbook is the focused-to-medium change.
 
 1. Pin the behaviour contract first. Run `how` over the affected subsystem to
    learn the contract, then write a characterization test, snapshot, or
@@ -52,7 +52,7 @@ belongs to `figure-it-out`; this role is the focused-to-medium change.
 8. Rebase into small ordered commits telling the story: a subtraction commit,
    then the reshape, then follow-on cleanup, so a single revert undoes one
    slice. Each behaviour-preserving slice stays green before the next. Run
-   Opening a PR (`roles/opening-a-pr.md`).
+   Opening a PR (`playbooks/opening-a-pr.md`).
 
 **Reply:** the structure that changed, the pin you held it against, the
 equivalence proof, the reader-load delta, what shipped and what got reverted.

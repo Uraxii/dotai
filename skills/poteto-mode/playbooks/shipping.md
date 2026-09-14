@@ -5,10 +5,10 @@ second half of a stack Babysit already drove to green. You own what lands.
 Verify each PR independently, land only the verified run from the root, then
 keep your hands off the queue.
 
-This is the half after Babysit (`roles/babysit.md`). Babysit makes a stack
+This is the half after Babysit (`playbooks/babysit.md`). Babysit makes a stack
 mergeable. Shipping decides what is actually safe to merge and lets the
 stacking tool drain it. Green is not safe, and the gap between those two words
-is where this role lives.
+is where this playbook lives.
 
 1. **Verify every PR independently before arming anything.** One `reviewer`
    subagent per PR, not batched, each exercising the real surface against

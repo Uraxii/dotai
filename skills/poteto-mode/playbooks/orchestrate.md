@@ -3,12 +3,12 @@
 Pick when: a whole project handed to one standing coordinator chat. Multi-day,
 many stacked PRs, dozens to hundreds of subagents, the human checking in twice
 a day. One task driven to a predicate is Autonomous run
-(`roles/autonomous-run.md`); one ambitious run needing a bespoke workflow is
+(`playbooks/autonomous-run.md`); one ambitious run needing a bespoke workflow is
 `figure-it-out`. Route here when the work outlives any single agent.
 
 You own the program, never the code. Author briefs, drain the queue, keep the
 frontier green, decide. Work one agent could finish inside the session budget
-is not a program: measured head to head, this role's ceremony turned a
+is not a program: measured head to head, this playbook's ceremony turned a
 half-hour 12-unit job into 1 landed unit while a plain agent landed all 12.
 Below that line, run Autonomous run. Above it, collapse each gate as its
 section directs.
@@ -155,7 +155,7 @@ Never resume-chain a brief; respawn fresh with consolidated scope.
   run it. PR closes and retargets go through the stacker only, because closing a
   base PR orphans every chain above it. Merges and stack surgery are units with
   briefs.
-- Babysitters follow `roles/babysit.md`, one per stack, scoped to one immutable
+- Babysitters follow `playbooks/babysit.md`, one per stack, scoped to one immutable
   frontier generation; they report conflicts to the stacker rather than
   restacking. One retro watcher follows merged PRs for reverts, post-merge CI
   breaks, and orphaned follow-ups.

@@ -92,7 +92,7 @@ requirement on day one, what would it look like? Redesign holistically;
 deliver incrementally.
 
 A phase that creates or edits a skill instructs the implementer to follow
-the Authoring a skill role (`roles/authoring-a-skill.md`).
+the Authoring a skill playbook (`playbooks/authoring-a-skill.md`).
 
 ## 5. Verification per phase
 
@@ -119,7 +119,7 @@ apply, by name:
 - `unslop` over each diff before commit and over any prose surface.
 - `show-me-your-work` to keep a decision trail when the plan is large enough
   to need an auditable record.
-- Babysit (`roles/babysit.md`) after opening the PR.
+- Babysit (`playbooks/babysit.md`) after opening the PR.
 
 ## 7. Hand back
 

@@ -50,7 +50,7 @@ untested changes, never claim a win from code inspection. The data decides
      (`git add <files>`, never `-A`). Log the row either way.
    Each iteration ends in a check before the next begins. Unattended run ->
    borrow only the wake mechanism from Autonomous run
-   (`roles/autonomous-run.md`), not its stop rule. This role's stop criteria
+   (`playbooks/autonomous-run.md`), not its stop rule. This playbook's stop criteria
    govern, so a plateau means pivot, not stop.
 6. Push past the first plateau. On a stall, several rejects in a row, pivot
    category, combine near-misses, re-read the source, or try something more
@@ -61,7 +61,7 @@ untested changes, never claim a win from code inspection. The data decides
    marginal and not worth their cost. Do not relax the predicate to declare
    victory, and do not quit while cheap untried hypotheses remain. Stuck ->
    surface it instead of spinning.
-8. Run Opening a PR (`roles/opening-a-pr.md`) with the accepted commits
+8. Run Opening a PR (`playbooks/opening-a-pr.md`) with the accepted commits
    stacked in the order they landed, so the metric's climb reads top to
    bottom.
 

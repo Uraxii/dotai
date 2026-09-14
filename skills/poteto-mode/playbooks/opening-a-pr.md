@@ -1,6 +1,6 @@
 # Opening a PR
 
-Invoked at the end of every other role.
+Invoked at the end of every other playbook.
 
 **Worktree.** Work from a git worktree off main; subagents inherit it.
 Multiple parallel spawns on the same branch each get their own worktree, or
@@ -20,7 +20,7 @@ PRs use whatever stacking tool the team uses: small, ordered slices, stack
 visible to reviewers. `gh pr view <number>` before referencing PR status.
 Rebase on `main` before substantial stack work. No `## Summary` /
 `## Test plan` boilerplate on small PRs; commit bodies do not restate the
-subject. After opening, run Babysit (`roles/babysit.md`); push back when
+subject. After opening, run Babysit (`playbooks/babysit.md`); push back when
 feedback drifts. An in-flight review verdict blocks merge exactly as red CI
 does; synthesize the interrogate verdict BEFORE merging, never in parallel
 with it.

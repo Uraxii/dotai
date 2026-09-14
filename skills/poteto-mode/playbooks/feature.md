@@ -38,7 +38,7 @@ verify. Delegate implementation; stay in the lead.
 6. Rebase into small, ordered commits; stack follow-ups. Build, verify, and
    commit each small unit before the next.
 7. Design contested -> `interrogate` before shipping.
-8. Run Opening a PR (`roles/opening-a-pr.md`).
+8. Run Opening a PR (`playbooks/opening-a-pr.md`).
 
 Code-coupled work (one feature, one migration) goes to a single owner with the
 checkpoint inline; that owner fans out internally after the blocking phase.

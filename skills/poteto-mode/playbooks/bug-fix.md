@@ -37,7 +37,7 @@ where the evidence is the trace.
    the diff tells the story. See `tdd` for the failing-test-first cadence, and
    consult it before settling that the fix ships without a test. This is the
    canonical verifiable-unit sequence: failing test first, fix on top.
-6. Run Opening a PR (`roles/opening-a-pr.md`).
+6. Run Opening a PR (`playbooks/opening-a-pr.md`).
 
 Investigation fans out `how` and `why` as parallel `researcher` subagents.
 

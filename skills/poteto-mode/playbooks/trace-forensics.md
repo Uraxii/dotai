@@ -5,7 +5,7 @@ Pick when: a dropped `.cpuprofile`, `Trace-*.json.gz`, `Spindump.txt`, or
 crashing". You own the diagnosis from the artifact. Load it, shape it, narrow
 to the cause, attribute to source.
 
-Distinct from Runtime forensics (`roles/runtime-forensics.md`), which
+Distinct from Runtime forensics (`playbooks/runtime-forensics.md`), which
 instruments the live process. Here the capture already exists; the artifact is
 a fixed dataset: read it, do not re-run it. Keep tooling generic: a
 DevTools or trace parser for cpuprofile and `.json.gz`, a text editor for a

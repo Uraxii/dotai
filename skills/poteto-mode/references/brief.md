@@ -7,7 +7,7 @@ naming goal, scope, verify command, report shape.
 GOAL         one sentence outcome, executable by stranger with no chat access
 SCOPE        paths this task may write; paths it may not; the agent's own
              worktree and branch
-SKILLS       active role first (e.g. prototype) with its mode line copied
+SKILLS       active playbook first (e.g. prototype) with its mode line copied
              verbatim, then skills by name; agents carry no defaults
 CONTEXT      file paths and issue ids; upstream reports pasted in full when
              this task depends on them (agents cannot see siblings)
@@ -32,7 +32,7 @@ Claude Code spawning with `isolation: "worktree"` puts it there, so SCOPE says
 "your worktree" rather than a hand-made path. On every other harness the agent
 runs `git worktree add` to that same path itself. Repo work never goes under
 `/tmp`: it is wiped on reboot, and a write from a worktree at any other
-path is denied. Scratch output that never enters the repo goes under
+path breaks the rule, not a hook. Scratch output that never enters the repo goes under
 `.nikki-agents/` as well, which keeps every agent artifact in one
 already-gitignored root. A brief naming the main checkout as a write path is
 a refuse-to-spawn condition.

@@ -19,7 +19,7 @@ and audits.
    (`principle-prove-it-works`), skeptical triage of review-bot comments, a
    pass of `unslop` over the diff, the comment rule in
    `principle-code-quality`, a rebase onto current trunk, the Babysit loop to
-   green (`roles/babysit.md`), and the merge itself. The rebase always
+   green (`playbooks/babysit.md`), and the merge itself. The rebase always
    precedes babysit and never waits for drift or conflicts. Every owner keeps
    a decision trail per `show-me-your-work`, never committed, returned with
    its report. The merge is the one step an owner may not take alone; step 4
@@ -42,7 +42,7 @@ and audits.
 5. **On a clean verdict the owner merges and takes the next item.** The owner
    merges only from a head freshly rebased on trunk. The merge-ready report is
    made at a trunk-current head, and the verdict pins that SHA. Trunk moves
-   again before the merge -> the patch-id rule in `roles/shipping.md` governs
+   again before the merge -> the patch-id rule in `playbooks/shipping.md` governs
    re-verification; a new head voids the verdict unless the patch-id is
    unchanged. The owner squash-merges its own PR and picks up its next
    self-contained item from the queue. The user's full-autonomy grant plus the

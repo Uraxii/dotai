@@ -7,13 +7,6 @@
         "bash": "python3 hooks/handoff-token-flag.py --mode stop",
         "timeoutSec": 5
       }
-    ],
-    "preToolUse": [
-      {
-        "type": "command",
-        "bash": "python3 hooks/agent-isolation/agent_isolation.py --harness copilot",
-        "timeoutSec": 5
-      }
     ]
   }
 }

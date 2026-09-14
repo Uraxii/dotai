@@ -76,8 +76,8 @@ the project ships over every touched skill.
   does it directly.
 - Substantive edit (a new section, a new table, more than about 10 lines),
   `tune description: <skill path>`, or `new skill: <kebab-name>`: hand to a
-  `developer` following the Authoring a skill role
-  (`roles/authoring-a-skill.md` in the `poteto-mode` skill). Do not invent the
+  `developer` following the Authoring a skill playbook
+  (`playbooks/authoring-a-skill.md` in the `poteto-mode` skill). Do not invent the
   shape ad hoc.
 
 ## 5. Summarize
