@@ -47,6 +47,46 @@ class SessionStartContextTests(unittest.TestCase):
         session_command = session_start["hooks"][0]["command"]
         self.assertIn("session_start_context.py --harness claude", session_command)
 
+    def test_copilot_output_is_additional_context_json(self) -> None:
+        output = HOOK.build_output("copilot", "SessionStart")
+        parsed = json.loads(output)
+
+        self.assertEqual({"additionalContext": HOOK.REMINDER_TEXT}, parsed)
+
+    def test_opencode_output_is_plain_reminder_text(self) -> None:
+        output = HOOK.build_output("opencode", None)
+
+        self.assertEqual(HOOK.REMINDER_TEXT, output)
+
+    def test_hermes_output_injects_context_on_first_turn(self) -> None:
+        output = HOOK.build_hermes_output({"extra": {"is_first_turn": True}})
+
+        self.assertEqual({"context": HOOK.REMINDER_TEXT}, json.loads(output))
+
+    def test_hermes_output_is_noop_on_later_turns(self) -> None:
+        output = HOOK.build_hermes_output({"extra": {"is_first_turn": False}})
+
+        self.assertEqual({}, json.loads(output))
+
+    def test_hermes_output_is_noop_when_extra_is_missing(self) -> None:
+        # A malformed or unexpected payload must never risk injecting the
+        # reminder on every turn; treat "unknown" the same as "not first".
+        output = HOOK.build_hermes_output({})
+
+        self.assertEqual({}, json.loads(output))
+
+    def test_copilot_manifest_wires_session_start(self) -> None:
+        config = json.loads((REPOSITORY_ROOT / "hooks.json").read_text())
+
+        session_start = config["hooks"]["sessionStart"][0]
+        self.assertIn(
+            "session_start_context.py --harness copilot --event SessionStart",
+            session_start["bash"],
+        )
+
+        stop_command = config["hooks"]["agentStop"][0]["bash"]
+        self.assertIn("handoff-token-flag.py --mode stop", stop_command)
+
     def test_codex_manifest_wires_session_start_and_post_compact(self) -> None:
         config = json.loads(
             (REPOSITORY_ROOT / "hooks" / "codex-hooks.json").read_text()
