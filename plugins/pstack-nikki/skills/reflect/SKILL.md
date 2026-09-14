@@ -42,7 +42,7 @@ resolves, write a tight digest of the session and pass that instead.
 ## 2. Spawn three reviewers in parallel
 
 One message, three `reviewer` agents, each carrying the full spawn brief.
-Model per call from the `poteto-mode` skill's `models.md` (`judgment and
+Model per call from `plugins/pstack-nikki/models.json` (`judgment and
 prose` row); row absent -> omit `model`. Keep their context-lookup tools.
 FORBIDDEN: no writes, no commits, inspection only. The parent applies edits.
 
@@ -91,3 +91,11 @@ Short list, no preamble:
 - New skills: `<skill path>`, one line each.
 - Backlog filed: `<issue title>`, one line each.
 - Dropped: one line per rejected finding, plus the synthesizer's reason.
+
+<!-- dotai:models:start -->
+## Models
+
+Stamped from `plugins/pstack-nikki/models.json` (edit there, rerun `generate-models.py`). Row absent -> omit `model`, child inherits.
+
+- `judgment and prose`: `claude-opus-5`, `gpt-5.5`, `claude-sonnet-5`, `gpt-5.4`
+<!-- dotai:models:end -->

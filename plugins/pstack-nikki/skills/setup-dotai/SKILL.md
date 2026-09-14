@@ -36,9 +36,9 @@ Install dotai on a new machine:
 ```
 
 Claude Code loads the plugin's agent files from
-[`../../agents/`](../../agents/) automatically. Do not copy them into
+`../../agents/` automatically. Do not copy them into
 `~/.claude/agents/`. It also loads the context-pressure hook from
-[`../../hooks/hooks.json`](../../hooks/hooks.json). Offer the Preamble for
+`../../hooks/hooks.json`. Offer the Preamble for
 `~/.claude/CLAUDE.md`, then continue to Models. Tell the user to start a new
 session after changing the global instructions, agent definitions, or hooks.
 
@@ -59,11 +59,11 @@ Resolve the config directory once: `COPILOT_HOME` when that variable is
 set, otherwise `~/.copilot`. Never hardcode a home directory.
 
 1. **Agents.** Copilot CLI loads the plugin's agent files from
-   [`../../agents/`](../../agents/) automatically. Do not copy them into the
+   `../../agents/` automatically. Do not copy them into the
    personal `<config-dir>/agents/` directory.
 
 2. **Hooks.** Copilot CLI loads the context-pressure hook from
-   [`../../hooks.json`](../../hooks.json). Do not copy it into the personal
+   `../../hooks.json`. Do not copy it into the personal
    config directory.
 
 3. **Instructions.** The global instructions file is
@@ -90,7 +90,7 @@ Codex loads personal custom agents from `<codex-home>/agents/`. Resolve
 `<codex-home>` from `CODEX_HOME` when set, otherwise use `~/.codex`.
 
 1. Codex loads the plugin's context-pressure hook from
-   [`../../hooks/codex-hooks.json`](../../hooks/codex-hooks.json). Tell the
+   `../../hooks/codex-hooks.json`. Tell the
    user to open `/hooks`, review the definition, and trust its current hash.
    Codex skips a new or changed plugin hook until the user trusts it.
 2. Run [the Codex agent installer](scripts/install-codex-agents.py) with
@@ -109,8 +109,8 @@ Codex loads personal custom agents from `<codex-home>/agents/`. Resolve
 
 The generated Codex files intentionally omit `model` and
 `model_reasoning_effort`. A custom-agent file would override the role choice
-made by the spawning workflow. Keep model selection in `models.md` and pass it
-when spawning instead.
+made by the spawning workflow. Keep model selection in `models.json` and pass
+it when spawning instead.
 
 The platform-neutral definitions live in
 [references/agent-definitions.toml](references/agent-definitions.toml). After
@@ -155,21 +155,22 @@ installed skills.
 
 ## Models
 
-You edit the `poteto-mode` skill's `models.md` on the user's request. One
-row per label, an ordered preference list of model names; a spawner walks
-the list and pins the first name its harness accepts, so one row serves
-every harness. Locate the file through the skills install this skill was
-loaded from; never hardcode an install layout or guess a home directory.
+You edit `plugins/pstack-nikki/models.json` on the user's request. One row
+per label, an ordered preference list of model names (or the name of a
+shared list under `panels`); a spawner walks the list and pins the first
+name its harness accepts, so one row serves every harness. Locate the file
+through the skills install this skill was loaded from; never hardcode an
+install layout or guess a home directory.
 
 1. **Discover the pinnable set.** Enumerate the model names the current
    harness accepts on a spawned agent this session (its spawn tool's model
-   parameter, or its documented model list). That set, plus the harness
-   aliases `models.md` maps to full names, is the only set you may write.
-   Never write a name outside it, and never write one unconfirmed by the
-   user.
+   parameter, or its documented model list). That set, plus `available` in
+   `models.json`, is the only set you may write. Never write a name outside
+   it, and never write one unconfirmed by the user.
 
-2. **Load current state.** Read `models.md`; its rows are the current
-   preference lists, one per label.
+2. **Load current state.** Read `models.json`; each `roles` entry's
+   `models` is the current preference list for that label, resolving a
+   named `panels` entry first.
 
 3. **Interview, per row.** Show the label and its current list. Ask which
    name goes first for this harness and whether any entry should move or go.
@@ -177,9 +178,16 @@ loaded from; never hardcode an install layout or guess a home directory.
 
 4. **Validate.** Reject any name outside the discovered set.
 
-5. **Write.** Overwrite only the confirmed rows, in the same
-   `label: comma-separated list` format. Leave every other line untouched.
-   Report the path written and the rows changed.
+5. **Write.** Update only the confirmed rows in `models.json`. Leave every
+   other row untouched. Then run the generator so every skill's stamped
+   Models block matches:
+
+   ```
+   python3 plugins/pstack-nikki/skills/setup-dotai/scripts/generate-models.py
+   ```
+
+   Report the rows changed and confirm
+   `generate-models.py --check` exits 0.
 
 ## Auto mode: let agents use Proton Pass
 

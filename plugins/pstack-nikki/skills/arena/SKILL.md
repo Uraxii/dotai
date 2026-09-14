@@ -27,7 +27,7 @@ The N candidates will receive the same prompt, so the prompt is the contract. Ge
 
 1. State the artifact each candidate is producing.
 2. Derive the rubric. State what success looks like for *this* task, then turn it into 3-6 concrete gradeable criteria. Concrete: `Adds a --dry-run flag that skips writes`. Vague: `code is correct`. The rubric is the picker's tool in Phase D; candidates only see the task.
-3. Pick the runners. Use `arena runners` from the `poteto-mode` skill's `models.md` when present; row absent -> omit `model`. Spawn more when the arena covers multiple design directions. Same model N times when the work is generation-bound rather than judgment-sensitive.
+3. Pick the runners. Use `arena runners` from `plugins/pstack-nikki/models.json` when present; row absent -> omit `model`. Spawn more when the arena covers multiple design directions. Same model N times when the work is generation-bound rather than judgment-sensitive.
 4. Assign output paths. A candidate that writes in the repo gets its own git worktree on its own branch, never a shared checkout; a candidate that writes nothing into the repo gets `.nikki-agents/arena/<slug>/candidate-<n>/`. N candidates writing to the same path is shared mutable state, keep them isolated.
 
 ## Phase B: Fan out
@@ -40,7 +40,7 @@ If a candidate fails to produce output, proceed with N-1 and note the dropout in
 
 ## Phase C: Cross-judge
 
-After all Phase B candidates complete, choose one model from the `arena cross-judge pool` in the `poteto-mode` skill's `models.md` when present; absent -> omit `model`. Prefer a different model family from the parent's. Spawn one judge `reviewer` on that model. FORBIDDEN: no writes, no commits, inspection only. It sees the rubric and the candidates by path label, scores each criterion, and recommends a base with rationale. It runs in parallel with the parent's reading in Phase D, not with the candidates themselves. Spawning while candidates are still writing means the judge sees partial or empty outputs and reports them as dropouts.
+After all Phase B candidates complete, choose one model from the `arena cross-judge pool` in `plugins/pstack-nikki/models.json` when present; absent -> omit `model`. Prefer a different model family from the parent's. Spawn one judge `reviewer` on that model. FORBIDDEN: no writes, no commits, inspection only. It sees the rubric and the candidates by path label, scores each criterion, and recommends a base with rationale. It runs in parallel with the parent's reading in Phase D, not with the candidates themselves. Spawning while candidates are still writing means the judge sees partial or empty outputs and reports them as dropouts.
 
 ## Phase D: Pick a base
 
@@ -71,3 +71,12 @@ If verification surfaces a problem the arena did not catch, either Phase A was w
 ## Outputs
 
 One synthesized artifact. One short synthesis note alongside, naming the base, the grafts (with source candidate), the rejections, the dropouts if any, and the verification result.
+
+<!-- dotai:models:start -->
+## Models
+
+Stamped from `plugins/pstack-nikki/models.json` (edit there, rerun `generate-models.py`). Row absent -> omit `model`, child inherits.
+
+- `arena runners`: `claude-opus-5`, `claude-sonnet-5`, `gpt-5.5`
+- `arena cross-judge pool`: `claude-opus-5`, `gpt-5.5`, `claude-sonnet-5`
+<!-- dotai:models:end -->

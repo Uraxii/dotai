@@ -118,7 +118,7 @@ Launch all matching investigators in a single message so they run concurrently. 
 
 Subagent config (each):
 - role: `researcher`
-- `model`: model from the `poteto-mode` skill's `models.md`; absent -> omit `model`
+- `model`: model from `plugins/pstack-nikki/models.json`; absent -> omit `model`
 - Investigators shouldn't write anything. That's a posture, not a sandbox restriction.
 
 Each investigator gets:
@@ -164,7 +164,7 @@ If your scope assessment suggests a single-commit trivial target where the PR de
 Spawn one synthesizer subagent:
 
 - role: `researcher`
-- `model`: model from the `poteto-mode` skill's `models.md`; absent -> omit `model`
+- `model`: model from `plugins/pstack-nikki/models.json`; absent -> omit `model`
 - The synthesizer's quality check spot-verifies citations, which can require connector access.
 
 The synthesizer gets:
