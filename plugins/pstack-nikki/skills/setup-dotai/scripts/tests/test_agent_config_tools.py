@@ -49,6 +49,30 @@ class AgentConfigGeneratorTests(unittest.TestCase):
             self.assertNotIn("model", config)
             self.assertNotIn("model_reasoning_effort", config)
 
+    def test_named_agents_are_thin_poteto_agent_bodies(self) -> None:
+        result = run_script(GENERATOR, "--check")
+        self.assertEqual(0, result.returncode, result.stderr)
+
+        references = SKILL_ROOT / "references"
+        plugin_root = SKILL_ROOT.parents[1]
+        body = (references / "poteto-agent-body.md").read_text().rstrip()
+        codex_body = (
+            (references / "poteto-agent-codex-body.md").read_text().rstrip()
+        )
+
+        for name in WORKER_NAMES:
+            generated = (plugin_root / "agents" / f"{name}.md").read_text()
+            self.assertIn(body, generated)
+
+        for name in ("developer-codex", "reviewer-codex"):
+            generated = (plugin_root / "agents" / f"{name}.md").read_text()
+            self.assertIn(codex_body, generated)
+            stray_toml = SKILL_ROOT / "assets" / "codex-agents" / f"{name}.toml"
+            self.assertFalse(stray_toml.exists())
+
+        contract_files = {path.name for path in references.glob("*contract*")}
+        self.assertEqual(set(), contract_files)
+
 
 class CodexAgentInstallerTests(unittest.TestCase):
     def test_installs_workers_and_zakia_without_drift(self) -> None:
