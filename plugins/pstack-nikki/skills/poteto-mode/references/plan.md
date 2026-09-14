@@ -3,6 +3,9 @@
 Produce a phased implementation plan grounded in the Principles section of the
 `poteto-mode` skill. The plan is the deliverable. Do not implement.
 
+On Codex, the todolist below is `update_plan`; see `codex-tools.md` in this
+same directory.
+
 Open a todolist with one item per step below.
 
 ## 0. Triage
