@@ -59,10 +59,10 @@ Codex exposes subagent tools under one of two protocols, chosen by the
 
 ## Model names
 
-pstack-nikki's `models.md` already lists one ordered name per row across
-harnesses (`claude-sonnet-5, gpt-5.5, gpt-5.4, claude-opus-5`, and so on) and
-says a spawner takes the first name its harness accepts. On Codex that means
-the `gpt-*` entries in each row; nothing here overrides that file.
+pstack-nikki's `models.json` gives each role a `models` object keyed by
+harness (`claude`, `codex`, `copilot`), each value an ordered preference
+list for that harness alone. On Codex, read the `codex` entry (`gpt-*`
+slugs) and pin the first name in it; nothing here overrides that file.
 
 ## Driver and bundled skills
 
@@ -83,7 +83,7 @@ above. Most skills need only the table.
 | `figure-it-out` | todolist | `update_plan` |
 | `swarm` | todolist; spawns N workers in one message | `update_plan`; `spawn_agent` calls (concurrent) |
 | `how` | `Agent` tool call fields (`agent`, `model`, `readonly`) | `spawn_agent` fields; `readonly` has no Codex equivalent, enforce it by instruction in the spawned agent's prompt |
-| `interrogate` | spawns a reviewer panel, pins `model` per entry | `spawn_agent` per reviewer; substitute Codex model slugs per `models.md` |
+| `interrogate` | spawns a reviewer panel, pins `model` per entry | `spawn_agent` per reviewer; take each reviewer's `codex` entry from `models.json` |
 | `reflect` | spawns three `reviewer` agents in one message | `spawn_agent` calls (concurrent) |
 | `why` | spawns investigator and synthesizer subagents | `spawn_agent` |
 | `show-me-your-work` | pins the reviewer model via the spawn call's `model` argument | `spawn_agent`'s model argument |
