@@ -13,12 +13,17 @@ worker: the brief's OWNER line holds, and Codex inherits it.
    condition, same as any other spawn.
    Then check Codex can run: `codex --version` and `codex login status` both
    exit 0. Either fails, or the run in step 5 exits non-zero or writes no
-   report -> fall back. Do the brief yourself on Claude as a plain
-   `developer` or `reviewer` would, and open your report with
-   `fallback: claude` plus the failing command's output verbatim.
+   report -> fall back. Prepare the step 2 worktree if you have not, then do
+   the brief yourself in it on Claude as a plain `developer` or `reviewer`
+   would, and open your report with `fallback: claude` plus the failing
+   command's output verbatim.
 2. Prepare the worktree yourself; Codex wires no isolation hook.
-   - Writer brief (`developer-codex`): `git worktree add
-     .nikki-agents/worktrees/<name> -b agent/<name>` before you call Codex.
+   - Writer brief (`developer-codex`): one worktree serves both the Codex
+     run and any fallback. Spawned with `isolation: "worktree"`, you already
+     sit in it (`git rev-parse --git-dir` differs from
+     `git rev-parse --git-common-dir`); use it as `-C`. Otherwise run `git
+     worktree add .nikki-agents/worktrees/<name> -b agent/<name>` before
+     you call Codex or fall back, so neither writes in the main checkout.
    - Read-only brief (`reviewer-codex`): no worktree. Point Codex at the
      existing checkout and pass `-s read-only`.
 3. Resolve the poteto-mode skill path yourself. `developer-codex` uses the
@@ -59,7 +64,7 @@ worker: the brief's OWNER line holds, and Codex inherits it.
    Writer (`developer-codex`):
    ```
    codex exec -m <first Codex model from the "feature, refactoring" row> \
-     -s workspace-write -C .nikki-agents/worktrees/<name> \
+     -s workspace-write -C <step 2 worktree path> \
      -o <report-file> "$(cat brief-with-preamble.txt)"
    ```
 

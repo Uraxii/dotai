@@ -118,7 +118,8 @@ In the overview, name which `poteto-mode` non-negotiables the implementer must
 apply, by name:
 
 - `how` over each unfamiliar subsystem before changing it.
-- `interrogate` for adversarial review on contested designs before shipping.
+- `interrogate` for adversarial review on contested designs before shipping,
+  run by the owner, never by a worker on its own unit.
 - `unslop` over each diff before commit and over any prose surface.
 - `show-me-your-work` to keep a decision trail when the plan is large enough
   to need an auditable record.

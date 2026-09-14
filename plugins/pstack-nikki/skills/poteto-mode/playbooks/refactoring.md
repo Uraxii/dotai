@@ -2,6 +2,7 @@
 
 Pick when: "refactor", "rename", "extract", "inline", "dedupe",
 "restructure", "move this module", "tidy up this area". You own the contract.
+Owner only: the main thread or an `orchestrator`, never a `developer`.
 The structure changes; the behaviour does not. Distinct from Feature, which
 adds behaviour, and Bug fix, which corrects it.
 

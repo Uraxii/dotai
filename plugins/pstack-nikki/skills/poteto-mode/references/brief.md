@@ -11,9 +11,11 @@ SKILLS       owner brief (orchestrator): the playbook it leads, its mode
              line copied verbatim. Worker brief: the one playbook step it
              executes, never a lead playbook. Then skills by name; agents
              carry no defaults
-OWNER        who reviews the diff, runs `interrogate`, and opens the PR.
-             Worker default, copied verbatim: "Your spawner reviews. You
-             spawn no reviewer, run no interrogate, open no PR, and never
+OWNER        the main thread or `orchestrator` that owns the change: it
+             reviews the diff, runs `interrogate`, and opens the PR. A
+             nested brief copies this line unchanged. Worker form, verbatim
+             after the owner's name: "<owner> reviews. You spawn no
+             reviewer, run no interrogate, open no PR, and never
              re-delegate your whole unit."
 CONTEXT      file paths and issue ids; upstream reports pasted in full when
              this task depends on them (agents cannot see siblings)

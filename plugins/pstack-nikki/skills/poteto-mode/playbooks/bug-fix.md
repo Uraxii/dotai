@@ -2,7 +2,8 @@
 
 Pick when: reported defect to reproduce, root-cause, and fix. You own the
 task. Plan, review, verify. Delegate investigation and the fix to subagents,
-stay in the lead.
+stay in the lead. Owner only: the main thread or an `orchestrator`, never a
+`developer`.
 
 Be scientific. Every shipped line traces to runtime evidence.
 Belt-and-suspenders that "might help" is a hypothesis, not a fix; it does not
