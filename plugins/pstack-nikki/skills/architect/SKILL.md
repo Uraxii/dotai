@@ -75,6 +75,10 @@ evidence: re-ground and re-run Phase B before any more code.
 
 ## Phase D: Hand off to implementation
 
+Running as a spawned `architect` worker, this phase and the Phase C
+`interrogate` belong to your brief's OWNER: commit the sketch, name both steps
+in your report, and stop. The owner then runs them.
+
 Architect stops at shape. Hand the synthesized sketch to a `developer` subagent
 as the contract: replace TODO-stub bodies with code, pseudocode with logic.
 Never write implementation logic, tests, config files, or deploy scripts

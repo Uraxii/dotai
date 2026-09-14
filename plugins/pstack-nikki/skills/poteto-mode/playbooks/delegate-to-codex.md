@@ -13,10 +13,15 @@ worker: the brief's OWNER line holds, and Codex inherits it.
    condition, same as any other spawn.
    Then check Codex can run: `codex --version` and `codex login status` both
    exit 0. Either fails, or the run in step 5 exits non-zero or writes no
-   report -> fall back. Prepare the step 2 worktree if you have not, then do
-   the brief yourself in it on Claude as a plain `developer` or `reviewer`
-   would, and open your report with `fallback: claude` plus the failing
-   command's output verbatim.
+   report -> fall back. Do the brief yourself on Claude as a plain
+   `developer` or `reviewer` would, and open your report with
+   `fallback: claude` plus the failing command's output verbatim.
+   - Writer fallback: work in the step 2 worktree (prepare it if you have
+     not). A failed run can leave commits or edits there: read `git status`,
+     `git log`, and `git diff` first, keep what matches the brief, and
+     continue from that state. Never reset it away unread.
+   - Reviewer fallback: stays read-only in the existing checkout, no
+     worktree.
 2. Prepare the worktree yourself; Codex wires no isolation hook.
    - Writer brief (`developer-codex`): one worktree serves both the Codex
      run and any fallback. Spawned with `isolation: "worktree"`, you already
