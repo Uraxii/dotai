@@ -31,7 +31,7 @@ tool schemas, so the source is primary.
 | Message a running subagent (`SendMessage`) | `send_input` (default protocol) | `spec_plan.rs:670-674`. |
 | Wait for a subagent's result | `wait_agent` | `spec_plan.rs:674`. |
 | End a subagent | `close_agent` | `spec_plan.rs:674`. |
-| `isolation: "worktree"` on the `Agent` tool | No isolation flag. Run `git worktree add` yourself before dispatch. | No `WorktreeCreate`-equivalent hook or tool found in `codex-rs`. |
+| `isolation: "worktree"` on the `Agent` tool | No isolation flag. Run `git worktree add` yourself before dispatch. | No matching hook or tool that creates a worktree found in `codex-rs`. |
 
 ### Two multi-agent protocol versions
 
