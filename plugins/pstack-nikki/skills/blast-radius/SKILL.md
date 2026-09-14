@@ -5,6 +5,9 @@ description: "Find what a change could break somewhere else before it ships, bey
 
 # Blast radius
 
+On Codex, spawning a reviewer subagent is `spawn_agent`; see
+`../poteto-mode/references/codex-tools.md`.
+
 Find what a change breaks somewhere else, before it ships. Use for "blast radius of X", "what could this break", or reviewing a small diff you don't trust yet.
 
 Listing the callers is not the job. The agent can grep those in a second. The job is the breakage grep won't show you.

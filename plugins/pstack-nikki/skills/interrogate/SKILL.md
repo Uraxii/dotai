@@ -5,6 +5,9 @@ description: "Multiple LLM reviewers challenge changes from independent angles. 
 
 # Interrogate
 
+On Codex, spawning a reviewer is `spawn_agent`; see
+`../poteto-mode/references/codex-tools.md`.
+
 Spawn one reviewer per configured model to adversarially review code changes. Each model gets the same prompt and rubric. The adversarial signal comes from model diversity, not assigned personas. Models differ in blind spots, priors, and reasoning patterns. Agreement across models is high-confidence signal; lone-model findings are worth reading but lower confidence.
 
 The deliverable is a synthesized verdict. Do NOT auto-apply changes.

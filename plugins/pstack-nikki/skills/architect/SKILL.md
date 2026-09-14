@@ -5,6 +5,9 @@ description: "Settles system structure before any logic is written: types, funct
 
 # Architect
 
+On Codex, the todolist below is `update_plan`; see
+`../poteto-mode/references/codex-tools.md`.
+
 Design before implementing. Sketch types, function signatures, class shapes,
 and module boundaries with TODO-stub bodies and pseudocode. Synthesize across
 several models, hand the sketch to implementation as the contract, and throw it
