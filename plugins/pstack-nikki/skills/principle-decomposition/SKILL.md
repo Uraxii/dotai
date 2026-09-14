@@ -14,7 +14,9 @@ Every agent sizes its own work when the brief lands; nobody plans the tree up fr
   inline. Write one line per child naming its scope; two overlap -> merge them.
 - Scale waves, not width. Dependent work chains as fresh spawns; a wave that finds
   new territory gets a second targeted wave, not a bigger first one.
-- A child that only re-delegates what it received is a layer. Delete it.
+- A child that only re-delegates what it received is a layer. Delete it. An
+  `orchestrator` that reviews and gates what it delegates is an owner, not a
+  layer.
 - Partial return: re-cut the remainder into new units. Never re-spawn the same brief
   bigger. Regular overruns mean this text is wrong: fix the text.
 - No ceilings, budgets, scripts, hooks, or watchers size work. Judgment at receipt does.

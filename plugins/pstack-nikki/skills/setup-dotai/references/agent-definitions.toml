@@ -7,13 +7,13 @@ instructions = "poteto-agent-body.md"
 targets = ["claude", "codex"]
 
 [agents.developer]
-description = "Implements one scoped unit of code per a brief. Spawn for a feature, a fix, a refactor, or any hand-written diff. Model pinned per call. Same thin agent as the others; the name exists so the agent graph reads."
+description = "Implements one scoped unit of code per a brief. Spawn for one unit of a feature, fix, or refactor; a whole feature needing review goes to orchestrator. Spawns no reviewer, runs no interrogate, opens no PR. On Claude Code, the fallback when developer-codex cannot run. Model pinned per call. Same thin agent as the others; the name exists so the agent graph reads."
 color = "green"
 instructions = "poteto-agent-body.md"
 targets = ["claude", "codex"]
 
 [agents.developer-codex]
-description = "Implements one scoped unit of code per a brief, running as a poteto-agent inside Codex on GPT. Spawn for a feature, a fix, a refactor, or any hand-written diff that should show as GPT's work. Model pinned per call. Same thin agent as the others; the name exists so the agent graph reads."
+description = "Implements one scoped unit of code per a brief, running as a poteto-agent inside Codex on GPT, falling back to Claude when Codex cannot run. First pick on Claude Code for one unit of a feature, fix, or refactor. Spawns no reviewer, runs no interrogate, opens no PR. Model pinned per call. Same thin agent as the others; the name exists so the agent graph reads."
 color = "orange"
 instructions = "poteto-agent-codex-body.md"
 targets = ["claude"]
@@ -25,7 +25,7 @@ instructions = "poteto-agent-body.md"
 targets = ["claude", "codex"]
 
 [agents.orchestrator]
-description = "Runs one workstream end to end by delegating per a poteto-mode playbook. Spawns the other six agents with scoped briefs, synthesizes results, never edits code directly. Model pinned per call. Same thin agent as the others; the name exists so the agent graph reads."
+description = "Owns one workstream end to end by delegating per a poteto-mode playbook. Spawn for work with more than one kind or unit (build plus verify, a fan-out over N targets, a feature needing review separation). Spawns the other agents with scoped briefs, reviews their diffs, runs interrogate, opens the PR, never edits code directly. Model pinned per call. Same thin agent as the others; the name exists so the agent graph reads."
 color = "purple"
 instructions = "poteto-agent-body.md"
 targets = ["claude", "codex"]
@@ -37,13 +37,13 @@ instructions = "poteto-agent-body.md"
 targets = ["claude", "codex"]
 
 [agents.reviewer]
-description = "Adversarial gate: reads a diff or artifact and returns a verdict with evidence, never edits. Spawn before ship on risky or cross-cutting work. Model pinned per call. Same thin agent as the others; the name exists so the agent graph reads."
+description = "Adversarial gate: reads a diff or artifact and returns a verdict with evidence, never edits. Spawn before ship on risky or cross-cutting work. On Claude Code, the fallback when reviewer-codex cannot run. Model pinned per call. Same thin agent as the others; the name exists so the agent graph reads."
 color = "red"
 instructions = "poteto-agent-body.md"
 targets = ["claude", "codex"]
 
 [agents.reviewer-codex]
-description = "Adversarial gate run as a poteto-agent inside Codex on GPT: reads a diff or artifact and returns a verdict with evidence, never edits. Spawn before ship when the second opinion should come from GPT instead of Claude. Model pinned per call. Same thin agent as the others; the name exists so the agent graph reads."
+description = "Adversarial gate run as a poteto-agent inside Codex on GPT: reads a diff or artifact and returns a verdict with evidence, never edits. First pick on Claude Code for a review gate before ship, falling back to Claude when Codex cannot run. Model pinned per call. Same thin agent as the others; the name exists so the agent graph reads."
 color = "gray"
 instructions = "poteto-agent-codex-body.md"
 targets = ["claude"]

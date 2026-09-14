@@ -1,6 +1,8 @@
 # Opening a PR
 
-Invoked at the end of every other playbook.
+Invoked by the owner at the end of every other playbook. Owner only: the main
+thread or the `orchestrator` that owns the change. A worker skips this
+playbook: it commits on its own branch and reports to its owner.
 
 **Worktree.** Work from a git worktree off main; subagents inherit it.
 Multiple parallel spawns on the same branch each get their own worktree, or
@@ -25,5 +27,6 @@ feedback drifts. An in-flight review verdict blocks merge exactly as red CI
 does; synthesize the interrogate verdict BEFORE merging, never in parallel
 with it.
 
-A subagent that opens a PR runs `interrogate` and `unslop`, returns the URL,
-and does NOT babysit. Return to the parent.
+An `orchestrator` owner that opens a PR runs `interrogate` and `unslop`,
+returns the URL, and does NOT babysit unless its playbook hands it the merge
+(Autopilot-full). Return to the parent.

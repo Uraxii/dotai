@@ -15,7 +15,7 @@ Triggers a skill description alone would not fire:
 - Any code written, changed, or reviewed -> `principle-code-quality`. Any step that WRITES code, or reach for a new dependency -> `ponytail`, mandatory. Stdlib and native platform before any new dep.
 - Any test written or changed, and any code change settling that it ships without one -> `tdd`.
 - Question about how the codebase does X -> `how`. Never guess from memory, never sweep files by hand first.
-- Before any PR opened or integrated, and on any contested design -> `interrogate`.
+- Before any PR opened or integrated, and on any contested design -> `interrogate`. The change's owner runs it, never a worker on its own unit (Agents below).
 - About to ask the user a "which approach" or "what should this do" fork -> classify it first. Answer observable by running something is not the human's to give. Sketch it with `prototype` and let the result decide. Save the ask for a taste call no experiment settle.
 - Parallel fan-out -> `swarm` for coverage, races, partitions. `arena` for bakeoffs with base selection and grafting.
 - A brief lands in your hands, or you are writing one for someone else -> `principle-decomposition`. Sizing precedes the first tool call.
@@ -75,7 +75,7 @@ Everything else delegate to one of seven. Same thin body, no default skills. The
 
 | Name | Does |
 |---|---|
-| `orchestrator` | Run one workstream by delegating, following a playbook below |
+| `orchestrator` | Own one multi-kind workstream: lead a playbook below by delegating, review, gate |
 | `architect` | Settle structure before logic: types, contracts, skeletons |
 | `developer` | Implement one scoped unit of code |
 | `tester` | Write and run tests, prove the change |
@@ -89,11 +89,14 @@ Every spawn carry the brief fields in `references/brief.md`. Field you cannot fi
 - Every writer gets its own git worktree on its own branch, on branch `agent/<name>`. Where it lands differs by harness, and both are the rule, not a bug. On Claude Code, spawn with `isolation: "worktree"` on the `Agent` tool: Claude places it at `.claude/worktrees/<name>` (its own default; no pstack-nikki hook redirects it there anymore). On every other harness the agent runs `git worktree add .nikki-agents/worktrees/<name> -b agent/<name>` itself. The main checkout is read-only for agents; the rule holds by instruction, not by an enforcing hook. Only the coordinator lands a verified branch, fast-forward or cherry-pick. Skill text naming a Claude-only tool (`Agent`, `TodoWrite`, `AskUserQuestion`, and the rest) has a Codex equivalent in `references/codex-tools.md`.
 - You own every agent's work. Review the diff, write your own summary, never pass through what it said.
 - `principle-guard-the-context-window`: file pointers not inlined context, bulk to agents, summaries in the main thread.
-- Every agent sizes and splits its own brief per `principle-decomposition`; any agent may spawn the pieces it cuts. Bigger work chains across fresh spawns, never lands on one agent.
+- Every agent sizes its own brief per `principle-decomposition`. Bigger work chains across fresh spawns, never lands on one agent.
+- **Multi-kind work goes to `orchestrator`.** Work failing the decomposition unit test (two kinds of work such as read + build or build + verify, a fan-out over N targets, a feature that needs review separation) is never handed to a worker. The main thread leads it itself or spawns one `orchestrator` as its owner, running the matched playbook (Feature, Refactoring, Bug fix, or `figure-it-out`). `architect`, `developer`, `tester`, `reviewer`, `researcher`, and `explorer` get single units. A worker handed multi-kind work returns it unstarted, asking for an `orchestrator`.
+- **The owner reviews; workers never review their own unit.** The owner is whoever spawned the unit: it reviews the diff, runs `interrogate`, and opens the PR. A worker spawns no reviewer for its own unit, runs no `interrogate`, opens no PR, runs no lead playbook, and never re-delegates its whole unit. A worker may still split its unit for breadth; the pieces report back to it, and its owner reviews the result.
+- **Codex first on Claude Code.** An implementation unit spawns `developer-codex`; a single review gate spawns `reviewer-codex`. Both run `playbooks/delegate-to-codex.md`, which falls back to doing the brief on Claude when `codex` is missing, not logged in, or the run fails, and says so in its report. Spawn `developer` or `reviewer` directly only when Codex is already known to be unavailable this session. `orchestrator`, `architect`, `tester`, `researcher`, and `explorer` stay on Claude: they need the harness's own spawn, test, and search tools, and no Codex variant exists for them. The `interrogate` panel follows its own `models.json` row. Every other harness spawns `developer` and `reviewer`.
 
 ## Playbooks
 
-Your first todolist actions are the matched playbook's steps, copied in VERBATIM, before any task-specific todo. Failure mode: read the playbook, then write a bespoke plan quietly dropping its steps. A step you skip stay in the list with a one-line `skip: <reason>`.
+Playbooks are for the owner. A worker's brief names the one playbook step it executes, never a whole lead playbook. As owner, your first todolist actions are the matched playbook's steps, copied in VERBATIM, before any task-specific todo. Failure mode: read the playbook, then write a bespoke plan quietly dropping its steps. A step you skip stay in the list with a one-line `skip: <reason>`.
 
 Large or cross-cutting effort, or no bundled playbook fits -> `figure-it-out`. Standing multi-day program, many units, fleet of agents under one coordinator -> Orchestrate.
 
@@ -120,4 +123,4 @@ Large or cross-cutting effort, or no bundled playbook fits -> `figure-it-out`. S
 - **Multi-phase plan.** Work spanning phases or stacked PRs. `playbooks/multi-phase-plan.md`.
 - **Worktree cleanup.** Reclaim disk by pruning merged or abandoned git worktrees and stale simulators. `playbooks/worktree-cleanup.md`.
 - **Opening a PR.** Invoked at the end of every other playbook. `playbooks/opening-a-pr.md`.
-- **Delegate to Codex.** Claude Code only; skip it on any other harness. Run a poteto-agent brief as a real Codex session on a GPT model (`developer-codex`, `reviewer-codex`). `playbooks/delegate-to-codex.md`.
+- **Delegate to Codex.** Claude Code only; skip it on any other harness. Run a poteto-agent brief as a real Codex session on a GPT model (`developer-codex`, `reviewer-codex`, the default implementation and review picks there), with a Claude fallback. `playbooks/delegate-to-codex.md`.

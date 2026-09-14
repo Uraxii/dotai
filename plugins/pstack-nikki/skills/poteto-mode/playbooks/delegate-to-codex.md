@@ -4,11 +4,18 @@ Claude Code only. Running in any other harness, Codex included: do not use this 
 
 Pick when: a `developer-codex` or `reviewer-codex` agent holds a poteto-agent
 brief and must run it as a real Codex session on a GPT model, not imitate
-GPT locally.
+GPT locally. On Claude Code these two are the default picks for an
+implementation unit and a single review gate (SKILL.md, Agents). You are a
+worker: the brief's OWNER line holds, and Codex inherits it.
 
 1. Confirm the brief carries every spawn field (`references/brief.md`). A
    brief missing GOAL, SCOPE, ACCEPTANCE, or VERIFY is a refuse-to-spawn
    condition, same as any other spawn.
+   Then check Codex can run: `codex --version` and `codex login status` both
+   exit 0. Either fails, or the run in step 5 exits non-zero or writes no
+   report -> fall back. Do the brief yourself on Claude as a plain
+   `developer` or `reviewer` would, and open your report with
+   `fallback: claude` plus the failing command's output verbatim.
 2. Prepare the worktree yourself; Codex wires no isolation hook.
    - Writer brief (`developer-codex`): `git worktree add
      .nikki-agents/worktrees/<name> -b agent/<name>` before you call Codex.
@@ -95,9 +102,9 @@ GPT locally.
    (`principle-prove-it-works`): read the actual commit or diff before
    reporting it landed, never the agent's self-report alone.
 
-**Reply:** model and sandbox picked, whether the SKILL.md fallback path was
-used, the commit or branch you confirmed yourself, or the blocker hit
-verbatim.
+**Reply:** model and sandbox picked, or `fallback: claude` with the failing
+output, whether the SKILL.md fallback path was used, the commit or branch you
+confirmed yourself, or the blocker hit verbatim.
 
 <!-- dotai:models:start -->
 ## Models
