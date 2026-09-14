@@ -1,7 +1,9 @@
 # Feature
 
 Pick when: new or changed behaviour. You own the design. Plan, review,
-verify. Delegate implementation; stay in the lead.
+verify. Delegate implementation; stay in the lead. Owner only: the main
+thread or an `orchestrator`. A `developer` handed this playbook returns the
+brief unstarted, asking for an `orchestrator`.
 
 1. `how` over the affected subsystem.
 2. `architect` for parallel design exploration. Skipping stays as
@@ -16,7 +18,8 @@ verify. Delegate implementation; stay in the lead.
    - **Shared mutable state.** Default to splitting the target
      (`principle-code-quality`). Serialize only for real invariants.
    - **Smallest safe decomposition.** If one worker is best, name why.
-4. Delegate code-writing to a `developer` subagent with a specific scope: file
+4. Delegate code-writing to a developer (`developer-codex` first on Claude
+   Code, per SKILL.md) with a specific scope: file
    paths, the named data shape and its organizing structure per
    `principle-code-quality` (a state machine over scattered booleans, a table
    or registry over branching, a typed model over repeated shape assumptions,
@@ -25,11 +28,11 @@ verify. Delegate implementation; stay in the lead.
    abstraction layer, test structure) -> delegate via `arena` instead, so the
    runners surface the alternatives and the cross-judge guards the pick.
    Mandatory: no skip-with-reason escape, and the laziness rule does not
-   override it (the gain is review separation, not lines saved). You can spawn
-   a subagent even though you are one; "the app is small" and "a subagent
-   cannot spawn one" are both wrong. A subagent forbidden to spawn satisfies
-   this by owning the diff directly with the same review separation, never a
-   "standing by" reply waiting on a nested agent. Comments per
+   override it (the gain is review separation, not lines saved). "The app is
+   small" is wrong, and an `orchestrator` leading this playbook spawns its
+   developers like the main thread does. Each developer brief carries one unit
+   and the worker OWNER line from `references/brief.md`: the developer spawns
+   no reviewer, runs no `interrogate`, and opens no PR; you do. Comments per
    `principle-code-quality`. Surgical edits; re-ground against the source for
    upstream-derived files. Port shared-primitive improvements to all consumers
    and verify each. Commit liberally.

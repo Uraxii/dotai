@@ -1,6 +1,6 @@
 ---
 name: interrogate
-description: "Multiple LLM reviewers challenge changes from independent angles. Use before any PR is opened or integrated, on any contested design decision, or for \"interrogate\", \"adversarial review\", \"multi-model review\", \"challenge this\", \"stress test this code\", \"find blind spots\", or \"tear this apart\"."
+description: "Multiple LLM reviewers challenge changes from independent angles. Use before any PR is opened or integrated (run by the change's owner, never by a worker on its own unit), on any contested design decision, or for \"interrogate\", \"adversarial review\", \"multi-model review\", \"challenge this\", \"stress test this code\", \"find blind spots\", or \"tear this apart\"."
 ---
 
 # Interrogate
@@ -11,6 +11,10 @@ On Codex, spawning a reviewer is `spawn_agent`; see
 Spawn one reviewer per configured model to adversarially review code changes. Each model gets the same prompt and rubric. The adversarial signal comes from model diversity, not assigned personas. Models differ in blind spots, priors, and reasoning patterns. Agreement across models is high-confidence signal; lone-model findings are worth reading but lower confidence.
 
 The deliverable is a synthesized verdict. Do NOT auto-apply changes.
+
+Owner only. The main thread or the `orchestrator` that owns the change runs
+this. A worker (`developer`, `developer-codex`, `tester`, and the rest) never
+runs it on its own unit; it reports, and its owner runs it.
 
 Block only on material risk or missing evidence, never on preference. Check
 scope alongside correctness: scope creep, missing acceptance criteria, or

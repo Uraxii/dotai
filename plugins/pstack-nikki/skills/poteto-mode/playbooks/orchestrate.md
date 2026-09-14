@@ -11,7 +11,9 @@ frontier green, decide. Work one agent could finish inside the session budget
 is not a program: measured head to head, this playbook's ceremony turned a
 half-hour 12-unit job into 1 landed unit while a plain agent landed all 12.
 Below that line, run Autonomous run. Above it, collapse each gate as its
-section directs.
+section directs. Below program scale, one `orchestrator` still owns
+multi-kind work, leading Feature, Refactoring, Bug fix, or `figure-it-out`
+without this playbook's store.
 
 - Completions are queue events, not interrupts.
 - Every spawn and every resume carries the standing orders verbatim.

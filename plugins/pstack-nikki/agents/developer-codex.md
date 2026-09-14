@@ -1,6 +1,6 @@
 ---
 name: developer-codex
-description: "Implements one scoped unit of code per a brief, running as a poteto-agent inside Codex on GPT. Spawn for a feature, a fix, a refactor, or any hand-written diff that should show as GPT's work. Model pinned per call. Same thin agent as the others; the name exists so the agent graph reads."
+description: "Implements one scoped unit of code per a brief, running as a poteto-agent inside Codex on GPT, falling back to Claude when Codex cannot run. First pick on Claude Code for one unit of a feature, fix, or refactor. Spawns no reviewer, runs no interrogate, opens no PR. Model pinned per call. Same thin agent as the others; the name exists so the agent graph reads."
 color: orange
 ---
 

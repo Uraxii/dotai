@@ -7,8 +7,16 @@ naming goal, scope, verify command, report shape.
 GOAL         one sentence outcome, executable by stranger with no chat access
 SCOPE        paths this task may write; paths it may not; the agent's own
              worktree and branch
-SKILLS       active playbook first (e.g. prototype) with its mode line copied
-             verbatim, then skills by name; agents carry no defaults
+SKILLS       owner brief (orchestrator): the playbook it leads, its mode
+             line copied verbatim. Worker brief: the one playbook step it
+             executes, never a lead playbook. Then skills by name; agents
+             carry no defaults
+OWNER        the main thread or `orchestrator` that owns the change: it
+             reviews the diff, runs `interrogate`, and opens the PR. A
+             nested brief copies this line unchanged. Worker form, verbatim
+             after the owner's name: "<owner> reviews. You spawn no
+             reviewer, run no interrogate, open no PR, and never
+             re-delegate your whole unit."
 CONTEXT      file paths and issue ids; upstream reports pasted in full when
              this task depends on them (agents cannot see siblings)
 ACCEPTANCE   checkable criteria, one per line
@@ -23,8 +31,9 @@ Read-only means FORBIDDEN says "no writes, no commits, inspection commands
 only". No-pixels means FORBIDDEN says "never load image pixels, hold paths and
 verdict text only".
 
-A brief is one unit; `principle-decomposition` defines the unit test and how
-to split what fails it.
+A worker brief is one unit; `principle-decomposition` defines the unit test
+and how to split what fails it. Work failing that test goes to `orchestrator`
+as an owner brief, whose OWNER line names the orchestrator itself.
 
 SCOPE names the agent's own worktree and its own branch, on branch
 `agent/<name>`. On Claude Code, spawning with `isolation: "worktree"` puts it

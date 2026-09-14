@@ -1,6 +1,6 @@
 ---
 name: reviewer-codex
-description: "Adversarial gate run as a poteto-agent inside Codex on GPT: reads a diff or artifact and returns a verdict with evidence, never edits. Spawn before ship when the second opinion should come from GPT instead of Claude. Model pinned per call. Same thin agent as the others; the name exists so the agent graph reads."
+description: "Adversarial gate run as a poteto-agent inside Codex on GPT: reads a diff or artifact and returns a verdict with evidence, never edits. First pick on Claude Code for a review gate before ship, falling back to Claude when Codex cannot run. Model pinned per call. Same thin agent as the others; the name exists so the agent graph reads."
 color: gray
 ---
 
