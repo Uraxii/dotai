@@ -16,7 +16,7 @@
   "skills": "./skills/",
   "hooks": "./hooks/codex-hooks.json",
   "interface": {
-    "displayName": "dotai",
+    "displayName": "pstack-nikki",
     "shortDescription": "Reusable skills for software development work.",
     "longDescription": "A collection of reusable workflows, principles, playbooks, and tools for Codex and other coding agents.",
     "developerName": "Uraxii",
@@ -26,9 +26,9 @@
       "Hooks"
     ],
     "defaultPrompt": [
-      "Show me which dotai skills can help with this task.",
+      "Show me which pstack-nikki skills can help with this task.",
       "Use poteto-mode to work through this task.",
-      "Set up dotai for this Codex environment."
+      "Set up pstack-nikki for this Codex environment."
     ]
   }
 }
