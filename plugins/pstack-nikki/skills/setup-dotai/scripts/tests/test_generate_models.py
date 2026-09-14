@@ -68,7 +68,7 @@ class GenerateModelsTests(unittest.TestCase):
         self.assertIn("<!-- dotai:models:start -->", text)
         self.assertIn(
             "`arena runners`: On Claude Code: `opus`, `sonnet`. "
-            "On Codex: `gpt-5.5`. "
+            "On Codex: `gpt-5.6-sol`, `gpt-5.6-terra`. "
             "On Copilot CLI: `claude-opus-5`, `claude-sonnet-5`, `gpt-5.5`.",
             text,
         )

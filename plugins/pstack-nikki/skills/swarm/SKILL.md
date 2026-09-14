@@ -52,5 +52,5 @@ Return one consolidated in-chat report with the table, issue one-liners, gaps or
 
 Stamped from `plugins/pstack-nikki/models.json` (edit there, rerun `generate-models.py`). Row absent -> omit `model`, child inherits. A spawner reads the entry for its own harness.
 
-- `swarm workers`: On Claude Code: `sonnet`. On Codex: `gpt-5.5`, `gpt-5.4-mini`. On Copilot CLI: `claude-sonnet-5`, `gpt-5.5`, `gpt-5.4-mini`.
+- `swarm workers`: On Claude Code: `sonnet`. On Codex: `gpt-5.6-terra`. On Copilot CLI: `claude-sonnet-5`, `gpt-5.5`.
 <!-- dotai:models:end -->
