@@ -123,7 +123,7 @@ decision.
 <!-- dotai:models:start -->
 ## Models
 
-Stamped from `plugins/pstack-nikki/models.json` (edit there, rerun `generate-models.py`). Row absent -> omit `model`, child inherits.
+Stamped from `plugins/pstack-nikki/models.json` (edit there, rerun `generate-models.py`). Row absent -> omit `model`, child inherits. A spawner reads the entry for its own harness.
 
-- `arena runners`: `claude-opus-5`, `claude-sonnet-5`, `gpt-5.5`
+- `arena runners`: On Claude Code: `opus`, `sonnet`. On Codex: `gpt-5.5`. On Copilot CLI: `claude-opus-5`, `claude-sonnet-5`, `gpt-5.5`.
 <!-- dotai:models:end -->
