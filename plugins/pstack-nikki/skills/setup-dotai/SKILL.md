@@ -155,32 +155,36 @@ installed skills.
 
 ## Models
 
-You edit `plugins/pstack-nikki/models.json` on the user's request. One row
-per label, an ordered preference list of model names (or the name of a
-shared list under `panels`); a spawner walks the list and pins the first
-name its harness accepts, so one row serves every harness. Locate the file
-through the skills install this skill was loaded from; never hardcode an
-install layout or guess a home directory.
+You edit `plugins/pstack-nikki/models.json` on the user's request. Each
+`roles` entry's `models` is an object keyed by harness (`claude`, `codex`,
+`copilot`), each value an ordered preference list, or the name of a shared
+list under `panels`; a spawner reads the entry for its own harness and pins
+the first name in it. `available` is keyed the same way: one label/slug
+list per harness. Locate the file through the skills install this skill
+was loaded from; never hardcode an install layout or guess a home
+directory.
 
 1. **Discover the pinnable set.** Enumerate the model names the current
    harness accepts on a spawned agent this session (its spawn tool's model
-   parameter, or its documented model list). That set, plus `available` in
-   `models.json`, is the only set you may write. Never write a name outside
-   it, and never write one unconfirmed by the user.
+   parameter, or its documented model list). That set, plus this harness's
+   list in `available`, is the only set you may write into this harness's
+   entries. Never write a name outside it, and never write one unconfirmed
+   by the user.
 
 2. **Load current state.** Read `models.json`; each `roles` entry's
-   `models` is the current preference list for that label, resolving a
+   `models` holds one ordered preference list per harness, resolving a
    named `panels` entry first.
 
-3. **Interview, per row.** Show the label and its current list. Ask which
-   name goes first for this harness and whether any entry should move or go.
-   No inline defaults, no assumed answer.
+3. **Interview, per row.** Show the label and its current list for this
+   harness. Ask which name goes first and whether any entry should move or
+   go. No inline defaults, no assumed answer.
 
-4. **Validate.** Reject any name outside the discovered set.
+4. **Validate.** Reject any name outside the discovered set, and any
+   harness key outside `claude`, `codex`, `copilot`.
 
-5. **Write.** Update only the confirmed rows in `models.json`. Leave every
-   other row untouched. Then run the generator so every skill's stamped
-   Models block matches:
+5. **Write.** Update only the confirmed harness entries in `models.json`.
+   Leave every other row and every other harness untouched. Then run the
+   generator so every skill's stamped Models block matches:
 
    ```
    python3 plugins/pstack-nikki/skills/setup-dotai/scripts/generate-models.py
