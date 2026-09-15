@@ -13,9 +13,10 @@ instructions = "poteto-agent-body.md"
 targets = ["claude", "codex"]
 
 [agents.developer-codex]
-description = "Implements one scoped unit of code per a brief, running as a poteto-agent inside Codex on GPT, falling back to Claude when Codex cannot run. First pick on Claude Code for one unit of a feature, fix, or refactor. Spawns no reviewer, runs no interrogate, opens no PR. Model pinned per call. Same thin agent as the others; the name exists so the agent graph reads."
+description = "Starts one Codex run and copies its results back verbatim. On failure, reports `fallback: claude` to its owner. Model pinned per call. Same thin agent as the others; the name exists so the agent graph reads."
 color = "orange"
-instructions = "poteto-agent-codex-body.md"
+tools = ["Bash", "Write"]
+instructions = "../../poteto-mode/playbooks/delegate-to-codex.md"
 targets = ["claude"]
 
 [agents.explorer]
@@ -43,9 +44,10 @@ instructions = "poteto-agent-body.md"
 targets = ["claude", "codex"]
 
 [agents.reviewer-codex]
-description = "Adversarial gate run as a poteto-agent inside Codex on GPT: reads a diff or artifact and returns a verdict with evidence, never edits. First pick on Claude Code for a review gate before ship, falling back to Claude when Codex cannot run. Model pinned per call. Same thin agent as the others; the name exists so the agent graph reads."
+description = "Starts one Codex run and copies its results back verbatim. On failure, reports `fallback: claude` to its owner. Model pinned per call. Same thin agent as the others; the name exists so the agent graph reads."
 color = "gray"
-instructions = "poteto-agent-codex-body.md"
+tools = ["Bash", "Write"]
+instructions = "../../poteto-mode/playbooks/delegate-to-codex.md"
 targets = ["claude"]
 
 [agents.tester]
