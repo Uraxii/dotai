@@ -235,7 +235,8 @@ def create_container(
 
 def start_container(lab: Lab) -> bool:
     """Start the container unless it is already running. True when started."""
-    if podman(["inspect", lab.container, "--format", RUNNING_QUERY], check=False) == "true":
+    query = ["inspect", lab.container, "--format", RUNNING_QUERY]
+    if podman(query, check=False) == "true":
         return False
     try:
         podman(["start", lab.container])

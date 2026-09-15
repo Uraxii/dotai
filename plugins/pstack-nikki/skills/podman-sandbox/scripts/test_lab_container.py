@@ -225,13 +225,14 @@ class SetupRestartTest(unittest.TestCase):
         self.assertEqual(self.podman.elements().count("start-app"), 1)
 
     def test_a_retry_after_up_failed_before_setup_reruns_setup(self) -> None:
-        sentinel = lab_container.SETUP_SENTINEL_PREFIX + "deadbeef"
-        self.podman.existing_paths.add(sentinel)
+        self.assertTrue(lab_container.run_setup(self.lab, self.profile, "/work/myrepo"))
+        # A failed `up` started the container again, then raised before setup.
+        self.podman.started_at = "2026-09-14T12:05:00.000000000Z"
 
         changed = lab_container.run_setup(self.lab, self.profile, "/work/myrepo")
 
         self.assertTrue(changed)
-        self.assertIn("start-app", self.podman.elements())
+        self.assertEqual(self.podman.elements().count("start-app"), 2)
 
 
 class DetachedHeadTest(unittest.TestCase):

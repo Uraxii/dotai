@@ -66,8 +66,10 @@ class LabShotTest(unittest.TestCase):
 
             if os.environ["LAB_SHOT_TEST_MODE"] == "die":
                 raise SystemExit(0)
+            lock = Path("/tmp/.X4917-lock")
             for _ in range(50):
-                if Path("/tmp/.X4917-lock").exists():
+                owner = Path(f"/proc/{lock.read_text()}/cmdline") if lock.exists() else None
+                if owner and owner.exists() and b"Xvfb" in owner.read_bytes():
                     raise SystemExit(0)
                 time.sleep(0.01)
             raise SystemExit(1)
@@ -113,6 +115,14 @@ class LabShotTest(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertRegex(result.stderr, r"Xvfb failed to (start on|acquire) :4917")
         self.assertFalse(self.marker.exists())
+
+    def test_starts_xvfb_past_a_lock_not_owned_by_xvfb(self) -> None:
+        LOCK.write_text(str(os.getpid()))
+
+        result = self.run_lab_shot()
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue(self.marker.exists())
 
     def test_rejects_lock_owned_by_a_live_xvfb(self) -> None:
         owner_dir = self.root / "owner-bin"
