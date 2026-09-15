@@ -20,6 +20,7 @@ import lab_profile
 HOSTILE_BRANCH = "x;rm -rf / #$(touch /tmp/lab-injection-proof)`id`"
 HEAD = "1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b"
 REPO = Path("/src/myrepo")
+GIT_COMMON = Path("/src/myrepo.git")
 SHELL_WORDS = ("bash", "sh", "-c", "-lc", "eval")
 
 
@@ -79,6 +80,19 @@ class HostileBranchTest(unittest.TestCase):
         clones = [call for call in self.podman.calls if "clone" in call]
         self.assertEqual(
             clones[0][-2:], [lab_container.MOUNT_SOURCE_READONLY, "/work/myrepo"]
+        )
+
+    def test_create_mounts_the_common_git_directory_read_only(self) -> None:
+        spec = lab_container.LabSpec(
+            repo=str(REPO), branch="main", profile="base", port=None,
+            image="test:latest", recipe_sha256="deadbeef",
+        )
+
+        lab_container.create_container(self.lab, spec, REPO, GIT_COMMON)
+
+        create = [call for call in self.podman.calls if call[0] == "create"][0]
+        self.assertIn(
+            f"{GIT_COMMON}:{lab_container.MOUNT_GIT_COMMON_READONLY}:ro", create
         )
 
     def test_a_hostile_hook_argv_stays_argv(self) -> None:

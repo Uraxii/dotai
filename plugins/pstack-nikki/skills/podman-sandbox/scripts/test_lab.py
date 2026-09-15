@@ -20,6 +20,8 @@ from __future__ import annotations
 
 import importlib.machinery
 import importlib.util
+import subprocess
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -62,6 +64,39 @@ class IsBlankTest(unittest.TestCase):
     def test_a_line_without_a_colour_count_is_an_error(self) -> None:
         with self.assertRaises(lab_container.LabError):
             lab.is_blank("stddev=19661.3 bytes=8852")
+
+
+class GitWorktreeTest(unittest.TestCase):
+    """A linked worktree clones from its shared git directory."""
+
+    def test_the_common_git_directory_clones_a_detached_worktree_head(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            parent = Path(temporary)
+            repo = parent / "repo"
+            worktree = parent / "worktree"
+            subprocess.run(["git", "init", str(repo)], check=True,
+                           capture_output=True, text=True)
+            subprocess.run(["git", "config", "user.email", "test@example.com"],
+                           cwd=str(repo), check=True, capture_output=True, text=True)
+            subprocess.run(["git", "config", "user.name", "Test"],
+                           cwd=str(repo), check=True, capture_output=True, text=True)
+            (repo / "tracked").write_text("tracked\n")
+            subprocess.run(["git", "add", "tracked"], cwd=str(repo), check=True,
+                           capture_output=True, text=True)
+            subprocess.run(["git", "commit", "-m", "initial"], cwd=str(repo),
+                           check=True, capture_output=True, text=True)
+            subprocess.run(["git", "worktree", "add", "--detach", str(worktree)],
+                           cwd=str(repo), check=True, capture_output=True, text=True)
+            head = subprocess.run(["git", "rev-parse", "HEAD"], cwd=str(worktree),
+                                  check=True, capture_output=True, text=True).stdout.strip()
+            common = lab.resolve_git_common_dir(worktree)
+            clone = parent / "clone"
+            subprocess.run(["git", "clone", str(common), str(clone)], check=True,
+                           capture_output=True, text=True)
+            subprocess.run(["git", "fetch", str(common), head], cwd=str(clone),
+                           check=True, capture_output=True, text=True)
+            subprocess.run(["git", "cat-file", "-e", f"{head}^{{commit}}"],
+                           cwd=str(clone), check=True, capture_output=True, text=True)
 
 
 if __name__ == "__main__":
