@@ -91,9 +91,9 @@ contracts in prose at the top of one file, not next to each function.
 | `scripts/lab` | 220 | 188 | 395 |
 | `scripts/lab_container.py` | 165 | 143 | 338 |
 | `scripts/lab_profile.py` | 122 | 97 | 214 |
-| `profiles/base/lab-shot` | 43 | 43 | 64 |
+| `profiles/base/lab-shot` | 42 | 42 | 63 |
 | `profiles/base/Containerfile` | 18 | 18 | 25 |
-| Total | 568 | 489 | 1036 |
+| Total | 567 | 488 | 1035 |
 
 The design projected 310 code lines and the implementation landed on 549.
 Three things account for the gap, and none of them is a feature the design
