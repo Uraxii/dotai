@@ -28,7 +28,7 @@
     {
       "role": "codex watchers",
       "models": {
-        "claude": ["haiku"]
+        "claude": ["sonnet"]
       }
     },
     {

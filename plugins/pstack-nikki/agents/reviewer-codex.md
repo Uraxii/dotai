@@ -59,6 +59,11 @@ Bash call `timeout: 600000` and never set `run_in_background`. The Bash
 result shows `Exit code N` when a command exits non-zero; no such line means
 exit code 0.
 
+A step that exits non-zero ends the steps. Run nothing after it, not even
+`cat`, even when a report file might exist. The fallback reply then holds that
+step's own command, that step's own exit code, and that step's own output,
+which is `(empty)` when Bash printed only the `Exit code N` line.
+
 1. `codex --version`. Non-zero: fallback reply.
 2. `codex login status`. Non-zero: fallback reply.
 3. Writer with `worktree: create` only:
@@ -89,8 +94,9 @@ exit code 0.
 Your whole final message is this template, filled in, as plain text with no
 code fence around it. Paste each output exactly as Bash printed it: every
 line, same order, leading spaces kept, nothing changed, nothing shortened, no
-commentary. An empty output is written `(empty)`. Nothing goes before
-`fallback:` or after `===== end =====`.
+commentary. An empty output is written `(empty)`. The first line of your
+message is `fallback:` and the last is `===== end =====`: no sentence before
+or after them.
 
 ```
 fallback: none
@@ -126,5 +132,5 @@ report file: <RUN>/report.md, or (none) when step 6 never ran
 
 Stamped from `plugins/pstack-nikki/models.json` (edit there, rerun `generate-models.py`). Row absent -> omit `model`, child inherits. A spawner reads the entry for its own harness.
 
-- `codex watchers`: On Claude Code: `haiku`.
+- `codex watchers`: On Claude Code: `sonnet`.
 <!-- dotai:models:end -->
