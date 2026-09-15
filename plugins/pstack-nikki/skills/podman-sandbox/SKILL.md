@@ -116,18 +116,19 @@ uncommitted work in it are gone. Save commits before you run this command.
 
 ## Save commits from a lab
 
-If `lab up` refuses to reset a clone, use the `REF` named in its error to
-create a bundle and fetch it into the host repository. Replace `NAME` with the
-lab name.
+If `lab up` refuses to reset a clone, run the commands it prints for each
+`REF`. The last command saves the commits under a branch unique to that lab
+and ref. Replace `NAME` with the lab name.
 
 ```
 scripts/lab exec NAME git bundle create /tmp/NAME.bundle REF
 podman cp lab-NAME:/tmp/NAME.bundle /tmp/NAME.bundle
-git fetch /tmp/NAME.bundle REF:rescue
+git fetch /tmp/NAME.bundle REF:refs/heads/lab-rescue/NAME/REF
 ```
 
-After `git fetch` completes, `rescue` names the saved commits in the host
-repository. You can run `lab up` again or run `lab down NAME`.
+After `git fetch` completes, the printed `lab-rescue` branch names the saved
+commits in the host repository. You can run `lab up` again or run `lab down
+NAME`.
 
 To see which labs exist, ask podman:
 

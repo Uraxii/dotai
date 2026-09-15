@@ -58,32 +58,6 @@ class DetachedHeadPodman(FakePodman):
         return done
 
 
-class ExistingClonePodman(FakePodman):
-    """Record a clone whose current commit differs from the requested one."""
-
-    def __init__(self, container_only: bool) -> None:
-        super().__init__()
-        self.container_only = container_only
-
-    def __call__(self, args: list[str]) -> subprocess.CompletedProcess:
-        done = super().__call__(args)
-        if args[-3:-1] == ["test", "-d"]:
-            return subprocess.CompletedProcess(args, 0, "", "")
-        if args[-2:] == ["rev-parse", "HEAD"]:
-            return subprocess.CompletedProcess(args, 0, "container-head", "")
-        if args[-3:] == ["branch", "--show-current"]:
-            return subprocess.CompletedProcess(args, 0, "main", "")
-        if "for-each-ref" in args:
-            return subprocess.CompletedProcess(
-                args, 0, "refs/remotes/lab-host/main", ""
-            )
-        if "rev-list" in args:
-            return subprocess.CompletedProcess(
-                args, 0, "container-only" if self.container_only else "", ""
-            )
-        return done
-
-
 class SetupPodman(FakePodman):
     """Record setup calls for one running container start."""
 
@@ -273,33 +247,6 @@ class DetachedHeadTest(unittest.TestCase):
         self.assertTrue(current)
 
 
-class ContainerCommitTest(unittest.TestCase):
-    """Host branch switches preserve commits that only the lab can reach."""
-
-    def setUp(self) -> None:
-        self.podman = ExistingClonePodman(container_only=True)
-        patch = mock.patch.object(lab_container, "run", self.podman)
-        patch.start()
-        self.addCleanup(patch.stop)
-        self.lab = lab_container.Lab("demo")
-
-    def test_sync_refuses_to_drop_a_container_only_commit(self) -> None:
-        with self.assertRaisesRegex(lab_container.LabError, "lab demo.*git bundle"):
-            lab_container.sync_clone(self.lab, REPO, "refs/heads/main", HEAD)
-
-        self.assertFalse(any("checkout" in call for call in self.podman.calls))
-
-    def test_sync_allows_a_branch_switch_without_container_only_commits(self) -> None:
-        no_private_commit = ExistingClonePodman(container_only=False)
-        with mock.patch.object(lab_container, "run", no_private_commit):
-            changed = lab_container.sync_clone(
-                self.lab, REPO, "refs/heads/main", HEAD
-            )
-
-        self.assertTrue(changed)
-        self.assertTrue(any("checkout" in call for call in no_private_commit.calls))
-
-
 class LocalGitClone:
     """Run the container's git argv against a local clone."""
 
@@ -377,6 +324,17 @@ class SyncedCommitTest(unittest.TestCase):
         self.sync("refs/heads/main", head)
         return head
 
+    def rescue_ref(self, ref: str) -> str:
+        """Return the host branch the refusal recipe uses for `ref`."""
+        return f"refs/heads/lab-rescue/{self.lab.name}/{ref}"
+
+    def rescue(self, ref: str) -> str:
+        """Save `ref` from the clone using the refusal's bundle recipe."""
+        bundle = self.parent / "demo.bundle"
+        self.git("bundle", "create", str(bundle), ref, cwd=self.clone)
+        self.git("fetch", str(bundle), f"{ref}:{self.rescue_ref(ref)}")
+        return self.git("rev-parse", self.rescue_ref(ref))
+
     def test_allows_a_host_amend_after_the_old_head_becomes_unreachable(self) -> None:
         self.sync_main()
         (self.repo / "initial").write_text("amended\n")
@@ -417,14 +375,45 @@ class SyncedCommitTest(unittest.TestCase):
         with self.assertRaisesRegex(lab_container.LabError, "git bundle"):
             self.sync("refs/heads/main", target)
 
-        bundle = self.parent / "demo.bundle"
-        self.git(
-            "bundle", "create", str(bundle), "refs/heads/main", cwd=self.clone
-        )
-        self.git("fetch", str(bundle), "refs/heads/main:rescue")
+        rescued = self.rescue("refs/heads/main")
 
         self.assertTrue(self.sync("refs/heads/main", target))
-        self.assertEqual(self.git("rev-parse", "rescue"), saved)
+        self.assertEqual(rescued, saved)
+
+    def test_allows_target_reset_when_current_branch_keeps_the_commit(self) -> None:
+        self.sync_main()
+        saved = self.commit_in_clone("lab-only")
+        self.git("checkout", "-b", "feat", cwd=self.clone)
+        target = self.commit("host-next")
+
+        self.assertTrue(self.sync("refs/heads/main", target))
+        self.assertEqual(self.git("rev-parse", "feat", cwd=self.clone), saved)
+
+    def test_allows_two_successive_bundle_rescues(self) -> None:
+        self.sync_main()
+        on_main = self.commit_in_clone("lab-main")
+        self.git("checkout", "--detach", "HEAD~1", cwd=self.clone)
+        on_head = self.commit_in_clone("lab-detached")
+        target = self.commit("host-next")
+
+        with self.assertRaises(lab_container.LabError) as raised:
+            self.sync("refs/heads/main", target)
+        self.assertIn("refs/heads/main", str(raised.exception))
+        self.assertIn("HEAD", str(raised.exception))
+
+        self.assertEqual(self.rescue("refs/heads/main"), on_main)
+        self.assertEqual(self.rescue("HEAD"), on_head)
+        self.assertTrue(self.sync("refs/heads/main", target))
+
+    def test_prunes_host_refs_when_a_branch_becomes_a_directory(self) -> None:
+        self.git("branch", "a")
+        self.sync_main()
+        self.git("branch", "x")
+        self.sync("refs/heads/main", self.commit("next"))
+        self.git("branch", "-D", "a")
+        self.git("branch", "a/b")
+
+        self.assertTrue(self.sync("refs/heads/main", self.commit("next2")))
 
     def test_allows_commit_on_a_non_target_branch(self) -> None:
         self.sync_main()
@@ -465,9 +454,45 @@ class SyncedCommitTest(unittest.TestCase):
         self.commit_in_clone("lab-only")
         target = self.commit("host-next")
 
-        command = "git bundle create /tmp/demo.bundle HEAD,"
+        command = "git bundle create /tmp/demo.bundle HEAD"
         with self.assertRaisesRegex(lab_container.LabError, command):
             self.sync("refs/heads/main", target)
+
+    def test_refusal_bundle_command_has_no_trailing_punctuation(self) -> None:
+        self.sync_main()
+        self.git("checkout", "--detach", cwd=self.clone)
+        self.commit_in_clone("lab-only")
+        target = self.commit("host-next")
+
+        with self.assertRaises(lab_container.LabError) as raised:
+            self.sync("refs/heads/main", target)
+
+        commands = [
+            line for line in str(raised.exception).splitlines()
+            if "git bundle create" in line
+        ]
+        self.assertEqual(commands, [
+            "Run scripts/lab exec demo git bundle create /tmp/demo.bundle HEAD"
+        ])
+
+    def test_allows_rescued_commit_from_detached_head(self) -> None:
+        self.sync_main()
+        self.git("checkout", "--detach", cwd=self.clone)
+        saved = self.commit_in_clone("lab-only")
+        target = self.commit("host-next")
+
+        with self.assertRaisesRegex(lab_container.LabError, "HEAD"):
+            self.sync("refs/heads/main", target)
+
+        fetch_command = (
+            "git fetch /tmp/demo.bundle HEAD:"
+            "refs/heads/lab-rescue/demo/HEAD"
+        )
+        with self.assertRaises(lab_container.LabError) as raised:
+            self.sync("refs/heads/main", target)
+        self.assertIn(fetch_command, str(raised.exception))
+        self.assertEqual(self.rescue("HEAD"), saved)
+        self.assertTrue(self.sync("refs/heads/main", target))
 
     def test_fetches_an_advertised_non_branch_head_before_comparing(self) -> None:
         self.sync_main()
