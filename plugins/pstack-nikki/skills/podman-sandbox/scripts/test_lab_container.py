@@ -465,7 +465,8 @@ class SyncedCommitTest(unittest.TestCase):
         self.commit_in_clone("lab-only")
         target = self.commit("host-next")
 
-        with self.assertRaisesRegex(lab_container.LabError, "HEAD"):
+        command = "git bundle create /tmp/demo.bundle HEAD,"
+        with self.assertRaisesRegex(lab_container.LabError, command):
             self.sync("refs/heads/main", target)
 
     def test_fetches_an_advertised_non_branch_head_before_comparing(self) -> None:

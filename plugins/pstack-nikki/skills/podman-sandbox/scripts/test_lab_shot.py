@@ -65,6 +65,21 @@ class LabShotTest(unittest.TestCase):
             from pathlib import Path
 
             if os.environ["LAB_SHOT_TEST_MODE"] == "die":
+                # Answer only after the dying Xvfb stub is gone, so lab-shot
+                # always sees the death rather than racing the stub's exit.
+                stub = os.path.join(os.path.dirname(__file__), "Xvfb").encode()
+
+                def stub_alive():
+                    for pid in filter(str.isdigit, os.listdir("/proc")):
+                        try:
+                            if stub in Path(f"/proc/{pid}/cmdline").read_bytes():
+                                return True
+                        except OSError:
+                            pass
+                    return False
+
+                while stub_alive():
+                    time.sleep(0.01)
                 raise SystemExit(0)
             lock = Path("/tmp/.X4917-lock")
             for _ in range(50):
@@ -113,7 +128,7 @@ class LabShotTest(unittest.TestCase):
         result = self.run_lab_shot()
 
         self.assertNotEqual(result.returncode, 0)
-        self.assertRegex(result.stderr, r"Xvfb failed to (start on|acquire) :4917")
+        self.assertIn("Xvfb failed to start on :4917", result.stderr)
         self.assertFalse(self.marker.exists())
 
     def test_starts_xvfb_past_a_lock_not_owned_by_xvfb(self) -> None:
