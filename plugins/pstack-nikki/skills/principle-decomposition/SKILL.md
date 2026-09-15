@@ -10,8 +10,8 @@ Every agent sizes its own work when the brief lands; nobody plans the tree up fr
 - Unit test: one artifact, one verify command, one kind of work, and a reviewer
   could reject it while approving its neighbour. Fold setup, config, and docs into
   the unit whose deliverable needs them. Passes -> do it yourself. Fails -> split.
-  An `orchestrator` never does a unit itself: passes -> one worker. A brief
-  whose whole job passes the test does not need an `orchestrator` at all.
+  An `orchestrator` hands even a passing unit to a worker: separation from its
+  review is what that spawn buys.
 - Spawn only when it buys breadth, isolation, or independence. Buys none -> do it
   inline. Write one line per child naming its scope; two overlap -> merge them.
 - Scale waves, not width. Dependent work chains as fresh spawns; a wave that finds
