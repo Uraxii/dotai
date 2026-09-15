@@ -90,7 +90,7 @@ def resolve_branch(repo: Path, given: str | None) -> tuple[str, str]:
     """Return (branch, head sha) for `given`, defaulting to the repo's HEAD."""
     requested = given or "HEAD"
     branch = git(["rev-parse", "--symbolic-full-name", "--verify", requested], repo)
-    return branch, git(["rev-parse", "--verify", requested], repo)
+    return branch, git(["rev-parse", "--verify", f"{requested}^{{commit}}"], repo)
 
 
 def default_shot_path(repo: Path, name: str) -> Path:
@@ -346,7 +346,7 @@ def describe_repo(given: str | None) -> str:
     """Return the repo root and head for `given`, or the working directory."""
     repo = resolve_repo(given)
     branch, head = resolve_branch(repo, None)
-    return f"{repo} {branch} {head[:HEAD_DIGITS]}"
+    return f"{repo} {lab_container.branch_name(branch)} {head[:HEAD_DIGITS]}"
 
 
 def describe_profile(name: str, given: str | None) -> str:

@@ -10,6 +10,7 @@ site, `lab_container.run`, is replaced by a recorder.
 from __future__ import annotations
 
 import subprocess
+import tempfile
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -261,6 +262,124 @@ class ContainerCommitTest(unittest.TestCase):
 
         self.assertTrue(changed)
         self.assertTrue(any("checkout" in call for call in no_private_commit.calls))
+
+
+class LocalGitClone:
+    """Run the container's git argv against a local clone."""
+
+    def __init__(self, source: Path, clone: Path) -> None:
+        self.source = source
+        self.clone = clone
+
+    def path(self, value: str) -> str:
+        if value == lab_container.MOUNT_GIT_COMMON_READONLY:
+            return str(self.source)
+        if value == lab_container.MOUNT_WORK:
+            return str(self.clone.parent)
+        if value.startswith("/work/repo"):
+            return str(self.clone) + value[len("/work/repo"):]
+        return value
+
+    def capture(self, _lab: lab_container.Lab, argv: list[str], workdir: str) -> str:
+        done = subprocess.run(
+            [self.path(value) for value in argv],
+            cwd=self.path(workdir), capture_output=True, text=True, check=False,
+        )
+        if done.returncode:
+            raise lab_container.LabError(done.stderr.strip())
+        return done.stdout.strip()
+
+    def status(self, _lab: lab_container.Lab, argv: list[str], workdir: str) -> int:
+        return subprocess.run(
+            [self.path(value) for value in argv],
+            cwd=self.path(workdir), capture_output=True, text=True, check=False,
+        ).returncode
+
+
+class SyncedCommitTest(unittest.TestCase):
+    """A lab preserves commits not contained by a head it previously synced."""
+
+    def setUp(self) -> None:
+        self.temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temporary.cleanup)
+        self.parent = Path(self.temporary.name)
+        self.repo = self.parent / "repo"
+        self.clone = self.parent / "clone"
+        self.git("init", "--initial-branch=main", str(self.repo), cwd=self.parent)
+        self.git("config", "user.email", "test@example.com")
+        self.git("config", "user.name", "Test")
+        self.commit("initial")
+        self.lab = lab_container.Lab("demo")
+        self.local = LocalGitClone(self.repo, self.clone)
+        self.capture = mock.patch.object(
+            lab_container, "exec_capture", self.local.capture
+        )
+        self.status = mock.patch.object(lab_container, "exec_status", self.local.status)
+        self.capture.start()
+        self.status.start()
+        self.addCleanup(self.capture.stop)
+        self.addCleanup(self.status.stop)
+
+    def git(self, *args: str, cwd: Path | None = None) -> str:
+        done = subprocess.run(
+            ["git"] + list(args), cwd=str(cwd or self.repo), capture_output=True,
+            text=True, check=True,
+        )
+        return done.stdout.strip()
+
+    def commit(self, name: str) -> str:
+        (self.repo / name).write_text(name + "\n")
+        self.git("add", name)
+        self.git("commit", "-m", name)
+        return self.git("rev-parse", "HEAD")
+
+    def sync(self, branch: str, head: str) -> bool:
+        return lab_container.sync_clone(self.lab, self.repo, branch, head)
+
+    def sync_main(self) -> str:
+        head = self.git("rev-parse", "HEAD")
+        self.sync("refs/heads/main", head)
+        return head
+
+    def test_allows_a_host_amend_after_the_old_head_becomes_unreachable(self) -> None:
+        self.sync_main()
+        (self.repo / "initial").write_text("amended\n")
+        self.git("add", "initial")
+        self.git("commit", "--amend", "-m", "amended")
+
+        self.assertTrue(self.sync("refs/heads/main", self.git("rev-parse", "HEAD")))
+
+    def test_allows_switching_away_from_a_synced_sha(self) -> None:
+        self.sync_main()
+        self.git("checkout", "-b", "pull-request")
+        synced = self.commit("pull-request")
+        self.git("update-ref", "refs/pull/1/head", synced)
+        self.git("checkout", "main")
+        self.git("branch", "-D", "pull-request")
+        self.git("fetch", str(self.repo), synced, cwd=self.clone)
+        self.sync("origin/pr", synced)
+        target = self.commit("main-next")
+
+        self.assertTrue(self.sync("refs/heads/main", target))
+
+    def test_refuses_to_drop_a_commit_on_an_inactive_lab_branch(self) -> None:
+        target = self.sync_main()
+        self.git("checkout", "-b", "feat", cwd=self.clone)
+        (self.clone / "lab-only").write_text("lab-only\n")
+        self.git("add", "lab-only", cwd=self.clone)
+        self.git("commit", "-m", "lab-only", cwd=self.clone)
+        self.git("checkout", "main", cwd=self.clone)
+
+        with self.assertRaisesRegex(lab_container.LabError, "refs/heads/feat"):
+            self.sync("refs/heads/feat", target)
+
+    def test_fetches_an_advertised_non_branch_head_before_comparing(self) -> None:
+        self.sync_main()
+        target = self.commit("pull-request")
+        self.git("update-ref", "refs/pull/1/head", target)
+        self.git("reset", "--hard", "HEAD^")
+
+        self.assertTrue(self.sync("refs/pull/1/head", target))
 
 
 if __name__ == "__main__":

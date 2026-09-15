@@ -50,10 +50,10 @@ Flags:
   build-essential, curl, jq, Xvfb, ImageMagick, and Mesa software GL. Any
   other name is a directory you wrote. See
   [the profile contract](references/profile-contract.md).
-- `--branch BRANCH` the branch to check out. Defaults to the repository's
-  current branch. Before `up` resets a clone, it refuses when the clone holds
-  commits unavailable from the host. Save those commits with a bundle before
-  you run `up` again.
+- `--branch BRANCH` the branch or revision to check out. Defaults to the
+  repository's current branch. Before `up` resets a clone, it refuses only
+  when the reset would lose a commit made in the lab. Save that commit with a
+  bundle before you run `up` again.
 - `--port N` override the port the profile publishes. Give each lab its own
   port: two labs cannot publish the same host port, and the second `up`
   fails at start.
@@ -117,14 +117,14 @@ uncommitted work in it are gone. Save commits before you run this command.
 
 ## Save commits from a lab
 
-If `lab up` refuses to reset a clone, create a bundle in the container and
-fetch it into the host repository. Replace `NAME` with the lab name and
-`BRANCH` with the branch holding the commits.
+If `lab up` refuses to reset a clone, create a bundle from `HEAD` in the
+container and fetch it into the host repository. `HEAD` also works when the
+lab is detached. Replace `NAME` with the lab name.
 
 ```
-scripts/lab exec NAME git bundle create /tmp/NAME.bundle BRANCH
-podman cp lab-NAME:/tmp/NAME.bundle ./NAME.bundle
-git fetch ./NAME.bundle BRANCH:rescue
+scripts/lab exec NAME git bundle create /tmp/NAME.bundle HEAD
+podman cp lab-NAME:/tmp/NAME.bundle /tmp/NAME.bundle
+git fetch /tmp/NAME.bundle HEAD:rescue
 ```
 
 After `git fetch` completes, `rescue` names the saved commits in the host

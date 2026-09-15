@@ -99,5 +99,34 @@ class GitWorktreeTest(unittest.TestCase):
                            cwd=str(clone), check=True, capture_output=True, text=True)
 
 
+class GitReferenceTest(unittest.TestCase):
+    """A tag resolves to the commit the lab checks out."""
+
+    def test_an_annotated_tag_resolves_to_its_commit_and_displays_a_short_name(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            repo = Path(temporary) / "repo"
+            subprocess.run(["git", "init", "--initial-branch=main", str(repo)],
+                           check=True, capture_output=True, text=True)
+            for key, value in (("user.email", "test@example.com"),
+                               ("user.name", "Test")):
+                subprocess.run(["git", "config", key, value], cwd=str(repo),
+                               check=True, capture_output=True, text=True)
+            (repo / "tracked").write_text("tracked\n")
+            subprocess.run(["git", "add", "tracked"], cwd=str(repo), check=True,
+                           capture_output=True, text=True)
+            subprocess.run(["git", "commit", "-m", "initial"], cwd=str(repo),
+                           check=True, capture_output=True, text=True)
+            subprocess.run(["git", "tag", "-a", "v1", "-m", "v1"], cwd=str(repo),
+                           check=True, capture_output=True, text=True)
+            commit = subprocess.run(["git", "rev-parse", "HEAD"], cwd=str(repo),
+                                    check=True, capture_output=True, text=True).stdout.strip()
+
+            branch, head = lab.resolve_branch(repo, "v1")
+
+            self.assertEqual(branch, "refs/tags/v1")
+            self.assertEqual(head, commit)
+            self.assertIn(" main ", lab.describe_repo(str(repo)))
+
+
 if __name__ == "__main__":
     unittest.main()
