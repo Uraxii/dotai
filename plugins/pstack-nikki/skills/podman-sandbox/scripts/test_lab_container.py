@@ -79,13 +79,15 @@ class HostileBranchTest(unittest.TestCase):
         lab_container.sync_clone(self.lab, REPO, HOSTILE_BRANCH, HEAD)
         clones = [call for call in self.podman.calls if "clone" in call]
         self.assertEqual(
-            clones[0][-2:], [lab_container.MOUNT_SOURCE_READONLY, "/work/myrepo"]
+            clones[0][-2:],
+            [lab_container.MOUNT_GIT_COMMON_READONLY, "/work/myrepo"],
         )
 
     def test_create_mounts_the_common_git_directory_read_only(self) -> None:
         spec = lab_container.LabSpec(
             repo=str(REPO), branch="main", profile="base", port=None,
             image="test:latest", recipe_sha256="deadbeef",
+            git_common_dir=str(GIT_COMMON),
         )
 
         lab_container.create_container(self.lab, spec, REPO, GIT_COMMON)

@@ -79,6 +79,13 @@ def resolve_repo(given: str | None) -> Path:
     return Path(git(["rev-parse", "--show-toplevel"], start)).resolve()
 
 
+def resolve_git_common_dir(repo: Path) -> Path:
+    """Return the absolute git directory shared by every linked worktree."""
+    return Path(git([
+        "rev-parse", "--path-format=absolute", "--git-common-dir"
+    ], repo)).resolve()
+
+
 def resolve_branch(repo: Path, given: str | None) -> tuple[str, str]:
     """Return (branch, head sha) for `given`, defaulting to the repo's HEAD."""
     branch = given or git(["rev-parse", "--abbrev-ref", "HEAD"], repo)
@@ -122,6 +129,7 @@ def command_up(args: argparse.Namespace) -> int:
     """
     lab_container.require_podman()
     repo = resolve_repo(args.repo)
+    git_common_dir = resolve_git_common_dir(repo)
     branch, head = resolve_branch(repo, args.branch)
     profile = lab_profile.load(args.profile, repo)
     base = None
@@ -136,6 +144,7 @@ def command_up(args: argparse.Namespace) -> int:
         port=port,
         image=profile.image,
         recipe_sha256=lab_container.recipe_sha256(profile, base),
+        git_common_dir=str(git_common_dir),
     )
     changed = 0
     logging.info("converging image %s", profile.image)
@@ -143,7 +152,7 @@ def command_up(args: argparse.Namespace) -> int:
     created = lab_container.read_spec(lab) != spec
     if created:
         logging.info("creating container %s", lab.container)
-        lab_container.create_container(lab, spec, repo)
+        lab_container.create_container(lab, spec, repo, git_common_dir)
         changed += 1
     started = lab_container.start_container(lab)
     changed += int(started)

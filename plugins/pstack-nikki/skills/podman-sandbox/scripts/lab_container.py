@@ -40,6 +40,7 @@ from lab_profile import RECIPE_NAME, Profile
 
 SPEC_LABEL = "lab.spec"
 MOUNT_SOURCE_READONLY = "/src-ro"
+MOUNT_GIT_COMMON_READONLY = "/git-common-ro"
 MOUNT_WORK = "/work"
 PERSISTENT_DISPLAY = ":99"
 
@@ -76,6 +77,7 @@ class LabSpec:
     port: int | None
     image: str
     recipe_sha256: str
+    git_common_dir: str
 
     def to_label(self) -> str:
         """Serialise to the JSON stored in the `lab.spec` label."""
@@ -203,10 +205,12 @@ def build_image(profile: Profile, base: Profile | None) -> bool:
     return True
 
 
-def create_container(lab: Lab, spec: LabSpec, repo: Path) -> None:
+def create_container(
+        lab: Lab, spec: LabSpec, repo: Path, git_common_dir: Path) -> None:
     """Create the container for `spec`, stopped, replacing any older one.
 
-    Mounts the repo read-only at `/src-ro` and the named volume at `/work`.
+    Mounts the repo read-only at `/src-ro`, its common git directory at
+    `/git-common-ro`, and the named volume at `/work`.
     The clone lives in a named volume rather than a host bind mount, so no
     uid mapping is needed and no container-owned file can land on the host.
     Publishes `spec.port` as `127.0.0.1:<port>:<port>` when set, so nothing
@@ -222,6 +226,7 @@ def create_container(lab: Lab, spec: LabSpec, repo: Path) -> None:
             "--label", f"{SPEC_LABEL}={spec.to_label()}",
             "--security-opt", "label=disable",
             "--volume", f"{repo}:{MOUNT_SOURCE_READONLY}:ro",
+            "--volume", f"{git_common_dir}:{MOUNT_GIT_COMMON_READONLY}:ro",
             "--volume", f"{lab.volume}:{MOUNT_WORK}",
             "--workdir", MOUNT_WORK]
     if spec.port is not None:
@@ -268,8 +273,8 @@ def sync_clone(lab: Lab, repo: Path, branch: str, head: str) -> bool:
     if cloned and at_revision(lab, clone, branch, head):
         return False
     if not cloned:
-        exec_capture(lab, ["git", "clone", MOUNT_SOURCE_READONLY, clone], MOUNT_WORK)
-    exec_capture(lab, ["git", "fetch", "--quiet", MOUNT_SOURCE_READONLY, branch], clone)
+        exec_capture(lab, ["git", "clone", MOUNT_GIT_COMMON_READONLY, clone], MOUNT_WORK)
+    exec_capture(lab, ["git", "fetch", "--quiet", MOUNT_GIT_COMMON_READONLY, branch], clone)
     exec_capture(lab, ["git", "checkout", "--quiet", "-B", branch, head], clone)
     return True
 
