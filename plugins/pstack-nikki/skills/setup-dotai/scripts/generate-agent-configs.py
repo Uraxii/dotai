@@ -21,6 +21,7 @@ class AgentDefinition:
     name: str
     description: str
     color: str
+    tools: tuple[str, ...]
     instructions: str
     targets: frozenset[str]
     global_codex_instructions: bool
@@ -51,6 +52,7 @@ def load_definitions(skill_directory: Path) -> tuple[AgentDefinition, ...]:
                 name=name,
                 description=values["description"],
                 color=values["color"],
+                tools=tuple(values.get("tools", ())),
                 instructions=instructions_path.read_text(),
                 targets=targets,
                 global_codex_instructions=values.get(
@@ -64,11 +66,13 @@ def load_definitions(skill_directory: Path) -> tuple[AgentDefinition, ...]:
 def render_claude(definition: AgentDefinition) -> str:
     description = json.dumps(definition.description, ensure_ascii=False)
     body = definition.instructions.rstrip()
+    tools = f"tools: {', '.join(definition.tools)}\n" if definition.tools else ""
     return (
         "---\n"
         f"name: {definition.name}\n"
         f"description: {description}\n"
         f"color: {definition.color}\n"
+        f"{tools}"
         "---\n\n"
         f"{body}\n"
     )

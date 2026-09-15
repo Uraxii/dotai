@@ -25,6 +25,12 @@
   },
   "roles": [
     {
+      "role": "codex watchers",
+      "models": {
+        "claude": ["sonnet"]
+      }
+    },
+    {
       "role": "feature, refactoring",
       "models": {
         "claude": ["sonnet", "opus"],

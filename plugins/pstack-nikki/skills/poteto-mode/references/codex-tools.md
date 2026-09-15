@@ -61,8 +61,13 @@ Codex exposes subagent tools under one of two protocols, chosen by the
 
 pstack-nikki's `models.json` gives each role a `models` object keyed by
 harness (`claude`, `codex`, `copilot`), each value an ordered preference
-list for that harness alone. On Codex, read the `codex` entry (`gpt-*`
-slugs) and pin the first name in it; nothing here overrides that file.
+list for that harness alone. Most Codex spawns leave `model` and
+`reasoning_effort` out, so the user's `[agents] default_subagent_model` and
+`default_subagent_reasoning_effort` apply. The exception is a spawn pinning
+from its own panel row (`interrogate` reviewers, the `arena` cross-judge,
+the `blast-radius` panel): read that row's `codex` entry (`gpt-*` slugs)
+and pin the first name in it. Nothing here overrides
+`models.json`.
 
 ## Driver and bundled skills
 

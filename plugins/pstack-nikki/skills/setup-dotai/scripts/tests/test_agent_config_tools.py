@@ -56,9 +56,9 @@ class AgentConfigGeneratorTests(unittest.TestCase):
         references = SKILL_ROOT / "references"
         plugin_root = SKILL_ROOT.parents[1]
         body = (references / "poteto-agent-body.md").read_text().rstrip()
-        codex_body = (
-            (references / "poteto-agent-codex-body.md").read_text().rstrip()
-        )
+        watcher_body = (
+            plugin_root / "skills" / "poteto-mode" / "playbooks" / "delegate-to-codex.md"
+        ).read_text().rstrip()
 
         for name in WORKER_NAMES:
             generated = (plugin_root / "agents" / f"{name}.md").read_text()
@@ -66,7 +66,9 @@ class AgentConfigGeneratorTests(unittest.TestCase):
 
         for name in ("developer-codex", "reviewer-codex"):
             generated = (plugin_root / "agents" / f"{name}.md").read_text()
-            self.assertIn(codex_body, generated)
+            frontmatter, body = generated.split("---\n\n", maxsplit=1)
+            self.assertIn("tools: Bash, Write\n", frontmatter)
+            self.assertEqual(watcher_body, body.rstrip())
             stray_toml = SKILL_ROOT / "assets" / "codex-agents" / f"{name}.toml"
             self.assertFalse(stray_toml.exists())
 
