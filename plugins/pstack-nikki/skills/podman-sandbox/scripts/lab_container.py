@@ -265,8 +265,8 @@ def sync_clone(lab: Lab, repo: Path, branch: str, head: str) -> bool:
     Every git call is a separate argument list run inside the container. The
     branch name is an argv element, never part of a command string.
 
-    Destructive: resets the branch to `head` and discards container-side
-    commits on that branch.
+    A branch is reset to `head`; a tag, SHA, or detached HEAD checks out
+    detached at `head`.
     """
     clone = lab.clone_path(repo)
     cloned = exec_status(lab, ["test", "-d", f"{clone}/.git"], MOUNT_WORK) == 0
@@ -274,16 +274,41 @@ def sync_clone(lab: Lab, repo: Path, branch: str, head: str) -> bool:
         return False
     if not cloned:
         exec_capture(lab, ["git", "clone", MOUNT_GIT_COMMON_READONLY, clone], MOUNT_WORK)
-    exec_capture(lab, ["git", "fetch", "--quiet", MOUNT_GIT_COMMON_READONLY, branch], clone)
-    exec_capture(lab, ["git", "checkout", "--quiet", "-B", branch, head], clone)
+    exec_capture(lab, ["git", "fetch", "--quiet", MOUNT_GIT_COMMON_READONLY, head], clone)
+    if is_branch(branch):
+        exec_capture(lab, ["git", "checkout", "--quiet", "-B",
+                           branch_name(branch), head], clone)
+    else:
+        exec_capture(lab, ["git", "checkout", "--quiet", "--detach", head], clone)
     return True
 
 
+def is_branch(reference: str) -> bool:
+    """True when `reference` names a local branch rather than a revision."""
+    if reference.startswith("refs/heads/"):
+        return True
+    if reference == "HEAD" or reference.startswith("refs/"):
+        return False
+    return not (len(reference) == 40 and all(
+        character in "0123456789abcdef" for character in reference.lower()
+    ))
+
+
+def branch_name(reference: str) -> str:
+    """Return the local branch name stored after the heads ref prefix."""
+    prefix = "refs/heads/"
+    return reference[len(prefix):] if reference.startswith(prefix) else reference
+
+
 def at_revision(lab: Lab, clone: str, branch: str, head: str) -> bool:
-    """True when the clone already sits on `branch` at `head`."""
+    """True when the clone already sits on `branch`, or detached, at `head`."""
     head_now = exec_capture(lab, ["git", "rev-parse", "HEAD"], clone)
+    if head_now != head:
+        return False
+    if not is_branch(branch):
+        return True
     branch_now = exec_capture(lab, ["git", "branch", "--show-current"], clone)
-    return head_now == head and branch_now == branch
+    return branch_now == branch_name(branch)
 
 
 def run_setup(lab: Lab, profile: Profile, workdir: str, force: bool = False) -> bool:

@@ -88,8 +88,9 @@ def resolve_git_common_dir(repo: Path) -> Path:
 
 def resolve_branch(repo: Path, given: str | None) -> tuple[str, str]:
     """Return (branch, head sha) for `given`, defaulting to the repo's HEAD."""
-    branch = given or git(["rev-parse", "--abbrev-ref", "HEAD"], repo)
-    return branch, git(["rev-parse", "--verify", branch], repo)
+    requested = given or "HEAD"
+    branch = git(["rev-parse", "--symbolic-full-name", "--verify", requested], repo)
+    return branch, git(["rev-parse", "--verify", requested], repo)
 
 
 def default_shot_path(repo: Path, name: str) -> Path:
