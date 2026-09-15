@@ -339,8 +339,7 @@ def run_setup(lab: Lab, profile: Profile, workdir: str) -> bool:
     """
     if not profile.setup:
         return False
-    started_at = podman(["inspect", lab.container, "--format",
-                         "{{.State.StartedAt}}"])
+    started_at = podman(["inspect", lab.container, "--format", "{{.State.StartedAt}}"])
     start_hash = hashlib.sha256(started_at.encode("utf-8")).hexdigest()
     sentinel = f"{SETUP_SENTINEL_PREFIX}{profile.recipe_sha256}-{start_hash}"
     if exec_status(lab, ["test", "-f", sentinel], MOUNT_WORK) == 0:
