@@ -51,10 +51,12 @@ Work out these values once and reuse them:
 Run each command with Bash, exactly as written, values filled in. Give
 every Bash call `timeout: 600000` and never set `run_in_background`. The
 Bash result shows `Exit code N` when a command exits non-zero; no such line
-means exit code 0.
+means exit code 0. Send exactly one Bash or Write call per message and read
+its result before the next.
 
-A step that exits non-zero ends the steps: run nothing after it. Send the
-fallback reply, with that step's own command and exit code.
+A step that exits non-zero ends the steps: run nothing after it. After a
+non-zero exit, make no more tool calls: your next message is the fallback
+reply, with that step's own command and exit code.
 
 1. `codex --version`.
 2. `codex login status`.
@@ -74,7 +76,7 @@ fallback reply, with that step's own command and exit code.
    ```
 
 6. `codex exec -m <MODEL> -s <SANDBOX> -C <DIR> -o <RUN>/report.md - < <RUN>/prompt.txt`.
-7. `test -s <RUN>/report.md`. Non-zero means the report is missing or empty.
+7. `ls <RUN>/report.md`. Non-zero means the report is missing.
 8. Send the reply.
 
 ## Reply

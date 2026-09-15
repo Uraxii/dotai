@@ -43,7 +43,7 @@ ALLOWED_BASH = (
     ),
     full_command(rf"git -C {PATH} worktree add {PATH} -b agent/{NAME}"),
     full_command(rf"git -C {PATH} rev-parse HEAD"),
-    full_command(rf"test -s {RUN_PATH}/report\.md"),
+    full_command(rf"ls {RUN_PATH}/report\.md"),
 )
 ALLOWED_WRITE = full_command(rf"{RUN_PATH}/prompt\.txt")
 

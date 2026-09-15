@@ -55,7 +55,7 @@ class CodexWatcherGuardTests(unittest.TestCase):
             f"git -C {REPO} worktree add /repo/.nikki-agents/worktrees/sample-run "
             "-b agent/sample-run",
             f"git -C {REPO} rev-parse HEAD",
-            f"test -s {RUN}/report.md",
+            f"ls {RUN}/report.md",
         )
         for command in commands:
             self.assert_allowed(command)
@@ -82,6 +82,9 @@ class CodexWatcherGuardTests(unittest.TestCase):
             "cat /etc/passwd",
             "cat /r/README.md",
             "cat /r/.nikki-agents/codex-runs/x/../../README.md",
+            f"test -s {RUN}/report.md",
+            f"ls -lh {RUN}/report.md",
+            f"ls {REPO}/other.md",
         )
         for command in commands:
             with self.subTest(command=command):
