@@ -18,7 +18,9 @@ import lab_container
 import lab_profile
 
 HOSTILE_BRANCH = "x;rm -rf / #$(touch /tmp/lab-injection-proof)`id`"
+HOSTILE_BRANCH_REF = f"refs/heads/{HOSTILE_BRANCH}"
 HEAD = "1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b"
+SHORT_SHA = HEAD[:12]
 REPO = Path("/src/myrepo")
 GIT_COMMON = Path("/src/myrepo.git")
 SHELL_WORDS = ("bash", "sh", "-c", "-lc", "eval")
@@ -92,29 +94,29 @@ class HostileBranchTest(unittest.TestCase):
         self.lab = lab_container.Lab("demo")
 
     def test_sync_clone_passes_the_branch_as_one_argument(self) -> None:
-        lab_container.sync_clone(self.lab, REPO, HOSTILE_BRANCH, HEAD)
+        lab_container.sync_clone(self.lab, REPO, HOSTILE_BRANCH_REF, HEAD)
         self.assertIn(HOSTILE_BRANCH, self.podman.elements())
 
     def test_no_argument_mixes_the_branch_with_anything_else(self) -> None:
-        lab_container.sync_clone(self.lab, REPO, HOSTILE_BRANCH, HEAD)
+        lab_container.sync_clone(self.lab, REPO, HOSTILE_BRANCH_REF, HEAD)
         for element in self.podman.elements():
             if element != HOSTILE_BRANCH:
                 self.assertNotIn("rm -rf", element)
                 self.assertNotIn("$(", element)
 
     def test_no_call_asks_for_a_shell(self) -> None:
-        lab_container.sync_clone(self.lab, REPO, HOSTILE_BRANCH, HEAD)
+        lab_container.sync_clone(self.lab, REPO, HOSTILE_BRANCH_REF, HEAD)
         for element in self.podman.elements():
             self.assertNotIn(element, SHELL_WORDS)
 
     def test_the_branch_is_checked_out_by_name(self) -> None:
-        lab_container.sync_clone(self.lab, REPO, HOSTILE_BRANCH, HEAD)
+        lab_container.sync_clone(self.lab, REPO, HOSTILE_BRANCH_REF, HEAD)
         checkouts = [call for call in self.podman.calls if "checkout" in call]
         self.assertEqual(len(checkouts), 1)
         self.assertEqual(checkouts[0][-2:], [HOSTILE_BRANCH, HEAD])
 
     def test_the_clone_is_made_from_the_read_only_mount(self) -> None:
-        lab_container.sync_clone(self.lab, REPO, HOSTILE_BRANCH, HEAD)
+        lab_container.sync_clone(self.lab, REPO, HOSTILE_BRANCH_REF, HEAD)
         clones = [call for call in self.podman.calls if "clone" in call]
         self.assertEqual(
             clones[0][-2:],
@@ -151,7 +153,7 @@ class HostileBranchTest(unittest.TestCase):
             self.assertNotIn(element, SHELL_WORDS)
 
     def test_the_injection_never_ran(self) -> None:
-        lab_container.sync_clone(self.lab, REPO, HOSTILE_BRANCH, HEAD)
+        lab_container.sync_clone(self.lab, REPO, HOSTILE_BRANCH_REF, HEAD)
         self.assertFalse(Path("/tmp/lab-injection-proof").exists())
 
 
@@ -212,6 +214,18 @@ class DetachedHeadTest(unittest.TestCase):
         checkout = [call for call in self.podman.calls if "checkout" in call][0]
         self.assertEqual(checkout[-4:], ["checkout", "--quiet", "--detach", HEAD])
 
+    def test_sync_clone_detaches_for_an_empty_reference(self) -> None:
+        lab_container.sync_clone(self.lab, REPO, "", HEAD)
+
+        checkout = [call for call in self.podman.calls if "checkout" in call][0]
+        self.assertEqual(checkout[-4:], ["checkout", "--quiet", "--detach", HEAD])
+
+    def test_sync_clone_detaches_for_a_short_sha_reference(self) -> None:
+        lab_container.sync_clone(self.lab, REPO, SHORT_SHA, HEAD)
+
+        checkout = [call for call in self.podman.calls if "checkout" in call][0]
+        self.assertEqual(checkout[-4:], ["checkout", "--quiet", "--detach", HEAD])
+
     def test_a_detached_clone_at_the_requested_sha_is_current(self) -> None:
         detached = DetachedHeadPodman()
         with mock.patch.object(lab_container, "run", detached):
@@ -234,14 +248,16 @@ class ContainerCommitTest(unittest.TestCase):
 
     def test_sync_refuses_to_drop_a_container_only_commit(self) -> None:
         with self.assertRaisesRegex(lab_container.LabError, "lab demo.*git bundle"):
-            lab_container.sync_clone(self.lab, REPO, "main", HEAD)
+            lab_container.sync_clone(self.lab, REPO, "refs/heads/main", HEAD)
 
         self.assertFalse(any("checkout" in call for call in self.podman.calls))
 
     def test_sync_allows_a_branch_switch_without_container_only_commits(self) -> None:
         no_private_commit = ExistingClonePodman(container_only=False)
         with mock.patch.object(lab_container, "run", no_private_commit):
-            changed = lab_container.sync_clone(self.lab, REPO, "main", HEAD)
+            changed = lab_container.sync_clone(
+                self.lab, REPO, "refs/heads/main", HEAD
+            )
 
         self.assertTrue(changed)
         self.assertTrue(any("checkout" in call for call in no_private_commit.calls))

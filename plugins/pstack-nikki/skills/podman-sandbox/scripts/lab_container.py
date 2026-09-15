@@ -312,13 +312,7 @@ def has_container_only_commits(lab: Lab, clone: str, head: str) -> bool:
 
 def is_branch(reference: str) -> bool:
     """True when `reference` names a local branch rather than a revision."""
-    if reference.startswith("refs/heads/"):
-        return True
-    if reference == "HEAD" or reference.startswith("refs/"):
-        return False
-    return not (len(reference) == 40 and all(
-        character in "0123456789abcdef" for character in reference.lower()
-    ))
+    return reference.startswith("refs/heads/")
 
 
 def branch_name(reference: str) -> str:
