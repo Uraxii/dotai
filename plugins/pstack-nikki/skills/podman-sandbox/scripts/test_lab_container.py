@@ -43,6 +43,18 @@ class FakePodman:
         return [element for call in self.calls for element in call]
 
 
+class DetachedHeadPodman(FakePodman):
+    """Report a clone whose detached HEAD already names the requested commit."""
+
+    def __call__(self, args: list[str]) -> subprocess.CompletedProcess:
+        done = super().__call__(args)
+        if args[-2:] == ["rev-parse", "HEAD"]:
+            return subprocess.CompletedProcess(args, 0, HEAD, "")
+        if args[-3:] == ["branch", "--show-current"]:
+            return subprocess.CompletedProcess(args, 0, "", "")
+        return done
+
+
 class HostileBranchTest(unittest.TestCase):
     """A branch name is data. It never becomes part of a command string."""
 
@@ -156,6 +168,32 @@ class SetupRestartTest(unittest.TestCase):
 
         self.assertTrue(changed)
         self.assertIn("start-app", self.podman.elements())
+
+
+class DetachedHeadTest(unittest.TestCase):
+    """A revision without a local branch stays detached."""
+
+    def setUp(self) -> None:
+        self.podman = FakePodman()
+        patch = mock.patch.object(lab_container, "run", self.podman)
+        patch.start()
+        self.addCleanup(patch.stop)
+        self.lab = lab_container.Lab("demo")
+
+    def test_sync_clone_checks_out_a_detached_revision(self) -> None:
+        lab_container.sync_clone(self.lab, REPO, "HEAD", HEAD)
+
+        checkout = [call for call in self.podman.calls if "checkout" in call][0]
+        self.assertEqual(checkout[-4:], ["checkout", "--quiet", "--detach", HEAD])
+
+    def test_a_detached_clone_at_the_requested_sha_is_current(self) -> None:
+        detached = DetachedHeadPodman()
+        with mock.patch.object(lab_container, "run", detached):
+            current = lab_container.at_revision(
+                self.lab, "/work/myrepo", "HEAD", HEAD
+            )
+
+        self.assertTrue(current)
 
 
 if __name__ == "__main__":
