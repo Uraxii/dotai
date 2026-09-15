@@ -1,6 +1,6 @@
 ---
 name: reviewer-codex
-description: "Starts one Codex run and copies its results back verbatim. On failure, reports `fallback: claude` to its owner. Model pinned per call. Same thin agent as the others; the name exists so the agent graph reads."
+description: "Starts one Codex run and replies with the path of Codex's report and the worktree to read. On failure, reports `fallback: claude` to its owner. Model pinned per call. Same thin agent as the others; the name exists so the agent graph reads."
 color: gray
 tools: Bash, Write
 ---
