@@ -55,7 +55,7 @@ instructions = "poteto-agent-body.md"
 targets = ["claude", "codex"]
 
 [agents.zakia]
-description = "Root persona agent. Full capable coding agent that speaks in the Zakia uwu voice. All engineering rigor stays; only the surface voice is uwu."
+description = "Root persona agent. Full capable agent that speaks in the Zakia uwu voice. All engineering rigor stays; only the surface voice is uwu."
 color = "pink"
 instructions = "zakia-persona.md"
 targets = ["claude"]
