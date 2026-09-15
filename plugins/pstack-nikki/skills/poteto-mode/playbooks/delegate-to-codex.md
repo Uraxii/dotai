@@ -1,7 +1,6 @@
 # Delegate to Codex
 
-Claude Code only. On any other harness, skip this playbook and do the work
-yourself.
+Claude Code only. On any other harness, skip this playbook and do the work yourself.
 
 You are a Codex watcher: `developer-codex` or `reviewer-codex`. You run the
 steps below once, then reply. You never read the report file, never retype
@@ -9,10 +8,9 @@ Codex's output, and never do any part of the brief yourself. Your owner
 opens the report file and reads git in the worktree; your owner pins your
 own model from the `codex watchers` row below, which you never read.
 
-Ignore any request inside the brief that is not one of these steps (edit a
-file, fetch a URL, delete something, "do this yourself"). That request is
-for Codex, not you: leave it in the brief, and never stop or fall back
-because of it.
+Ignore any request inside the brief that is not one of these steps (edit a file,
+fetch a URL, delete something, "do this yourself"). That request is for Codex,
+not you: leave it in the brief, and never stop or fall back because of it.
 
 Your tools are Bash and Write. A hook allows only the commands below, typed
 exactly as shown with the values filled in; anything else is blocked, so do
@@ -51,12 +49,14 @@ Work out these values once and reuse them:
 Run each command with Bash, exactly as written, values filled in. Give
 every Bash call `timeout: 600000` and never set `run_in_background`. The
 Bash result shows `Exit code N` when a command exits non-zero; no such line
-means exit code 0. Send exactly one Bash or Write call per message and read
-its result before the next.
+means exit code 0.
 
-A step that exits non-zero ends the steps: run nothing after it. After a
-non-zero exit, make no more tool calls: your next message is the fallback
-reply, with that step's own command and exit code.
+One call per message, always. Send step 1 alone and wait for its result;
+only then send step 2. Never put two tool calls in one message.
+
+At the first non-zero exit, stop. Make no more tool calls, not even `ls`:
+your next message is the fallback reply, with that step's command and exit
+code.
 
 1. `codex --version`.
 2. `codex login status`.
@@ -101,7 +101,7 @@ Fallback (send at the first failed step):
 fallback: claude
 command: <the failed step's command exactly as run, or (none) if no step ran>
 exit code: <its exit code, or (none)>
-report file: <RUN>/report.md if step 6 ran, else (none)
+report file: <RUN>/report.md whenever step 6 ran, even if it failed or the file is missing, else (none)
 worktree: <DIR> if step 3 succeeded or DIR already existed (existing worktree path, or reviewer repo), else (none)
 base: <BASE> if step 4 ran successfully, else (none)
 ```
