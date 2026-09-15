@@ -93,9 +93,10 @@ Codex loads personal custom agents from `<codex-home>/agents/`. Resolve
 `<codex-home>` from `CODEX_HOME` when set, otherwise use `~/.codex`.
 
 1. Codex loads the plugin's context-pressure hook from
-   `../../hooks/codex-hooks.json`. Tell the
-   user to open `/hooks`, review the definition, and trust its current hash.
-   Codex skips a new or changed plugin hook until the user trusts it.
+   `../../hooks/codex-hooks.json`. Open `/hooks`, review the definition, and
+   trust its current hash now: Codex skips a new or changed plugin hook
+   until it is trusted, on this first install and after any later hook
+   change.
 2. Run [the Codex agent installer](scripts/install-codex-agents.py) with
    `--codex-home <codex-home>`. The script resolves
    [the generated agent files](assets/codex-agents/) relative to this skill and
@@ -112,14 +113,37 @@ Codex loads personal custom agents from `<codex-home>/agents/`. Resolve
 
 The generated Codex files intentionally omit `model` and
 `model_reasoning_effort`. A custom-agent file would override the role choice
-made by the spawning workflow. Keep model selection in `models.json` and pass
-it when spawning instead.
+made by the spawning workflow. Keep model selection in `models.json`: most
+spawns omit `model` too, so the user's Codex `[agents]` defaults apply; a
+spawn pinning from its own panel row (`interrogate` reviewers, the `arena`
+cross-judge, the `blast-radius` panel) still pins from `models.json`.
 
 The platform-neutral definitions live in
 [references/agent-definitions.toml](references/agent-definitions.toml). After
 changing that manifest or one of its relative instruction files, run
 [the generator](scripts/generate-agent-configs.py). Do not edit generated
 Claude or Codex agent files by hand.
+
+### Updating
+
+Refresh the installed plugin:
+
+```
+codex plugin marketplace upgrade uraxii
+```
+
+There is no `codex plugin update`. This command refreshes the marketplace
+snapshot and reinstalls every plugin already installed from it, but it does
+not touch `<codex-home>/agents/`. Rerun [the Codex agent
+installer](scripts/install-codex-agents.py) only when
+[assets/codex-agents/](assets/codex-agents/) changed: it changes nothing
+when the installed files already match, and step 3 above covers showing the
+changed paths before rerunning with `--force`. Start a new Codex session
+after either step.
+
+The hook trust hash covers the hook's event, matcher, and command, so a
+plugin version bump alone keeps the existing trust. Re-trust the hook
+through `/hooks` only when its event, matcher, or command changed.
 
 ## OpenCode
 
