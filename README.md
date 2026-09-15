@@ -18,7 +18,7 @@ place pstack-claude keeps `plugins/pstack/`.
 | `plugins/pstack-nikki/skills/setup-dotai/scripts/` | Generates and installs agent files. |
 | `themes/` | Editor themes. Source of truth only. Nothing installs them, so copy one into `~/.claude/themes/` yourself. |
 | `output-styles/` | Output styles, `output-styles/<name>.md`. Nothing installs them, so copy one into `~/.claude/output-styles/` and select it with `/output-style` yourself. |
-| `statusline.sh` | Statusline command: usage bars and tokens per minute. Nothing installs it, so copy it to `~/.claude/statusline.sh` and set `statusLine` yourself. |
+| `statusline.py` | Statusline command: usage bars and tokens per minute. Nothing installs it, so copy it to `~/.claude/statusline.py` and set `statusLine` yourself. |
 | `plugins/pstack-nikki/hooks/` | Hook scripts. `cap_bash_timeout.py` is a `PreToolUse` gate on long Bash timeouts; it is registered nowhere and does not run. `handoff-token-flag.py` warns before context compaction; plugin installation wires it for Claude Code, Codex, and Copilot CLI. `session_start_context.py` reminds the agent to load `poteto-mode` at session start; plugin installation wires it for Claude Code, Codex, and Copilot CLI, `opencode-reminder-plugin.ts` (same directory) wires it into opencode, and the `setup-dotai` skill walks through wiring it into Hermes by hand. See [Session-start reminder](#session-start-reminder) below for what each harness can and cannot do. Add `.nikki-agents/` to the exclude config of your editor, LSP, and any semantic index: `.git/info/exclude` covers git, ripgrep, and fd, but an indexer that keeps its own ignore list walks the worktrees and ends up crawling six figures of files in a repo with a few hundred tracked ones. |
 
 ## Install
