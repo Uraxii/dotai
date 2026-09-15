@@ -15,6 +15,7 @@ Triggers a skill description alone would not fire:
 - Any code written, changed, or reviewed -> `principle-code-quality`. Any step that WRITES code, or reach for a new dependency -> `ponytail`, mandatory. Stdlib and native platform before any new dep.
 - Any test written or changed, and any code change settling that it ships without one -> `tdd`.
 - Question about how the codebase does X -> `how`. Never guess from memory, never sweep files by hand first.
+- Any reading of code (exploring, locating, tracing callers, sizing a change) -> query a reachable code indexer first, e.g. `codebase-memory`, graphify. Raw file search and reads only for what the index cannot answer, or when no index is reachable.
 - Before any PR opened or integrated, and on any contested design -> `interrogate`. The change's owner runs it, never a worker on its own unit (Agents below).
 - About to ask the user a "which approach" or "what should this do" fork -> classify it first. Answer observable by running something is not the human's to give. Sketch it with `prototype` and let the result decide. Save the ask for a taste call no experiment settle.
 - Parallel fan-out -> `swarm` for coverage, races, partitions. `arena` for bakeoffs with base selection and grafting.
@@ -23,7 +24,7 @@ Triggers a skill description alone would not fire:
 - Docs, RFCs, readmes, PR bodies, commit messages -> `technical-writing`.
 - Long, autonomous, or unattended work -> `show-me-your-work`.
 - Anything settled the next session must respect: a fork the user answered, a design call made after weighing options, an approach abandoned for a named reason -> `decisions`. Record the row, never an ADR or a rules file.
-- Citing a web page -> `research` (store the source), never a bare link.
+- Any research finding, from any source (web, local repo, docs) -> store it where the project or user says research goes, e.g. `llm-wiki` into the project `.kb`. No convention stated -> ask. Citing a web page -> `research` stores the source first, never a bare link.
 - Interacting with Notion -> `notion-cli`. Keep content rules in the task's
   skill; use the CLI skill for access, commands, and supported uploads.
 - Broken skill mid-task -> fix it in its own change. Do not block. Do not work around it silently.
@@ -83,7 +84,7 @@ Everything else delegate to one of seven. Same thin body, no default skills. The
 | `researcher` | Answer a question from sources, write findings |
 | `explorer` | Locate code and files, return pointers |
 
-Every spawn carry the brief fields in `references/brief.md`. Field you cannot fill = task not scoped. Model pinned per call from `plugins/pstack-nikki/models.json`, never frontmatter: read the row for the role, then take its entry for your own harness (`claude`, `codex`, or `copilot`) and pin the first name in that list. A role with no entry for your harness spawns unpinned. Constraints live in FORBIDDEN, not tool config. Paste the user's global instructions into every spawn; directives decay.
+Every spawn carry the brief fields in `references/brief.md`. Field you cannot fill = task not scoped. Model pinned per call from `plugins/pstack-nikki/models.json`, never frontmatter: read the row for the role, then take its entry for your own harness (`claude`, `codex`, or `copilot`) and pin the first name in that list. A role with no entry for your harness spawns unpinned. Constraints live in FORBIDDEN, not tool config. Do not paste the user's global instructions into briefs: Claude agents load `~/.claude/CLAUDE.md` and Codex loads `~/.codex/AGENTS.md` on their own.
 
 - Fresh spawn over resume-chain, always. Scope change -> fresh spawn. Bloated agent -> `rotate-agent`.
 - Every writer gets its own git worktree on its own branch, on branch `agent/<name>`. Where it lands differs by harness, and both are the rule, not a bug. On Claude Code, spawn with `isolation: "worktree"` on the `Agent` tool: Claude places it at `.claude/worktrees/<name>` (its own default; no pstack-nikki hook redirects it there anymore). On every other harness the agent runs `git worktree add .nikki-agents/worktrees/<name> -b agent/<name>` itself. The main checkout is read-only for agents; the rule holds by instruction, not by an enforcing hook. Only the coordinator lands a verified branch, fast-forward or cherry-pick. Skill text naming a Claude-only tool (`Agent`, `TodoWrite`, `AskUserQuestion`, and the rest) has a Codex equivalent in `references/codex-tools.md`.
