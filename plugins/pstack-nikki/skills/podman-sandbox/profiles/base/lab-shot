@@ -1,0 +1,63 @@
+#!/usr/bin/env bash
+# Capture the root window of a virtual display inside the container.
+#
+#   lab-shot OUT.png DISPLAY SECONDS [COMMAND...]
+#
+# With COMMAND: start Xvfb on DISPLAY, run COMMAND on it with software GL,
+# wait SECONDS, capture, then stop both. With no COMMAND: capture DISPLAY as
+# it is, start nothing, stop nothing, so a long-running editor survives.
+#
+# This file is bash, not Python, deliberately. It is five execs with no logic
+# of its own, which Python could only wrap in subprocess calls,
+# and it must run in every profile's image without requiring python3 there.
+# "$@" keeps the caller's argument list intact, so no shell string is ever
+# built from it.
+#
+# Prints one ImageMagick identify line. A caller judges a blank frame from
+# stddev and colors without opening the image.
+
+set -euo pipefail
+
+out=${1:-}
+display=${2:-}
+seconds=${3:-}
+if [ -z "$out" ] || [ -z "$display" ] || [ -z "$seconds" ]; then
+	echo 'usage: lab-shot OUT.png DISPLAY SECONDS [COMMAND...]' >&2
+	exit 2
+fi
+shift 3
+
+if [ "$#" -gt 0 ]; then
+	lock=/tmp/.X${display#:}-lock
+	if [ -f "$lock" ]; then
+		lock_pid=$(tr -cd '0-9' < "$lock")
+		if [ -n "$lock_pid" ] && [ -r "/proc/$lock_pid/comm" ] && \
+			[ "$(cat "/proc/$lock_pid/comm")" = Xvfb ]; then
+			echo "lab-shot: $display is already owned by Xvfb (pid $lock_pid)" >&2
+			exit 1
+		fi
+	fi
+	Xvfb "$display" -screen 0 1280x720x24 -nolisten tcp &
+	xvfb_pid=$!
+	trap 'kill ${cmd_pid:-} $xvfb_pid 2>/dev/null || true' EXIT
+	for _ in $(seq 50); do
+		DISPLAY=$display xdpyinfo >/dev/null 2>&1 && break
+		sleep 0.2
+	done
+	if ! kill -0 "$xvfb_pid" 2>/dev/null; then
+		wait "$xvfb_pid" || true
+		echo "lab-shot: Xvfb failed to start on $display" >&2
+		exit 1
+	fi
+	if [ "$(tr -cd '0-9' < "$lock")" != "$xvfb_pid" ]; then
+		echo "lab-shot: Xvfb failed to acquire $display" >&2
+		exit 1
+	fi
+	DISPLAY=$display "$@" >/tmp/lab-shot-cmd.log 2>&1 &
+	cmd_pid=$!
+	sleep "$seconds"
+fi
+
+DISPLAY=$display import -window root "$out"
+identify -format '%wx%h stddev=%[standard-deviation] colors=%k bytes=%B\n' \
+	"$out"
