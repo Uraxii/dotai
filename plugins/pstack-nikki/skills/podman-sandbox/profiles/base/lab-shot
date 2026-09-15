@@ -28,6 +28,16 @@ fi
 shift 3
 
 if [ "$#" -gt 0 ]; then
+	lock=/tmp/.X${display#:}-lock
+	if [ -f "$lock" ]; then
+		lock_pid=$(tr -cd '0-9' < "$lock")
+		if [ -n "$lock_pid" ] && [ -r "/proc/$lock_pid/comm" ] && \
+			[ "$(cat "/proc/$lock_pid/comm")" = Xvfb ]; then
+			echo "lab-shot: $display is already owned by Xvfb (pid $lock_pid)" >&2
+			exit 1
+		fi
+		rm -f "$lock"
+	fi
 	Xvfb "$display" -screen 0 1280x720x24 -nolisten tcp &
 	xvfb_pid=$!
 	trap 'kill ${cmd_pid:-} $xvfb_pid 2>/dev/null || true' EXIT
@@ -35,6 +45,15 @@ if [ "$#" -gt 0 ]; then
 		DISPLAY=$display xdpyinfo >/dev/null 2>&1 && break
 		sleep 0.2
 	done
+	if ! kill -0 "$xvfb_pid" 2>/dev/null; then
+		wait "$xvfb_pid" || true
+		echo "lab-shot: Xvfb failed to start on $display" >&2
+		exit 1
+	fi
+	if [ "$(tr -cd '0-9' < "$lock")" != "$xvfb_pid" ]; then
+		echo "lab-shot: Xvfb failed to acquire $display" >&2
+		exit 1
+	fi
 	DISPLAY=$display "$@" >/tmp/lab-shot-cmd.log 2>&1 &
 	cmd_pid=$!
 	sleep "$seconds"

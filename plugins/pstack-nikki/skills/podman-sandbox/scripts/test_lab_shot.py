@@ -57,7 +57,22 @@ class LabShotTest(unittest.TestCase):
             time.sleep(30)
             """,
         )
-        self.write_executable("xdpyinfo", "raise SystemExit(0)")
+        self.write_executable(
+            "xdpyinfo",
+            """
+            import os
+            import time
+            from pathlib import Path
+
+            if os.environ["LAB_SHOT_TEST_MODE"] == "die":
+                raise SystemExit(0)
+            for _ in range(50):
+                if Path("/tmp/.X4917-lock").exists():
+                    raise SystemExit(0)
+                time.sleep(0.01)
+            raise SystemExit(1)
+            """,
+        )
         self.write_executable(
             "import",
             """
