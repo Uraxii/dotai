@@ -9,6 +9,7 @@ site, `lab_container.run`, is replaced by a recorder.
 
 from __future__ import annotations
 
+import re
 import subprocess
 import tempfile
 import unittest
@@ -324,16 +325,37 @@ class SyncedCommitTest(unittest.TestCase):
         self.sync("refs/heads/main", head)
         return head
 
-    def rescue_ref(self, ref: str) -> str:
-        """Return the host branch the refusal recipe uses for `ref`."""
-        return f"refs/heads/lab-rescue/{self.lab.name}/{ref}"
+    def rescue(self, refusal: lab_container.LabError) -> list[str]:
+        """Run each command line the refusal prints; return the saved commits."""
+        bundle = str(self.parent / "demo.bundle")
+        saved = []
+        for line in str(refusal).splitlines()[1:]:
+            argv = line.replace("/tmp/demo.bundle", bundle).split()
+            if argv[:4] == ["scripts/lab", "exec", "demo", "git"]:
+                self.git(*argv[4:], cwd=self.clone)
+            elif argv[:2] == ["git", "fetch"]:
+                self.git(*argv[1:])
+                saved.append(self.git("rev-parse", argv[-1].split(":")[1]))
+            else:
+                self.assertEqual(argv[:2], ["podman", "cp"], line)
+        return saved
 
-    def rescue(self, ref: str) -> str:
-        """Save `ref` from the clone using the refusal's bundle recipe."""
-        bundle = self.parent / "demo.bundle"
-        self.git("bundle", "create", str(bundle), ref, cwd=self.clone)
-        self.git("fetch", str(bundle), f"{ref}:{self.rescue_ref(ref)}")
-        return self.git("rev-parse", self.rescue_ref(ref))
+    def test_recipe_in_skill_matches_the_refusal(self) -> None:
+        self.sync_main()
+        self.git("checkout", "--detach", cwd=self.clone)
+        self.commit_in_clone("lab-only")
+        with self.assertRaises(lab_container.LabError) as raised:
+            self.sync("refs/heads/main", self.commit("host-next"))
+
+        skill = (Path(__file__).parent.parent / "SKILL.md").read_text()
+        recipe = skill.split("## Save commits from a lab")[1].split("```")[1]
+        templates = recipe.strip().splitlines()
+        printed = str(raised.exception).splitlines()[1:]
+        self.assertEqual(len(templates), len(printed))
+        for template, line in zip(templates, printed):
+            pattern = re.escape(template).replace("NAME", "demo")
+            pattern = pattern.replace("REF", "HEAD").replace("SHA", "[0-9a-f]{12}")
+            self.assertRegex(line, "^" + pattern + "$")
 
     def test_allows_a_host_amend_after_the_old_head_becomes_unreachable(self) -> None:
         self.sync_main()
@@ -372,13 +394,11 @@ class SyncedCommitTest(unittest.TestCase):
         saved = self.commit_in_clone("lab-only")
         target = self.commit("host-next")
 
-        with self.assertRaisesRegex(lab_container.LabError, "git bundle"):
+        with self.assertRaises(lab_container.LabError) as raised:
             self.sync("refs/heads/main", target)
 
-        rescued = self.rescue("refs/heads/main")
-
+        self.assertEqual(self.rescue(raised.exception), [saved])
         self.assertTrue(self.sync("refs/heads/main", target))
-        self.assertEqual(rescued, saved)
 
     def test_allows_target_reset_when_current_branch_keeps_the_commit(self) -> None:
         self.sync_main()
@@ -398,12 +418,21 @@ class SyncedCommitTest(unittest.TestCase):
 
         with self.assertRaises(lab_container.LabError) as raised:
             self.sync("refs/heads/main", target)
-        self.assertIn("refs/heads/main", str(raised.exception))
-        self.assertIn("HEAD", str(raised.exception))
 
-        self.assertEqual(self.rescue("refs/heads/main"), on_main)
-        self.assertEqual(self.rescue("HEAD"), on_head)
+        self.assertEqual(self.rescue(raised.exception), [on_main, on_head])
         self.assertTrue(self.sync("refs/heads/main", target))
+
+    def test_allows_rescuing_the_same_ref_again_later(self) -> None:
+        self.sync_main()
+        for name in ("first", "second"):
+            self.git("checkout", "--detach", cwd=self.clone)
+            saved = self.commit_in_clone("lab-" + name)
+            target = self.commit("host-" + name)
+            with self.assertRaises(lab_container.LabError) as raised:
+                self.sync("refs/heads/main", target)
+
+            self.assertEqual(self.rescue(raised.exception), [saved])
+            self.assertTrue(self.sync("refs/heads/main", target))
 
     def test_prunes_host_refs_when_a_branch_becomes_a_directory(self) -> None:
         self.git("branch", "a")
@@ -472,7 +501,7 @@ class SyncedCommitTest(unittest.TestCase):
             if "git bundle create" in line
         ]
         self.assertEqual(commands, [
-            "Run scripts/lab exec demo git bundle create /tmp/demo.bundle HEAD"
+            "scripts/lab exec demo git bundle create /tmp/demo.bundle HEAD"
         ])
 
     def test_allows_rescued_commit_from_detached_head(self) -> None:
@@ -481,17 +510,10 @@ class SyncedCommitTest(unittest.TestCase):
         saved = self.commit_in_clone("lab-only")
         target = self.commit("host-next")
 
-        with self.assertRaisesRegex(lab_container.LabError, "HEAD"):
-            self.sync("refs/heads/main", target)
-
-        fetch_command = (
-            "git fetch /tmp/demo.bundle HEAD:"
-            "refs/heads/lab-rescue/demo/HEAD"
-        )
         with self.assertRaises(lab_container.LabError) as raised:
             self.sync("refs/heads/main", target)
-        self.assertIn(fetch_command, str(raised.exception))
-        self.assertEqual(self.rescue("HEAD"), saved)
+
+        self.assertEqual(self.rescue(raised.exception), [saved])
         self.assertTrue(self.sync("refs/heads/main", target))
 
     def test_fetches_an_advertised_non_branch_head_before_comparing(self) -> None:

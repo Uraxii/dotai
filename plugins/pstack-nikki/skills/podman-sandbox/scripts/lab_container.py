@@ -281,20 +281,16 @@ def sync_clone(lab: Lab, repo: Path, branch: str, head: str) -> bool:
         ], clone)
         container_refs = has_container_only_commits(lab, clone, branch, head)
         if container_refs:
-            rescue_commands = [
-                f"lab {lab.name} has commits only in the container on:"
-            ]
-            for container_ref in container_refs:
-                rescue_commands.extend([
-                    container_ref,
-                    f"Run scripts/lab exec {lab.name} git bundle create "
-                    f"/tmp/{lab.name}.bundle {container_ref}",
-                    f"podman cp lab-{lab.name}:/tmp/{lab.name}.bundle "
-                    f"/tmp/{lab.name}.bundle",
-                    f"git fetch /tmp/{lab.name}.bundle {container_ref}:"
-                    f"refs/heads/lab-rescue/{lab.name}/{container_ref}",
-                ])
-            raise LabError("\n".join(rescue_commands))
+            bundle = f"/tmp/{lab.name}.bundle"
+            lines = [f"lab {lab.name} has commits only in the container. "
+                     "To save them, run:"]
+            for ref, tip in container_refs:
+                lines += [
+                    f"scripts/lab exec {lab.name} git bundle create {bundle} {ref}",
+                    f"podman cp lab-{lab.name}:{bundle} {bundle}",
+                    f"git fetch {bundle} {ref}:refs/heads/lab-rescue/{lab.name}-{tip[:12]}",
+                ]
+            raise LabError("\n".join(lines))
     if not cloned:
         exec_capture(lab, ["git", "fetch", "--quiet", MOUNT_GIT_COMMON_READONLY, head], clone)
     if is_branch(branch):
@@ -308,8 +304,8 @@ def sync_clone(lab: Lab, repo: Path, branch: str, head: str) -> bool:
 
 def has_container_only_commits(
     lab: Lab, clone: str, branch: str, head: str
-) -> list[str]:
-    """Return refs a reset to `head` would lose after sync_clone fetches host refs."""
+) -> list[tuple[str, str]]:
+    """Return (ref, tip) pairs a reset to `head` would lose; needs sync_clone's host-ref fetch."""
     refs: list[str] = []
     if is_branch(branch) and exec_status(
             lab, ["git", "show-ref", "--verify", "--quiet", branch], clone
@@ -317,16 +313,17 @@ def has_container_only_commits(
         refs.append(branch)
     if not exec_capture(lab, ["git", "branch", "--show-current"], clone):
         refs.append("HEAD")
-    container_refs: list[str] = []
+    container_refs = []
     for ref in refs:
         command = [
             "git", "rev-list", "--max-count=1", ref, "--not", head,
             "--glob=refs/lab/synced/*", "--glob=refs/lab/host/*", "--remotes",
         ]
         if ref == branch:
-            command.extend(["--exclude=" + branch_name(branch), "--branches"])
-        if exec_capture(lab, command, clone):
-            container_refs.append(ref)
+            command += ["--exclude=" + branch_name(branch), "--branches"]
+        tip = exec_capture(lab, command, clone)
+        if tip:
+            container_refs.append((ref, tip))
     return container_refs
 
 
