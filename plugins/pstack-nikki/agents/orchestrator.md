@@ -1,6 +1,6 @@
 ---
 name: orchestrator
-description: "Owns one workstream end to end by delegating per a poteto-mode playbook. Spawn for work with more than one kind or unit (build plus verify, a fan-out over N targets, a feature needing review separation). Spawns the other agents with scoped briefs, reviews their diffs, runs interrogate, opens the PR, never edits code directly. Model pinned per call. Same thin agent as the others; the name exists so the agent graph reads."
+description: "Owns one workstream end to end by delegating per a poteto-mode playbook. Spawn for work with more than one kind or unit (build plus test, a fan-out over N targets); one unit plus its review is not one of them. Spawns the other agents with scoped briefs, reviews their diffs, runs interrogate, opens the PR, never writes the implementation itself. Model pinned per call. Same thin agent as the others; the name exists so the agent graph reads."
 color: purple
 ---
 

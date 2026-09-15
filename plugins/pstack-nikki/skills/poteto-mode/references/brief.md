@@ -33,7 +33,8 @@ verdict text only".
 
 A worker brief is one unit; `principle-decomposition` defines the unit test
 and how to split what fails it. Work failing that test goes to `orchestrator`
-as an owner brief, whose OWNER line names the orchestrator itself.
+as an owner brief, whose OWNER line names the orchestrator itself and whose
+GOAL or CONTEXT names the kinds of work or the N units it covers.
 
 SCOPE names the agent's own worktree and its own branch, on branch
 `agent/<name>`. On Claude Code, spawning with `isolation: "worktree"` puts it
