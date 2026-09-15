@@ -36,7 +36,6 @@ if [ "$#" -gt 0 ]; then
 			echo "lab-shot: $display is already owned by Xvfb (pid $lock_pid)" >&2
 			exit 1
 		fi
-		rm -f "$lock"
 	fi
 	Xvfb "$display" -screen 0 1280x720x24 -nolisten tcp &
 	xvfb_pid=$!
