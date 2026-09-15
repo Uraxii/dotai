@@ -18,7 +18,6 @@ DENIAL_REASON = (
 WATCHER_NAMES = frozenset({"developer-codex", "reviewer-codex"})
 NAME = r"[A-Za-z0-9._-]+"
 SLUG = r"[a-z0-9.-]+"
-REVISION = r"[0-9a-f]{7,40}"
 PATH_SEGMENT = r"(?!(?:\.\.)(?:/|$))[A-Za-z0-9._@+-]+"
 PATH = rf"/(?:{PATH_SEGMENT})(?:/{PATH_SEGMENT})*"
 RUN_PATH = rf"{PATH}/\.nikki-agents/codex-runs/{NAME}"
@@ -44,10 +43,7 @@ ALLOWED_BASH = (
     ),
     full_command(rf"git -C {PATH} worktree add {PATH} -b agent/{NAME}"),
     full_command(rf"git -C {PATH} rev-parse HEAD"),
-    full_command(rf"git -C {PATH} log --oneline -5"),
-    full_command(rf"git -C {PATH} diff --stat(?: {REVISION}\.\.HEAD)?"),
-    full_command(rf"git -C {PATH} status(?: --short)?"),
-    full_command(rf"cat {RUN_PATH}/report\.md"),
+    full_command(rf"test -s {RUN_PATH}/report\.md"),
 )
 ALLOWED_WRITE = full_command(rf"{RUN_PATH}/prompt\.txt")
 

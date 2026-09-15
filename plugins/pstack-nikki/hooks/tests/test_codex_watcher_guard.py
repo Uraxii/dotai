@@ -55,12 +55,7 @@ class CodexWatcherGuardTests(unittest.TestCase):
             f"git -C {REPO} worktree add /repo/.nikki-agents/worktrees/sample-run "
             "-b agent/sample-run",
             f"git -C {REPO} rev-parse HEAD",
-            f"git -C {REPO} log --oneline -5",
-            f"git -C {REPO} diff --stat",
-            f"git -C {REPO} diff --stat 1234567..HEAD",
-            f"git -C {REPO} status",
-            f"git -C {REPO} status --short",
-            f"cat {RUN}/report.md",
+            f"test -s {RUN}/report.md",
         )
         for command in commands:
             self.assert_allowed(command)
@@ -87,6 +82,24 @@ class CodexWatcherGuardTests(unittest.TestCase):
             "cat /etc/passwd",
             "cat /r/README.md",
             "cat /r/.nikki-agents/codex-runs/x/../../README.md",
+        )
+        for command in commands:
+            with self.subTest(command=command):
+                self.assert_denied(
+                    payload("pstack-nikki:developer-codex", "Bash", command=command),
+                    "Bash",
+                )
+
+    def test_cat_report_log_diff_and_status_are_denied(self) -> None:
+        # v3 contract: the watcher never reads file content or git history
+        # itself, so these v2 allowances are gone.
+        commands = (
+            f"cat {RUN}/report.md",
+            f"git -C {REPO} log --oneline -5",
+            f"git -C {REPO} diff --stat",
+            f"git -C {REPO} diff --stat 1234567..HEAD",
+            f"git -C {REPO} status",
+            f"git -C {REPO} status --short",
         )
         for command in commands:
             with self.subTest(command=command):
