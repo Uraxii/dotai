@@ -160,7 +160,7 @@ def command_up(args: argparse.Namespace) -> int:
     clone = lab.clone_path(repo)
     logging.info("syncing clone %s to %s", clone, head[:HEAD_DIGITS])
     changed += int(lab_container.sync_clone(lab, repo, branch, head))
-    changed += int(lab_container.run_setup(lab, profile, clone, created or started))
+    changed += int(lab_container.run_setup(lab, profile, clone))
     lab_container.wait_ready(lab, profile)
     report = lab_container.ConvergeReport(lab, spec, clone, head, changed)
     print(format_up(report))

@@ -53,8 +53,8 @@ Every key is optional. An absent file means every default applies.
   clone and so cannot happen at build time: copying an addon in, writing a
   config value, running an import pass, starting a long-running process on
   the persistent display `:99`. It must exit 0. `lab up` skips it when the
-  lab stays running and the profile stays unchanged. It runs setup again when
-  `lab up` creates or starts the container, or when the profile changes.
+  lab keeps running and the profile stays unchanged. It runs setup again after
+  the container starts, including a restart, or when the profile changes.
 
 `ready` (list of strings, default none)
 : An argument list polled inside the container until it exits 0. Use it to
@@ -81,9 +81,8 @@ it into the image, and name the script.
   repository read-only at `/src-ro` and the private clone's volume at
   `/work`. A `VOLUME` or `WORKDIR` of your own under either path fights the
   tool.
-- **Make `setup` idempotent.** It runs again whenever `lab up` creates or
-  starts the container, or whenever you edit the profile. It must not fail on
-  a clone it already prepared.
+- **Make `setup` idempotent.** It runs after each container start or profile
+  edit. It must not fail on a clone it already prepared.
 
 ## A minimal profile, end to end
 

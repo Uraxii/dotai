@@ -84,6 +84,26 @@ class ExistingClonePodman(FakePodman):
         return done
 
 
+class SetupPodman(FakePodman):
+    """Record setup calls for one running container start."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.started_at = "2026-09-14T12:00:00.000000000Z"
+
+    def __call__(self, args: list[str]) -> subprocess.CompletedProcess:
+        self.calls.append(list(args))
+        if args[:2] == ["inspect", "lab-demo"]:
+            return subprocess.CompletedProcess(args, 0, self.started_at, "")
+        if args[-3:-1] == ["test", "-f"]:
+            return subprocess.CompletedProcess(
+                args, 0 if args[-1] in self.existing_paths else 1, "", ""
+            )
+        if args[-2:] == ["touch", args[-1]]:
+            self.existing_paths.add(args[-1])
+        return subprocess.CompletedProcess(args, 0, "", "")
+
+
 class HostileBranchTest(unittest.TestCase):
     """A branch name is data. It never becomes part of a command string."""
 
@@ -172,7 +192,7 @@ class SetupRestartTest(unittest.TestCase):
     """A restarted container needs its setup-launched process again."""
 
     def setUp(self) -> None:
-        self.podman = FakePodman()
+        self.podman = SetupPodman()
         patch = mock.patch.object(lab_container, "run", self.podman)
         patch.start()
         self.addCleanup(patch.stop)
@@ -187,13 +207,28 @@ class SetupRestartTest(unittest.TestCase):
             recipe_sha256="deadbeef",
         )
 
-    def test_a_started_container_reruns_setup_despite_its_sentinel(self) -> None:
+    def test_an_external_restart_reruns_setup(self) -> None:
+        self.assertTrue(lab_container.run_setup(self.lab, self.profile, "/work/myrepo"))
+        self.podman.started_at = "2026-09-14T12:00:01.000000000Z"
+
+        changed = lab_container.run_setup(self.lab, self.profile, "/work/myrepo")
+
+        self.assertTrue(changed)
+        self.assertEqual(self.podman.elements().count("start-app"), 2)
+
+    def test_an_unchanged_running_container_skips_setup(self) -> None:
+        self.assertTrue(lab_container.run_setup(self.lab, self.profile, "/work/myrepo"))
+
+        changed = lab_container.run_setup(self.lab, self.profile, "/work/myrepo")
+
+        self.assertFalse(changed)
+        self.assertEqual(self.podman.elements().count("start-app"), 1)
+
+    def test_a_retry_after_up_failed_before_setup_reruns_setup(self) -> None:
         sentinel = lab_container.SETUP_SENTINEL_PREFIX + "deadbeef"
         self.podman.existing_paths.add(sentinel)
 
-        changed = lab_container.run_setup(
-            self.lab, self.profile, "/work/myrepo", force=True
-        )
+        changed = lab_container.run_setup(self.lab, self.profile, "/work/myrepo")
 
         self.assertTrue(changed)
         self.assertIn("start-app", self.podman.elements())

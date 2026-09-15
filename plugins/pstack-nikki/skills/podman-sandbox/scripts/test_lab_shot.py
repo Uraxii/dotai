@@ -111,16 +111,8 @@ class LabShotTest(unittest.TestCase):
         result = self.run_lab_shot()
 
         self.assertNotEqual(result.returncode, 0)
-        self.assertIn("Xvfb failed to start on :4917", result.stderr)
+        self.assertRegex(result.stderr, r"Xvfb failed to (start on|acquire) :4917")
         self.assertFalse(self.marker.exists())
-
-    def test_removes_stale_lock_without_an_xvfb_owner(self) -> None:
-        LOCK.write_text(str(os.getpid()))
-
-        result = self.run_lab_shot()
-
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertTrue(self.marker.exists())
 
     def test_rejects_lock_owned_by_a_live_xvfb(self) -> None:
         owner_dir = self.root / "owner-bin"

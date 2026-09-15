@@ -19,11 +19,9 @@ lab that no longer exists. A state file would drift from reality and would
 have to be reconciled; a label cannot.
 
 A podman label cannot be changed after a container is created, so the one
-thing `up` must remember across runs but cannot know at create time, that
-the profile's setup hook already succeeded, is a sentinel file in the work
-volume instead. It is named for the recipe hash, so editing a profile's
-setup script runs setup again, and `down` deletes it with the clone whose
-state it describes.
+thing `up` must remember across runs is a sentinel file in the work volume.
+It includes the recipe hash and current container start. `down` deletes it
+with the clone whose state it describes.
 """
 
 from __future__ import annotations
@@ -237,8 +235,7 @@ def create_container(
 
 def start_container(lab: Lab) -> bool:
     """Start the container unless it is already running. True when started."""
-    query = ["inspect", lab.container, "--format", RUNNING_QUERY]
-    if podman(query, check=False) == "true":
+    if podman(["inspect", lab.container, "--format", RUNNING_QUERY], check=False) == "true":
         return False
     try:
         podman(["start", lab.container])
@@ -331,18 +328,21 @@ def at_revision(lab: Lab, clone: str, branch: str, head: str) -> bool:
     return branch_now == branch_name(branch)
 
 
-def run_setup(lab: Lab, profile: Profile, workdir: str, force: bool = False) -> bool:
+def run_setup(lab: Lab, profile: Profile, workdir: str) -> bool:
     """Run the profile's `setup` argv once, from the clone directory.
 
     Skipped when a sentinel in the work volume already records a successful
-    setup for this recipe hash. A newly created or started container forces
-    setup because the volume outlives the process setup may have launched.
+    setup for this recipe hash and current start. A restart changes the
+    sentinel because the volume outlives processes that setup launched.
     Raises LabError on a non-zero exit.
     """
     if not profile.setup:
         return False
-    sentinel = SETUP_SENTINEL_PREFIX + profile.recipe_sha256
-    if not force and exec_status(lab, ["test", "-f", sentinel], MOUNT_WORK) == 0:
+    started_at = podman(["inspect", lab.container, "--format",
+                         "{{.State.StartedAt}}"])
+    start_hash = hashlib.sha256(started_at.encode("utf-8")).hexdigest()
+    sentinel = f"{SETUP_SENTINEL_PREFIX}{profile.recipe_sha256}-{start_hash}"
+    if exec_status(lab, ["test", "-f", sentinel], MOUNT_WORK) == 0:
         return False
     exec_capture(lab, list(profile.setup), workdir)
     exec_capture(lab, ["touch", sentinel], MOUNT_WORK)
