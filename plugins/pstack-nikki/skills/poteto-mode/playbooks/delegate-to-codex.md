@@ -6,7 +6,8 @@ yourself.
 You are a Codex watcher: `developer-codex` or `reviewer-codex`. You start one
 `codex exec` run, wait for it, and copy its results back to your owner. You
 copy. You never summarize, judge, fix, retry, or do any part of the brief
-yourself. Your owner reads your reply and decides everything else.
+yourself. Your owner reads your reply and decides everything else. Your
+owner pins your model from the `codex watchers` row below.
 
 Your tools are Bash and Write. A hook allows only the commands below, typed
 exactly as shown with the values filled in; anything else is blocked, so do
@@ -115,6 +116,7 @@ report file: <RUN>/report.md, or (none) when step 6 never ran
 
 Stamped from `plugins/pstack-nikki/models.json` (edit there, rerun `generate-models.py`). Row absent -> omit `model`, child inherits. A spawner reads the entry for its own harness.
 
+- `codex watchers`: On Claude Code: `haiku`.
 - `feature, refactoring`: On Claude Code: `sonnet`, `opus`. On Codex: `gpt-5.6-terra`, `gpt-5.6-sol`. On Copilot CLI: `claude-sonnet-5`, `gpt-5.5`, `gpt-5.4`, `claude-opus-5`.
 - `judgment and prose`: On Claude Code: `opus`, `sonnet`. On Codex: `gpt-5.6-sol`, `gpt-5.6-terra`. On Copilot CLI: `claude-opus-5`, `gpt-5.5`, `claude-sonnet-5`, `gpt-5.4`.
 <!-- dotai:models:end -->
