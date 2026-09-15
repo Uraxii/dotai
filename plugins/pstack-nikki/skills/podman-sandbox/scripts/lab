@@ -140,15 +140,17 @@ def command_up(args: argparse.Namespace) -> int:
     changed = 0
     logging.info("converging image %s", profile.image)
     changed += int(lab_container.build_image(profile, base))
-    if lab_container.read_spec(lab) != spec:
+    created = lab_container.read_spec(lab) != spec
+    if created:
         logging.info("creating container %s", lab.container)
         lab_container.create_container(lab, spec, repo)
         changed += 1
-    changed += int(lab_container.start_container(lab))
+    started = lab_container.start_container(lab)
+    changed += int(started)
     clone = lab.clone_path(repo)
     logging.info("syncing clone %s to %s", clone, head[:HEAD_DIGITS])
     changed += int(lab_container.sync_clone(lab, repo, branch, head))
-    changed += int(lab_container.run_setup(lab, profile, clone))
+    changed += int(lab_container.run_setup(lab, profile, clone, created or started))
     lab_container.wait_ready(lab, profile)
     report = lab_container.ConvergeReport(lab, spec, clone, head, changed)
     print(format_up(report))

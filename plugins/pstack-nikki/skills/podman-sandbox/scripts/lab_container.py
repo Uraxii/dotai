@@ -281,17 +281,18 @@ def at_revision(lab: Lab, clone: str, branch: str, head: str) -> bool:
     return head_now == head and branch_now == branch
 
 
-def run_setup(lab: Lab, profile: Profile, workdir: str) -> bool:
+def run_setup(lab: Lab, profile: Profile, workdir: str, force: bool = False) -> bool:
     """Run the profile's `setup` argv once, from the clone directory.
 
     Skipped when a sentinel in the work volume already records a successful
-    setup for this recipe hash, which is what keeps `up` idempotent for a
-    profile that mutates the clone. Raises LabError on a non-zero exit.
+    setup for this recipe hash. A newly created or started container forces
+    setup because the volume outlives the process setup may have launched.
+    Raises LabError on a non-zero exit.
     """
     if not profile.setup:
         return False
     sentinel = SETUP_SENTINEL_PREFIX + profile.recipe_sha256
-    if exec_status(lab, ["test", "-f", sentinel], MOUNT_WORK) == 0:
+    if not force and exec_status(lab, ["test", "-f", sentinel], MOUNT_WORK) == 0:
         return False
     exec_capture(lab, list(profile.setup), workdir)
     exec_capture(lab, ["touch", sentinel], MOUNT_WORK)
