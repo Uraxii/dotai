@@ -9,6 +9,7 @@ import getpass
 import json
 import os
 from pathlib import Path
+import re
 import socket
 import sys
 import time
@@ -17,6 +18,7 @@ from collections.abc import Iterable, Mapping
 __all__ = ["main"]
 
 BAR_WIDTH = 10
+LINE_LABEL_WIDTH = len("claude")
 CODEX_TAIL_BYTES = 256 * 1024
 MAX_ROLLOUT_FILES = 3
 FIVE_HOUR_MINUTES = 300
@@ -112,16 +114,9 @@ def windows_from_rate_limits(rate_limits: object, now_epoch: float) -> dict[int,
 
 def codex_snapshot(event: Mapping[str, object], now_epoch: float) -> UsageSnapshot:
     payload = as_mapping(event.get("payload"))
-    info = as_mapping(payload.get("info"))
-    last_usage = as_mapping(info.get("last_token_usage"))
-    tokens = as_number(last_usage.get("total_tokens"))
-    context_size = as_number(info.get("model_context_window"))
-    context = UNKNOWN_WINDOW
-    if tokens is not None and context_size is not None and context_size > 0:
-        context = UsageWindow(bounded_percent(100 - tokens * 100 / context_size))
     windows = windows_from_rate_limits(payload.get("rate_limits"), now_epoch)
     return UsageSnapshot(
-        context=context,
+        context=UNKNOWN_WINDOW,
         five_hour=windows.get(FIVE_HOUR_MINUTES, UNKNOWN_WINDOW),
         weekly=windows.get(WEEKLY_MINUTES, UNKNOWN_WINDOW),
         observed_at=parse_timestamp(event.get("timestamp")),
@@ -174,11 +169,11 @@ def rounded_percent(value: float) -> int:
 
 def make_bar(label: str, window: UsageWindow, warn_at: float | None = None) -> str:
     if window.remaining_percent is None:
-        return f"{label} [{'?' * BAR_WIDTH}] ?"
+        return f"{label} [{'?' * BAR_WIDTH}] {'?':>4}"
     percent = rounded_percent(window.remaining_percent)
     filled = min(BAR_WIDTH, max(0, rounded_percent(percent / BAR_WIDTH)))
     bar = "█" * filled + "░" * (BAR_WIDTH - filled)
-    rendered = f"{label} [{bar}] {percent}%"
+    rendered = f"{label} [{bar}] {percent:>3}%"
     if warn_at is not None and window.remaining_percent <= warn_at:
         return f"{WARN}{rendered}{RESET}"
     return rendered
@@ -221,13 +216,19 @@ def battery_status() -> str:
     return rendered
 
 
-def snapshot_line(label: str, snapshot: UsageSnapshot, age: str = "") -> str:
+def snapshot_line(
+    label: str,
+    snapshot: UsageSnapshot,
+    age: str = "",
+    include_context: bool = True,
+) -> str:
     bars = (
         make_bar("5h", snapshot.five_hour, 20),
         make_bar("wk", snapshot.weekly, 50),
-        make_bar("ctx", snapshot.context),
     )
-    return f"{label} " + "  ".join(bars) + age
+    if include_context:
+        bars += (make_bar("ctx", snapshot.context),)
+    return f"{label:<{LINE_LABEL_WIDTH}} " + "  ".join(bars) + age
 
 
 def age_suffix(observed_at: datetime | None, now: datetime) -> str:
@@ -252,7 +253,9 @@ def render_status(input_data: Mapping[str, object], codex_home: Path, now_epoch:
     line_one = "  ".join(part for part in first_parts if part)
     codex = codex_usage_snapshot(codex_home, now_epoch)
     claude_line = snapshot_line("claude", claude_snapshot(input_data))
-    codex_line = snapshot_line("codex", codex, age_suffix(codex.observed_at, now))
+    codex_line = snapshot_line(
+        "codex", codex, age_suffix(codex.observed_at, now), include_context=False
+    )
     return "\n".join((line_one, claude_line, codex_line))
 
 
@@ -280,6 +283,22 @@ def self_check() -> None:
     assert parse_timestamp("2026-09-15T01:00:00") is None
     expired = {"used_percent": 90, "window_minutes": FIVE_HOUR_MINUTES, "resets_at": now}
     assert remaining_from_limit(expired, now).remaining_percent == 100
+    cases = (
+        UsageSnapshot(UsageWindow(25), UsageWindow(75), UsageWindow(50)),
+        UNKNOWN_SNAPSHOT,
+        UsageSnapshot(UsageWindow(100), UsageWindow(100), UsageWindow(100)),
+        UsageSnapshot(UsageWindow(5), UsageWindow(5), UsageWindow(5)),
+    )
+    for snapshot in cases:
+        claude_line = snapshot_line("claude", snapshot)
+        codex_line = snapshot_line("codex", snapshot, include_context=False)
+        plain_claude = re.sub(r"\x1b\[[0-9;]*m", "", claude_line)
+        plain_codex = re.sub(r"\x1b\[[0-9;]*m", "", codex_line)
+        assert "ctx" not in plain_codex
+        assert plain_claude.index("[") == plain_codex.index("[")
+        assert plain_claude.index("[", plain_claude.index("[") + 1) == plain_codex.index(
+            "[", plain_codex.index("[") + 1
+        )
 
 
 def main() -> int:
