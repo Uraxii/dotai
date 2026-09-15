@@ -16,8 +16,8 @@ DENIAL_REASON = (
     "copy the playbook command exactly or send the fallback reply"
 )
 WATCHER_NAMES = frozenset({"developer-codex", "reviewer-codex"})
-NAME = r"[A-Za-z0-9._-]+"
-SLUG = r"[a-z0-9.-]+"
+NAME = r"(?!\.\.?(?:/|$))[A-Za-z0-9._-]+"
+SLUG = r"[a-z0-9][a-z0-9.-]*"
 PATH_SEGMENT = r"(?!(?:\.\.)(?:/|$))[A-Za-z0-9._@+-]+"
 PATH = rf"/(?:{PATH_SEGMENT})(?:/{PATH_SEGMENT})*"
 RUN_PATH = rf"{PATH}/\.nikki-agents/codex-runs/{NAME}"
@@ -28,18 +28,12 @@ def full_command(pattern: str) -> re.Pattern[str]:
     return re.compile(rf"{pattern}")
 
 
-CODEX_EXEC_OPTIONS = (
-    rf"(?: -c model_reasoning_effort=(?:low|medium|high))?"
-    rf"(?: --add-dir {PATH})?"
-    rf"|(?: --add-dir {PATH})?"
-    rf"(?: -c model_reasoning_effort=(?:low|medium|high))?"
-)
 ALLOWED_BASH = (
     full_command(r"codex --version"),
     full_command(r"codex login status"),
     full_command(
         rf"codex exec -m {SLUG} -s (?:workspace-write|read-only) -C {PATH}"
-        rf"(?:{CODEX_EXEC_OPTIONS})? -o {RUN_PATH}/report\.md - < {RUN_PATH}/prompt\.txt"
+        rf" -o {RUN_PATH}/report\.md - < {RUN_PATH}/prompt\.txt"
     ),
     full_command(rf"git -C {PATH} worktree add {PATH} -b agent/{NAME}"),
     full_command(rf"git -C {PATH} rev-parse HEAD"),
@@ -84,7 +78,11 @@ def guard(payload: Mapping[str, object]) -> str:
     tool_input = payload.get("tool_input")
     if not isinstance(tool_name, str) or not isinstance(tool_input, Mapping):
         return deny(tool_name if isinstance(tool_name, str) else "unknown")
-    if tool_name == "Bash" and allowed_bash(tool_input.get("command")):
+    if (
+        tool_name == "Bash"
+        and not tool_input.get("run_in_background")
+        and allowed_bash(tool_input.get("command"))
+    ):
         return ""
     if tool_name == "Write" and allowed_write(tool_input.get("file_path")):
         return ""

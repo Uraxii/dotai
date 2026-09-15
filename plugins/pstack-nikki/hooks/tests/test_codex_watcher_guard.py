@@ -49,9 +49,6 @@ class CodexWatcherGuardTests(unittest.TestCase):
             "codex login status",
             f"codex exec -m gpt-5.6-terra -s workspace-write -C {REPO} -o "
             f"{RUN}/report.md - < {RUN}/prompt.txt",
-            f"codex exec -m gpt-5.6-terra -s read-only -C {REPO} "
-            "-c model_reasoning_effort=high --add-dir /other -o "
-            f"{RUN}/report.md - < {RUN}/prompt.txt",
             f"git -C {REPO} worktree add /repo/.nikki-agents/worktrees/sample-run "
             "-b agent/sample-run",
             f"git -C {REPO} rev-parse HEAD",
@@ -110,6 +107,56 @@ class CodexWatcherGuardTests(unittest.TestCase):
                     payload("pstack-nikki:developer-codex", "Bash", command=command),
                     "Bash",
                 )
+
+    def test_codex_exec_extra_options_are_denied(self) -> None:
+        # v4 contract: codex exec takes no options beyond the playbook's
+        # exact -m/-s/-C/-o/stdin shape, so -c and --add-dir are gone too.
+        command = (
+            f"codex exec -m gpt-5.6-terra -s read-only -C {REPO} "
+            "-c model_reasoning_effort=high --add-dir /other -o "
+            f"{RUN}/report.md - < {RUN}/prompt.txt"
+        )
+        self.assert_denied(
+            payload("pstack-nikki:developer-codex", "Bash", command=command), "Bash"
+        )
+
+    def test_codex_exec_slug_must_start_with_a_letter_or_digit(self) -> None:
+        command = (
+            "codex exec -m --dangerously-bypass-approvals-and-sandbox "
+            f"-s workspace-write -C {REPO} -o {RUN}/report.md - < {RUN}/prompt.txt"
+        )
+        self.assert_denied(
+            payload("pstack-nikki:developer-codex", "Bash", command=command), "Bash"
+        )
+
+    def test_codex_runs_parent_traversal_is_denied(self) -> None:
+        traversal = f"{REPO}/.nikki-agents/codex-runs/.."
+        self.assert_denied(
+            payload(
+                "pstack-nikki:developer-codex",
+                "Bash",
+                command=f"ls {traversal}/report.md",
+            ),
+            "Bash",
+        )
+        self.assert_denied(
+            payload(
+                "pstack-nikki:reviewer-codex",
+                "Write",
+                file_path=f"{traversal}/prompt.txt",
+            ),
+            "Write",
+        )
+
+    def test_background_bash_calls_are_denied_even_when_the_command_is_allowed(
+        self,
+    ) -> None:
+        command = f"git -C {REPO} rev-parse HEAD"
+        for agent_type in WATCHERS:
+            with self.subTest(agent_type=agent_type):
+                event = payload(agent_type, "Bash", command=command)
+                event["tool_input"]["run_in_background"] = True
+                self.assert_denied(event, "Bash")
 
     def test_invalid_writes_and_tools_are_denied(self) -> None:
         self.assert_denied(
