@@ -51,6 +51,8 @@ RUNNING_QUERY = "{{.State.Running}}"
 SETUP_SENTINEL_PREFIX = MOUNT_WORK + "/.lab-setup-"
 READY_POLL_SEC = 2.0
 PORT_TAKEN_SIGNS = ("address already in use", "port is already allocated")
+HOST_BRANCH_REFSPEC = "+refs/heads/*:refs/remotes/lab-host/*"
+HOST_TAG_REFSPEC = "+refs/tags/*:refs/remotes/lab-host-tags/*"
 PORT_TAKEN_HINT = (
     "the host port this lab publishes is already taken by another lab or "
     "process. Give this lab its own port with --port N"
@@ -274,6 +276,13 @@ def sync_clone(lab: Lab, repo: Path, branch: str, head: str) -> bool:
         return False
     if not cloned:
         exec_capture(lab, ["git", "clone", MOUNT_GIT_COMMON_READONLY, clone], MOUNT_WORK)
+    else:
+        fetch_host_refs(lab, clone)
+        if has_container_only_commits(lab, clone, head):
+            raise LabError(
+                f"lab {lab.name} has commits only in the container. "
+                "Create a git bundle before running up again."
+            )
     exec_capture(lab, ["git", "fetch", "--quiet", MOUNT_GIT_COMMON_READONLY, head], clone)
     if is_branch(branch):
         exec_capture(lab, ["git", "checkout", "--quiet", "-B",
@@ -281,6 +290,24 @@ def sync_clone(lab: Lab, repo: Path, branch: str, head: str) -> bool:
     else:
         exec_capture(lab, ["git", "checkout", "--quiet", "--detach", head], clone)
     return True
+
+
+def fetch_host_refs(lab: Lab, clone: str) -> None:
+    """Fetch host branches and tags under lab-owned remote-tracking refs."""
+    exec_capture(lab, ["git", "fetch", "--quiet", MOUNT_GIT_COMMON_READONLY,
+                       HOST_BRANCH_REFSPEC], clone)
+    exec_capture(lab, ["git", "fetch", "--quiet", MOUNT_GIT_COMMON_READONLY,
+                       HOST_TAG_REFSPEC], clone)
+
+
+def has_container_only_commits(lab: Lab, clone: str, head: str) -> bool:
+    """Return whether clone HEAD reaches commits unavailable from the host."""
+    refs = exec_capture(
+        lab, ["git", "for-each-ref", "--format=%(refname)",
+              "refs/remotes/lab-host", "refs/remotes/lab-host-tags"], clone
+    ).splitlines()
+    command = ["git", "rev-list", "--max-count=1", "HEAD", "--not", head]
+    return bool(exec_capture(lab, command + refs, clone))
 
 
 def is_branch(reference: str) -> bool:

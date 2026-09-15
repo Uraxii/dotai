@@ -51,9 +51,9 @@ Flags:
   other name is a directory you wrote. See
   [the profile contract](references/profile-contract.md).
 - `--branch BRANCH` the branch to check out. Defaults to the repository's
-  current branch. `up` resets that branch to the host's head, discarding
-  commits made inside the container on the same branch, so push
-  container-side work to a different branch name if you want it to survive.
+  current branch. Before `up` resets a clone, it refuses when the clone holds
+  commits unavailable from the host. Save those commits with a bundle before
+  you run `up` again.
 - `--port N` override the port the profile publishes. Give each lab its own
   port: two labs cannot publish the same host port, and the second `up`
   fails at start.
@@ -113,8 +113,22 @@ scripts/lab down demo
 ```
 
 This deletes the container and its `lab-demo-work` volume. The clone and any
-uncommitted work in it are gone. Commit inside the container and fetch from
-the host first if you want to keep anything.
+uncommitted work in it are gone. Save commits before you run this command.
+
+## Save commits from a lab
+
+If `lab up` refuses to reset a clone, create a bundle in the container and
+fetch it into the host repository. Replace `NAME` with the lab name and
+`BRANCH` with the branch holding the commits.
+
+```
+scripts/lab exec NAME git bundle create /tmp/NAME.bundle BRANCH
+podman cp lab-NAME:/tmp/NAME.bundle ./NAME.bundle
+git fetch ./NAME.bundle BRANCH:rescue
+```
+
+After `git fetch` completes, `rescue` names the saved commits in the host
+repository. You can run `lab up` again or run `lab down NAME`.
 
 To see which labs exist, ask podman:
 
