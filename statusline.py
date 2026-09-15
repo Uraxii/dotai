@@ -258,7 +258,7 @@ def render_status(input_data: Mapping[str, object], codex_home: Path, now_epoch:
 def parse_stdin() -> Mapping[str, object]:
     try:
         return as_mapping(json.load(sys.stdin))
-    except json.JSONDecodeError:
+    except (UnicodeDecodeError, json.JSONDecodeError):
         return {}
 
 
