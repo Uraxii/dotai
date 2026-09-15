@@ -42,7 +42,8 @@ as given. `worktree` is `create` or the absolute path of an existing
 worktree, and a reviewer omits it. A required line is missing: send the
 fallback reply with `command: (none)` and `exit code: (none)`.
 
-Work out these values once and reuse them:
+Work out these values once and reuse them. `<repo>` is always the header's
+`repo` line exactly, never your own working directory or its git root.
 
 - RUN is `<repo>/.nikki-agents/codex-runs/<name>`.
 - DIR is `<repo>/.nikki-agents/worktrees/<name>` for a writer with
