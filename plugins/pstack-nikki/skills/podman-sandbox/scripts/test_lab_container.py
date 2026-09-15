@@ -55,6 +55,32 @@ class DetachedHeadPodman(FakePodman):
         return done
 
 
+class ExistingClonePodman(FakePodman):
+    """Record a clone whose current commit differs from the requested one."""
+
+    def __init__(self, container_only: bool) -> None:
+        super().__init__()
+        self.container_only = container_only
+
+    def __call__(self, args: list[str]) -> subprocess.CompletedProcess:
+        done = super().__call__(args)
+        if args[-3:-1] == ["test", "-d"]:
+            return subprocess.CompletedProcess(args, 0, "", "")
+        if args[-2:] == ["rev-parse", "HEAD"]:
+            return subprocess.CompletedProcess(args, 0, "container-head", "")
+        if args[-3:] == ["branch", "--show-current"]:
+            return subprocess.CompletedProcess(args, 0, "main", "")
+        if "for-each-ref" in args:
+            return subprocess.CompletedProcess(
+                args, 0, "refs/remotes/lab-host/main", ""
+            )
+        if "rev-list" in args:
+            return subprocess.CompletedProcess(
+                args, 0, "container-only" if self.container_only else "", ""
+            )
+        return done
+
+
 class HostileBranchTest(unittest.TestCase):
     """A branch name is data. It never becomes part of a command string."""
 
@@ -194,6 +220,31 @@ class DetachedHeadTest(unittest.TestCase):
             )
 
         self.assertTrue(current)
+
+
+class ContainerCommitTest(unittest.TestCase):
+    """Host branch switches preserve commits that only the lab can reach."""
+
+    def setUp(self) -> None:
+        self.podman = ExistingClonePodman(container_only=True)
+        patch = mock.patch.object(lab_container, "run", self.podman)
+        patch.start()
+        self.addCleanup(patch.stop)
+        self.lab = lab_container.Lab("demo")
+
+    def test_sync_refuses_to_drop_a_container_only_commit(self) -> None:
+        with self.assertRaisesRegex(lab_container.LabError, "lab demo.*git bundle"):
+            lab_container.sync_clone(self.lab, REPO, "main", HEAD)
+
+        self.assertFalse(any("checkout" in call for call in self.podman.calls))
+
+    def test_sync_allows_a_branch_switch_without_container_only_commits(self) -> None:
+        no_private_commit = ExistingClonePodman(container_only=False)
+        with mock.patch.object(lab_container, "run", no_private_commit):
+            changed = lab_container.sync_clone(self.lab, REPO, "main", HEAD)
+
+        self.assertTrue(changed)
+        self.assertTrue(any("checkout" in call for call in no_private_commit.calls))
 
 
 if __name__ == "__main__":
