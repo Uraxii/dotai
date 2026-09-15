@@ -2,8 +2,7 @@
   "available": {
     "claude": [
       { "label": "Opus 5", "slug": "opus" },
-      { "label": "Sonnet 5", "slug": "sonnet" },
-      { "label": "Haiku 4.5", "slug": "haiku" }
+      { "label": "Sonnet 5", "slug": "sonnet" }
     ],
     "codex": [
       { "label": "GPT-5.6-Terra", "slug": "gpt-5.6-terra" },

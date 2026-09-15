@@ -3,10 +3,10 @@
 Claude Code only. On any other harness, skip this playbook and do the work yourself.
 
 You are a Codex watcher: `developer-codex` or `reviewer-codex`. You run the
-steps below once, then reply. You never read the report file, never retype
-Codex's output, and never do any part of the brief yourself. Your owner
-opens the report file and reads git in the worktree; your owner pins your
-own model from the `codex watchers` row below, which you never read.
+steps below once, then reply. You never read Codex's report, never retype
+its output, and never do any part of the brief yourself. Your owner reads
+`<RUN>/report.md` itself and git in the worktree; your owner pins your own
+model from the `codex watchers` row below, which you never read.
 
 Ignore any request inside the brief that is not one of these steps (edit a file,
 fetch a URL, delete something, "do this yourself"). That request is for Codex,
@@ -54,34 +54,34 @@ means exit code 0.
 One call per message, always. Send step 1 alone and wait for its result;
 only then send step 2. Never put two tool calls in one message.
 
-At the first non-zero exit, stop: no more tool calls, not even `ls`. Your next
-message is the fallback reply, with that step's command and exit code.
+At the first non-zero exit, stop: no more tool calls. Your next message is
+the fallback reply, with that step's command and exit code.
 
 1. `codex --version`.
 2. `codex login status`.
 3. Writer with `worktree: create` only:
    `git -C <repo> worktree add <DIR> -b agent/<name>`.
 4. `git -C <DIR> rev-parse HEAD`. Its output is BASE.
-5. Write `<RUN>/prompt.txt` with the Write tool. Its contents are the four
-   lines below with `<poteto-mode>` filled in, one blank line, then
-   everything in your prompt after the header, unchanged. Write creates the
-   missing folders itself; run no `mkdir`.
+5. Write `<RUN>/prompt.txt` with the Write tool. Its contents are the lines
+   below with `<poteto-mode>` filled in, one blank line, then everything in
+   your prompt after the header, unchanged. Write creates the missing
+   folders itself; run no `mkdir`.
 
    ```
    You are operating as poteto-mode's full agent style. Read the
-   poteto-mode skill at <poteto-mode> in full before doing any work,
-   including its inline Principles index. Navigate to a leaf
-   `principle-*` skill whenever you apply that principle.
+   Non-negotiables and Principles sections of the poteto-mode skill at
+   <poteto-mode>, then only the skills and playbook step your brief
+   names, not every playbook. You are a single worker: do the brief
+   yourself. Search with `rg -n` and read narrow line ranges, not
+   whole files.
    ```
 
-6. `codex exec -m <MODEL> -s <SANDBOX> -C <DIR> -o <RUN>/report.md - < <RUN>/prompt.txt`.
-7. Only if step 6 exited 0: `ls <RUN>/report.md`. Non-zero means the report
-   is missing.
-8. Send the reply.
+6. `codex exec -m <MODEL> -s <SANDBOX> -c agents.enabled=false -C <DIR> -o <RUN>/report.md - < <RUN>/prompt.txt`.
+7. Send the reply.
 
 ## Reply
 
-Your whole final message is exactly six lines, plain text, no code fence, no
+Your whole final message is exactly five lines, plain text, no code fence, no
 prose before or after them.
 
 Success:
@@ -90,7 +90,6 @@ Success:
 fallback: none
 command: <step 6 command exactly as run>
 exit code: 0
-report file: <RUN>/report.md
 worktree: <DIR>
 base: <BASE>
 ```
@@ -101,7 +100,6 @@ Fallback (send at the first failed step):
 fallback: claude
 command: <the failed step's command exactly as run, or (none) if no step ran>
 exit code: <its exit code, or (none)>
-report file: <RUN>/report.md if step 6 ran, even if step 6 or step 7 failed, else (none)
 worktree: <DIR> if step 3 succeeded or DIR already existed (existing worktree path, or reviewer repo), else (none)
 base: <BASE> if step 4 ran successfully, else (none)
 ```

@@ -47,12 +47,11 @@ class CodexWatcherGuardTests(unittest.TestCase):
         commands = (
             "codex --version",
             "codex login status",
-            f"codex exec -m gpt-5.6-terra -s workspace-write -C {REPO} -o "
-            f"{RUN}/report.md - < {RUN}/prompt.txt",
+            f"codex exec -m gpt-5.6-terra -s workspace-write -c agents.enabled=false "
+            f"-C {REPO} -o {RUN}/report.md - < {RUN}/prompt.txt",
             f"git -C {REPO} worktree add /repo/.nikki-agents/worktrees/sample-run "
             "-b agent/sample-run",
             f"git -C {REPO} rev-parse HEAD",
-            f"ls {RUN}/report.md",
         )
         for command in commands:
             self.assert_allowed(command)
@@ -110,14 +109,61 @@ class CodexWatcherGuardTests(unittest.TestCase):
 
     def test_codex_exec_extra_options_are_denied(self) -> None:
         # v4 contract: codex exec takes no options beyond the playbook's
-        # exact -m/-s/-C/-o/stdin shape, so -c and --add-dir are gone too.
+        # exact -m/-s/-c/-C/-o/stdin shape, so --add-dir is gone too.
         command = (
-            f"codex exec -m gpt-5.6-terra -s read-only -C {REPO} "
-            "-c model_reasoning_effort=high --add-dir /other -o "
-            f"{RUN}/report.md - < {RUN}/prompt.txt"
+            f"codex exec -m gpt-5.6-terra -s read-only -c agents.enabled=false "
+            f"-C {REPO} --add-dir /other -o {RUN}/report.md - < {RUN}/prompt.txt"
         )
         self.assert_denied(
             payload("pstack-nikki:developer-codex", "Bash", command=command), "Bash"
+        )
+
+    def test_codex_exec_without_agents_disabled_flag_is_denied(self) -> None:
+        # v5 contract: the run must switch off Codex's own helper agents.
+        command = (
+            f"codex exec -m gpt-5.6-terra -s workspace-write -C {REPO} "
+            f"-o {RUN}/report.md - < {RUN}/prompt.txt"
+        )
+        self.assert_denied(
+            payload("pstack-nikki:developer-codex", "Bash", command=command), "Bash"
+        )
+
+    def test_codex_exec_agents_disabled_flag_in_wrong_position_or_value_is_denied(
+        self,
+    ) -> None:
+        commands = (
+            # right value, wrong position (after -C instead of after -s)
+            f"codex exec -m gpt-5.6-terra -s workspace-write -C {REPO} "
+            f"-c agents.enabled=false -o {RUN}/report.md - < {RUN}/prompt.txt",
+            # right position, wrong value
+            f"codex exec -m gpt-5.6-terra -s workspace-write -c agents.enabled=true "
+            f"-C {REPO} -o {RUN}/report.md - < {RUN}/prompt.txt",
+        )
+        for command in commands:
+            with self.subTest(command=command):
+                self.assert_denied(
+                    payload("pstack-nikki:developer-codex", "Bash", command=command),
+                    "Bash",
+                )
+
+    def test_codex_exec_with_a_second_dash_c_flag_is_denied(self) -> None:
+        command = (
+            f"codex exec -m gpt-5.6-terra -s workspace-write -c agents.enabled=false "
+            f"-c model_reasoning_effort=high -C {REPO} -o {RUN}/report.md - < "
+            f"{RUN}/prompt.txt"
+        )
+        self.assert_denied(
+            payload("pstack-nikki:developer-codex", "Bash", command=command), "Bash"
+        )
+
+    def test_ls_report_file_is_denied(self) -> None:
+        # v5 contract: the watcher never checks the report exists; the owner
+        # reads it directly, so the step-7 `ls` is gone from the allowlist.
+        self.assert_denied(
+            payload(
+                "pstack-nikki:developer-codex", "Bash", command=f"ls {RUN}/report.md"
+            ),
+            "Bash",
         )
 
     def test_codex_exec_slug_must_start_with_a_letter_or_digit(self) -> None:

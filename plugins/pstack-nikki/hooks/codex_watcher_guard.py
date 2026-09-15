@@ -32,12 +32,12 @@ ALLOWED_BASH = (
     full_command(r"codex --version"),
     full_command(r"codex login status"),
     full_command(
-        rf"codex exec -m {SLUG} -s (?:workspace-write|read-only) -C {PATH}"
+        rf"codex exec -m {SLUG} -s (?:workspace-write|read-only)"
+        rf" -c agents\.enabled=false -C {PATH}"
         rf" -o {RUN_PATH}/report\.md - < {RUN_PATH}/prompt\.txt"
     ),
     full_command(rf"git -C {PATH} worktree add {PATH} -b agent/{NAME}"),
     full_command(rf"git -C {PATH} rev-parse HEAD"),
-    full_command(rf"ls {RUN_PATH}/report\.md"),
 )
 ALLOWED_WRITE = full_command(rf"{RUN_PATH}/prompt\.txt")
 
