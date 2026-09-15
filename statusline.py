@@ -70,9 +70,10 @@ def parse_timestamp(value: object) -> datetime | None:
     if not isinstance(value, str):
         return None
     try:
-        return datetime.fromisoformat(value.replace("Z", "+00:00"))
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
     except ValueError:
         return None
+    return parsed if parsed.tzinfo is not None else None
 
 
 def remaining_from_limit(limit: object, now_epoch: float) -> UsageWindow:
@@ -274,6 +275,9 @@ def self_check() -> None:
     windows = windows_from_rate_limits(rate_limits, now)
     assert windows[WEEKLY_MINUTES].remaining_percent == 75
     assert FIVE_HOUR_MINUTES not in windows
+    event = {"payload": {"type": "token_count", "rate_limits": rate_limits}}
+    assert codex_snapshot(event, now).five_hour.remaining_percent is None
+    assert parse_timestamp("2026-09-15T01:00:00") is None
     expired = {"used_percent": 90, "window_minutes": FIVE_HOUR_MINUTES, "resets_at": now}
     assert remaining_from_limit(expired, now).remaining_percent == 100
 
