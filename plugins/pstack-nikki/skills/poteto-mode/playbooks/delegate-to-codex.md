@@ -54,9 +54,8 @@ means exit code 0.
 One call per message, always. Send step 1 alone and wait for its result;
 only then send step 2. Never put two tool calls in one message.
 
-At the first non-zero exit, stop. Make no more tool calls, not even `ls`:
-your next message is the fallback reply, with that step's command and exit
-code.
+At the first non-zero exit, stop: no more tool calls, not even `ls`. Your next
+message is the fallback reply, with that step's command and exit code.
 
 1. `codex --version`.
 2. `codex login status`.
@@ -76,7 +75,8 @@ code.
    ```
 
 6. `codex exec -m <MODEL> -s <SANDBOX> -C <DIR> -o <RUN>/report.md - < <RUN>/prompt.txt`.
-7. `ls <RUN>/report.md`. Non-zero means the report is missing.
+7. Only if step 6 exited 0: `ls <RUN>/report.md`. Non-zero means the report
+   is missing.
 8. Send the reply.
 
 ## Reply
@@ -101,7 +101,7 @@ Fallback (send at the first failed step):
 fallback: claude
 command: <the failed step's command exactly as run, or (none) if no step ran>
 exit code: <its exit code, or (none)>
-report file: <RUN>/report.md whenever step 6 ran, even if it failed or the file is missing, else (none)
+report file: <RUN>/report.md if step 6 ran, even if step 6 or step 7 failed, else (none)
 worktree: <DIR> if step 3 succeeded or DIR already existed (existing worktree path, or reviewer repo), else (none)
 base: <BASE> if step 4 ran successfully, else (none)
 ```
