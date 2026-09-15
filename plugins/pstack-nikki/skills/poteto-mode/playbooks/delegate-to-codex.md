@@ -49,7 +49,8 @@ Work out these values once and reuse them:
 Run each command with Bash, exactly as written, values filled in. Give
 every Bash call `timeout: 600000` and never set `run_in_background`. The
 Bash result shows `Exit code N` when a command exits non-zero; no such line
-means exit code 0.
+means exit code 0. A result reporting the command timed out, with no `Exit
+code` line, is a failed step too: fallback reply with `exit code: timeout`.
 
 One call per message, always. Send step 1 alone and wait for its result;
 only then send step 2. Never put two tool calls in one message.

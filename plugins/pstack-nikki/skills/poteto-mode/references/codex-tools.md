@@ -66,7 +66,7 @@ list for that harness alone. Most Codex spawns leave `model` and
 `default_subagent_reasoning_effort` apply. The exception is a spawn pinning
 from its own panel row (`interrogate` reviewers, the `arena` cross-judge,
 the `blast-radius` panel): read that row's `codex` entry (`gpt-*` slugs)
-and pin the first name in it, same as today. Nothing here overrides
+and pin the first name in it. Nothing here overrides
 `models.json`.
 
 ## Driver and bundled skills

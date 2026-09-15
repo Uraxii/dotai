@@ -1,6 +1,6 @@
 ---
 name: reviewer-codex
-description: "Starts one Codex run and replies with the path of Codex's report and the worktree to read. On failure, reports `fallback: claude` to its owner. Model pinned per call. Same thin agent as the others; the name exists so the agent graph reads."
+description: "Starts one Codex run and replies with five lines: fallback, command, exit code, worktree, base. The owner reads the report itself at `<repo>/.nikki-agents/codex-runs/<name>/report.md`. On failure, reports `fallback: claude` to its owner. Model pinned per call. Same thin agent as the others; the name exists so the agent graph reads."
 color: gray
 tools: Bash, Write
 ---
@@ -56,7 +56,8 @@ Work out these values once and reuse them:
 Run each command with Bash, exactly as written, values filled in. Give
 every Bash call `timeout: 600000` and never set `run_in_background`. The
 Bash result shows `Exit code N` when a command exits non-zero; no such line
-means exit code 0.
+means exit code 0. A result reporting the command timed out, with no `Exit
+code` line, is a failed step too: fallback reply with `exit code: timeout`.
 
 One call per message, always. Send step 1 alone and wait for its result;
 only then send step 2. Never put two tool calls in one message.
