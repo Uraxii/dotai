@@ -28,10 +28,11 @@ class FakePodman:
 
     def __init__(self) -> None:
         self.calls: list[list[str]] = []
+        self.existing_paths: set[str] = set()
 
     def __call__(self, args: list[str]) -> subprocess.CompletedProcess:
         self.calls.append(list(args))
-        absent_clone = "test" in args
+        absent_clone = "test" in args and args[-1] not in self.existing_paths
         return subprocess.CompletedProcess(
             args, 1 if absent_clone else 0, "", ""
         )
@@ -108,6 +109,37 @@ class NameTest(unittest.TestCase):
         self.assertEqual(lab.container, "lab-demo")
         self.assertEqual(lab.volume, "lab-demo-work")
         self.assertEqual(lab.clone_path(REPO), "/work/myrepo")
+
+
+class SetupRestartTest(unittest.TestCase):
+    """A restarted container needs its setup-launched process again."""
+
+    def setUp(self) -> None:
+        self.podman = FakePodman()
+        patch = mock.patch.object(lab_container, "run", self.podman)
+        patch.start()
+        self.addCleanup(patch.stop)
+        self.lab = lab_container.Lab("demo")
+        self.profile = lab_profile.Profile(
+            name="app",
+            directory=Path("/tmp/app"),
+            port=None,
+            setup=("start-app",),
+            ready=(),
+            ready_timeout_sec=1,
+            recipe_sha256="deadbeef",
+        )
+
+    def test_a_started_container_reruns_setup_despite_its_sentinel(self) -> None:
+        sentinel = lab_container.SETUP_SENTINEL_PREFIX + "deadbeef"
+        self.podman.existing_paths.add(sentinel)
+
+        changed = lab_container.run_setup(
+            self.lab, self.profile, "/work/myrepo", force=True
+        )
+
+        self.assertTrue(changed)
+        self.assertIn("start-app", self.podman.elements())
 
 
 if __name__ == "__main__":
