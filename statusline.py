@@ -284,14 +284,17 @@ def self_check() -> None:
     expired = {"used_percent": 90, "window_minutes": FIVE_HOUR_MINUTES, "resets_at": now}
     assert remaining_from_limit(expired, now).remaining_percent == 100
     cases = (
-        UsageSnapshot(UsageWindow(25), UsageWindow(75), UsageWindow(50)),
-        UNKNOWN_SNAPSHOT,
-        UsageSnapshot(UsageWindow(100), UsageWindow(100), UsageWindow(100)),
-        UsageSnapshot(UsageWindow(5), UsageWindow(5), UsageWindow(5)),
+        (UsageSnapshot(UsageWindow(25), UsageWindow(75), UsageWindow(51)), False),
+        (UNKNOWN_SNAPSHOT, False),
+        (UsageSnapshot(UsageWindow(100), UsageWindow(100), UsageWindow(100)), False),
+        (UsageSnapshot(UsageWindow(5), UsageWindow(5), UsageWindow(5)), True),
     )
-    for snapshot in cases:
+    for snapshot, expect_warning in cases:
         claude_line = snapshot_line("claude", snapshot)
         codex_line = snapshot_line("codex", snapshot, include_context=False)
+        if expect_warning:
+            assert WARN in claude_line
+            assert WARN in codex_line
         plain_claude = re.sub(r"\x1b\[[0-9;]*m", "", claude_line)
         plain_codex = re.sub(r"\x1b\[[0-9;]*m", "", codex_line)
         assert "ctx" not in plain_codex
