@@ -9,6 +9,7 @@ site, `lab_container.run`, is replaced by a recorder.
 
 from __future__ import annotations
 
+import os
 import re
 import subprocess
 import tempfile
@@ -284,14 +285,23 @@ class SyncedCommitTest(unittest.TestCase):
     """A lab preserves commits not contained by a head it previously synced."""
 
     def setUp(self) -> None:
+        identity = mock.patch.dict(
+            os.environ,
+            {
+                "GIT_AUTHOR_NAME": "Test",
+                "GIT_AUTHOR_EMAIL": "test@example.com",
+                "GIT_COMMITTER_NAME": "Test",
+                "GIT_COMMITTER_EMAIL": "test@example.com",
+            },
+        )
+        identity.start()
+        self.addCleanup(identity.stop)
         self.temporary = tempfile.TemporaryDirectory()
         self.addCleanup(self.temporary.cleanup)
         self.parent = Path(self.temporary.name)
         self.repo = self.parent / "repo"
         self.clone = self.parent / "clone"
         self.git("init", "--initial-branch=main", str(self.repo), cwd=self.parent)
-        self.git("config", "user.email", "test@example.com")
-        self.git("config", "user.name", "Test")
         self.commit("initial")
         self.lab = lab_container.Lab("demo")
         self.local = LocalGitClone(self.repo, self.clone)
