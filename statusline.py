@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import UTC, datetime
 import getpass
 import json
 import math
@@ -19,11 +18,9 @@ from collections.abc import Iterable, Mapping
 __all__ = ["main"]
 
 BAR_WIDTH = 10
-LINE_LABEL_WIDTH = len("claude")
+WEEKLY_MINUTES = 10_080
 CODEX_TAIL_BYTES = 256 * 1024
 MAX_ROLLOUT_FILES = 3
-FIVE_HOUR_MINUTES = 300
-WEEKLY_MINUTES = 10_080
 WARN = "\033[33m"
 DIM = "\033[2;36m"
 RESET = "\033[0m"
@@ -41,7 +38,6 @@ class UsageSnapshot:
     context: UsageWindow
     five_hour: UsageWindow
     weekly: UsageWindow
-    observed_at: datetime | None = None
 
 
 UNKNOWN_WINDOW = UsageWindow(None)
@@ -69,16 +65,6 @@ def remaining_from_used(used_percent: object) -> UsageWindow:
     return UsageWindow(bounded_percent(None if used_number is None else 100 - used_number))
 
 
-def parse_timestamp(value: object) -> datetime | None:
-    if not isinstance(value, str):
-        return None
-    try:
-        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
-    except ValueError:
-        return None
-    return parsed if parsed.tzinfo is not None else None
-
-
 def remaining_from_limit(limit: object, now_epoch: float) -> UsageWindow:
     limit_data = as_mapping(limit)
     reset_at = as_number(limit_data.get("resets_at"))
@@ -103,25 +89,13 @@ def claude_snapshot(input_data: Mapping[str, object]) -> UsageSnapshot:
     )
 
 
-def windows_from_rate_limits(rate_limits: object, now_epoch: float) -> dict[int, UsageWindow]:
-    windows: dict[int, UsageWindow] = {}
+def weekly_window(rate_limits: object, now_epoch: float) -> UsageWindow:
     for slot in ("primary", "secondary"):
         limit_data = as_mapping(as_mapping(rate_limits).get(slot))
         minutes = as_number(limit_data.get("window_minutes"))
-        if minutes is not None:
-            windows[int(minutes)] = remaining_from_limit(limit_data, now_epoch)
-    return windows
-
-
-def codex_snapshot(event: Mapping[str, object], now_epoch: float) -> UsageSnapshot:
-    payload = as_mapping(event.get("payload"))
-    windows = windows_from_rate_limits(payload.get("rate_limits"), now_epoch)
-    return UsageSnapshot(
-        context=UNKNOWN_WINDOW,
-        five_hour=windows.get(FIVE_HOUR_MINUTES, UNKNOWN_WINDOW),
-        weekly=windows.get(WEEKLY_MINUTES, UNKNOWN_WINDOW),
-        observed_at=parse_timestamp(event.get("timestamp")),
-    )
+        if minutes is not None and int(minutes) == WEEKLY_MINUTES:
+            return remaining_from_limit(limit_data, now_epoch)
+    return UNKNOWN_WINDOW
 
 
 def tail_lines(path: Path) -> list[bytes]:
@@ -158,10 +132,11 @@ def newest_rollouts(sessions_path: Path) -> list[Path]:
         return []
 
 
-def codex_usage_snapshot(codex_home: Path, now_epoch: float) -> UsageSnapshot:
+def codex_weekly(codex_home: Path, now_epoch: float) -> UsageWindow:
     for event in token_events(newest_rollouts(codex_home / "sessions")):
-        return codex_snapshot(event, now_epoch)
-    return UNKNOWN_SNAPSHOT
+        payload = as_mapping(event.get("payload"))
+        return weekly_window(payload.get("rate_limits"), now_epoch)
+    return UNKNOWN_WINDOW
 
 
 def rounded_percent(value: float) -> int:
@@ -217,47 +192,23 @@ def battery_status() -> str:
     return rendered
 
 
-def snapshot_line(
-    label: str,
-    snapshot: UsageSnapshot,
-    age: str = "",
-    include_context: bool = True,
-) -> str:
+def bars_line(claude: UsageSnapshot, codex_weekly_window: UsageWindow) -> str:
     bars = (
-        make_bar("5h", snapshot.five_hour, 20),
-        make_bar("wk", snapshot.weekly, 50),
+        make_bar("5h", claude.five_hour, 20),
+        make_bar("wk", claude.weekly, 50),
+        make_bar("ctx", claude.context),
+        make_bar("cdx-wk", codex_weekly_window, 50),
     )
-    if include_context:
-        bars += (make_bar("ctx", snapshot.context),)
-    return f"{label:<{LINE_LABEL_WIDTH}} " + "  ".join(bars) + age
-
-
-def age_suffix(observed_at: datetime | None, now: datetime) -> str:
-    if observed_at is None:
-        return ""
-    seconds = max(0, int((now - observed_at).total_seconds()))
-    if seconds < 60:
-        age = "<1m"
-    elif seconds < 3600:
-        age = f"{seconds // 60}m"
-    elif seconds < 86_400:
-        age = f"{seconds // 3600}h"
-    else:
-        age = f"{seconds // 86_400}d"
-    return f"  {DIM}· {age} ago{RESET}"
+    return "claude " + "  ".join(bars)
 
 
 def render_status(input_data: Mapping[str, object], codex_home: Path, now_epoch: float) -> str:
-    now = datetime.fromtimestamp(now_epoch, UTC)
     user_host = f"{DIM}{getpass.getuser()}@{socket.gethostname().split('.')[0]}{RESET}"
     first_parts = [user_host, battery_status(), tokens_per_minute(input_data)]
     line_one = "  ".join(part for part in first_parts if part)
-    codex = codex_usage_snapshot(codex_home, now_epoch)
-    claude_line = snapshot_line("claude", claude_snapshot(input_data))
-    codex_line = snapshot_line(
-        "codex", codex, age_suffix(codex.observed_at, now), include_context=False
-    )
-    return "\n".join((line_one, claude_line, codex_line))
+    claude = claude_snapshot(input_data)
+    codex = codex_weekly(codex_home, now_epoch)
+    return "\n".join((line_one, bars_line(claude, codex)))
 
 
 def parse_stdin() -> Mapping[str, object]:
@@ -276,35 +227,27 @@ def self_check() -> None:
             "resets_at": now + 1,
         }
     }
-    windows = windows_from_rate_limits(rate_limits, now)
-    assert windows[WEEKLY_MINUTES].remaining_percent == 75
-    assert FIVE_HOUR_MINUTES not in windows
-    event = {"payload": {"type": "token_count", "rate_limits": rate_limits}}
-    assert codex_snapshot(event, now).five_hour.remaining_percent is None
-    assert parse_timestamp("2026-09-15T01:00:00") is None
-    expired = {"used_percent": 90, "window_minutes": FIVE_HOUR_MINUTES, "resets_at": now}
-    assert remaining_from_limit(expired, now).remaining_percent == 100
+    assert weekly_window(rate_limits, now).remaining_percent == 75
+    expired = {
+        "primary": {"used_percent": 90, "window_minutes": WEEKLY_MINUTES, "resets_at": now}
+    }
+    assert weekly_window(expired, now).remaining_percent == 100
     nan_rate_limits = {"primary": {"window_minutes": float("nan")}}
-    assert windows_from_rate_limits(nan_rate_limits, now) == {}
-    cases = (
-        (UsageSnapshot(UsageWindow(25), UsageWindow(75), UsageWindow(51)), False),
-        (UNKNOWN_SNAPSHOT, False),
-        (UsageSnapshot(UsageWindow(100), UsageWindow(100), UsageWindow(100)), False),
-        (UsageSnapshot(UsageWindow(5), UsageWindow(5), UsageWindow(5)), True),
-    )
-    for snapshot, expect_warning in cases:
-        claude_line = snapshot_line("claude", snapshot)
-        codex_line = snapshot_line("codex", snapshot, include_context=False)
-        if expect_warning:
-            assert WARN in claude_line
-            assert WARN in codex_line
-        plain_claude = re.sub(r"\x1b\[[0-9;]*m", "", claude_line)
-        plain_codex = re.sub(r"\x1b\[[0-9;]*m", "", codex_line)
-        assert "ctx" not in plain_codex
-        assert plain_claude.index("[") == plain_codex.index("[")
-        assert plain_claude.index("[", plain_claude.index("[") + 1) == plain_codex.index(
-            "[", plain_codex.index("[") + 1
-        )
+    assert weekly_window(nan_rate_limits, now) == UNKNOWN_WINDOW
+    assert weekly_window({}, now) == UNKNOWN_WINDOW
+
+    normal = bars_line(UsageSnapshot(UsageWindow(25), UsageWindow(75), UsageWindow(51)), UsageWindow(75))
+    plain = re.sub(r"\x1b\[[0-9;]*m", "", normal)
+    assert "\n" not in normal
+    assert "ago" not in plain
+    assert plain.startswith("claude 5h")
+    assert plain.index("5h") < plain.index("wk") < plain.index("ctx") < plain.index("cdx-wk")
+
+    unknown = bars_line(UNKNOWN_SNAPSHOT, UNKNOWN_WINDOW)
+    assert "?" in unknown
+
+    warning = bars_line(UsageSnapshot(UsageWindow(5), UsageWindow(5), UsageWindow(5)), UsageWindow(5))
+    assert WARN in warning
 
 
 def main() -> int:
