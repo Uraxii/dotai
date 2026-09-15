@@ -409,6 +409,65 @@ class SyncedCommitTest(unittest.TestCase):
         with self.assertRaisesRegex(lab_container.LabError, "refs/heads/feat"):
             self.sync("refs/heads/feat", target)
 
+    def test_allows_rescued_commit_on_the_target_branch(self) -> None:
+        self.sync_main()
+        saved = self.commit_in_clone("lab-only")
+        target = self.commit("host-next")
+
+        with self.assertRaisesRegex(lab_container.LabError, "git bundle"):
+            self.sync("refs/heads/main", target)
+
+        bundle = self.parent / "demo.bundle"
+        self.git(
+            "bundle", "create", str(bundle), "refs/heads/main", cwd=self.clone
+        )
+        self.git("fetch", str(bundle), "refs/heads/main:rescue")
+
+        self.assertTrue(self.sync("refs/heads/main", target))
+        self.assertEqual(self.git("rev-parse", "rescue"), saved)
+
+    def test_allows_commit_on_a_non_target_branch(self) -> None:
+        self.sync_main()
+        self.git("checkout", "-b", "feat", cwd=self.clone)
+        saved = self.commit_in_clone("lab-only")
+        self.git("checkout", "main", cwd=self.clone)
+        target = self.commit("host-next")
+
+        self.assertTrue(self.sync("refs/heads/main", target))
+        self.assertEqual(self.git("rev-parse", "feat", cwd=self.clone), saved)
+
+    def test_allows_branch_switch_that_preserves_main(self) -> None:
+        target = self.sync_main()
+        self.git("branch", "other")
+        saved = self.commit_in_clone("lab-only")
+
+        self.assertTrue(self.sync("refs/heads/other", target))
+        self.assertEqual(self.git("rev-parse", "main", cwd=self.clone), saved)
+
+    def test_refuses_to_drop_a_commit_on_the_target_branch(self) -> None:
+        self.git("branch", "feat")
+        target = self.git("rev-parse", "feat")
+        self.sync("refs/heads/feat", target)
+        self.commit_in_clone("lab-only")
+        self.git("checkout", "feat")
+        target = self.commit("host-next")
+
+        command = (
+            "scripts/lab exec demo git bundle create /tmp/demo.bundle "
+            "refs/heads/feat"
+        )
+        with self.assertRaisesRegex(lab_container.LabError, command):
+            self.sync("refs/heads/feat", target)
+
+    def test_refuses_to_drop_a_commit_from_detached_head(self) -> None:
+        self.sync_main()
+        self.git("checkout", "--detach", cwd=self.clone)
+        self.commit_in_clone("lab-only")
+        target = self.commit("host-next")
+
+        with self.assertRaisesRegex(lab_container.LabError, "HEAD"):
+            self.sync("refs/heads/main", target)
+
     def test_fetches_an_advertised_non_branch_head_before_comparing(self) -> None:
         self.sync_main()
         target = self.commit("pull-request")
@@ -416,6 +475,12 @@ class SyncedCommitTest(unittest.TestCase):
         self.git("reset", "--hard", "HEAD^")
 
         self.assertTrue(self.sync("refs/pull/1/head", target))
+
+    def commit_in_clone(self, name: str) -> str:
+        (self.clone / name).write_text(name + "\n")
+        self.git("add", name, cwd=self.clone)
+        self.git("commit", "-m", name, cwd=self.clone)
+        return self.git("rev-parse", "HEAD", cwd=self.clone)
 
 
 if __name__ == "__main__":

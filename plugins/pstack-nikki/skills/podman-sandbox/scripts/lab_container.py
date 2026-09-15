@@ -274,12 +274,18 @@ def sync_clone(lab: Lab, repo: Path, branch: str, head: str) -> bool:
         exec_capture(lab, ["git", "clone", MOUNT_GIT_COMMON_READONLY, clone], MOUNT_WORK)
     else:
         exec_capture(lab, ["git", "fetch", "--quiet", MOUNT_GIT_COMMON_READONLY, head], clone)
-        container_ref = has_container_only_commits(lab, clone, head)
+        exec_capture(lab, [
+            "git", "fetch", "--quiet", MOUNT_GIT_COMMON_READONLY,
+            "+refs/heads/*:refs/lab/host/heads/*",
+            "+refs/tags/*:refs/lab/host/tags/*",
+        ], clone)
+        container_ref = has_container_only_commits(lab, clone, branch, head)
         if container_ref:
             raise LabError(
                 f"lab {lab.name} has commits only in the container on "
                 f"{container_ref}. "
-                "Create a git bundle before running up again."
+                f"Run scripts/lab exec {lab.name} git bundle create "
+                f"/tmp/{lab.name}.bundle {container_ref}, then see SKILL.md."
             )
     if not cloned:
         exec_capture(lab, ["git", "fetch", "--quiet", MOUNT_GIT_COMMON_READONLY, head], clone)
@@ -292,19 +298,22 @@ def sync_clone(lab: Lab, repo: Path, branch: str, head: str) -> bool:
     return True
 
 
-def has_container_only_commits(lab: Lab, clone: str, head: str) -> str | None:
+def has_container_only_commits(
+    lab: Lab, clone: str, branch: str, head: str
+) -> str | None:
     """Return a lab ref containing a commit a reset to `head` would lose."""
-    commit = exec_capture(lab, [
-        "git", "rev-list", "--max-count=1", "HEAD", "--branches", "--not",
-        head, "--glob=refs/lab/synced/*", "--remotes",
-    ], clone)
-    if not commit:
-        return None
-    refs = exec_capture(lab, [
-        "git", "for-each-ref", "--format=%(refname)", "--contains", commit,
-        "refs/heads",
-    ], clone).splitlines()
-    return refs[0] if refs else "HEAD"
+    refs = (branch,) if is_branch(branch) and exec_status(
+        lab, ["git", "show-ref", "--verify", "--quiet", branch], clone
+    ) == 0 else ()
+    if not exec_capture(lab, ["git", "branch", "--show-current"], clone):
+        refs += ("HEAD",)
+    for ref in refs:
+        if exec_capture(lab, [
+            "git", "rev-list", "--max-count=1", ref, "--not", head,
+            "--glob=refs/lab/synced/*", "--glob=refs/lab/host/*", "--remotes",
+        ], clone):
+            return ref
+    return None
 
 
 def is_branch(reference: str) -> bool:

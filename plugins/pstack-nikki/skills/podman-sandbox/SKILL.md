@@ -51,9 +51,8 @@ Flags:
   other name is a directory you wrote. See
   [the profile contract](references/profile-contract.md).
 - `--branch BRANCH` the branch or revision to check out. Defaults to the
-  repository's current branch. Before `up` resets a clone, it refuses only
-  when the reset would lose a commit made in the lab. Save that commit with a
-  bundle before you run `up` again.
+  repository's current branch. Before `up` resets that branch or a detached
+  `HEAD`, it refuses only when it would lose a lab commit not on the host.
 - `--port N` override the port the profile publishes. Give each lab its own
   port: two labs cannot publish the same host port, and the second `up`
   fails at start.
@@ -117,14 +116,14 @@ uncommitted work in it are gone. Save commits before you run this command.
 
 ## Save commits from a lab
 
-If `lab up` refuses to reset a clone, create a bundle from `HEAD` in the
-container and fetch it into the host repository. `HEAD` also works when the
-lab is detached. Replace `NAME` with the lab name.
+If `lab up` refuses to reset a clone, use the `REF` named in its error to
+create a bundle and fetch it into the host repository. Replace `NAME` with the
+lab name.
 
 ```
-scripts/lab exec NAME git bundle create /tmp/NAME.bundle HEAD
+scripts/lab exec NAME git bundle create /tmp/NAME.bundle REF
 podman cp lab-NAME:/tmp/NAME.bundle /tmp/NAME.bundle
-git fetch /tmp/NAME.bundle HEAD:rescue
+git fetch /tmp/NAME.bundle REF:rescue
 ```
 
 After `git fetch` completes, `rescue` names the saved commits in the host
