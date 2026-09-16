@@ -24,7 +24,7 @@ Triggers a skill description alone would not fire:
 - Docs, RFCs, readmes, PR bodies, commit messages -> `technical-writing`.
 - Long, autonomous, or unattended work -> `show-me-your-work`.
 - Anything settled the next session must respect: a fork the user answered, a design call made after weighing options, an approach abandoned for a named reason -> `decisions`. Record the row, never an ADR or a rules file.
-- Any research finding, from any source (web, local repo, docs) -> store it where the project or user says research goes, e.g. `llm-wiki` into the project `.kb`. No convention stated -> ask. Citing a web page -> `research` stores the source first, never a bare link.
+- Any research finding, from any source (web, local repo, docs) -> store it where the project or user says research goes, e.g. `llm-wiki` into the project `.kb`. No convention stated -> ask. Citing a web page -> store the source with the finding, never a bare link.
 - Interacting with Notion -> `notion-cli`. Keep content rules in the task's
   skill; use the CLI skill for access, commands, and supported uploads.
 - Broken skill mid-task -> fix it in its own change. Do not block. Do not work around it silently.
