@@ -19,7 +19,6 @@ auth.lock
 config.json
 config.toml
 config.yaml
-CLAUDE.md
 settings.json
 opencode.json
 .dotai-manifest
