@@ -1,133 +1,94 @@
 ---
 name: architect
-description: "Settles system structure before any logic is written: types, function signatures, module boundaries, and TODO-stub skeletons that implementation later fills in. Use when non-trivial work would lock in the wrong shape if code came first, for new-system design, refactoring direction, technology evaluation, or architectural trade-off analysis."
+description: "Sketch types, signatures, and module structure before code, then stay in the loop while implementation fills in. Use for /architect, 'architect this', 'design this', or non-trivial work where jumping to code would lock in the wrong shape."
 ---
 
 # Architect
 
-On Codex, the todolist below is `update_plan`; see
-`../poteto-mode/references/codex-tools.md`.
+On Codex, read the [platform mapping](../poteto-mode/references/codex-tools.md), including its per-skill notes, before following this skill.
 
-Design before implementing. Sketch types, function signatures, class shapes,
-and module boundaries with TODO-stub bodies and pseudocode. Synthesize across
-several models, hand the sketch to implementation as the contract, and throw it
-out when implementation proves it wrong.
+Design before implementing. Sketch types, function signatures, class shapes, and module boundaries with `not implemented` bodies and pseudocode. Synthesize across multiple model perspectives, then fill in code against the chosen sketch. If implementation proves the sketch wrong, throw it out and redesign.
 
 ## Start
 
-Open a todolist with one entry per phase before starting. Autonomous mode
-needs the list to show phase position and keep phases from silently vanishing.
+Open a todolist with one entry per phase before starting.
 
 1. Ground
 2. Sketch
 3. Agree
-4. Hand off
+4. Implement
 5. Scrap
 
 ## Phase A: Ground the problem
 
-Build a real mental model of every system the new code touches. Run the `how`
-skill over the relevant subsystems, in critique mode when existing structure is
-the constraint or the design must push back on it. Naming a file is not
-grounding: produce the traced model `how` prescribes. If the design redefines
-ownership or layering, run the `why` skill on the existing shape too, so the
-rationale becomes a constraint instead of a guess. Skip this phase only when
-the work is greenfield with nothing to integrate with.
+Build a real mental model of every system the new code touches. Run the **how** skill over the relevant subsystems.
+
+Naming a file isn't grounding. Produce the traced model `how` prescribes. If the design redefines ownership or layering, also run the **why** skill on the existing shape so the rationale becomes a constraint, not a guess.
+
+Skip Phase A only when the work is genuinely greenfield with no surrounding system to integrate.
 
 ## Phase B: Sketch
 
-Run the `arena` skill with the design-sketch task and the Phase A grounding
-artifacts. Pass `references/runner-prompt.md` as each runner's prompt. Each
-candidate produces a design package shaped per
-`references/rationale-template.md`: the caller's usage first, then the type
-sketch, signatures, module map, and the rationale derived from it. A TODO-stub
-body at every call or change site (`raise NotImplementedError`, `throw new
-Error("not impl")`) marks where logic goes.
+Run the **arena** skill with the design-sketch task and the Phase A grounding artifacts. Pass `references/runner-prompt.md` as each runner's prompt. Each candidate produces a design package shaped per `references/rationale-template.md`.
 
-Use `arena runners` from `plugins/pstack-nikki/models.json` when present;
-row absent -> omit `model`.
+Use your configured architect runners (defaults in [Models](#models)).
 
-Design it twice. Require at least two structurally distinct candidates before
-synthesis, even when the first looks sufficient, per
-`principle-exhaust-the-design-space`. Whole-shape alternatives, not point fixes
-inside one shape. Screen each against
-[`references/design-red-flags.md`](references/design-red-flags.md) first:
-reject or revise shallow modules, information leakage, temporal decomposition,
-and pass-through methods.
+Design it twice. Require at least two structurally distinct candidates before synthesis, even when the first looks sufficient. This is the **exhaust-the-design-space** principle skill made concrete. Whole-shape alternatives, not point fixes inside one shape.
 
-Compare viable candidates on interface depth. Prefer the design that hides more
-complexity behind a smaller public surface. A rich interface keeps call chains
-short by concentrating capability. Arena returns one synthesized package, whose
-synthesis decision fills that section of the rationale.
+Screen every candidate against [`references/design-red-flags.md`](references/design-red-flags.md) before synthesis. Reject or revise shallow modules, information leakage, temporal decomposition, and pass-through methods.
+
+Compare viable candidates on interface depth. Prefer the design that hides more complexity behind a smaller, simpler public surface. A rich interface can keep call chains short by concentrating capability instead of scattering it across layers.
+
+Arena returns one synthesized design package. The synthesis decision populates the rationale's "Synthesis decision" section.
 
 ## Phase C: Agree (opt-in)
 
-Default: proceed to hand-off, no human checkpoint. Opt in when the invoker asks
-("stop and show me before implementing"), then pause for sign-off.
+Default: proceed directly to implementation with the synthesized design. No human checkpoint.
 
-The synthesis ships as its own commit either way. That is the scaffold-first
-mode of `principle-foundational-thinking`, and later commits read as filling in
-bodies against a stable contract. Planned, scoped breakage during fill-in is
-fine, per `principle-outcome-oriented-execution`. For adversarial pressure
-before implementation starts, run `interrogate` on the synthesized sketch. A
-human pushing back on the shape, in a checkpoint or after the fact, is Phase A
-evidence: re-ground and re-run Phase B before any more code.
+Opt in to a checkpoint when the invoker explicitly asks: "/architect with checkpoint," "stop and show me before implementing," or similar. Then surface the synthesized design and pause for sign-off.
 
-## Phase D: Hand off to implementation
+The synthesis can ship as its own commit either way, as the "scaffold first" mode of the **foundational-thinking** principle skill. Planned and scoped breakage during fill-in is fine, per the **outcome-oriented-execution** principle skill. For adversarial pressure on the design before implementing, run the **interrogate** skill on the synthesized sketch.
 
-Running as a spawned `architect` worker, this phase and the Phase C
-`interrogate` belong to your brief's OWNER: commit the sketch, name both steps
-in your report, and stop. The owner then runs them.
+If the human pushes back on the shape (in a checkpoint or after the fact), treat that as Phase A evidence. Re-ground and re-run Phase B before writing more code.
 
-Architect stops at shape. Hand the synthesized sketch to a `developer` subagent
-as the contract: replace TODO-stub bodies with code, pseudocode with logic.
-Never write implementation logic, tests, config files, or deploy scripts
-yourself. Deviations the developer hits are signal worth surfacing, not
-friction to absorb silently. A function needing a parameter the sketch did not
-anticipate means the sketch was wrong, a requirement was missed, or the
-implementation overreaches. Surface it, do not bolt it on.
+## Phase D: Implement against the sketch
+
+Replace `not implemented` bodies with code, pseudocode with logic. The synthesized sketch is the contract.
+
+Deviations from the sketch are signal worth surfacing, not friction to absorb silently. If a function needs a parameter the sketch didn't anticipate, ask whether the sketch was wrong, the requirement was missed, or the implementation is overreaching.
+
+Before closing each implementation unit or handing its contract to the next worker, compare accepted deviations with the saved behavior contracts, interfaces, and responsibility assignments. Once the appropriate owner or review process accepts a change, update the affected parts of the existing sketch and rationale. Record the acceptance source there. A change from raising an error to returning a refusal must update the outcome contract before the next unit begins.
+
+For a local deviation that leaves the shared contract intact, record the decision and why the design still holds; a local variable rename need not rewrite the architecture. Keep unaccepted changes and unresolved disagreements visible. Do not call the unit reconciled while the next worker would receive contradictory instructions, or edit the specification merely to justify what was implemented. Use the existing design artifact rather than a parallel record per unit. Repeated structural deviations still trigger Phase E.
 
 ## Phase E: Scrap when the architecture is wrong
 
-If implementation keeps producing friction the sketch cannot absorb, throw the
-sketch out. Do not bolt fixes onto a wrong design, per
-`principle-redesign-from-first-principles`. Fix the root cause instead. The
-signal is a pattern, not single instances. Tells:
+If implementation keeps producing friction the sketch can't absorb, throw the sketch out. Don't bolt fixes onto a wrong design, per the **redesign-from-first-principles** and **fix-root-causes** principle skills.
+
+The signal is a *pattern*, not single instances. Tells:
 
 - The same shape of workaround appearing repeatedly across unrelated code.
 - Multiple unrelated edge cases that all need special-case branches.
-- Types that need escape hatches (`any`, casts, optional fields always set in
-  practice) to compile.
-- The "we need a lock" reflex when the sketch said the state was not shared.
+- Types that need escape hatches (`any`, casts, optional fields always set in practice) to compile.
+- The "we need a lock" reflex when the sketch said the state wasn't shared.
 - Callers having to know the abstraction's internal rules to use it.
-- Two or more independent Phase D deviations of the same shape. Surfacing
-  deviations is Phase D's job; a repeated pattern of them is Phase E's trigger.
+- Two or more independent Phase D deviations of the same shape across the implementation.
 
-Use judgment. A few edge cases do not condemn an architecture, and complexity
-in the data is not complexity in the design.
+Use judgment. A few edge cases don't condemn an architecture. Some problems are legitimately complex; complexity in the data is not complexity in the design.
 
 When you scrap:
 
-1. Re-run the `how` skill over what has been built. Implementation lessons
-   enter the new design as inputs, not vibes.
-2. Redesign as if the new constraints had been day-one assumptions, per
-   `principle-redesign-from-first-principles`.
-3. Subtract before adding, per the "Subtract first" section of
-   `principle-code-quality`. The new sketch starts smaller than the old one.
-4. Return to Phase B and re-run `arena`.
+1. Re-run the **how** skill over what's been built.
+2. Redesign as if the new constraints had been day-one assumptions, per redesign-from-first-principles.
+3. Subtract before adding, per the **subtract-before-you-add** principle skill. The new sketch should be smaller than the old one before it grows.
+4. Return to Phase B and re-run arena.
 
 ## Outputs
 
-The caller's usage written first, the type sketch derived from it. One file of
-new types and signatures for a small change; a module map plus type definitions
-for larger work. Bodies stay TODO stubs. The rationale ships alongside per
-`references/rationale-template.md`, with the usage sketch and synthesis
-decision.
+The caller's usage is written first and the type sketch derived from it. One file with new types and signatures for small changes; module map plus type definitions for larger work. The rationale ships alongside, shaped per `references/rationale-template.md`, including the usage sketch and the synthesis decision.
 
-<!-- dotai:models:start -->
 ## Models
 
-Stamped from `plugins/pstack-nikki/models.json` (edit there, rerun `generate-models.py`). Row absent -> omit `model`, child inherits. A spawner reads the entry for its own harness.
+Role defaults, stamped from `plugins/pstack/models.json` (edit there, rerun `tools/generate.mjs`). A matching role line in `~/.claude/pstack-models.md` overrides each at runtime; see `/setup-pstack`.
 
-- `arena runners`: On Claude Code: `opus`, `sonnet`. On Codex: `gpt-5.6-sol`, `gpt-5.6-terra`. On Copilot CLI: `claude-opus-5`, `claude-sonnet-5`, `gpt-5.5`.
-<!-- dotai:models:end -->
+- architect runners: `claude-opus-5`, `claude-fable-5-1`, `claude-sonnet-5`

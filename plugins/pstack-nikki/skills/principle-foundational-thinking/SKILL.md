@@ -1,34 +1,21 @@
 ---
 name: principle-foundational-thinking
-description: Use at the very start of a new area, before any logic exists, to fix the core data structure, decide which piece gets built first, and name what two concurrent actors share. Boundary, module interfaces, seams, and domain vocabulary belong to the `principle-code-quality` skill.
+description: "Apply before writing logic: choosing core types and data structures, sequencing scaffold-vs-feature work, asking what concurrent actors share. Get the data structures right so downstream code becomes obvious."
+user-invocable: false
 ---
 
-# Foundational thinking
+# Foundational Thinking
 
-Structural decision protect option value, code-level decision protect
-simplicity. Over-engineering often a premature decision closing doors; right
-foundational data structure keep doors open.
+**Structural decisions** protect option value. **Code-level decisions** protect simplicity.
 
-## Data structures first
+**Data structures first.** Get the data shape right before writing logic. Define core types early, trace every access pattern, and choose structures that match the dominant paths.
 
-Get data shape right BEFORE writing logic. Right shape make downstream code
-obvious. Define core types early. Trace every access pattern; pick structure
-matching dominant paths. Late data-structure change = rewrite, early = often
-one-line diff.
+At code level, DRY the structure, not every line. Types and data models should converge. Three similar statements still beat a premature abstraction. Prefer explicit over clever. Test behavior and edge cases, not line counts.
 
-At code level: DRY the structure, not every line, types and data models
-converge. Three similar statements still beat premature abstraction. Explicit
-over clever. Test behaviour and edge case, not line count.
+**Concurrency corollary.** Before sharing state between actors, ask "what happens if another actor modifies this concurrently?" If not "nothing", isolate.
 
-**Concurrency corollary.** Before sharing state between actors (thread, coroutine, peer, worker process,
-CI job) ask: what happen if another actor modify this concurrently? Answer not
-"nothing" -> isolate.
+**Scaffold first.** If something helps every later phase, do it first. Ask "does every subsequent phase benefit from this existing?" CI, linting, test infrastructure, and shared types are scaffold. Sequence for option value: setup before features, tests before fixes. Keep commits small and single-purpose.
 
-## Scaffold first
+Each increment should land a coherent abstraction or deepen one that exists. Do not spread a new capability across callers as special-case coordination.
 
-Helps every later phase -> do it first. CI, lint, test harness, shared types,
-headless run script are scaffold. Sequence for option value: setup before
-features, tests before fixes. Commits small and single-purpose. Each increment
-land a coherent abstraction or deepen one that exist; do not spread a new
-capability across callers as special-case coordination. Subtraction come before
-scaffolding: remove dead weight first, then lay foundation.
+Subtraction comes before scaffolding: remove dead code first, then lay foundations.

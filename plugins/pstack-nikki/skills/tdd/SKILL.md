@@ -1,72 +1,43 @@
 ---
 name: tdd
-description: "Use before writing or changing any test, when a bug reproduces cheaply against a local seam, and whenever the user asks for TDD, a failing test, or a regression test. Read it before settling that a code change ships without a test: the conditions for skipping the red step, and for preferring no test over a bad one, live here."
+description: "Use only when the user explicitly asks for TDD, a failing test, or a regression test, OR when the bug has an obvious cheap local test target. Skip when the test path is unclear, expensive, integration-heavy, or not requested."
 ---
 
-# Test-driven development
+# TDD Bug Fix
 
-## Rules of the loop
+When fixing a bug with a clear, cheap test path, make the broken behavior executable before changing production code. The goal is a focused regression test that fails before the fix and passes after it.
 
-- **Red before green.** Write the failing test first, run it, confirm it fails
-  for the intended reason, then write only enough code to pass it. Do not
-  anticipate future tests or add speculative features.
-- **One slice at a time.** One seam, one test, one minimal implementation per
-  cycle. Never all tests then all implementation: bulk tests verify *imagined*
-  behaviour, go insensitive to real changes, and lock in test structure before
-  the implementation is understood. Each test is a tracer bullet that responds
-  to what the last cycle taught.
-- **Refactoring is not part of the loop.** It belongs to review
-  (`principle-code-quality` and `interrogate` skills), not the red-green cycle.
-- Do not change a test to match a wrong implementation, and do not weaken an
-  assertion unless the expected behaviour genuinely changed.
+Do not force a test when it would be impractical. If the available test would require broad harness setup, brittle mocks, slow end-to-end infrastructure, production-only state, vague reproduction steps, or large unrelated fixture churn, skip adding a new test and use the closest useful verification instead.
 
-## What a good test is
+## Workflow
 
-Verifies behaviour through the public interface, never implementation details.
-The code can change entirely and the test should not. It reads like a
-specification: "user can checkout with valid cart" names the capability. Test
-names and interface vocabulary follow the project's domain language.
+1. **Understand the bug.** Identify the intended behavior, current behavior, affected path, and smallest observable reproduction.
+2. **Choose the narrowest executable check.** Prefer the closest unit, component, integration, or regression test already used for that codepath. If no practical test path is obvious, do not create one from scratch just to satisfy the workflow.
+3. **Write the failing test first.** Add the smallest focused test that would have caught the bug. The test should encode intended behavior, not mirror the current implementation.
+4. **Run the new test before fixing.** Confirm it fails for the intended reason. Quote the failure content, not the assertion line: an exception, an empty result against a literal, and the predicted mismatch all print red, and only the last one proves the test measures the bug. If it passes or fails for an unrelated reason, correct the test or reproduction before editing the implementation.
+5. **Fix the bug.** Make the smallest production change that satisfies the intended behavior while preserving nearby contracts.
+6. **Rerun the regression test.** Confirm the test now passes.
+7. **Run nearby validation.** Run relevant adjacent tests, type checks, lint, or scenario checks when the change has broader risk.
 
-Expected values come from an independent source of truth: a known-good literal,
-a worked example, the spec.
+## If a Failing Test Is Impractical
 
-## Seams. Where tests go
+Do not silently skip the regression step. Before fixing, explicitly explain why a failing test is impossible or not worth the cost, then choose the closest executable regression check available. Examples include a targeted script, manual reproduction command, browser automation, snapshot comparison, log assertion, or focused integration check.
 
-A **seam** is the public boundary you test at, the interface where behaviour is
-observed without reaching inside. Tests live at seams, never against internals.
+Prefer no new test over a bad test. A bad test is one that mostly tests mocks, encodes current implementation details, depends on timing or unrelated global state, needs expensive infrastructure for a small fix, or would be deleted immediately after proving the fix.
 
-**Name the seams before the first test.** Write the seams under test down and
-proceed on them: confirm with the user when you have a channel to her, name
-them at the top of your report when you do not. A seam you cannot name is a
-seam you do not test at. You cannot test everything; fixing the seams up front
-is how effort lands on critical paths instead of every edge case.
+## Guardrails
 
-Mock at system boundaries only: external APIs, time, randomness, sometimes the
-database or filesystem. Never mock your own modules or internal collaborators.
+- Do not change tests merely to match a wrong implementation.
+- Do not weaken existing assertions unless the expected behavior has genuinely changed and the reason is clear.
+- Keep the regression test focused on the bug; avoid broad fixture churn or unrelated coverage expansion.
+- Do not add tests when the practical signal is weak; use manual or scripted verification and say why.
+- If the bug is flaky, make the test deterministic where possible and document the signal being locked down.
+- If the bug exposes a broader class of failures, first land the focused regression path, then consider additional sibling coverage.
 
-## Anti-patterns
+## Final Response
 
-- **Implementation-coupled.** Mocks internal collaborators, tests private
-  methods, or verifies through a side channel (querying the database instead of
-  using the interface). Tell: the test breaks on refactor with no behaviour
-  change.
-- **Tautological.** The assertion recomputes the expected value the way the
-  code does (`expect(add(a, b)).toBe(a + b)`, a hand-derived snapshot), so it
-  passes by construction and can never disagree with the code.
+Report the evidence, not just the outcome:
 
-## When a failing test is impractical
-
-A change with no executable behaviour (prose, docs, config nothing executes)
-needs no test and no justification. Do not manufacture either.
-
-Do not silently skip the red step. Say WHY first (broad harness setup, brittle
-mocks, slow end-to-end infra, production-only state, vague reproduction steps,
-large unrelated fixture churn), then run the closest executable check instead:
-targeted script, manual reproduction command, browser automation, snapshot
-diff, log assertion, focused integration check. Report which one you used and
-what it showed.
-
-Prefer no new test over a bad test. Bad test = mostly tests mocks, encodes
-current implementation details, depends on timing or unrelated global state,
-needs expensive infrastructure for a small fix, or gets deleted right after
-proving the fix.
+- Name the failing-before test or executable check and quote the failure it produced, trimmed to the diff.
+- Name the passing-after test run and any nearby validation performed.
+- If failing-before evidence could not be demonstrated, state why and describe the closest regression check used instead.

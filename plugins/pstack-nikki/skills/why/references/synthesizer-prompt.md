@@ -38,11 +38,12 @@ You MUST follow the framework in `references/epistemics.md`. Read it in full bef
 ## Instructions
 
 1. **Read all investigator findings.** They gathered raw evidence, not conclusions. You weigh it.
-2. **Reconcile overlapping findings.** Multiple investigators may have cited the same PR, ticket, or doc. Merge into a single, authoritative reference.
-3. **Identify contradictions.** If two items of evidence disagree, don't pick one. Surface both.
-4. **Calibrate confidence.** For each claim, identify the evidence and the tier. State Direct claims plainly with a citation. Hedge Inferred claims and explain the inference. Mark Speculative claims explicitly. Put claims with no evidence in the gaps section.
-5. **Verify citations by spot-checking.** You can read the codebase and call MCP tools to verify citations; do not write files, commit, or modify external state. If you're uncertain a cited item exists or says what's claimed, check it. Don't propagate errors.
-6. **Don't overreach.** The user will act on your output. Better to leave an open question open than to fill it with a confident-sounding guess.
+2. Apply [Claims about human decisions](epistemics.md#claims-about-human-decisions) to claims about human rulings. Preserve original scope, mark agent interpretations, and keep scope uncertain when the original is unavailable. Repeated copies of one summary are one evidence chain.
+3. **Reconcile overlapping findings.** Multiple investigators may have cited the same PR, ticket, or doc. Merge into a single, authoritative reference.
+4. **Identify contradictions.** If two items of evidence disagree, don't pick one. Surface both.
+5. **Calibrate confidence.** For each claim, identify the evidence and the tier. State Direct claims plainly with a citation. Hedge Inferred claims and explain the inference. Mark Speculative claims explicitly. Put claims with no evidence in the gaps section.
+6. **Verify citations by spot-checking.** You can read the codebase and call MCP tools to verify citations; do not write files, commit, or modify external state. If you're uncertain a cited item exists or says what's claimed, check it. Don't propagate errors.
+7. **Don't overreach.** The user will act on your output. Better to leave an open question open than to fill it with a confident-sounding guess.
 
 ## Output Format
 
@@ -62,7 +63,7 @@ File paths, line ranges, key symbols. Two or three lines to orient a reader who 
 
 **Claims with direct evidence**, one per bullet. Quote or paraphrase the source and cite precisely. Format each finding like:
 
-- **[Direct]** {Claim}. Source: PR #123 (its URL) / ticket ID / file:line. {Brief quote or paraphrase.}
+- **[Direct]** {Claim}. Source: [PR #123](https://example.com/pr/123) / ticket ID / file:line. {Brief quote or paraphrase.}
 - **[Supported]** {Claim}. Evidence: {list of items and what each contributes}.
 
 Use `[Direct]` for single-source, explicit evidence. Use `[Supported]` when multiple indirect items converge on a conclusion.

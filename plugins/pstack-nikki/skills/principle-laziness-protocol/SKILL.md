@@ -1,28 +1,18 @@
 ---
 name: principle-laziness-protocol
-description: Use when you pick up a brief describing sprawl, layers, or wrappers, or asking for something to be cut back or deleted, and run the `ponytail` skill on it first. This is the deeper treatment the `ponytail` skill escalates to, never a first-pass substitute for it. Use after ponytail has already been applied and the change still grows layers, wrappers, config options, or parameters threaded through many files, or when the fix is to delete existing code rather than to keep one new diff small. Inventories what can be removed outright and re-sequences the work around subtraction.
+description: "Apply when refactoring, evaluating diff size, or tempted to add abstractions, layers, or signal threading. Bias toward deletion and the smallest change that solves the problem."
+user-invocable: false
 ---
 
-# Laziness protocol
+# Laziness Protocol
 
-Writing code cheap for model, so over-engineering easy. Borrow human maintainer
-fatigue. Most result, least code and complexity.
+Aim for the most result with the least code and complexity.
 
-- **Prefer deletion.** Refactor or improve request -> hunt removals before
-  additions.
-- **Flat call hierarchy.** Answering one question needs tracing >3 files or
-  layers -> flatten. Rich interface hiding real work is NOT deep chain.
-- **Consolidate decisions.** Same choice repeated in several places -> one
-  source of truth, pass result as simple flag.
-- **Minimize diff.** Smallest change solving problem. Fewer lines beat
-  "elegant" boilerplate.
-- **Question threading.** Task say "pass new flag through types, schema,
-  autoload, render graph, pipeline stage" -> stop, find direct path.
-- **Sweat small leaks.** Tiny pass-throughs, representation leaks, duplicated
-  choices compound into permanent coordination cost.
-- **Refuse one-off structure.** Abstraction with one implementation -> inline
-  it. Config option nobody asked for -> named constant. Templating layer over a
-  file used exactly once -> literal file.
+- **Prefer deletion.** When asked to refactor or improve, look for removals before additions.
+- **Maintain a flat call hierarchy.** Avoid deep call chains. A rich interface that hides substantial work is not a deep call chain. If answering a question requires tracing through more than 3 files or layers, flatten it.
+- **Consolidate decisions.** Do not repeat the same choice in several places. Put it behind one source of truth and pass the result as a simple flag.
+- **Minimize the diff.** Make the smallest change that solves the problem. Fewer lines beat "elegant" boilerplate.
+- **Question the threading.** If a task asks you to pass a new signal through types, schemas, pipelines, or similar layers, stop and look for a more direct path.
+- **Sweat the small leaks.** Remove tiny pass-throughs, representation leaks, and duplicated choices before they spread. Small leaks compound into permanent coordination costs.
 
-**Prime directive:** human dev would find code exhausting to maintain -> bad
-solution. Be lazy. Stay simple.
+**The test:** If a human developer would find the code exhausting to maintain, it is a bad solution.

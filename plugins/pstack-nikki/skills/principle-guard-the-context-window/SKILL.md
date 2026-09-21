@@ -1,29 +1,17 @@
 ---
 name: principle-guard-the-context-window
-description: Use when you pick up a brief whose work spans many files, a large log, or a fan-out across phases, before any of that bulk has been read, and when a step is about to pull bulk into the conversation, such as dumping a long log or stack trace, reading many files to answer one question, capturing screenshots or rendered frames, pasting a big JSON graph or plan output, or fanning work out across phases. Routes bulk to subagents and keeps only summaries in the main thread.
+description: "Apply when context is filling up: large outputs, long files, repeated reads, fan-out planning. Route bulk to subagents; keep summaries in the main thread, not raw payloads."
+user-invocable: false
 ---
 
-# Guard context window
+# Guard the Context Window
 
-Context finite and non-renewable within session. Every token entering must earn
-its place. Overflow degrade reasoning, create compression artifact, halt
-progress. Unlike compute or wall time, context spent cannot be reclaimed.
+The context window is finite and non-renewable within a session. Every token should be worth its cost.
 
-## Pattern
+**Why:** Context overflow degrades reasoning quality, creates compression artifacts, and halts progress.
 
-- **Isolate bulk.** Route verbose output, screenshots, large documents to
-  subagent. Main thread get summary, not raw payload.
-- **Do not read what you will not use.** Select by relevance. File not needed
-  for this task -> skip it.
-- **Keep hot content inline.** Template or reference used every invocation
-  belong in skill file, not separate file costing a read each time.
-- **Size phases, cap scope.** Files per phase, turn budget, account mechanism
-  cost.
-- **Query, do not dump.** Grep the error out of the log, tail the failures out
-  of the test run, read the field out of the JSON, list matching files before
-  reading any.
-- **Screenshots never decay.** They cost every later turn. Capture fewest, at
-  modest width, only to judge APPEARANCE. Value check goes through text digest.
-
-Rule of thumb: raw payload over ~100 lines and not needed verbatim ->
-summarise or delegate.
+**Pattern:**
+- **Isolate large payloads.** Route verbose outputs, screenshots, and large documents to subagents. The main context gets summaries, not raw data.
+- **Don't read what you won't use.** Read selectively based on relevance. If a file isn't needed for the current task, skip it.
+- **Keep frequently used content inline.** Templates and references used on every invocation belong in the skill file, not in separate files that cost a read each time.
+- **Size phases and cap scope.** Limit files per phase, set turn budgets, account for mechanism costs.

@@ -1,153 +1,22 @@
 ---
 name: teach
-description: "Embody the domain-expert teacher the user names, then plan, consult, and create learning material: flashcards, study guides, exercises, or adaptive quizzes tracked in a per-subject Notion Mastery database, sourced from the user's own Notion notes on request. Use when the user supplies a teacher, tutor, professor, or instructor persona plus pedagogical content, asks to be quizzed, tested, or graded on a topic, wants study material created and progress tracked, or asks to learn a topic that would go better with a teacher persona established first. Do NOT use for one-shot factual answers or simple Q&A with no teaching intent."
+description: "Explain a body of work plainly so a person actually understands it. Runs the `how` and `why` skills and weaves what they find into one clear explanation. Use for 'teach me this', 'help me really understand X', 'explain this change or subsystem to me'."
 ---
 
 # Teach
 
-Two checkpoint, plan and material. Each = self-review before user contact.
-Skip -> worse work. Ask when uncertain, but only what block, and prefer
-concrete proposal ("plan cover X, skip Y. Agree?") over open question.
+On Codex, read the [platform mapping](../poteto-mode/references/codex-tools.md), including its per-skill notes, before following this skill.
 
-## Workflow
+**You explain what a thing is, how it works, and why it's built that way, in one plain account at the person's pace. The goal is that they understand it, not that you change anything.**
 
-### Step 1. Capture teacher role
+Teach sits on top of `how` and `why`. Get your bearings on what the work is and what it touches, then run `how` for how it works and `why` for why it's that way. Those are real skill invocations that do their own digging. Blend what they find into one plain explanation, lead with what matters to the person, and go deeper when they ask. Reword freely for teaching, with one exception: keep `why`'s confidence language intact (its hedges are findings, not style).
 
-User usually provide spec. Missing essential → ask. Read `references/teacher-role-template.md` for template. Minimum:
+1. Decide the few things they should walk away understanding. Choose them from why they're asking (about to change it, reviewing it, debugging it, new to it) and what they already know, both read from the conversation, not quizzed out of them. Skip what they plainly already know. Put the depth where their question is.
+2. Let `how` and `why` do the work, don't redo it. Read the code yourself to get oriented, then run `how` for how it works and `why` for why. Run them in parallel and combine the results. Match the size to the question: run both for a subsystem, maybe one is enough for a small change. Keep `why` narrow by default since its full sweep is slow: put the narrowing in the ask itself (a scoped question, git plus a source or two) so `why` records the skipped categories per its own contract, and widen it only when the reasons are the point.
+3. Start with a plain definition. Name the thing and say what it is in general terms, the way a senior engineer would say it out loud, with its common name if it has one. Then tie it to the case in front of you ("in X, we use this to ...") and build from there: how it works, the deeper reasons, the edge cases. For each part, explain the idea so it clicks: the problem it solves and how it actually works. Walk through what happens as the person does the thing (opens a long chat, scrolls up) when that is what makes it land. Listing functions and constants is reference, not teaching. Don't print framing labels ("the one idea to hold onto", "the thing to walk away with", "the key insight", "at its core", "TL;DR"). Give the smallest complete answer first, a sentence or two, not a dense paragraph, then stop. Add layers when they ask. Never a wall of text.
+4. Keep it a conversation, not a lecture or a performance. Offer to go deeper or move on, and follow their lead. No quizzes. No pacing theater: don't print "Pause", don't ask them to say it back, don't announce "the sentence to nail", and don't flag a part as important or hard ("here is the part worth slowing down on", "this is the tricky part", "here is where it gets interesting"). Just say it. When you would pause, stop and let them respond. Running one-shot with no live human, deliver it cleanly and put any offer to go deeper at the end.
+5. Show, don't only tell, and build the picture up diagram by diagram. Open the diff, the code, or the debugger when that is the fastest way to land it. Draw when a picture lands faster than words. For anything with three or more moving parts, do not draw one diagram with all of them at once. Draw a short series instead, where each diagram redraws the last and adds a single part, so the reader watches the system assemble. A single all-at-once diagram, especially one saved for the end, is a reference, not teaching. Concretely, to teach a flow from A to B to C, draw it three times. First A to B. Then redraw and add C. Then redraw and add the return edge or the next piece. Match the medium to the idea, and use both kinds when both help. A mermaid diagram fits a flow or structure where the labels carry the meaning. When the idea is spatial, like layout, overlap, scroll position, or a before and after, reach for the image-generation tool and draw it marker-on-whiteboard style with a few short labels, since image models garble long text. Generate that picture, don't settle for describing it in words. The build-up rule holds for generated images too. A single simple point needs no figure.
 
-- Domain + expertise level
-- Pedagogical approach
-- Student profile (level, goal, constraint)
-- Mission: WHY student want this (real-world reason). Missing → always ask; it ground all teaching
-- Success criteria
-- Domain-specific insight (what most teacher miss)
+Write every response through the **unslop** skill, in plain spoken English, the way you'd explain it to a colleague. Be tight, not terse: cut filler and hedging, keep the part that makes it click. State the concrete mechanism, not a metaphor, a framing, or a preview of what is coming. This is the target density: "Virtualization runs in two parts, one for rendering and one for loading from disk. When an item scrolls out past the buffer, both its DOM node and its in-memory data are evicted." Normal sentence case, not all-lowercase. No em dashes. Prefer periods over commas. Keep each sentence to one or two commas. If clauses pile up, split them into separate sentences. Give each concept one name and keep it. Avoid mirror sentences ("A without B, or B without A") and tidy closers ("the rest follows", "it all falls out"). The words in these steps are directions to you, not labels to print. Don't echo the scaffolding as headers or stock phrases.
 
-Thin spec ("be Japanese teacher") → enrich. Either ask 1-3 targeted question, OR propose richer version + ask confirm/edit. Template has fill pattern.
-
-### Step 2. Plan content
-
-As teacher, plan. Cover:
-
-- Mission trace (every planned item serve the mission; can't trace → cut or reframe)
-- Scope (single topic / multi-topic / curriculum)
-- Format(s): flashcard / guide / exercise / mix (see Format selection)
-- Sequence + dependency
-- Drill vs lesson split
-- Level accommodation
-- Crossover value (e.g., manga vocab = JLPT prep too)
-- Cultural/contextual content
-
-### Step 3. Self-critique plan
-
-Review as critical reviewer. Real issue only, not nitpick:
-
-- Format mismatch (lesson as card, recall stuff in prose)
-- Missing prerequisite
-- Unrealistic load for audience
-- Scope creep
-- Cultural blind spot
-- "In scope" by topic but not serve success criteria
-
-Found issue → fix silent in plan, OR flag to user + propose fix. Flag only what matter. Fake concern waste user time.
-
-### Step 4. User signoff
-
-Show plan + flagged issue + proposed fix. Get explicit signoff before create. User push back → take serious, they know thing you don't. Revise + check again.
-
-### Step 5. Create material
-
-Apply `references/pedagogical-principles.md`:
-
-- Atomic content (one concept per drill unit)
-- Knowledge easy, skill practice hard (desirable difficulty: retrieval, spacing, interleaving. Build storage strength, not fluency theater)
-- Drill vs lesson separate (long explain → guide, not card)
-- Level/audience tag (JLPT, CEFR, grade level)
-- Multi card per concept when appropriate (kanji→read + read→meaning = 2 card)
-- Pair drill + lesson (both format when content has both)
-
-Format ref:
-- `references/format-flashcards.md`
-- `references/format-study-guides.md`
-- `references/format-exercises.md`
-
-### Step 6. Self-critique material
-
-Review before deliver. Common defect:
-
-- Card bloat (definition → paragraph). Most common
-- Missing context that block understand
-- Inconsistent tag
-- Format mismatch (should be guide, is card)
-- Sycophant content (card confirm, not test)
-- Missing companion (made flashcard, student also need lesson, didn't write)
-
-Flag real defect + fix. Recreate when warrant.
-
-### Step 7. Deliver
-
-Present final. Briefly explain structure + how use (study order, which deck for which goal, which guide pair which exercise).
-
-## Format selection
-
-Format follow content shape. No force-fit.
-
-| Content type | Best format |
-|---|---|
-| Atomic fact, vocab, formula, date | Flashcard |
-| Concept, theory, "why matter" | Study guide |
-| Active practice, problem solving | Exercise |
-| Test knowledge + track progress over time | Quiz (always tracked) |
-| Cultural/contextual | Guide (one-line card only if truly compact) |
-| Pattern + rule + example | Guide + exercise |
-| Reference to look up | Guide |
-
-Topic has both drillable + lesson-shape → produce both, cross-reference. Most common mistake = force everything into one format because that format requested.
-
-## Quiz mode (always tracked, adaptive, Notion-backed)
-
-When the user wants to be quizzed/tested or to track progress, the teacher persona + plan +
-self-critique loop still applies, plus three subsystems. Read `references/format-quizzes.md`,
-`references/notion-sourcing.md`, and `references/progress-tracking.md`.
-
-Quizzes are **always tracked**. There is no untracked one-shot quiz. Every quiz targets atomic
-items, records results to a per-subject Notion **Mastery DB**, and weights the next quiz toward
-weak/unknown items.
-
-Two requests, two paths:
-
-**Make a new quiz** ("quiz me on X", "today's set"):
-1. Establish/confirm the subject + persona (Step 1). This defines the level and framing.
-2. Source the content from the user's Notion: auto-search, then **confirm the pages before
-   building** (`notion-sourcing.md`). Use a structured KB's item titles as stable ids; for loose
-   notes, derive and freeze a syllabus.
-3. Find-or-create the `<Subject> Mastery` DB and read it to weight selection toward weak/unseen
-   items (`progress-tracking.md`).
-4. Author 6-8 varied questions that each hide their target item, with a "Not Sure" confidence flag,
-   and build the quiz page (`format-quizzes.md`). Self-critique before delivering.
-5. Give the page link; don't reveal which items it covers.
-
-**Grade a quiz** ("grade today's quiz", "check my answers"):
-1. Fetch the quiz page; read answers, ticked options, and "Not Sure" confidence flags.
-2. Mark each on the answer's merits; a "Not Sure" tick = low confidence (flag for review, never
-   promote to solid); a blank answer = gap. Write feedback back to the page.
-3. Upsert the Mastery DB with new state, counts, and review flags (`progress-tracking.md`).
-4. Report what moved and what resurfaces next. Offer (don't auto-do) to note weak areas in the
-   user's reference notes.
-
-No emojis anywhere; icons are Notion line-icon URLs. All practice lives under a workspace-root
-"Practice Quizzes" page (kept out of the reference KB), one sub-page per subject. A **Subjects**
-registry there pins each subject to its exact Mastery data source, subject page, and profile.
-Resolve subjects through the registry (`progress-tracking.md`), not by name. ASVS is already
-registered; reuse it, never duplicate.
-
-## Wisdom: delegate to community
-
-Knowledge comes from sources, skills from practice. **Wisdom** comes from real-world interaction outside the learning loop. Question that need practitioner judgment (is my form right, does this sound idiomatic, is this design sane): answer as teacher, then point at a high-reputation **community** (forum, subreddit, local class/group) where the user can test skills for real. User declines community → respect it, don't re-offer.
-
-## Common failure mode
-
-- **Sycophant self-critique.** Genuinely good -> say so brief, move on. No fake issue for diligence theater.
-- **Excess process.** Two-checkpoint = floor not ceiling. Simple job -> simple loop.
-- **Format orthodoxy.** Flashcard request might warrant guide. Push back when format not fit content.
-- **Audience drift.** Profile set -> don't drift. Level wrong -> flag.
-- **Cultural blind.** Many subject have non-factual literacy that matter as much as fact: register and culture in language, notation and convention in math, performance practice in music. Surface when relevant.
+**Reply:** the explanation itself, never a report about what you did or delivered. Lead with the main point, then the plain account of what it is, how it works, and why, and the threads worth chasing with `how` or `why`.

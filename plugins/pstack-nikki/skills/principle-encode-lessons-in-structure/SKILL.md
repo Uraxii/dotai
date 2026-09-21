@@ -1,42 +1,31 @@
 ---
 name: principle-encode-lessons-in-structure
-description: Use when you pick up a brief that reports recurrence ("this keeps happening", "third time we have fixed this", "stop this class of bug coming back"), and when a brief asks you to fix many instances of one bug class. Recurrence is the trigger. Use on the SECOND occurrence of a lesson, when the human corrects the same thing twice, when about to write an instruction already written elsewhere, or when a class of bug returns after being fixed one instance at a time. Never fires on a first-time rule or on any single comment. Converts the repeated correction into a mechanism (type, lint rule, CI check, canonical helper, runtime assert, script) and deletes the prose.
+description: "Apply when you catch yourself writing the same instruction a second time, or notice a recurring correction. Encode the rule as a lint, metadata flag, runtime check, or script instead of more text."
+user-invocable: false
 ---
 
-# Encode lessons in structure
+# Encode Lessons in Structure
 
-Recurring fix belong in mechanism, not in more text. Text instruction easy to
-miss: need reader notice, remember, comply. Mechanism enforce without
-cooperation.
+Encode recurring fixes in mechanisms (tools, code, metadata, automation) instead of textual instructions. Every error, human correction, and unexpected outcome is a learning signal. Capture it, route it, and close the loop.
 
-## Pattern
+**Why:** Textual instructions are easy to miss. They require the reader to notice, remember, and comply. Structural mechanisms (lint rules, metadata flags, runtime checks, automation scripts) enforce the rule without cooperation.
 
-Catch self writing same instruction second time:
+**Pattern:**
+When you catch yourself writing the same instruction a second time:
+1. Ask: can this be a lint rule, a metadata flag, a runtime check, or a script?
+2. If yes, encode it. Delete the instruction
+3. If no (requires judgment), make the instruction more prominent and add an example of the failure mode
 
-1. Ask: type, lint rule, CI check, helper, runtime assert, or script?
-2. Yes -> encode it, delete the instruction.
-3. No, real judgement -> make instruction prominent, add failure-mode example.
+**Pick the strongest mechanism.** When more than one mechanism would work, choose the strongest the situation allows (an unrepresentable state that cannot compile, then a lint or banned API that fails CI, then a canonical helper, then a runtime check), because agents copy whatever the surrounding code already does and a weaker guard becomes the next template.
 
-## Pick strongest rung
+**Corollary:** If the fix is structural, only use the structural fix. The instruction is the symptom.
 
-Strongest the situation allow, best first: unrepresentable state (type or
-schema make bad value impossible) > fails CI (lint, banned symbol, schema
-validation, import test) > canonical helper (wrong path stop existing) >
-runtime assert at boundary > prose, last resort. Agents copy whatever
-surrounding code already do, so weaker guard become next template. Fix is
-structural -> use ONLY the structural fix. The instruction IS the symptom.
+**Feedback loop:**
+- **Capture every correction.** When the human intervenes or tests fail, decide if it's a one-off or a pattern.
+- **Route to the right layer.** One-off -> brain note. Recurring fix -> skill or lint rule. Systemic issue -> principle.
+- **Close the loop.** Don't just record. Apply now or create a concrete todo.
 
-## Anti-patterns
-
-- Acknowledge without recording. "I will keep that in mind" does not persist.
-- Record without routing. Note about a lint rule that should exist is wasted
-  until the rule exist.
-- Fix without generalising. One instance patched, pattern left alive.
-
-## Procedure
-
-Lesson from the session just finished, or the human corrected the same thing
-twice in a transcript -> run `reflect`. It reviews the transcript and routes
-each learning to an edit on an existing skill, the strongest rung that fits.
-A skill edit is the mechanism for agents; a type, lint, or CI rule is the
-mechanism for code.
+**Anti-patterns:**
+- Acknowledging without recording ("I'll keep that in mind" does not persist)
+- Recording without routing (a brain note about a lint rule that should exist is wasted unless the lint rule gets implemented)
+- Fixing without generalizing (fixing one instance while leaving the recurring pattern intact)

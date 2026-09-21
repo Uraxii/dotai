@@ -1,33 +1,22 @@
 ---
 name: principle-outcome-oriented-execution
-description: Use during a planned rewrite, port, or migration with explicit phases, when tempted to add shims, adapters, dual code paths, or flags purely to keep every intermediate commit green. Converges on the target architecture and proves correctness at phase boundaries instead of at every step.
+description: "Apply during planned rewrites and migrations with explicit phase boundaries. Converge on the target architecture; don't preserve smooth intermediate states with throwaway compatibility code."
+user-invocable: false
 ---
 
-# Outcome-oriented execution
+# Outcome-Oriented Execution
 
-Optimise for the intended, verifiable END state. Not for smooth intermediate
-states.
+Optimize for the intended, verifiable end state rather than preserving smooth intermediate states.
 
-**Why:** keeping every step fully stable breed temporary compatibility code:
-shim, adapter, dual code path, flag nobody ever remove. Temporary become
-long-lived debt. Converge on target architecture, prove correctness at explicit
-verification boundary.
+**Why:** Keeping every intermediate step fully stable often creates temporary compatibility code that becomes long-lived debt. Converge on the target architecture and prove correctness at explicit verification boundaries.
 
-## Core rule
+**Core rule:**
+- Prioritize end-state integrity over transitional stability
+- Intermediate breakage is acceptable when it is planned, scoped, and reversible
+- Always run final verification before declaring done
 
-- End-state integrity beat transitional stability.
-- Intermediate breakage acceptable when planned, scoped, reversible.
-- Full verification before declaring done. Always.
-
-## Guardrails
-
-- Only for planned rewrite or migration with explicit phase boundary. Not for
-  ordinary feature work on a live system.
-- Declare up front WHERE breakage is acceptable and for how long. Write it in
-  the plan.
-- Keep high-signal checks running on the area being touched while migrating.
-- Require full static and runtime verification at plan completion.
-- "Reversible" must be real: branch, backup, exported original asset, infra
-  state snapshot. No safety net -> not this principle, go incremental.
-- Cut over once and delete the old path in the same phase. Not both stacks live
-  "just in case".
+**Guardrails:**
+- Use this for planned rewrites and migrations with explicit phase boundaries
+- Declare where temporary breakage is acceptable
+- Keep high-signal checks for actively touched areas while migrating
+- Require full static and runtime verification at plan completion

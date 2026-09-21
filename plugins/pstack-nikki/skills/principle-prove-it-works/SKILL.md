@@ -1,50 +1,37 @@
 ---
 name: principle-prove-it-works
-description: Use as soon as you pick up a brief carrying a VERIFY step or acceptance criteria, since finishing it will mean proving it, and again right before declaring a task done or reporting success, and when checking work a delegate says it finished. Requires observing the real artifact (run the scene, render the image, hit the endpoint, read the diff) instead of trusting a green build, a file timestamp, or an agent's own summary.
+description: "Apply after completing a task, before declaring done. Verify against the real artifact (run the feature, read the actual value, inspect the diff), not a proxy, self-report, or 'it compiles.'"
+user-invocable: false
 ---
 
-# Prove it works
+# Prove It Works
 
-Verify every output against real thing. No proxy, no self-report, no
-"it compiles". Unverified work has unknown correctness. Indirect check (mtime,
-cached screenshot, one log line, agent summary) feel cheaper than direct
-observation; acting on wrong inference cost far more.
+Verify every task output by checking the real thing directly. Do not infer from proxies, self-reports, or "it compiles."
 
-After every task ask: how do I prove this actually work?
+**Why:** Unverified work has unknown correctness. Indirect verification (file mtimes, output freshness, agent self-reports, cached screenshots) feels cheaper than direct observation. Acting on a wrong inference costs far more than checking the source.
 
-- Process alive -> query process, not derived state file.
-- Value correct -> read actual value at runtime, not cached or derived copy.
-- Verification fail -> suspect observation method BEFORE suspecting system.
-- Diagnosis is an output too. Read the system's own log and source before
-  theorising from config plus plausible mechanism; the system usually names
-  its refusal.
+**Pattern:** After completing any task, ask: "how do I prove this actually works?"
 
-## Full chain
+Check the real thing, not a proxy:
+- Check process liveness directly, not indirectly through derived state
+- Read the actual value, not a cached or derived representation
+- When verification fails, suspect the observation method before suspecting the system
 
-Build (necessary, never sufficient), then exercise the real path as the
-consumer would, from outside the thing, and follow the chain input -> output
-with no gap trusted.
+Code and features:
+1. Build it (necessary but not sufficient)
+2. Run it and exercise the actual feature path
+3. Check the full chain: does data flow from input to output?
+4. For integrations, test the full communication path end-to-end
 
-**Delegation.** Trust artifacts, not reports. Inspect diff, file content, runtime behaviour.
-Agent report what it INTENDED, not always what happened.
+Verify the process as well as the outcome. A correct result can rest on a broken process, and a review that checks results passes it: a clause reconstructed from the user's paste instead of the durable record, a constraint honored by chance from a file never read. For each fact you relied on, name the record it came from and confirm that record is the one the project's rules point at.
 
-## Watch the check fail
+Red is a colour, not a measurement. A failing check proves the instrument only when the failure content is the disagreement you predicted. An exception, an empty collection against a non-empty literal, and a real mismatch all print red, so quote the assertion's diff (`Extra items in the right set`), never the assertion (`assert {...} == {...}`). A convergence probe keys on behavior only the new artifact can produce, never an identity field the old one also emits; a same-SHA restart lets old code report the new commit SHA.
 
-Guard never seen failing prove nothing. Before trusting any check (lint,
-verify script, monitoring probe, CI gate, review pass), feed it one
-known-bad input and watch it go red. Only then trust its green.
+Delegation: trust artifacts, not self-reports.
+When verifying delegated work, inspect the actual output artifact (git diff, file contents, runtime behavior), not the delegate's summary.
 
-- New or changed guard -> negative control first: the EICAR file, the
-  planted syntax error, the downed target, the rejected API response.
-- Reviewing a diff -> run the linter on it. Eyeball catch style, not defect.
-  No linter cover the defect class -> that gap is itself a finding.
-- Check that cannot fail is worse than no check: it manufacture confidence
-  and schedule its own discovery for the outage.
+## Script the check when you can
 
-## Script the check
+The strongest proof is a deterministic script that re-runs the same comparison, not a one-time eyeball. Write the script, run it, and keep its output as an artifact a reviewer can re-run instead of trusting your word.
 
-Strongest proof = deterministic script re-running same comparison, not one-time
-eyeball. Write script, run it, keep output as artifact reviewer can rerun.
-Script diffing old vs new output catch what glance miss. Keep artifact visible
-to human; commit only when trail must stay auditable later, like big port or
-migration.
+Keep the artifact visible for the human. Commit it only for large or complex work where the trail has to be auditable later, like a big port or migration (the **show-me-your-work** skill).

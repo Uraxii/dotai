@@ -1,24 +1,15 @@
 ---
 name: interrogate
-description: "Multiple LLM reviewers challenge changes from independent angles. Use before any PR is opened or integrated (run by the change's owner, never by a worker on its own unit), on any contested design decision, or for \"interrogate\", \"adversarial review\", \"multi-model review\", \"challenge this\", \"stress test this code\", \"find blind spots\", or \"tear this apart\"."
+description: "Use for \"interrogate\", \"adversarial review\", \"multi-model review\", \"challenge this\", \"stress test this code\", \"find blind spots\", or \"tear this apart\". Multiple LLM reviewers challenge changes from independent angles."
 ---
 
 # Interrogate
 
-On Codex, spawning a reviewer is `spawn_agent`; see
-`../poteto-mode/references/codex-tools.md`.
+On Codex, read the [platform mapping](../poteto-mode/references/codex-tools.md), including its per-skill notes, before following this skill.
 
-Spawn one reviewer per configured model to adversarially review code changes. Each model gets the same prompt and rubric. The adversarial signal comes from model diversity, not assigned personas. Models differ in blind spots, priors, and reasoning patterns. Agreement across models is high-confidence signal; lone-model findings are worth reading but lower confidence.
+Spawn one reviewer per configured model to adversarially review code changes. Each model gets the same prompt and rubric. The adversarial signal comes from model diversity, not assigned personas.
 
 The deliverable is a synthesized verdict. Do NOT auto-apply changes.
-
-Owner only. The main thread or the `orchestrator` that owns the change runs
-this. A worker (`developer`, `developer-codex`, `tester`, and the rest) never
-runs it on its own unit; it reports, and its owner runs it.
-
-Block only on material risk or missing evidence, never on preference. Check
-scope alongside correctness: scope creep, missing acceptance criteria, or
-architecture drift are findings in their own right, not just bugs.
 
 ## Step 1, Determine Scope
 
@@ -32,25 +23,31 @@ Package the diff (or file contents) plus any surrounding context files the revie
 
 ## Step 2, State the Intent
 
-Before spawning reviewers, state the intent explicitly. What is this code trying to accomplish? Derive this from:
+Before spawning reviewers, state the intent explicitly. Derive this from:
 
 - The user's message
 - Commit messages
 - PR description if one exists
 - The code itself
 
-Write one clear paragraph. Reviewers challenge whether the work achieves the intent well, not whether the intent itself is correct. If you're unsure about the intent, ask the user before proceeding.
+Write one clear paragraph. If you're unsure about the intent, ask the user before proceeding.
 
 ## Step 3, Spawn Reviewers
 
-Spawn every reviewer at once, one `reviewer` per entry in the `interrogate
-reviewers` row of `plugins/pstack-nikki/models.json`. Label them Reviewer
-A, B, C... in row order. Row absent -> two reviewers, `opus` and `sonnet`.
+Launch all reviewers in a single message using the `Agent` tool. Use the `interrogate reviewers` list from `~/.claude/pstack-models.md` when present, one reviewer per entry, extending or shrinking the Reviewer A/B/C/D labels below to the configured entry count; otherwise use the table defaults.
 
-Each brief:
-- pins `model` to its entry (entry `inherit` -> omit `model`)
-- FORBIDDEN: no writes, no commits, inspection commands only
-- carries the same filled template, so every model applies the same lens
+| Subagent | Default model |
+|----------|---------------|
+| Reviewer A | `claude-opus-5` |
+| Reviewer B | `claude-fable-5-1` |
+| Reviewer C | `claude-sonnet-5` |
+
+For each reviewer:
+- `subagent_type`: `general-purpose`
+- `model`: the configured `interrogate reviewers` entry, or the table default with no configured line
+- `readonly`: `true`
+
+If a model slug is rejected as unresolvable when you try to spawn the subagent, check the valid slugs in the Agent tool's error message, pick the closest equivalent (prefer the highest-reasoning tier of the same family), spawn with the valid slug, and open a separate PR to update the configured value or default table. Do not block the review on the slug issue. If the configured value is `inherit-parent` or `auto`, omit `model` instead; never treat those aliases as broken slugs or enter this fallback for them.
 
 Read `references/reviewer-prompt.md` and fill in the template with:
 1. The stated intent
@@ -59,8 +56,6 @@ Read `references/reviewer-prompt.md` and fill in the template with:
 4. The code-quality lens from `references/code-quality-review.md`
 
 The same filled template goes to all reviewers, so every model applies the code-quality lens.
-
-Each reviewer produces structured findings as described in the prompt template.
 
 ## Step 4, Synthesize
 
@@ -76,11 +71,19 @@ As results come back, build a unified picture:
 
 You are the lead reviewer, a pragmatic senior engineer, not a neutral aggregator.
 
-Read `references/lead-judgment.md` for the full framework. Reviewers only see a slice of the codebase. You have the full context (the goal, the constraints, the timeline, which tradeoffs were already considered). Use that context aggressively.
+Read `references/lead-judgment.md` for the full framework.
 
-Sort every finding into one of the four buckets defined in Output Format below.
-For each, record which model(s) raised it and a one-line rationale for the
-categorization.
+Categorize every finding using these buckets:
+
+- **Act on**. Real issues affecting correctness, security, or maintainability given the actual goals. These would block a real PR.
+- **Consider**. Legitimate points, but you're not sure they outweigh the cost of addressing them right now. Worth the user's attention.
+- **Noted**. Technically valid but not actionable. Context-dependent, premature optimization, or low-impact given the current stage.
+- **Dismissed**. Wrong, nitpicky, or missing context. Brief explanation why.
+
+For each finding, include:
+- Which model(s) raised it
+- The category (act on / consider / noted / dismissed)
+- A one-line rationale for the categorization
 
 ## Output Format
 
@@ -93,24 +96,16 @@ Present the verdict in this structure:
 - Reviewer [label]: [model name], [N findings] (one bullet per reviewer)
 
 ### Act On
-[Real issues in correctness, security, or maintainability given the actual goals: these would block a real PR. Each: description, which models raised it, why it matters.]
+[Findings that should be addressed. For each: description, which models raised it, why it matters.]
 
 ### Consider
-[Legitimate, but you are unsure the fix outweighs its cost right now. Each: description, which models raised it, the tradeoff.]
+[Findings worth thinking about. For each: description, which models raised it, tradeoff involved.]
 
 ### Noted
-[Technically valid, not actionable: context-dependent, premature optimization, or low-impact at this stage. Brief list.]
+[Valid but low-priority. Brief list.]
 
 ### Dismissed
-[Wrong, nitpicky, or missing context. Brief rationale each, so the user can override your judgment if they disagree.]
+[Rejected findings with brief rationale.]
 
 ### Agreement Map
 [Where did models agree, where did they diverge, and what does the pattern of agreement/disagreement tell us?]
-
-<!-- dotai:models:start -->
-## Models
-
-Stamped from `plugins/pstack-nikki/models.json` (edit there, rerun `generate-models.py`). Row absent -> omit `model`, child inherits. A spawner reads the entry for its own harness.
-
-- `interrogate reviewers`: On Claude Code: `opus`, `sonnet`. On Codex: `gpt-5.6-sol`, `gpt-5.6-terra`. On Copilot CLI: `claude-opus-5`, `gpt-5.5`, `claude-sonnet-5`.
-<!-- dotai:models:end -->

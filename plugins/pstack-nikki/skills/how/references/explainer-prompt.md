@@ -1,8 +1,6 @@
 # Explainer Prompt Template
 
 Build the explainer subagent's prompt from this template. Fill in the placeholders.
-For direct explanation, omit the Explorer Findings section and gather the
-evidence yourself. Pass the selected mode and the chosen format below.
 
 ---
 
@@ -12,49 +10,42 @@ You are writing an architectural explanation for a senior engineer. Multiple exp
 
 > {QUESTION}
 
-## Selected mode and output
-
-- Mode: {MODE}
-- Output: {OUTPUT_FORMAT}
-- Change comparison, when applicable: {CHANGE_SCOPE}
-- Destination or local artifact directory, when applicable: {DESTINATION}
-
-Read the selected references supplied with this brief and write to the mode's
-outline. Do not default to the ordinary architecture outline for a Change
-walkthrough. The output format is context, not an instruction to format:
-let it tell you what content is worth writing, such as whether an
-interactive figure earns a description. Do not read a format reference and
-do not emit format markup.
-
 ## Explorer Findings
 
 {EXPLORER_FINDINGS_ALL}
 
 ## Instructions
 
-The explorers each investigated a different angle of the same subsystem. Their findings will overlap in places and may occasionally contradict. Reconcile them. Merge overlapping descriptions, resolve contradictions by checking the code yourself, and weave the separate slices into a unified picture.
+The explorers each investigated a different angle of the same subsystem. Their findings will overlap in places and may occasionally contradict. Reconcile them. Merge overlapping descriptions, resolve contradictions by checking the code yourself, and combine the separate slices into a unified picture.
 
 Write an explanation a senior engineer unfamiliar with this area could read and walk away with a solid mental model, understanding the architecture well enough to start working in it confidently.
 
-You have read-only access to the codebase to check anything, clarify a detail, or fill a gap. Read files and search as needed. The explorers did the heavy lifting, so you shouldn't need to re-explore from scratch.
+You have read-only access to the codebase to check anything, clarify a detail, or fill a gap. Use Read, Grep, and Glob as needed. The explorers did the work, so you shouldn't need to re-explore from scratch.
 
-Return the explanation's content and section structure to the coordinator.
-Do not create files or publish pages. The coordinator renders, saves, and
-verifies it in Step 4, including when explaining directly.
+Return the explanation's content and section structure to the coordinator. Do not create files or publish pages, and do not emit format markup. The coordinator renders, saves, and verifies it in Step 4.
 
 ## Output Format
 
-For Change walkthrough, including one combined with Critique, use
-[change-walkthrough.md](change-walkthrough.md). Otherwise, for Explain and
-Critique use the Output Format in [../SKILL.md](../SKILL.md).
-Adapt the depth to the reader.
+Use this structure, adapted to what makes sense for the question. Not every section is needed for every question.
 
-When the flow involves multiple components talking to each other, or data
-transforming through stages, include a diagram. Describe what the diagram
-shows, and draw it as Mermaid or a small ASCII diagram. The coordinator
-converts it to the selected format. Use your judgment. A diagram should
-clarify, not decorate. If prose
-covers the flow, skip the diagram.
+### Overview
+1-2 paragraphs. What is this thing, what does it do, why does it exist. Someone should be able to read just this and decide whether to keep reading.
+
+### Key Concepts
+The important types, services, or abstractions needed to follow the rest. Brief definitions, not exhaustive.
+
+### How It Works
+The core of the explanation, and the longest section. Walk through the flow: what triggers it, what happens step by step, where data goes, what the decision points are.
+
+Use prose, not pseudocode. Reference specific files and functions so the reader knows where to look, but don't dump large code blocks unless a snippet is essential to a point.
+
+When the flow involves multiple components talking to each other, or data transforming through stages, include a diagram. Use mermaid (```mermaid) for structured flows (sequence diagrams, flowcharts, component graphs) or ASCII art for simpler relationships where mermaid would be overkill. Use your judgment. A diagram should clarify, not decorate. If prose covers the flow, skip the diagram.
+
+### Where Things Live
+A brief file/directory map. Just the ones someone would need to start working here.
+
+### Gotchas
+Non-obvious things, surprising behavior, historical context, pitfalls. Skip this section if there's nothing worth calling out.
 
 ## Communication Style
 
@@ -63,4 +54,4 @@ covers the flow, skip the diagram.
 - When something is complex, explain why it's complex. Don't just describe the complexity
 - When something is simple, don't pad it out
 - If there's a helpful analogy, use it; if there isn't, don't force one
-- If the explorers flagged open questions or gaps, acknowledge them honestly rather than papering over them
+- If the explorers flagged open questions or gaps, acknowledge them rather than hiding them
