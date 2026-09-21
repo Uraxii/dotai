@@ -1,6 +1,6 @@
 # pstack skill tree source
 
-28 skills in this plugin are a port from `michael-denyer/pstack-claude`, replacing
+42 skills in this plugin are a port from `michael-denyer/pstack-claude`, replacing
 an earlier, less maintained port of the same Cursor `pstack` origin.
 
 - Source: https://github.com/michael-denyer/pstack-claude
@@ -21,6 +21,24 @@ show-me-your-work, swarm, tdd, teach, technical-writing, unslop, why.
 Each was replaced wholesale (directory deleted, then copied from source) using
 `.nikki-agents/adopt_pstack_claude.py`. `poteto-mode` was ported in a separate
 commit; see that commit's message for what the swap changes.
+
+## Imported later, same revision
+
+The ported `poteto-mode` names these as skills to load, but that script only
+replaced directories already present, so none of them came across with it:
+
+deslop, no-comments, principle-attack-the-premise,
+principle-boundary-discipline, principle-fix-root-causes,
+principle-make-operations-idempotent,
+principle-migrate-callers-then-delete-legacy-apis,
+principle-minimize-reader-load, principle-model-the-domain,
+principle-separate-before-serializing-shared-state,
+principle-sequence-verifiable-units, principle-subtract-before-you-add,
+principle-test-behavior-not-implementation, principle-type-system-discipline.
+
+Each is a verbatim copy of the source directory at the revision above. Several
+overlap in subject with the local `principle-code-quality`, which was left
+untouched; consolidating them is a separate decision.
 
 ## setup-pstack, and the tooling deliberately left behind
 
