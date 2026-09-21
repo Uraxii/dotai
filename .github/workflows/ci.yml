@@ -9,6 +9,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # validate-skills.py reads which names used to be skills from git
+          # history, so the default shallow clone would hide stale references.
+          fetch-depth: 0
 
       - uses: actions/setup-python@v5
         with:

@@ -5,11 +5,25 @@ description: Change which model a pstack role runs on without editing the repo. 
 
 # Setup pstack
 
-Model picks live in two places. `plugins/pstack/models.json` holds the
-committed defaults; no skill repeats them, each points at that file. This
-skill writes the other place: a per-harness **override sheet** in the user's
-own config directory, loaded as session context, whose rows win over the
-committed defaults. Changing a model then touches no file in the repo.
+Model picks live in two places. The plugin's `models.json` holds the
+committed defaults; no skill repeats them, each points at that file.
+
+Role picks live in the plugin's `models.json`, two directories up from this
+skill's own directory (`plugins/pstack/models.json` in the repo). Resolve it
+from that directory, not from your working directory. See the Models section
+of `poteto-mode` for how each harness learns that path. The file is keyed by
+role and then by harness (`claude`, `codex`, `copilot`), each value an
+ordered preference list. A spawner reads the entry for its own harness and
+pins the first name in it. A row for the same role in your own harness's
+override sheet (`~/.claude/pstack-models.md` on Claude Code,
+`~/.codex/pstack-models.md` on Codex) wins over it; the sheet's path is its
+harness key, so it can only override that harness. See `setup-pstack` to
+write one. A role with no override row and no entry for your harness spawns
+unpinned: the `Agent` call omits `model` and the child inherits yours.
+
+This skill writes the other place: a per-harness **override sheet** in the
+user's own config directory, loaded as session context, whose rows win over
+the committed defaults. Changing a model then touches no file in the repo.
 
 On Codex, read the [platform mapping](../poteto-mode/references/codex-tools.md),
 including its per-skill notes, before following this skill. On another

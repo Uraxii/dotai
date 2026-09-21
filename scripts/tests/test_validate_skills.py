@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -11,13 +15,19 @@ VALIDATOR = REPOSITORY_ROOT / "scripts" / "validate-skills.py"
 SKILLS_DIR = PLUGIN_ROOT / "skills"
 
 
-def run_validator(skills_dir: Path) -> subprocess.CompletedProcess[str]:
+def run_validator(
+    skills_dir: Path, ci: str | None = None
+) -> subprocess.CompletedProcess[str]:
+    environment = {key: value for key, value in os.environ.items() if key != "CI"}
+    if ci is not None:
+        environment["CI"] = ci
     return subprocess.run(
         [sys.executable, str(VALIDATOR), str(skills_dir)],
         cwd=REPOSITORY_ROOT,
         text=True,
         capture_output=True,
         check=False,
+        env=environment,
     )
 
 
@@ -232,6 +242,242 @@ class BoldSkillReferenceTests(unittest.TestCase):
 
             self.assertNotEqual(0, result.returncode, result.stdout)
             self.assertIn("principle-ghost", result.stderr)
+
+
+def commit_all(repository: Path, message: str) -> None:
+    subprocess.run(["git", "add", "-A"], cwd=repository, check=True, capture_output=True)
+    subprocess.run(
+        ["git", "-c", "user.name=Test", "-c", "user.email=test@example.invalid",
+         "commit", "-m", message],
+        cwd=repository, check=True, capture_output=True,
+    )
+
+
+def write_removed_skill(repository: Path, skills_dir: Path, name: str) -> None:
+    """Give the repository a history in which `name` was a skill and then went away.
+
+    The validator learns which names used to be skills from git, so a test for a
+    stale reference has to leave that history behind the same way a real deletion
+    does: commit the skill, remove the directory, commit again.
+    """
+    if not (repository / ".git").exists():
+        subprocess.run(["git", "init", "-b", "main"], cwd=repository, check=True,
+                       capture_output=True)
+        skills_dir.mkdir(parents=True, exist_ok=True)
+        (skills_dir / ".keep").write_text("")
+        commit_all(repository, "Start the tree")
+    write_skill(skills_dir, name)
+    commit_all(repository, f"Add {name}")
+    shutil.rmtree(skills_dir / name)
+    commit_all(repository, f"Delete {name}")
+
+
+class RemovedSkillReferenceTests(unittest.TestCase):
+    """PR #56 deleted thirteen skills while a planted **caveman** reference passed.
+
+    A name that is not a skill directory is worth flagging in every syntax the
+    tree uses to cite skills, which is what these cases pin down.
+    """
+
+    def assert_reference_is_flagged(self, citation: str) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            repository = Path(directory)
+            skills_dir = repository / "skills"
+            write_removed_skill(repository, skills_dir, "caveman")
+            write_skill(skills_dir, "sample", citation)
+
+            result = run_validator(skills_dir)
+
+            self.assertNotEqual(0, result.returncode, result.stdout)
+            self.assertIn("caveman", result.stderr)
+
+    def test_fails_on_a_bare_bold_reference_to_a_removed_skill(self) -> None:
+        self.assert_reference_is_flagged("Answer in **caveman** register.\n")
+
+    def test_fails_on_a_bare_backticked_reference_to_a_removed_skill(self) -> None:
+        self.assert_reference_is_flagged("Answer in `caveman` register.\n")
+
+    def test_fails_on_the_bold_skill_frame_for_a_removed_skill(self) -> None:
+        self.assert_reference_is_flagged("Load the **caveman** skill now.\n")
+
+    def test_fails_on_the_backticked_skill_frame_for_a_removed_skill(self) -> None:
+        self.assert_reference_is_flagged("Load the `caveman` skill now.\n")
+
+    def test_fails_on_a_removed_skill_whose_prefix_family_has_one_member(self) -> None:
+        # Deleting setup-dotai left setup-pstack alone in the setup- family, and the
+        # family threshold of two then hid every remaining setup-dotai reference.
+        with tempfile.TemporaryDirectory() as directory:
+            repository = Path(directory)
+            skills_dir = repository / "skills"
+            write_removed_skill(repository, skills_dir, "setup-dotai")
+            write_skill(skills_dir, "setup-pstack")
+            write_skill(skills_dir, "sample", "Run `setup-dotai` first.\n")
+
+            result = run_validator(skills_dir)
+
+            self.assertNotEqual(0, result.returncode, result.stdout)
+            self.assertIn("setup-dotai", result.stderr)
+
+    def test_accepts_a_skill_that_history_removed_and_a_later_commit_restored(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            repository = Path(directory)
+            skills_dir = repository / "skills"
+            write_removed_skill(repository, skills_dir, "caveman")
+            write_skill(skills_dir, "caveman")
+            write_skill(skills_dir, "sample", "Answer in **caveman** register.\n")
+
+            result = run_validator(skills_dir)
+
+            self.assertEqual(0, result.returncode, result.stderr)
+
+    def test_flags_a_reference_to_a_skill_this_plugin_deleted(self) -> None:
+        # bro and teach were exempted globally to quiet one UPSTREAM.md
+        # sentence, which also hid every stale mention added afterwards.
+        with tempfile.TemporaryDirectory() as directory:
+            repository = Path(directory)
+            skills_dir = repository / "skills"
+            write_removed_skill(repository, skills_dir, "bro")
+            write_skill(skills_dir, "sample", "Answer in **bro** register.\n")
+
+            result = run_validator(skills_dir)
+
+            self.assertNotEqual(0, result.returncode, result.stdout)
+            self.assertIn("bro", result.stderr)
+            self.assertIn("deleted", result.stderr)
+
+    def test_ignores_a_skill_that_only_ever_existed_on_another_branch(self) -> None:
+        # --all made every ref's history count, so a name a merged-and-forgotten
+        # branch once carried stayed "historical" for good and a developer's
+        # result depended on which branches their clone happened to hold.
+        with tempfile.TemporaryDirectory() as directory:
+            repository = Path(directory)
+            skills_dir = repository / "skills"
+            skills_dir.mkdir(parents=True)
+            (skills_dir / ".keep").write_text("")
+            subprocess.run(["git", "init", "-b", "main"], cwd=repository,
+                           check=True, capture_output=True)
+            commit_all(repository, "Start the tree")
+            subprocess.run(["git", "checkout", "-b", "side"], cwd=repository,
+                           check=True, capture_output=True)
+            write_skill(skills_dir, "sidekick")
+            commit_all(repository, "Add sidekick")
+            shutil.rmtree(skills_dir / "sidekick")
+            commit_all(repository, "Delete sidekick")
+            subprocess.run(["git", "checkout", "main"], cwd=repository,
+                           check=True, capture_output=True)
+            write_skill(skills_dir, "sample", "Answer in **sidekick** register.\n")
+
+            result = run_validator(skills_dir, ci="true")
+
+            self.assertEqual(0, result.returncode, result.stderr)
+
+    def test_accepts_prose_words_that_were_never_skills(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            repository = Path(directory)
+            skills_dir = repository / "skills"
+            write_removed_skill(repository, skills_dir, "caveman")
+            write_skill(
+                skills_dir,
+                "sample",
+                "Keep it **read-only**, run `git status` on `main`, and **never** guess.\n",
+            )
+
+            result = run_validator(skills_dir)
+
+            self.assertEqual(0, result.returncode, result.stderr)
+
+class UnreadableHistoryTests(unittest.TestCase):
+    """History is one of the rules, so a run that could not read it has not
+    checked what the plain "ok:" line claims.
+
+    PR #56 shipped a stale reference behind a green line. A validator that
+    silently drops back to its weaker rules and still prints "ok:" reintroduces
+    exactly that failure, so an unreadable history has to be said out loud.
+    """
+
+    def assert_degraded(self, skills_dir: Path, ci: str | None, code: int) -> None:
+        result = run_validator(skills_dir, ci=ci)
+
+        self.assertIn("DEGRADED", result.stderr)
+        self.assertNotIn("ok:", result.stdout)
+        self.assertEqual(code, result.returncode, result.stderr)
+
+    def test_warns_and_withholds_the_ok_line_outside_a_git_repository(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            skills_dir = Path(directory) / "skills"
+            write_skill(skills_dir, "sample", "Answer in **caveman** register.\n")
+
+            self.assert_degraded(skills_dir, ci=None, code=0)
+
+    def test_fails_outside_a_git_repository_in_ci(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            skills_dir = Path(directory) / "skills"
+            write_skill(skills_dir, "sample", "Answer in **caveman** register.\n")
+
+            self.assert_degraded(skills_dir, ci="true", code=1)
+
+    def test_reads_ci_as_a_value_rather_than_as_a_set_variable(self) -> None:
+        # CI=false and CI=0 are how a developer says "not CI", and an empty
+        # CI is how a shell says the same thing.
+        with tempfile.TemporaryDirectory() as directory:
+            skills_dir = Path(directory) / "skills"
+            write_skill(skills_dir, "sample", "Body.\n")
+
+            for value, code in (("false", 0), ("0", 0), ("", 0),
+                                ("true", 1), ("1", 1)):
+                with self.subTest(ci=value):
+                    self.assert_degraded(skills_dir, ci=value, code=code)
+
+    def test_reports_degraded_alongside_a_failure_the_weaker_rules_caught(self) -> None:
+        # A run that exits 1 on the heuristics alone still has to say that the
+        # history rule never ran, or the log cannot be told apart from a run
+        # that checked every deleted name and found one.
+        with tempfile.TemporaryDirectory() as directory:
+            skills_dir = Path(directory) / "skills"
+            write_principle_family(skills_dir)
+            write_skill(skills_dir, "sample", "Apply **principle-ghost** first.\n")
+
+            result = run_validator(skills_dir, ci="true")
+
+            self.assertEqual(1, result.returncode, result.stdout)
+            self.assertIn("FAIL:", result.stderr)
+            self.assertIn("principle-ghost", result.stderr)
+            self.assertIn("DEGRADED:", result.stderr)
+
+    def test_fails_in_a_shallow_clone_in_ci(self) -> None:
+        # A shallow clone answers `git log` without error and simply omits the
+        # commit that deleted a skill, so CI keeping fetch-depth: 0 is load
+        # bearing and a shallow checkout has to fail rather than look clean.
+        with tempfile.TemporaryDirectory() as directory:
+            origin = Path(directory) / "origin"
+            origin.mkdir()
+            skills_dir = origin / "skills"
+            write_removed_skill(origin, skills_dir, "caveman")
+            clone = Path(directory) / "clone"
+            subprocess.run(
+                ["git", "clone", "--depth", "1", origin.as_uri(), str(clone)],
+                check=True, capture_output=True,
+            )
+
+            self.assert_degraded(clone / "skills", ci="true", code=1)
+
+    def test_reads_history_from_a_full_clone(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            origin = Path(directory) / "origin"
+            origin.mkdir()
+            skills_dir = origin / "skills"
+            write_removed_skill(origin, skills_dir, "caveman")
+            clone = Path(directory) / "clone"
+            subprocess.run(
+                ["git", "clone", origin.as_uri(), str(clone)],
+                check=True, capture_output=True,
+            )
+            write_skill(clone / "skills", "sample", "Answer in **caveman** register.\n")
+
+            result = run_validator(clone / "skills", ci="true")
+
+            self.assertNotEqual(0, result.returncode, result.stdout)
+            self.assertIn("caveman", result.stderr)
 
 
 if __name__ == "__main__":

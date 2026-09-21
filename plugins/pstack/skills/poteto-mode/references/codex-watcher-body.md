@@ -31,9 +31,13 @@ poteto-mode: /absolute/path/of/poteto-mode/SKILL.md
 ```
 
 `kind` is `writer` or `reviewer`. `model` is the Codex model to run, copied as
-given. `worktree` is `create` or the absolute path of an existing worktree,
-and a reviewer omits it. A required line is missing: send the fallback reply
-with `command: (none)` and `exit code: (none)`.
+given. `worktree` is `create` or the absolute path of an existing worktree
+inside `repo`, and a reviewer omits it. A required line is missing: send the
+fallback reply with `command: (none)` and `exit code: (none)`. The `worktree`
+path is outside `repo`: send the fallback reply with `command: (none)`,
+`exit code: denied`, and `worktree: (none)`. The hook would deny that path, you
+cannot fix the header yourself, and `denied` is what tells your owner to fix
+the header instead of sending another agent into that path.
 
 Work out these values once and reuse them. `<repo>` is always the header's
 `repo` line exactly, never your own working directory or its git root.
@@ -41,7 +45,7 @@ Work out these values once and reuse them. `<repo>` is always the header's
 - RUN is `<repo>/.nikki-agents/codex-runs/<name>`.
 - DIR is `<repo>/.nikki-agents/worktrees/<name>` for a writer with
   `worktree: create`, the given path for a writer with a worktree path, and
-  `<repo>` for a reviewer.
+  `<repo>` for a reviewer. DIR always sits inside `<repo>`.
 - SANDBOX is `workspace-write` for a writer, `read-only` for a reviewer.
 - MODEL is the header's `model` value.
 
@@ -50,14 +54,20 @@ Work out these values once and reuse them. `<repo>` is always the header's
 Run each command with Bash, exactly as written, values filled in. Give every
 Bash call `timeout: 600000` and never set `run_in_background`. The Bash result
 shows `Exit code N` when a command exits non-zero; no such line means exit
-code 0. A result reporting the command timed out, with no `Exit code` line, is
-a failed step too: fallback reply with `exit code: timeout`.
+code 0. Two other results are failed steps, and neither one carries an `Exit
+code` line, so never read the missing line as success:
+
+- The command timed out. Fallback reply with `exit code: timeout`.
+- The hook denied the call, or the harness refused permission for it. Fallback
+  reply with `exit code: denied`. Never retype the command, drop a flag, or
+  try another path to get past a denial.
 
 One call per message, always. Send step 1 alone and wait for its result; only
 then send step 2. Never put two tool calls in one message.
 
-At the first non-zero exit, stop: no more tool calls. Your next message is the
-fallback reply, with that step's command and exit code.
+At the first failed step, stop: no more tool calls. Your next message is the
+fallback reply, with that step's command and its exit code, `timeout`, or
+`denied`.
 
 1. `codex --version`.
 2. `codex login status`.
@@ -101,7 +111,7 @@ Fallback (send at the first failed step):
 ```
 fallback: claude
 command: <the failed step's command exactly as run, or (none) if no step ran>
-exit code: <its exit code, or (none)>
+exit code: <its exit code, timeout, denied, or (none) if no step ran>
 worktree: <DIR> if step 3 succeeded or DIR already existed (existing worktree path, or reviewer repo), else (none)
 base: <BASE> if step 4 ran successfully, else (none)
 ```

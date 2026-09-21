@@ -23,7 +23,7 @@ WATCHER_NAMES = frozenset({DEVELOPER, REVIEWER})
 # and segments are followed mid-command by a space (`worktree add NAME -b`).
 NAME = r"(?!\.\.?(?![A-Za-z0-9._-]))[A-Za-z0-9._-]+"
 SLUG = r"[a-z0-9][a-z0-9.-]*"
-PATH_SEGMENT = r"(?!\.\.(?![A-Za-z0-9._@+-]))[A-Za-z0-9._@+-]+"
+PATH_SEGMENT = r"(?!\.\.?(?![A-Za-z0-9._@+-]))[A-Za-z0-9._@+-]+"
 PATH = rf"/(?:{PATH_SEGMENT})(?:/{PATH_SEGMENT})*"
 FORBIDDEN_COMMAND_CHARS = re.compile(r"[\n\r;&|$`>]")
 
