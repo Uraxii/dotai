@@ -109,6 +109,29 @@ def expected_files(skill_directory: Path) -> dict[Path, str]:
     return expected
 
 
+def orphan_files(skill_directory: Path, expected: dict[Path, str]) -> tuple[Path, ...]:
+    """Generated files with no definition left behind them.
+
+    Both output directories hold nothing but generated files, so anything
+    there that the manifest no longer produces is a leftover from a removed
+    agent. Without this, dropping an agent from the manifest leaves its
+    generated file installed and the check still passes.
+    """
+    plugin_root = skill_directory.parents[1]
+    outputs = (
+        (plugin_root / "agents", "*.md"),
+        (skill_directory / "assets" / "codex-agents", "*.toml"),
+    )
+    return tuple(
+        sorted(
+            path
+            for directory, pattern in outputs
+            for path in directory.glob(pattern)
+            if path not in expected
+        )
+    )
+
+
 def check_files(expected: dict[Path, str]) -> tuple[Path, ...]:
     return tuple(
         path
@@ -124,6 +147,11 @@ def write_files(expected: dict[Path, str]) -> None:
             path.write_text(content)
 
 
+def delete_files(paths: tuple[Path, ...]) -> None:
+    for path in paths:
+        path.unlink()
+
+
 def parse_args(arguments: list[str] | None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -136,15 +164,20 @@ def parse_args(arguments: list[str] | None) -> argparse.Namespace:
 
 def main(arguments: list[str] | None = None) -> int:
     options = parse_args(arguments)
-    expected = expected_files(skill_root())
+    skill_directory = skill_root()
+    expected = expected_files(skill_directory)
+    orphans = orphan_files(skill_directory, expected)
     if not options.check:
         write_files(expected)
+        delete_files(orphans)
         return 0
 
     stale_files = check_files(expected)
     for path in stale_files:
         print(f"stale generated agent config: {path}", file=sys.stderr)
-    return 1 if stale_files else 0
+    for path in orphans:
+        print(f"generated agent config with no definition: {path}", file=sys.stderr)
+    return 1 if stale_files or orphans else 0
 
 
 if __name__ == "__main__":

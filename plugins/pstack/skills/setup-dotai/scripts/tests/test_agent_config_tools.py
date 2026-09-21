@@ -56,8 +56,14 @@ class AgentConfigGeneratorTests(unittest.TestCase):
         references = SKILL_ROOT / "references"
         plugin_root = SKILL_ROOT.parents[1]
         body = (references / "poteto-agent-body.md").read_text().rstrip()
+        # The watchers' body is the reference file the manifest points at,
+        # not the playbook it was split out of.
         watcher_body = (
-            plugin_root / "skills" / "poteto-mode" / "playbooks" / "delegate-to-codex.md"
+            plugin_root
+            / "skills"
+            / "poteto-mode"
+            / "references"
+            / "codex-watcher-body.md"
         ).read_text().rstrip()
 
         for name in WORKER_NAMES:
@@ -77,10 +83,10 @@ class AgentConfigGeneratorTests(unittest.TestCase):
 
 
 class CodexAgentInstallerTests(unittest.TestCase):
-    def test_installs_workers_and_zakia_without_drift(self) -> None:
+    def test_installs_workers_without_drift(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             codex_home = Path(directory)
-            arguments = ("--codex-home", directory, "--install-zakia")
+            arguments = ("--codex-home", directory)
 
             first = run_script(INSTALLER, *arguments)
             second = run_script(INSTALLER, *arguments)
@@ -89,10 +95,17 @@ class CodexAgentInstallerTests(unittest.TestCase):
             self.assertEqual(0, second.returncode, second.stderr)
             installed = list((codex_home / "agents").glob("*.toml"))
             self.assertEqual(WORKER_NAMES, {path.stem for path in installed})
-            instructions = (codex_home / "AGENTS.md").read_text()
-            self.assertEqual(1, instructions.count("<!-- dotai:zakia:start -->"))
-            self.assertEqual(1, instructions.count("<!-- dotai:zakia:end -->"))
-            self.assertIn("Zakia: fully capable coding agent", instructions)
+
+    def test_writes_nothing_into_the_users_global_instructions(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            codex_home = Path(directory)
+            own_notes = codex_home / "AGENTS.md"
+            own_notes.write_text("my own global instructions\n")
+
+            result = run_script(INSTALLER, "--codex-home", directory)
+
+            self.assertEqual(0, result.returncode, result.stderr)
+            self.assertEqual("my own global instructions\n", own_notes.read_text())
 
     def test_refuses_to_replace_a_changed_personal_agent(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -112,24 +125,6 @@ class CodexAgentInstallerTests(unittest.TestCase):
 
             self.assertEqual(0, forced.returncode, forced.stderr)
             self.assertNotEqual("personal changes\n", changed.read_text())
-
-    def test_malformed_zakia_markers_leave_workers_uninstalled(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
-            codex_home = Path(directory)
-            (codex_home / "AGENTS.md").write_text(
-                "<!-- dotai:zakia:start -->\nunterminated\n"
-            )
-
-            refused = run_script(
-                INSTALLER,
-                "--codex-home",
-                directory,
-                "--install-zakia",
-            )
-
-            self.assertNotEqual(0, refused.returncode)
-            self.assertIn("malformed Zakia markers", refused.stderr)
-            self.assertFalse((codex_home / "agents").exists())
 
 
 if __name__ == "__main__":

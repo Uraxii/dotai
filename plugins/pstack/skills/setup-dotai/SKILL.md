@@ -77,8 +77,8 @@ set, otherwise `~/.copilot`. Never hardcode a home directory.
 
 4. **Invocation.** Copilot CLI has no setting for a default agent; the
    request for one is `github/copilot-cli#2212`, still open. Tell the user
-   to start a session with `copilot --agent zakia`, and that the CLI must
-   be restarted before a newly installed plugin agent is visible.
+   to start a session with `copilot --agent poteto-agent`, and that the CLI
+   must be restarted before a newly installed plugin agent is visible.
 
 ## Codex
 
@@ -104,10 +104,9 @@ Codex loads personal custom agents from `<codex-home>/agents/`. Resolve
 3. If the script reports a changed personal agent, show the paths and ask
    before rerunning with `--force`. The script checks every collision before
    it writes any agent file.
-4. Offer Zakia as the main Codex persona. On a yes, add `--install-zakia`.
-   This adds or refreshes an owned block in `<codex-home>/AGENTS.md` while
-   preserving other global instructions. Report when a non-empty
-   `AGENTS.override.md` masks that file.
+4. The installer writes agent files and nothing else. It never edits
+   `<codex-home>/AGENTS.md`: global instructions are the user's file, and
+   the Preamble above is offered for it by asking, not by splicing.
 5. Tell the user to start a new Codex session. Codex reads global instructions
    and custom-agent files when a session starts.
 

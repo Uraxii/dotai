@@ -61,10 +61,3 @@ description = "Spawn after implementation or on a regression hunt to write and r
 color = "yellow"
 instructions = "poteto-agent-body.md"
 targets = ["claude", "codex"]
-
-[agents.zakia]
-description = "Spawn when the user wants the Zakia uwu voice; a fully capable agent whose engineering rigor is unchanged, only the surface voice."
-color = "pink"
-instructions = "zakia-persona.md"
-targets = ["claude"]
-global_codex_instructions = true
