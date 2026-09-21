@@ -20,7 +20,9 @@ show-me-your-work, swarm, tdd, teach, technical-writing, unslop, why.
 
 Each was replaced wholesale (directory deleted, then copied from source) using
 `.nikki-agents/adopt_pstack_claude.py`. `poteto-mode` was ported in a separate
-commit; see that commit's message for what the swap changes.
+commit; see that commit's message for what the swap changes. `bro` and `teach`
+were later removed from this plugin, so those two names no longer resolve to a
+skill here.
 
 ## Imported later, same revision
 
@@ -55,18 +57,15 @@ the stamper for the flat schema, and it also stamps a `VERSION` file,
 `CHANGES.md`, `docs/reference.md`, Codex prompt stubs, and a marketplace
 manifest that this repo does not have. Nothing stamps model picks here any
 more: this repo's own stamper was retired along with the copied-out `##
-Models` tables, and `skills/setup-dotai/scripts/validate-models.py` keeps only
-its validation half. Upstream's
-`sync.mjs`, `substitutions.json`, `upstream.json`, `validate-skills.mjs`, and
-`verify-merge-safety.mjs` serve upstream's own release pipeline and were not
-taken either.
+Models` tables, and `scripts/validate-models.py` keeps only its validation
+half. Upstream's `sync.mjs`, `substitutions.json`, `upstream.json`,
+`validate-skills.mjs`, and `verify-merge-safety.mjs` serve upstream's own
+release pipeline and were not taken either.
 
 ## Local to this plugin
 
 Every other skill under `plugins/pstack/skills/` is specific to this
-project and was not touched by the port: `caveman`, `create-artifact`,
-`decisions`, `handoff`, `wayfinder`, `podman-sandbox`, `notion-cli`, `principle-code-quality`,
-`principle-naming`, `principle-decomposition`, `principle-output-to-user`,
-`azure-devops`, `cloudflare`, `codebase-memory`, `domain-modeling`,
-`grilling`, `llm-wiki`, `ox-security`, `prototype`, `rotate-agent`,
-`setup-dotai`, `skill-quality`, `snyk`, `sysdig`, `README.md`.
+project and was not touched by the port: `azure-devops`, `codebase-memory`,
+`create-artifact`, `decisions`, `handoff`, `llm-wiki`, `notion-cli`,
+`podman-sandbox`, `principle-code-quality`, `principle-decomposition`,
+`principle-naming`, `principle-output-to-user`, `skill-quality`.
