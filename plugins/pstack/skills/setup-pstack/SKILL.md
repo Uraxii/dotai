@@ -16,7 +16,7 @@ including its per-skill notes, before following this skill. On another
 harness, read [Other harnesses](#other-harnesses) below for where the sheet
 lives and how it loads; the steps are the same.
 
-To edit the committed defaults in `models.json` instead, use `setup-dotai`.
+To edit the committed defaults instead, edit `plugins/pstack/models.json` directly.
 
 ## The sheet is per harness
 

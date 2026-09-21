@@ -155,8 +155,8 @@ Labelled heuristic, never hard violation. Rest of catalogue covered above:
 
 Name must reveal purpose to reader with no other context.
 
-File, directory, and document names, plus the cold-reader test itself, live
-in `principle-naming`. Load it alongside this skill.
+File, directory, and document names live in `principle-naming`. Load it
+alongside this skill.
 
 - Name the thing and its effect, not the mechanism or metaphor. `projectile`
   not `controller entity`. `change_owner` not `grant_control`.

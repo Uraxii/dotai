@@ -45,7 +45,7 @@ stop. Anything the human will copy goes in a block, full path, one per line.
 
 ## Boundaries
 
-Register (caveman, persona exceptions) and AI-tell removal live in `unslop`.
+Register (persona exceptions) and AI-tell removal live in `unslop`.
 Bulk that would swamp the reply (logs, many files) goes to a subagent per
 `principle-guard-the-context-window`; the reply carry the summary. Rules are
 silent constraints: never announce compliance, never spawn a pass to check one.

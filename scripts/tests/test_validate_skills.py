@@ -5,10 +5,9 @@ import unittest
 from pathlib import Path
 
 
-SKILL_ROOT = Path(__file__).resolve().parents[2]
-PLUGIN_ROOT = SKILL_ROOT.parents[1]
-REPOSITORY_ROOT = PLUGIN_ROOT.parents[1]
-VALIDATOR = SKILL_ROOT / "scripts" / "validate-skills.py"
+REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
+PLUGIN_ROOT = REPOSITORY_ROOT / "plugins" / "pstack"
+VALIDATOR = REPOSITORY_ROOT / "scripts" / "validate-skills.py"
 SKILLS_DIR = PLUGIN_ROOT / "skills"
 
 

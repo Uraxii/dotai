@@ -177,7 +177,7 @@ def validate_skills_tree(skills_dir: Path) -> list[str]:
 
 def main(arguments: list[str] | None = None) -> int:
     arguments = sys.argv[1:] if arguments is None else arguments
-    default_dir = Path(__file__).resolve().parents[3] / "skills"
+    default_dir = Path(__file__).resolve().parents[1] / "plugins" / "pstack" / "skills"
     skills_dir = Path(arguments[0]) if arguments else default_dir
     problems = validate_skills_tree(skills_dir)
     if problems:

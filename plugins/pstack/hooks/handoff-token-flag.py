@@ -109,11 +109,10 @@ def _build_message(tokens: int) -> str:
     return (
         f"[handoff-token-flag] Main session context ~{k}k tokens, past the "
         "200k soft limit. At the next natural stopping point, suggest "
-        "writing a handoff doc via the `handoff` skill (follow that skill's "
-        "location rules: `.handoffs/` at the project root, never /tmp) and "
-        "closing this session; if the user agrees, report the "
-        ".handoffs/handoff_*.md path as the first line. Do not start major "
-        "new work. Do not silently rely on auto-compact."
+        "writing a handoff doc via the `handoff` skill and closing this "
+        "session; if the user agrees, report the resulting path as the "
+        "first line. Do not start major new work. Do not silently rely on "
+        "auto-compact."
     )
 
 

@@ -11,14 +11,12 @@ lives under `plugins/pstack/`, the same place pstack-claude keeps its own.
 |-----------|---------------------------------------------------------|
 | `plugins/pstack/skills/` | Every skill, `skills/<name>/SKILL.md`. Source of truth. |
 | `plugins/pstack/models.json` | Model picks per role and harness. The only copy; skills point at it by path, and a per-harness override sheet in the user's config directory replaces a role for one harness without touching this repo (see the `setup-pstack` skill). |
-| `plugins/pstack/agents/` | Generated Claude and Copilot agent files. |
-| `plugins/pstack/skills/setup-dotai/references/` | Platform-neutral agent definitions. |
-| `plugins/pstack/skills/setup-dotai/assets/codex-agents/` | Generated Codex agent files. |
-| `plugins/pstack/skills/setup-dotai/scripts/` | Generates and installs agent files. |
+| `plugins/pstack/agents/` | Claude and Copilot agent files. |
+| `scripts/` | CI validators: `validate-models.py` checks `models.json` only names models it can back, `validate-skills.py` checks skill links and frontmatter. Tests in `scripts/tests/`. |
 | `themes/` | Editor themes. Source of truth only. Nothing installs them, so copy one into `~/.claude/themes/` yourself. |
 | `output-styles/` | Output styles, `output-styles/<name>.md`. Nothing installs them, so copy one into `~/.claude/output-styles/` and select it with `/output-style` yourself. |
 | `statusline.sh` | Statusline command: usage bars and tokens per minute. Nothing installs it, so copy it to `~/.claude/statusline.sh` and set `statusLine` yourself. |
-| `plugins/pstack/hooks/` | Hook scripts. `cap_bash_timeout.py` is a `PreToolUse` gate on long Bash timeouts; it is registered nowhere and does not run. `handoff-token-flag.py` warns before context compaction; plugin installation wires it for Claude Code, Codex, and Copilot CLI. `recap_on_stop.py` is a Claude Code `Stop` hook that asks for a plain-English recap at the end of every turn on Opus 5 and Fable 5; it gates on the model alone, because this user delegates edits to subagents where a turn-window edit count sees nothing. Plugin installation wires it, and no other harness gets it. `session_start_context.py` reminds the agent to load `poteto-mode` at session start; plugin installation wires it for Claude Code, Codex, and Copilot CLI, `opencode-reminder-plugin.ts` (same directory) wires it into opencode, and the `setup-dotai` skill walks through wiring it into Hermes by hand. See [Session-start reminder](#session-start-reminder) below for what each harness can and cannot do. Add `.nikki-agents/` to the exclude config of your editor, LSP, and any semantic index: `.git/info/exclude` covers git, ripgrep, and fd, but an indexer that keeps its own ignore list walks the worktrees and ends up crawling six figures of files in a repo with a few hundred tracked ones. |
+| `plugins/pstack/hooks/` | Hook scripts. `cap_bash_timeout.py` is a `PreToolUse` gate on long Bash timeouts; it is registered nowhere and does not run. `handoff-token-flag.py` warns before context compaction; plugin installation wires it for Claude Code, Codex, and Copilot CLI. `recap_on_stop.py` is a Claude Code `Stop` hook that asks for a plain-English recap at the end of every turn on Opus 5 and Fable 5; it gates on the model alone, because this user delegates edits to subagents where a turn-window edit count sees nothing. Plugin installation wires it, and no other harness gets it. `session_start_context.py` reminds the agent to load `poteto-mode` at session start; plugin installation wires it for Claude Code, Codex, and Copilot CLI, and `opencode-reminder-plugin.ts` (same directory) wires it into opencode. Wiring it into Hermes by hand is not covered by any skill here. See [Session-start reminder](#session-start-reminder) below for what each harness can and cannot do. Add `.nikki-agents/` to the exclude config of your editor, LSP, and any semantic index: `.git/info/exclude` covers git, ripgrep, and fd, but an indexer that keeps its own ignore list walks the worktrees and ends up crawling six figures of files in a repo with a few hundred tracked ones. |
 
 ## Install
 
@@ -59,27 +57,12 @@ clone the repo, point `~/.config/opencode/skills` at
 `~/.config/opencode/plugin/` for the session-start reminder (a copy breaks
 the plugin's lookup of its sibling script, so symlink it).
 
-Then run `/setup-dotai` once: it offers the preamble lines for your global
-instructions file, installs named agents where needed, and sets per-role
-models.
-
-Claude Code and Copilot CLI read the generated files in
-`plugins/pstack/agents/` from the plugin. Codex needs its generated
-files copied into its user config directory; `setup-dotai` handles that.
-OpenCode and Hermes use their native delegation with dotai roles carried in
-scoped briefs. Codex agent files omit `model` and `model_reasoning_effort`,
-so the role preferences in `plugins/pstack/models.json`
-remain authoritative at spawn time. skills.sh and opencode targets read
-`plugins/pstack/skills/` only.
-
-After changing an agent definition under
-`plugins/pstack/skills/setup-dotai/references/`, regenerate and check
-the platform files:
-
-```
-python3 plugins/pstack/skills/setup-dotai/scripts/generate-agent-configs.py
-python3 plugins/pstack/skills/setup-dotai/scripts/generate-agent-configs.py --check
-```
+Claude Code and Copilot CLI read the agent files in
+`plugins/pstack/agents/` from the plugin. OpenCode and Hermes use their
+native delegation with dotai roles carried in scoped briefs. This repo no
+longer ships Codex agent files, so a spawner on Codex reads the role
+preferences in `plugins/pstack/models.json` instead. skills.sh
+and opencode targets read `plugins/pstack/skills/` only.
 
 `plugins/pstack/models.json` is the only copy of the model picks. No skill
 repeats it; each points at the file by path, and a per-harness override sheet
@@ -89,8 +72,8 @@ touching this repo (see the `setup-pstack` skill). After changing
 tree for broken links and malformed skill frontmatter:
 
 ```
-python3 plugins/pstack/skills/setup-dotai/scripts/validate-models.py
-python3 plugins/pstack/skills/setup-dotai/scripts/validate-skills.py plugins/pstack/skills
+python3 scripts/validate-models.py
+python3 scripts/validate-skills.py plugins/pstack/skills
 ```
 
 Harness prefs (`CLAUDE.md`, `AGENTS.md`, `settings.json`, secrets) are not
@@ -136,5 +119,5 @@ extra array entry does.
 
 Hermes hooks require the user's consent on first use, recorded in
 `~/.hermes/shell-hooks-allowlist.json`
-(`website/docs/user-guide/features/hooks.md:1871`); `setup-dotai`'s Hermes
-section walks through adding the hook.
+(`website/docs/user-guide/features/hooks.md:1871`). Adding the hook by hand
+is not covered by any skill here.
