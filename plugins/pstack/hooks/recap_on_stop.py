@@ -5,11 +5,10 @@ Wired in the plugin's `hooks/hooks.json` under `Stop`.
 
 Fires when Claude tries to end its turn. Returns `{"decision": "block"}`,
 which does not stop at all: it hands Claude one more instruction, to write
-a short recap for someone who has not read the code. Only turns worth
-recapping get one — a model matching `opus-5|fable`, code actually
-written, and real work done —
-and every invocation appends one line to an audit log so a declined gate
-never looks like a hook that never ran.
+a short recap for someone who has not read the code. Every stop gets one
+as long as the model that answered matches `opus-5|fable`; that and the
+loop guard below are the whole gate. Every invocation appends one line to
+an audit log so a declined gate never looks like a hook that never ran.
 
 Rationale: a consistent close-out enforced by the harness, instead of the
 user remembering to ask for a summary every time.
@@ -38,8 +37,6 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
-EDIT_TOOLS = {"Edit", "Write", "MultiEdit", "NotebookEdit"}
-
 # A prompt, not config. Keep it short; it is injected on every turn.
 RECAP_INSTRUCTION = (
     "Type a clean recap. Keep it short, light, and plain — a few sentences "
@@ -64,26 +61,12 @@ def _log(message: str) -> None:
         pass
 
 
-def _is_tool_result(entry: dict) -> bool:
-    """True for a "user" entry that is really a tool result, not a prompt."""
-    content = entry.get("message", {}).get("content")
-    if not isinstance(content, list):
-        return False
-    return any(
-        isinstance(b, dict) and b.get("type") == "tool_result" for b in content
-    )
+def _current_model(transcript_path: Path) -> str:
+    """The model of the last main-agent reply, or "-" if there is none.
 
-
-def _turn_window(transcript_path: Path) -> tuple[str, int, int]:
-    """Walk the transcript backwards to the last real user prompt.
-
-    Returns (model, tool_calls, edits) for the current turn, main agent
-    only — subagent (isSidechain) work does not count.
+    Subagent (isSidechain) replies do not count: a delegate running on
+    another model must not decide whether this session gets a recap.
     """
-    model = ""
-    tool_calls = 0
-    edits = 0
-
     lines = transcript_path.read_text(encoding="utf-8", errors="replace")
     for line in reversed(lines.splitlines()):
         try:
@@ -92,22 +75,9 @@ def _turn_window(transcript_path: Path) -> tuple[str, int, int]:
             continue
         if not isinstance(entry, dict) or entry.get("isSidechain"):
             continue
-
         if entry.get("type") == "assistant":
-            content = entry.get("message", {}).get("content") or []
-            uses = [
-                b
-                for b in content
-                if isinstance(b, dict) and b.get("type") == "tool_use"
-            ]
-            model = model or entry.get("message", {}).get("model") or ""
-            tool_calls += len(uses)
-            edits += sum(1 for b in uses if b.get("name") in EDIT_TOOLS)
-        elif entry.get("type") == "user" and not entry.get("isMeta"):
-            if not _is_tool_result(entry):
-                break
-
-    return model or "-", tool_calls, edits
+            return entry.get("message", {}).get("model") or "-"
+    return "-"
 
 
 def main() -> int:
@@ -123,22 +93,16 @@ def main() -> int:
         return 0
 
     pattern = os.environ.get("CLEAN_RECAP_MODEL_PATTERN") or "opus-5|fable"
-    min_tool_calls = int(os.environ.get("CLEAN_RECAP_MIN_TOOL_CALLS") or 6)
-
-    model, tool_calls, edits = _turn_window(Path(transcript))
-    window = f"model={model} tool_calls={tool_calls} edits={edits}"
+    model = _current_model(Path(transcript))
 
     if not re.search(pattern, model, re.IGNORECASE):
-        _log(f"fired  {window} -> allow (model does not match '{pattern}')")
-        return 0
-    if edits < 1:
-        _log(f"fired  {window} -> allow (no code written this turn)")
-        return 0
-    if tool_calls < min_tool_calls:
-        _log(f"fired  {window} -> allow (under {min_tool_calls} tool calls)")
+        _log(
+            f"fired  model={model} -> allow "
+            f"(model does not match '{pattern}')"
+        )
         return 0
 
-    _log(f"fired  {window} -> BLOCK (requesting recap)")
+    _log(f"fired  model={model} -> BLOCK (requesting recap)")
     print(json.dumps({"decision": "block", "reason": RECAP_INSTRUCTION}))
     return 0
 

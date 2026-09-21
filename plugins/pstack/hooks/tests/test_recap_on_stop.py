@@ -34,11 +34,6 @@ def user_prompt(text="do the thing"):
     return {"type": "user", "message": {"content": text}}
 
 
-def tool_result():
-    return {"type": "user", "message": {"content": [{"type": "tool_result"}]}}
-
-
-# Six tool calls clears the default floor; two of them are edits.
 WORKING_TURN = [
     user_prompt(),
     assistant(tools=["Read", "Grep", "Edit", "Bash", "Edit", "Bash"]),
@@ -54,7 +49,6 @@ class RecapOnStopTests(unittest.TestCase):
         # and never let an ambient override decide a gate under test.
         environment = {**os.environ, "CLEAN_RECAP_LOG": str(self.log_path)}
         environment.pop("CLEAN_RECAP_MODEL_PATTERN", None)
-        environment.pop("CLEAN_RECAP_MIN_TOOL_CALLS", None)
         self.environment = environment
         self.enterContext(mock.patch.dict(os.environ, environment, clear=True))
 
@@ -87,6 +81,8 @@ class RecapOnStopTests(unittest.TestCase):
         )
         return "block"
 
+    # -- manifest wiring ---------------------------------------------------
+
     def test_claude_manifest_installs_the_stop_hook_without_a_matcher(
         self,
     ) -> None:
@@ -94,7 +90,10 @@ class RecapOnStopTests(unittest.TestCase):
             (REPOSITORY_ROOT / "hooks" / "hooks.json").read_text()
         )
 
-        stop_entry = config["hooks"]["Stop"][0]
+        stop_entries = config["hooks"]["Stop"]
+        # One entry only: a duplicated Stop key silently loses a hook.
+        self.assertEqual(1, len(stop_entries))
+        stop_entry = stop_entries[0]
         # Stop is not tied to a tool, so it takes no matcher.
         self.assertNotIn("matcher", stop_entry)
         hook = stop_entry["hooks"][0]
@@ -117,10 +116,45 @@ class RecapOnStopTests(unittest.TestCase):
         self.assertNotIn("Stop", codex["hooks"])
         self.assertNotIn("recap_on_stop", json.dumps(copilot))
 
+    # -- the gate ----------------------------------------------------------
+
     def test_fresh_turn_of_real_work_blocks(self) -> None:
         payload = {"transcript_path": self.transcript("work", WORKING_TURN)}
 
         self.assertEqual("block", self.decide(payload))
+        self.assertIn("BLOCK", self.log_path.read_text(encoding="utf-8"))
+
+    def test_a_turn_that_did_nothing_still_asks_for_a_recap(self) -> None:
+        """The regression the edit gate caused: this user delegates every
+        edit to a subagent, so the main turn window sees no edits and no
+        tool calls. The old gate allowed all 198 logged invocations."""
+        entries = [user_prompt(), assistant(tools=[])]
+
+        self.assertEqual(
+            "block",
+            self.decide({"transcript_path": self.transcript("idle", entries)}),
+        )
+
+    def test_a_read_only_turn_asks_for_a_recap(self) -> None:
+        """Replaces the old "wrote no code allows" case. Writing code is no
+        longer part of the gate."""
+        entries = [user_prompt(), assistant(tools=["Read"] * 8)]
+
+        self.assertEqual(
+            "block",
+            self.decide({"transcript_path": self.transcript("read", entries)}),
+        )
+
+    def test_a_two_tool_turn_asks_for_a_recap(self) -> None:
+        """Replaces the old tool-call floor case. There is no floor."""
+        entries = [user_prompt(), assistant(tools=["Edit", "Bash"])]
+
+        self.assertEqual(
+            "block",
+            self.decide({"transcript_path": self.transcript("small", entries)}),
+        )
+
+    # -- loop guard --------------------------------------------------------
 
     def test_second_stop_allows_so_the_session_can_end(self) -> None:
         payload = {
@@ -129,15 +163,13 @@ class RecapOnStopTests(unittest.TestCase):
         }
 
         self.assertEqual("allow", self.decide(payload))
+        self.assertIn("stand down", self.log_path.read_text(encoding="utf-8"))
 
     def test_absent_stop_hook_active_still_blocks(self) -> None:
         payload = {"transcript_path": self.transcript("work", WORKING_TURN)}
 
         self.assertNotIn("stop_hook_active", payload)
         self.assertEqual("block", self.decide(payload))
-
-    def test_empty_payload_allows(self) -> None:
-        self.assertEqual("allow", self.decide({}))
 
     def test_stop_hook_active_as_a_string_allows(self) -> None:
         payload = {
@@ -147,10 +179,19 @@ class RecapOnStopTests(unittest.TestCase):
 
         self.assertEqual("allow", self.decide(payload))
 
+    # -- malformed input ---------------------------------------------------
+
+    def test_empty_payload_allows(self) -> None:
+        self.assertEqual("allow", self.decide({}))
+
     def test_missing_transcript_file_allows(self) -> None:
         self.assertEqual(
             "allow",
             self.decide({"transcript_path": str(self.directory / "gone.jsonl")}),
+        )
+        self.assertIn(
+            "no readable transcript_path",
+            self.log_path.read_text(encoding="utf-8"),
         )
 
     def test_transcript_path_pointing_at_a_directory_allows(self) -> None:
@@ -158,21 +199,7 @@ class RecapOnStopTests(unittest.TestCase):
             "allow", self.decide({"transcript_path": str(self.directory)})
         )
 
-    def test_turn_that_wrote_no_code_allows(self) -> None:
-        entries = [user_prompt(), assistant(tools=["Read"] * 8)]
-
-        self.assertEqual(
-            "allow",
-            self.decide({"transcript_path": self.transcript("read", entries)}),
-        )
-
-    def test_turn_under_the_tool_call_floor_allows(self) -> None:
-        entries = [user_prompt(), assistant(tools=["Edit", "Bash"])]
-
-        self.assertEqual(
-            "allow",
-            self.decide({"transcript_path": self.transcript("small", entries)}),
-        )
+    # -- model matching ----------------------------------------------------
 
     def test_unmatched_model_allows(self) -> None:
         entries = [
@@ -186,6 +213,9 @@ class RecapOnStopTests(unittest.TestCase):
         self.assertEqual(
             "allow",
             self.decide({"transcript_path": self.transcript("sonnet", entries)}),
+        )
+        self.assertIn(
+            "model does not match", self.log_path.read_text(encoding="utf-8")
         )
 
     def test_fable_model_blocks(self) -> None:
@@ -230,32 +260,27 @@ class RecapOnStopTests(unittest.TestCase):
             self.decide({"transcript_path": self.transcript("side", entries)}),
         )
 
-    def test_tool_results_do_not_close_the_turn_window(self) -> None:
-        entries = [
-            user_prompt(),
-            assistant(tools=["Read", "Edit", "Bash"]),
-            tool_result(),
-            assistant(tools=["Edit", "Bash", "Read"]),
-            tool_result(),
-        ]
-
-        self.assertEqual(
-            "block",
-            self.decide({"transcript_path": self.transcript("results", entries)}),
-        )
-
-    def test_earlier_turns_do_not_leak_into_this_one(self) -> None:
+    def test_the_model_read_is_the_one_that_answered_last(self) -> None:
         entries = [
             user_prompt("older turn"),
-            assistant(tools=["Edit"] * 9),
+            assistant(model="claude-sonnet-5", tools=["Read"]),
             user_prompt("this turn"),
-            assistant(tools=["Read", "Edit"]),
+            assistant(model="claude-opus-5", tools=["Read"]),
         ]
 
         self.assertEqual(
-            "allow",
-            self.decide({"transcript_path": self.transcript("earlier", entries)}),
+            "claude-opus-5",
+            HOOK._current_model(Path(self.transcript("order", entries))),
         )
+
+    def test_no_assistant_reply_leaves_the_model_unknown(self) -> None:
+        entries = [user_prompt("hi")]
+
+        self.assertEqual(
+            "-", HOOK._current_model(Path(self.transcript("bare", entries)))
+        )
+
+    # -- logging and real invocation ---------------------------------------
 
     def test_every_decision_is_logged_to_the_configured_path(self) -> None:
         self.decide({"transcript_path": self.transcript("work", WORKING_TURN)})

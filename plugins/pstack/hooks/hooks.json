@@ -29,7 +29,8 @@
           {
             "type": "command",
             "command": "${CLAUDE_PLUGIN_ROOT}/hooks/recap_on_stop.py",
-            "timeout": 10
+            "timeout": 10,
+            "statusMessage": "Writing recap..."
           }
         ]
       }
