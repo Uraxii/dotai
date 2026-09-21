@@ -47,7 +47,7 @@ Skills name Claude defaults (a single-role default for code/prose/judgment plus 
 - Roles that default to the strongest Claude model (`bug-fix`, `perf-issue`, `hillclimb`, `strongest judgment`): your strongest Codex model (for example `gpt-6-astra`).
 - Diverse-model panels (`arena`, `architect`, `interrogate`, `how` critics, `reflect`): the adversarial signal comes from model diversity, so use the distinct Codex models available to you. A good default quad on ChatGPT is `gpt-6-astra`, `gpt-5.6-sol`, `gpt-5.6-terra`, `gpt-5.6-luna`. If only one model family is reachable, vary reasoning effort and note in the verdict that diversity was reduced.
 
-The `setup-pstack` skill writes `~/.codex/pstack-models.md`, whose rows override the `codex` entries in `plugins/pstack/models.json` for this machine. Write Codex slugs there and nothing else: a `claude-*` name in that file pins nothing.
+The `setup-pstack` skill writes `~/.codex/pstack-models.md`, whose rows override the `codex` entries in `models.json` (two directories up from this skill's directory; see the `poteto-mode` Models section) for this machine. Write Codex slugs there and nothing else: a `claude-*` name in that file pins nothing.
 
 ## Session routing hook
 
