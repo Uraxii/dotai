@@ -5,6 +5,10 @@ Claude and Codex run this on UserPromptSubmit in context mode. Copilot runs it
 on agentStop in stop mode because its command UserPromptSubmit hooks cannot
 inject context.
 
+This file is the only copy. Every harness reaches it through a plugin manifest
+in this repository, so a per-machine copy under a user's home directory is a
+fork waiting to happen, not an install step. Point the wiring at the plugin.
+
 Reads the session transcript path from stdin JSON, sums the last recorded
 `message.usage` input/cache token counts as a proxy for current context
 size, and injects an instruction into the agent's context the first time

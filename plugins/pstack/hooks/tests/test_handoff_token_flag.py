@@ -86,6 +86,83 @@ class HandoffTokenFlagTests(unittest.TestCase):
 
             self.assertEqual(210_000, HOOK._last_usage_tokens(transcript))
 
+    def test_context_mode_is_the_default_when_no_flag_is_passed(self) -> None:
+        """The wiring that predates --mode passes no arguments at all."""
+        self.assertEqual("context", HOOK.parse_args([]).mode)
+
+    def test_context_mode_stays_quiet_below_the_threshold(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            response = HOOK._response_for_crossing(
+                tokens=HOOK.THRESHOLD - 1,
+                session_id="session-quiet",
+                mode="context",
+                state_directory=Path(directory),
+            )
+
+            self.assertEqual("", response)
+
+    def test_context_mode_injects_plain_text_rather_than_a_decision(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            response = HOOK._response_for_crossing(
+                tokens=210_000,
+                session_id="session-2",
+                mode="context",
+                state_directory=Path(directory),
+            )
+
+            self.assertTrue(response.startswith("[handoff-token-flag]"))
+            self.assertIn("210k", response)
+            self.assertIn("handoff", response)
+            with self.assertRaises(json.JSONDecodeError):
+                json.loads(response)
+
+    def test_context_mode_nudges_once_per_band(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            state_directory = Path(directory) / "state"
+            first = HOOK._response_for_crossing(
+                tokens=210_000,
+                session_id="session-3",
+                mode="context",
+                state_directory=state_directory,
+            )
+            same_band = HOOK._response_for_crossing(
+                tokens=240_000,
+                session_id="session-3",
+                mode="context",
+                state_directory=state_directory,
+            )
+            next_band = HOOK._response_for_crossing(
+                tokens=260_000,
+                session_id="session-3",
+                mode="context",
+                state_directory=state_directory,
+            )
+
+            self.assertNotEqual("", first)
+            self.assertEqual("", same_band)
+            self.assertNotEqual("", next_band)
+
+    def test_sessions_track_their_bands_separately(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            state_directory = Path(directory) / "state"
+            mine = HOOK._response_for_crossing(
+                tokens=210_000,
+                session_id="session-4",
+                mode="context",
+                state_directory=state_directory,
+            )
+            theirs = HOOK._response_for_crossing(
+                tokens=210_000,
+                session_id="session-5",
+                mode="context",
+                state_directory=state_directory,
+            )
+
+            self.assertNotEqual("", mine)
+            self.assertNotEqual("", theirs)
+
     def test_stop_mode_forces_one_continuation_per_band(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             state_directory = Path(directory) / "state"
