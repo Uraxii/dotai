@@ -1,109 +1,77 @@
 ---
 name: podman-sandbox
-description: Give an agent its own throwaway podman container holding a private clone of a repo, published ports, and a virtual display it can screenshot. Use when work must not touch the real checkout, when several agents each need their own working tree and ports on one machine, when a test or a migration writes into the repo, or when a windowed app must run and be screenshotted with no desktop available. Covers environment profiles supplied as directories on disk, idempotent bring-up, port publishing, screenshots with a blankness check, and teardown.
+description: Gives an agent a throwaway podman container holding a private clone of a repository, the real checkout mounted read-only, an optional published port, and a virtual display it can screenshot. Use when work must not touch the real checkout, when several agents each need their own working tree and ports on one machine, when a test or a migration writes into the repository, or when a windowed app must run and be screenshotted with no desktop available. Covers bring-up from the project's own Containerfile, running commands in the clone, port publishing, screenshots with a blankness check, rescuing commits out of a container, and teardown.
 ---
 
 # Podman sandbox
 
-`scripts/lab` gives you a container with the repository mounted read-only at
-`/src-ro` and a private writable clone at `/work/<repo>`. Nothing you do
-inside can write the real checkout.
+`scripts/lab` gives you a container with the repository mounted read-only at `/src-ro` and a
+private writable clone at `/work/<repo>`. Nothing you do inside can write the real checkout.
 
-Paths below are relative to this skill's base directory, which the skill
-loader prints when it loads this file. Prefix every `lab` command with it.
+Paths below are relative to this skill's base directory, which the skill loader prints when it
+loads this file. Prefix every `lab` command with it. Requirements: podman, and Python 3.7 or
+later. No pip packages, and no environment variables to set, ever. Every knob is a flag.
 
-Requirements: podman, and Python 3.7 or later. No pip packages, no
-environment variables to set, ever. Every knob is a flag.
+The container recipe lives in one place, `<repo>/.sandbox-container/`. This skill ships no
+image.
 
-## When to use it
-
-- Work that must not touch the real checkout: a destructive migration, a
-  `git reset --hard`, a test that writes into the repository.
-- Several agents that each need their own working tree, ports, and caches.
-- A windowed app you must run and screenshot with no desktop available.
-
-Skip it for read-only inspection, and for anything whose answer depends on
-how frames actually look. See [Limits](#limits).
+- `Containerfile` is required. The whole directory is the build context, so editing any
+  file in it rebuilds the image.
+- `setup` and `ready` are optional executables, found by name and run inside the
+  container. `setup` runs once after the clone exists and must exit 0. `ready` is polled
+  until it exits 0, for up to 180 seconds.
+- For `lab shot`, the image needs `Xvfb`, `xdpyinfo`, and ImageMagick's `import` and
+  `identify`.
 
 ## Bring a lab up
 
 ```
-scripts/lab up demo --repo /path/to/repo
+scripts/lab up demo --repo /path/to/repo --branch feat/demo --port 6551
 ```
 
-`up` converges. It builds the image if the profile changed, creates and
-starts the container if the spec changed, checks the branch out, runs the
-profile's setup hook, and waits for the profile's ready check. Run it twice
-and the second run prints `changed=0` and rebuilds nothing.
-
-It prints one line on stdout. Progress goes to stderr.
+`up` converges: it builds the image, recreates the container if the spec changed, checks the
+branch out in the clone, runs `setup`, and waits for `ready`. A second run with no input change
+prints `changed=0`. Progress goes to stderr, and one line to stdout:
 
 ```
-lab name=demo container=lab-demo image=podman-sandbox/base:latest work=/work/myrepo head=1a2b3c4d changed=4
+lab name=demo container=lab-demo image=podman-sandbox/myrepo-082f93940c1d:latest work=/work/myrepo head=1a2b3c4d port=6551 changed=4
 ```
 
-Flags:
+`--repo` defaults to the working directory's repository, and `--branch` to that repository's
+current branch. `--port N` publishes port N on `127.0.0.1` and exports `LAB_PORT` into the
+container. It is the only way to publish a port, and the second lab to claim a host port fails
+to start, so give each lab its own.
 
-- `--repo PATH` the repository to mount and clone. Defaults to the working
-  directory's repository.
-- `--profile NAME` which environment. Defaults to `base`: git, python3,
-  build-essential, curl, jq, Xvfb, ImageMagick, and Mesa software GL. Any
-  other name is a directory you wrote. See
-  [the profile contract](references/profile-contract.md).
-- `--branch BRANCH` the branch or revision to check out. Defaults to the
-  repository's current branch. Before `up` resets that branch or a detached
-  `HEAD`, it refuses only when it would lose a lab commit not on the host.
-- `--port N` override the port the profile publishes. Give each lab its own
-  port: two labs cannot publish the same host port, and the second `up`
-  fails at start.
-
-## Run a command
+## Run a command in a lab
 
 ```
 scripts/lab exec demo pytest -q
-```
-
-The working directory is the private clone, so you never write `cd`.
-Arguments after the lab name are passed through unparsed, and `exec` returns
-the command's own exit code. For a pipeline, ask for a shell yourself:
-
-```
 scripts/lab exec demo bash -lc 'make 2>&1 | tail -40'
 ```
 
-## Take a screenshot
+The working directory is the private clone, so you never write `cd`. Arguments after the lab
+name pass through unparsed, and `exec` returns the command's own exit code.
 
-To run a windowed command on a throwaway virtual display and photograph it:
+## Screenshot a lab
 
 ```
 scripts/lab shot demo --seconds 60 -- myapp --fullscreen
 ```
 
-To photograph the display a profile's setup hook already started, and leave
-whatever is running on it alone, drop the `--` and everything after it:
+That runs a windowed command on a throwaway display and photographs it. Drop the `--` and
+everything after it to photograph the display `setup` already started, leaving whatever runs on
+it alone. `--seconds` defaults to 30. Both forms copy the PNG to the host and print one line:
 
 ```
-scripts/lab shot demo
+shot path=/path/to/repo/.sandbox-shots/demo-2026-09-12T14-03-11Z.png size=1280x720 stddev=10497.7 colors=4093 bytes=223095
 ```
 
-Either form copies the PNG to the host and prints one line:
+`--out PATH` names the file yourself. The default lands under `<repo>/.sandbox-shots/` with a
+UTC timestamp.
 
-```
-shot path=/path/to/repo/.nikki-agents/podman-sandbox/shots/demo-2026-09-12T14-03-11Z.png size=1280x720 stddev=10497.7 colors=4093 bytes=223095
-```
-
-`--out PATH` names the file yourself. The default lands under the
-repository's `.nikki-agents/podman-sandbox/shots/` directory with a UTC
-timestamp, so repeated shots never overwrite each other.
-
-**Judge the frame from `stddev` and `colors`. Do not open the PNG**, because
-its pixels then sit in your context for the rest of the session. `shot` exits
-1 when `colors` is 2 or fewer, which is a display nothing rendered on: an
-empty screen reads `colors=1`, and a window that failed to come up and left
-one dialog box behind reads `colors=2` with a `stddev` far from zero. Two
-colours is the whole frame's budget spent, so anything that really drew,
-anti-aliased text included, comes back well above it. Pass `--allow-blank`
-when such a frame is the answer you wanted.
+Judge the frame from `stddev` and `colors`. Do not open the PNG, because its pixels then sit in
+your context for the rest of the session. `shot` exits 1 when `colors` is 2 or fewer, and
+`--allow-blank` turns that gate off.
 
 ## Tear a lab down
 
@@ -111,14 +79,14 @@ when such a frame is the answer you wanted.
 scripts/lab down demo
 ```
 
-This deletes the container and its `lab-demo-work` volume. The clone and any
-uncommitted work in it are gone. Save commits before you run this command.
+This deletes the container and its `lab-demo-work` volume. The clone and any uncommitted work in
+it are gone, so save commits first. `podman ps -a --filter label=lab.spec` lists the labs that
+exist.
 
 ## Save commits from a lab
 
-If `lab up` refuses to reset a clone, it prints these three commands for each
-`REF` at risk, with `NAME`, `REF`, and `SHA` filled in. Run them from the host
-repository, in the order printed.
+If `lab up` refuses to reset a clone, it prints these three commands for each `REF` at risk,
+with `NAME`, `REF`, and `SHA` filled in. Run them from the host repository.
 
 ```
 scripts/lab exec NAME git bundle create /tmp/NAME.bundle REF
@@ -126,57 +94,15 @@ podman cp lab-NAME:/tmp/NAME.bundle /tmp/NAME.bundle
 git fetch /tmp/NAME.bundle REF:refs/heads/lab-rescue/NAME-SHA
 ```
 
-`SHA` is the first 12 characters of the newest commit at risk, so each rescue
-gets a new `lab-rescue` branch and never overwrites an earlier one. After
-`git fetch` completes, that branch holds the saved commits. You can run
-`lab up` again or run `lab down NAME`.
+`SHA` is the first 12 characters of the newest commit at risk, so each rescue gets its own
+`lab-rescue` branch. Then run `lab up` again, or `lab down NAME`.
 
-To see which labs exist, ask podman:
+## Check the host
 
 ```
-podman ps -a --filter label=lab.spec
+scripts/lab check --repo /path/to/repo
 ```
 
-## Check the host before you trust it
-
-```
-scripts/lab check --profile base
-```
-
-`check` prints one `ok:` or `FAIL:` line per check and exits 1 if any
-failed. It confirms podman answers, the profile resolves and its
-`profile.json` parses, and the repository's head resolves. It builds nothing.
-Run it first on a machine you have not used before, and after editing a
-profile.
-
-## One lab per parallel candidate
-
-Bring up one lab per candidate, named for the candidate, from the same
-repository. Give each its own branch and its own port, collect results as
-text, and tear each one down when its verdict is in.
-
-```
-scripts/lab up cand-a --repo /path/to/repo --branch feat/cand-a --port 6551
-scripts/lab up cand-b --repo /path/to/repo --branch feat/cand-b --port 6552
-scripts/lab exec cand-a ./run-gate.sh
-scripts/lab down cand-a
-```
-
-## Limits
-
-- **No GPU.** Rendering is llvmpipe and lavapipe on the CPU. No visual
-  judgment happens here. Anything that turns on how frames actually look
-  stays on a real display.
-- **No real desktop.** Xvfb is a headless X server. There is no compositor,
-  no window manager, and no host display is ever mounted.
-- **No writes to the real checkout.** By design. Get work out with git inside
-  the container, or with `podman cp`.
-- **podman only.** docker is not supported and is not detected. One engine
-  means one code path in every call site, and "works anywhere podman works"
-  already includes macOS, where podman runs a Linux VM.
-- **On macOS**, the repository must sit inside a directory the podman machine
-  shares, `$HOME` by default. A bind mount of an unshared path mounts nothing
-  and fails confusingly later. A profile that fetches an x86_64 binary also
-  needs an arm64 build or emulation on Apple Silicon.
-- **Rootless podman** cannot publish a port below 1024, and has no
-  `/dev/dri`, so software GL is the only GL.
+`check` confirms podman answers, the repository's head resolves, and
+`.sandbox-container/Containerfile` is there. It prints one `ok:` or `FAIL:` line per check,
+exits 1 if any failed, and builds nothing.

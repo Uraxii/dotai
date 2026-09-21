@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
 """Command line for podman-sandbox: a throwaway podman container per agent.
 
-    lab up NAME [--repo PATH] [--profile NAME] [--branch BRANCH] [--port N]
+    lab up NAME [--repo PATH] [--branch BRANCH] [--port N]
     lab exec NAME ARGV...
     lab shot NAME [--out PATH] [--seconds N] [--allow-blank] [-- ARGV...]
     lab down NAME
-    lab check [--profile NAME]
+    lab check [--repo PATH]
+
+The image comes from `<repo>/.sandbox-container/Containerfile`. The skill
+ships no image of its own.
 
 Python standard library only, forever. No pip dependency.
 
@@ -16,7 +19,7 @@ only two places a subprocess starts. A caller who wants a shell passes
 
 This file is the shell of the program: it parses argv, reads host git facts,
 calls the converge functions, and prints one machine-readable line. The
-decisions live in `lab_profile` and `lab_container`.
+decisions live in `lab_container`.
 """
 
 from __future__ import annotations
@@ -30,15 +33,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import lab_container
-import lab_profile
 
-SHOT_DIR_SUBPATH = Path(".nikki-agents") / "podman-sandbox" / "shots"
+SHOT_DIR_SUBPATH = Path(".sandbox-shots")
 SHOT_CONTAINER_PATH = "/tmp/lab-shot.png"
-DEFAULT_PROFILE = "base"
 DEFAULT_SHOT_SECONDS = 30
 BLANK_MAX_COLORS = 2
 
-SHOT_COMMAND = "lab-shot"
 SHOT_COMMAND_NAME = "shot"
 THROWAWAY_DISPLAY = ":100"
 HEAD_DIGITS = 8
@@ -94,7 +94,7 @@ def resolve_branch(repo: Path, given: str | None) -> tuple[str, str]:
 
 
 def default_shot_path(repo: Path, name: str) -> Path:
-    """Return `<repo>/.nikki-agents/podman-sandbox/shots/<name>-<UTC ISO>.png`.
+    """Return `<repo>/.sandbox-shots/<name>-<UTC ISO>.png`.
 
     A timestamped default means an agent never overwrites the screenshot it
     took a minute ago, and never has to invent a path.
@@ -116,40 +116,37 @@ def command_up(args: argparse.Namespace) -> int:
 
     Prints to stdout:
 
-        lab name=demo container=lab-demo image=podman-sandbox/base:latest
+        lab name=demo container=lab-demo
+        image=podman-sandbox/myrepo-082f93940c1d:latest
         work=/work/myrepo head=1a2b3c4d port=6551 changed=2
 
-    as one line, with `port=` omitted when the profile publishes none.
-    Progress goes to stderr, so stdout stays one parseable line.
+    as one line, with `port=` omitted when `--port` was not given. Progress
+    goes to stderr, so stdout stays one parseable line.
 
     Converge order: build the image, recreate the container if the spec
-    changed, start it, sync the clone, run the profile's setup, wait for the
-    profile's ready check. A second run with no input change prints
-    `changed=0` and rebuilds nothing. The ready check never counts as a
-    change, because polling alters nothing.
+    changed, start it, copy `lab-shot` in, sync the clone, run the `setup`
+    hook, wait for the `ready` hook. A second run with no input change
+    prints `changed=0` and rebuilds nothing. Neither the `lab-shot` copy nor
+    the ready check counts as a change: one overwrites a file with itself,
+    the other only polls.
     """
     lab_container.require_podman()
     repo = resolve_repo(args.repo)
     git_common_dir = resolve_git_common_dir(repo)
     branch, head = resolve_branch(repo, args.branch)
-    profile = lab_profile.load(args.profile, repo)
-    base = None
-    if profile.name != DEFAULT_PROFILE:
-        base = lab_profile.load(DEFAULT_PROFILE, repo)
-    port = args.port if args.port is not None else profile.port
+    definition = lab_container.load_definition(repo)
     lab = lab_container.Lab(args.name)
     spec = lab_container.LabSpec(
         repo=str(repo),
         branch=branch,
-        profile=profile.name,
-        port=port,
-        image=profile.image,
-        recipe_sha256=lab_container.recipe_sha256(profile, base),
+        port=args.port,
+        image=definition.image,
+        recipe_sha256=definition.recipe_sha256,
         git_common_dir=str(git_common_dir),
     )
     changed = 0
-    logging.info("converging image %s", profile.image)
-    changed += int(lab_container.build_image(profile, base))
+    logging.info("converging image %s", definition.image)
+    changed += int(lab_container.build_image(definition))
     created = lab_container.read_spec(lab) != spec
     if created:
         logging.info("creating container %s", lab.container)
@@ -157,11 +154,12 @@ def command_up(args: argparse.Namespace) -> int:
         changed += 1
     started = lab_container.start_container(lab)
     changed += int(started)
+    lab_container.install_shot_command(lab)
     clone = lab.clone_path(repo)
     logging.info("syncing clone %s to %s", clone, head[:HEAD_DIGITS])
     changed += int(lab_container.sync_clone(lab, repo, branch, head))
-    changed += int(lab_container.run_setup(lab, profile, clone))
-    lab_container.wait_ready(lab, profile)
+    changed += int(lab_container.run_setup(lab, definition, clone))
+    lab_container.wait_ready(lab, definition)
     report = lab_container.ConvergeReport(lab, spec, clone, head, changed)
     print(format_up(report))
     return 0
@@ -219,7 +217,7 @@ def split_shot_argv(argv: list[str]) -> tuple[list[str], list[str]]:
 def command_shot(args: argparse.Namespace) -> int:
     """Screenshot the lab's virtual display and copy the PNG to the host.
 
-    With no `--` argv, grabs the persistent display a profile's setup hook
+    With no `--` argv, grabs the persistent display the `setup` hook
     started, so a running editor is photographed and left running. With
     `-- ARGV`, runs `lab-shot` which starts its own throwaway display,
     leaving the persistent one untouched.
@@ -248,7 +246,8 @@ def command_shot(args: argparse.Namespace) -> int:
     logging.info("capturing display %s", display)
     stats = lab_container.exec_capture(
         lab,
-        [SHOT_COMMAND, SHOT_CONTAINER_PATH, display, str(args.seconds)] + argv,
+        [lab_container.SHOT_COMMAND_PATH, SHOT_CONTAINER_PATH, display,
+         str(args.seconds)] + argv,
         lab.clone_path(repo),
     )
     lab_container.copy_out(lab, SHOT_CONTAINER_PATH, out)
@@ -300,10 +299,9 @@ def command_check(args: argparse.Namespace) -> int:
     Fails loudly here rather than mysteriously later. Checks, in order:
 
     - `podman` is on PATH and `podman info` exits 0.
-    - The profile resolves to a directory holding a Containerfile, and its
-      profile.json parses.
     - The working directory, or `--repo`, is a git repository whose HEAD
       resolves.
+    - That repository holds `.sandbox-container/Containerfile`.
     - On Darwin: warns that the repo path must lie inside a directory the
       podman machine shares, because a bind mount of an unshared path
       silently mounts nothing.
@@ -311,27 +309,30 @@ def command_check(args: argparse.Namespace) -> int:
     Prints `ok: <what>` or `FAIL: <what>: <why>` per check, and exits 1 when
     any check failed. Builds no image and starts no container.
 
-    It does not test whether the profile's port is free. A port free now can
-    be taken by the time `up` runs, and podman names the collision itself at
-    the only moment that matters.
+    It does not test whether `--port` is free. A port free now can be taken
+    by the time `up` runs, and podman names the collision itself at the only
+    moment that matters.
     """
     results = [report_check("podman", describe_podman),
                report_check("repository", lambda: describe_repo(args.repo)),
-               report_check(f"profile {args.profile}",
-                            lambda: describe_profile(args.profile, args.repo))]
+               report_check("container definition",
+                            lambda: describe_definition(args.repo))]
     if platform.system() == "Darwin":
         print(f"ok: macos: {MACOS_SHARE_WARNING}")
     return 0 if all(results) else 1
 
 
 def report_check(what: str, probe) -> bool:
-    """Print one `ok:` or `FAIL:` line for `probe`. True when it passed."""
+    """Print one `ok:` or `FAIL:` line for `probe`. True when it passed.
+
+    A failure's remedy lines are joined onto the one line, so a caller can
+    read `check` output with `grep`.
+    """
     try:
         print(f"ok: {what}: {probe()}")
         return True
-    except (UsageError, OSError, lab_container.LabError,
-            lab_profile.ProfileError) as err:
-        print(f"FAIL: {what}: {err}")
+    except (UsageError, OSError, lab_container.LabError) as err:
+        print(f"FAIL: {what}: {'; '.join(str(err).splitlines())}")
         return False
 
 
@@ -349,15 +350,11 @@ def describe_repo(given: str | None) -> str:
     return f"{repo} {lab_container.branch_name(branch)} {head[:HEAD_DIGITS]}"
 
 
-def describe_profile(name: str, given: str | None) -> str:
-    """Return where profile `name` resolves and the hash of its directory."""
-    try:
-        repo = resolve_repo(given)
-    except UsageError:
-        repo = Path.cwd()
-    profile = lab_profile.load(name, repo)
-    digest = profile.recipe_sha256[:HEAD_DIGITS]
-    return f"{profile.directory} recipe={digest}"
+def describe_definition(given: str | None) -> str:
+    """Return the definition directory, image tag, and directory hash."""
+    definition = lab_container.load_definition(resolve_repo(given))
+    digest = definition.recipe_sha256[:HEAD_DIGITS]
+    return f"{definition.directory} image={definition.image} recipe={digest}"
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -368,9 +365,8 @@ def build_parser() -> argparse.ArgumentParser:
     up = sub.add_parser("up", help="converge a lab and print its facts")
     up.add_argument("name")
     up.add_argument("--repo", help="repository to mount and clone")
-    up.add_argument("--profile", default=DEFAULT_PROFILE)
     up.add_argument("--branch", help="branch to check out in the clone")
-    up.add_argument("--port", type=int, help="override the published port")
+    up.add_argument("--port", type=int, help="publish this port on localhost")
     up.set_defaults(run=command_up)
 
     run_in = sub.add_parser("exec", help="run a command in the clone")
@@ -391,8 +387,7 @@ def build_parser() -> argparse.ArgumentParser:
     down.set_defaults(run=command_down)
 
     check = sub.add_parser("check", help="check this host can run labs")
-    check.add_argument("--repo")
-    check.add_argument("--profile", default=DEFAULT_PROFILE)
+    check.add_argument("--repo", help="repository to check")
     check.set_defaults(run=command_check)
     return parser
 
@@ -407,7 +402,7 @@ def main(argv: list[str]) -> int:
         args.argv = passthrough
     try:
         return args.run(args)
-    except (UsageError, lab_profile.ProfileError) as err:
+    except UsageError as err:
         print(f"lab: {err}", file=sys.stderr)
         return 2
     except lab_container.LabError as err:

@@ -8,8 +8,9 @@
 # it is, start nothing, stop nothing, so a long-running editor survives.
 #
 # This file is bash, not Python, deliberately. It is five execs with no logic
-# of its own, which Python could only wrap in subprocess calls,
-# and it must run in every profile's image without requiring python3 there.
+# of its own, which Python could only wrap in subprocess calls. It runs inside
+# a container whose image the project wrote, and that image is not guaranteed
+# to have python3.
 # "$@" keeps the caller's argument list intact, so no shell string is ever
 # built from it.
 #

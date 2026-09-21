@@ -18,12 +18,16 @@ They need no podman: the gate reads the text of one `identify` line.
 
 from __future__ import annotations
 
+import argparse
+import contextlib
 import importlib.machinery
 import importlib.util
+import io
 import subprocess
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 import lab_container
 
@@ -64,6 +68,60 @@ class IsBlankTest(unittest.TestCase):
     def test_a_line_without_a_colour_count_is_an_error(self) -> None:
         with self.assertRaises(lab_container.LabError):
             lab.is_blank("stddev=19661.3 bytes=8852")
+
+
+class ShotCommandConvergeTest(unittest.TestCase):
+    """`up` reconciles `lab-shot`, including into a lab it did not create."""
+
+    def test_up_copies_the_shot_command_into_an_unchanged_lab(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            repo = Path(temporary) / "repo"
+            definition = repo / lab_container.DEFINITION_SUBPATH
+            definition.mkdir(parents=True)
+            (definition / "Containerfile").write_text("FROM debian:13-slim\n")
+            subprocess.run(["git", "init", "--initial-branch=main", str(repo)],
+                           check=True, capture_output=True, text=True)
+            for key, value in (("user.email", "test@example.com"),
+                               ("user.name", "Test")):
+                subprocess.run(["git", "config", key, value], cwd=str(repo),
+                               check=True, capture_output=True, text=True)
+            subprocess.run(["git", "commit", "--allow-empty", "-m", "initial"],
+                           cwd=str(repo), check=True, capture_output=True,
+                           text=True)
+            installed: list[str] = []
+            patches = mock.patch.multiple(
+                lab_container,
+                require_podman=lambda: "5.0.0",
+                build_image=lambda definition: False,
+                read_spec=lambda lab: MatchingSpec(),
+                create_container=fail_on_create,
+                start_container=lambda lab: False,
+                install_shot_command=lambda lab: installed.append(lab.name),
+                sync_clone=lambda lab, repo, branch, head: False,
+                run_setup=lambda lab, definition, workdir: False,
+                wait_ready=lambda lab, definition: False,
+            )
+            patches.start()
+            self.addCleanup(patches.stop)
+            args = argparse.Namespace(name="demo", repo=str(repo), branch=None,
+                                      port=None)
+
+            with contextlib.redirect_stdout(io.StringIO()) as printed:
+                self.assertEqual(lab.command_up(args), 0)
+
+            self.assertEqual(installed, ["demo"])
+            self.assertIn("changed=0", printed.getvalue())
+
+
+class MatchingSpec:
+    """Stand in for a stored spec that equals whatever `up` wants."""
+
+    def __eq__(self, other: object) -> bool:
+        return True
+
+
+def fail_on_create(*args: object) -> None:
+    raise AssertionError("the container already matched the wanted spec")
 
 
 class GitWorktreeTest(unittest.TestCase):

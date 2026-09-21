@@ -12,7 +12,7 @@ import unittest
 from pathlib import Path
 
 
-LAB_SHOT = Path(__file__).parents[1] / "profiles" / "base" / "lab-shot"
+LAB_SHOT = Path(__file__).resolve().parent / "lab-shot"
 DISPLAY = ":4917"
 LOCK = Path("/tmp/.X4917-lock")
 

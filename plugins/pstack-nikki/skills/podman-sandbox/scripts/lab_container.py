@@ -1,4 +1,4 @@
-"""Converge one lab container with podman, and nothing else.
+"""Read a repository's container definition and converge its lab container.
 
 INVARIANT, enforced by review: every function in this module that reaches a
 subprocess takes `list[str]` and passes it straight to `subprocess.run`
@@ -13,28 +13,26 @@ because "works anywhere podman works" is a wider bar than any detection
 logic bought, and the branching cost real lines in every call site.
 
 State lives in one podman label, `lab.spec`, holding the JSON of a LabSpec.
-There is no state file. The container is the state: if somebody removes it
-with `podman rm`, the label goes with it, so the tool cannot believe in a
-lab that no longer exists. A state file would drift from reality and would
-have to be reconciled; a label cannot.
+The container is the state: if somebody removes it with `podman rm`, the
+label goes with it, so the tool cannot believe in a lab that no longer
+exists. A state file would drift from reality; a label cannot.
 
 A podman label cannot be changed after a container is created, so the one
 thing `up` must remember across runs is a sentinel file in the work volume.
-It includes the recipe hash and current container start. `down` deletes it
-with the clone whose state it describes.
 """
 
 from __future__ import annotations
 
 import hashlib
 import json
+import re
 import shutil
+import stat
 import subprocess
+import tempfile
 import time
 from dataclasses import asdict, dataclass
 from pathlib import Path
-
-from lab_profile import RECIPE_NAME, Profile
 
 SPEC_LABEL = "lab.spec"
 MOUNT_SOURCE_READONLY = "/src-ro"
@@ -42,9 +40,23 @@ MOUNT_GIT_COMMON_READONLY = "/git-common-ro"
 MOUNT_WORK = "/work"
 PERSISTENT_DISPLAY = ":99"
 
-RECIPE_LABEL = "lab.recipe.sha256"
+DEFINITION_SUBPATH = ".sandbox-container"
+RECIPE_NAME = "Containerfile"
+SETUP_NAME = "setup"
+READY_NAME = "ready"
+READY_TIMEOUT_SEC = 180
+IMAGE_TAG_PREFIX = "podman-sandbox/"
+IMAGE_TAG_SUFFIX = ":latest"
+IMAGE_TAG_DIGEST_CHARS = 12
+IMAGE_TAG_FALLBACK_STEM = "repo"
+ILLEGAL_IN_IMAGE_TAG = re.compile("[^a-z0-9._-]")
+IMAGE_TAG_EDGE_SEPARATORS = "._-"
+
+SHOT_COMMAND_SOURCE = Path(__file__).resolve().parent / "lab-shot"
+SHOT_COMMAND_PATH = "/usr/local/bin/lab-shot"
+SHOT_COMMAND_MODE = 0o755
+
 SPEC_QUERY = '{{index .Config.Labels "' + SPEC_LABEL + '"}}'
-RECIPE_QUERY = '{{index .Config.Labels "' + RECIPE_LABEL + '"}}'
 RUNNING_QUERY = "{{.State.Running}}"
 SETUP_SENTINEL_PREFIX = MOUNT_WORK + "/.lab-setup-"
 READY_POLL_SEC = 2.0
@@ -60,6 +72,101 @@ class LabError(Exception):
 
 
 @dataclass(frozen=True)
+class ContainerDefinition:
+    """What `<repo>/.sandbox-container` declares, as read from disk.
+
+    `directory` is handed to podman as the build context, so every file in
+    it reaches the image. `recipe_sha256` covers that whole directory, which
+    is why editing a hook rebuilds the image.
+
+    `setup_command` runs once after the private clone exists and must exit
+    0. `ready_command` is polled until it exits 0 or READY_TIMEOUT_SEC
+    elapses. Both are argument lists naming an executable on the read-only
+    mount of the repository. An empty tuple means the hook is absent.
+    """
+
+    directory: Path
+    image: str
+    recipe_sha256: str
+    setup_command: tuple[str, ...]
+    ready_command: tuple[str, ...]
+
+
+def load_definition(repo: Path) -> ContainerDefinition:
+    """Read `<repo>/.sandbox-container`, or raise LabError naming the path."""
+    directory = repo / DEFINITION_SUBPATH
+    if not directory.is_dir():
+        raise LabError(
+            f"no container definition at {directory}\n"
+            f"create that directory and write a {RECIPE_NAME} in it. "
+            f"Executables named {SETUP_NAME} and {READY_NAME} beside it are "
+            "optional"
+        )
+    if not (directory / RECIPE_NAME).is_file():
+        raise LabError(
+            f"no {RECIPE_NAME} in {directory}\n"
+            f"write one there. Executables named {SETUP_NAME} and "
+            f"{READY_NAME} beside it are optional"
+        )
+    recipe_sha256 = hash_directory(directory)
+    return ContainerDefinition(
+        directory=directory,
+        image=image_tag(repo, recipe_sha256),
+        recipe_sha256=recipe_sha256,
+        setup_command=hook_command(directory, SETUP_NAME),
+        ready_command=hook_command(directory, READY_NAME),
+    )
+
+
+def hook_command(directory: Path, name: str) -> tuple[str, ...]:
+    """Return the container argv running `name`, or () when it is absent.
+
+    The repository is mounted read-only at `/src-ro`, so a hook the project
+    committed is already inside the container at a known path.
+    """
+    if not (directory / name).is_file():
+        return ()
+    return (f"{MOUNT_SOURCE_READONLY}/{DEFINITION_SUBPATH}/{name}",)
+
+
+def image_tag(repo: Path, recipe_sha256: str) -> str:
+    """Return the image tag for `repo`, naming it and its recipe hash.
+
+    The hash is part of the tag, so two repositories whose directories share
+    a name cannot build over each other's image, and a tag that exists is
+    always an image built from that exact directory.
+    """
+    stem = ILLEGAL_IN_IMAGE_TAG.sub("-", repo.name.lower())
+    stem = stem.strip(IMAGE_TAG_EDGE_SEPARATORS) or IMAGE_TAG_FALLBACK_STEM
+    digest = recipe_sha256[:IMAGE_TAG_DIGEST_CHARS]
+    return f"{IMAGE_TAG_PREFIX}{stem}-{digest}{IMAGE_TAG_SUFFIX}"
+
+
+def hash_directory(directory: Path) -> str:
+    """Hash every file under `directory` into one stable digest.
+
+    Walks in sorted relative-path order and feeds the path, the owner
+    execute bit, and the bytes of each file into one sha256. Sorting makes
+    the digest independent of filesystem order, so the same directory hashes
+    the same on every machine. The execute bit is included because a setup
+    script that loses `+x` changes behaviour without changing bytes.
+    """
+    found = [
+        (path.relative_to(directory).as_posix(), path)
+        for path in directory.rglob("*")
+        if path.is_file()
+    ]
+    digest = hashlib.sha256()
+    for relative, path in sorted(found):
+        content = path.read_bytes()
+        executable = int(bool(path.stat().st_mode & stat.S_IXUSR))
+        header = f"{relative}\0{executable}\0{len(content)}\0"
+        digest.update(header.encode("utf-8"))
+        digest.update(content)
+    return digest.hexdigest()
+
+
+@dataclass(frozen=True)
 class LabSpec:
     """Everything that decides whether a container must be recreated.
 
@@ -71,7 +178,6 @@ class LabSpec:
 
     repo: str
     branch: str
-    profile: str
     port: int | None
     image: str
     recipe_sha256: str
@@ -171,35 +277,16 @@ def read_spec(lab: Lab) -> LabSpec | None:
     return LabSpec.from_label(podman(query, check=False))
 
 
-def recipe_sha256(profile: Profile, base: Profile | None) -> str:
-    """Return the hash identifying the image `profile` builds.
+def build_image(definition: ContainerDefinition) -> bool:
+    """Build the image unless the tag already exists. True when a build ran.
 
-    Folds `base`'s own hash in when this profile derives from base, so
-    editing `base` changes the identity of every image built on it.
+    The tag carries the recipe hash, so existence is the whole check.
     """
-    if base is None:
-        return profile.recipe_sha256
-    both = f"{base.recipe_sha256}\0{profile.recipe_sha256}"
-    return hashlib.sha256(both.encode("utf-8")).hexdigest()
-
-
-def build_image(profile: Profile, base: Profile | None) -> bool:
-    """Build the profile's image unless it already matches its recipe hash.
-
-    Converges `base` first when given, then folds base's recipe hash into
-    this profile's image label, so a change to `base` rebuilds every profile
-    derived from it. Returns True when a build ran.
-    """
-    changed = build_image(base, None) if base is not None else False
-    wanted = recipe_sha256(profile, base)
-    query = ["image", "inspect", profile.image, "--format", RECIPE_QUERY]
-    built = podman(query, check=False)
-    if built == wanted:
-        return changed
-    podman(["build", "--label", f"{RECIPE_LABEL}={wanted}",
-            "--tag", profile.image,
-            "--file", str(profile.directory / RECIPE_NAME),
-            str(profile.directory)])
+    if podman_status(["image", "exists", definition.image]) == 0:
+        return False
+    podman(["build", "--tag", definition.image,
+            "--file", str(definition.directory / RECIPE_NAME),
+            str(definition.directory)])
     return True
 
 
@@ -213,8 +300,7 @@ def create_container(
     uid mapping is needed and no container-owned file can land on the host.
     Publishes `spec.port` as `127.0.0.1:<port>:<port>` when set, so nothing
     on the local network reaches it. Exports `LAB_PORT` into the container
-    so a profile's setup and ready hooks read the port instead of hardcoding
-    it.
+    so the setup and ready hooks read the port instead of hardcoding it.
 
     The volume outlives the container, so recreating a lab for a new branch
     or a rebuilt image keeps the clone.
@@ -231,6 +317,23 @@ def create_container(
         args += ["--publish", f"127.0.0.1:{spec.port}:{spec.port}",
                  "--env", f"LAB_PORT={spec.port}"]
     podman(args + [spec.image])
+
+
+def install_shot_command(lab: Lab) -> None:
+    """Copy `lab-shot` into the container, overwriting any older copy.
+
+    `up` runs this every time, so editing the skill's own `lab-shot`
+    reaches an existing lab. It is not part of LabSpec: a container holding
+    an older copy is not worth destroying a clone over.
+
+    Copied rather than bind-mounted: a bind mount would write a host path
+    into the container's spec, and the spec is read back as lab state.
+    """
+    with tempfile.TemporaryDirectory() as staging:
+        staged = Path(staging) / SHOT_COMMAND_SOURCE.name
+        shutil.copyfile(SHOT_COMMAND_SOURCE, staged)
+        staged.chmod(SHOT_COMMAND_MODE)
+        podman(["cp", str(staged), f"{lab.container}:{SHOT_COMMAND_PATH}"])
 
 
 def start_container(lab: Lab) -> bool:
@@ -349,42 +452,42 @@ def at_revision(lab: Lab, clone: str, branch: str, head: str) -> bool:
     return branch_now == branch_name(branch)
 
 
-def run_setup(lab: Lab, profile: Profile, workdir: str) -> bool:
-    """Run the profile's `setup` argv once, from the clone directory.
+def run_setup(lab: Lab, definition: ContainerDefinition, workdir: str) -> bool:
+    """Run the `setup` hook once, from the clone directory.
 
     Skipped when a sentinel in the work volume already records a successful
     setup for this recipe hash and current start. A restart changes the
     sentinel because the volume outlives processes that setup launched.
     Raises LabError on a non-zero exit.
     """
-    if not profile.setup:
+    if not definition.setup_command:
         return False
     started_at = podman(["inspect", lab.container, "--format", "{{.State.StartedAt}}"])
     start_hash = hashlib.sha256(started_at.encode("utf-8")).hexdigest()
-    sentinel = f"{SETUP_SENTINEL_PREFIX}{profile.recipe_sha256}-{start_hash}"
+    sentinel = f"{SETUP_SENTINEL_PREFIX}{definition.recipe_sha256}-{start_hash}"
     if exec_status(lab, ["test", "-f", sentinel], MOUNT_WORK) == 0:
         return False
-    exec_capture(lab, list(profile.setup), workdir)
+    exec_capture(lab, list(definition.setup_command), workdir)
     exec_capture(lab, ["touch", sentinel], MOUNT_WORK)
     return True
 
 
-def wait_ready(lab: Lab, profile: Profile) -> bool:
-    """Poll the profile's `ready` argv until it exits 0.
+def wait_ready(lab: Lab, definition: ContainerDefinition) -> bool:
+    """Poll the `ready` hook until it exits 0.
 
-    Returns False when `ready` is absent. Raises LabError naming the lab and
-    `ready_timeout_sec` when the deadline passes, because a lab that never
-    became ready must fail here rather than at the agent's first real call.
+    Returns False when the hook is absent. Raises LabError when the deadline
+    passes, because a lab that never became ready must fail here rather than
+    at the agent's first real call.
     """
-    if not profile.ready:
+    if not definition.ready_command:
         return False
-    deadline = time.monotonic() + profile.ready_timeout_sec
+    deadline = time.monotonic() + READY_TIMEOUT_SEC
     while time.monotonic() < deadline:
-        if exec_status(lab, list(profile.ready), MOUNT_WORK) == 0:
+        if exec_status(lab, list(definition.ready_command), MOUNT_WORK) == 0:
             return True
         time.sleep(READY_POLL_SEC)
     raise LabError(f"lab {lab.name} was not ready within "
-                   f"{profile.ready_timeout_sec} seconds")
+                   f"{READY_TIMEOUT_SEC} seconds")
 
 
 def exec_argv(lab: Lab, argv: list[str], workdir: str) -> int:
