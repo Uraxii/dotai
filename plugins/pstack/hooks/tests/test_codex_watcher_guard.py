@@ -97,6 +97,29 @@ class CodexWatcherGuardTests(unittest.TestCase):
         )
         self.assert_allowed("pstack:developer-codex", command)
 
+    def test_existing_worktree_must_sit_inside_the_repo(self) -> None:
+        # `worktree: <existing absolute path>` in the CODEX RUN header. `-C`
+        # is the directory a workspace-write Codex session may write to, so
+        # the guard keeps it inside the repo that receives the report. A
+        # sibling worktree beside the repo looks legitimate and is still
+        # outside that boundary.
+        def exec_command(directory: str) -> str:
+            return (
+                "codex exec -m gpt-5.6-terra -s workspace-write "
+                f"-c agents.enabled=false -C {directory} "
+                f"-o {RUN}/report.md - < {RUN}/prompt.txt"
+            )
+
+        self.assert_allowed("pstack:developer-codex", exec_command(f"{REPO}/wt/sample-run"))
+        self.assert_denied(
+            payload(
+                "pstack:developer-codex",
+                "Bash",
+                command=exec_command(f"{REPO}-worktrees/sample-run"),
+            ),
+            "Bash",
+        )
+
     def test_playbook_prompt_write_is_allowed_for_both_watchers(self) -> None:
         for agent_type in WATCHERS:
             with self.subTest(agent_type=agent_type):
