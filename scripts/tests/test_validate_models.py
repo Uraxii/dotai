@@ -6,10 +6,9 @@ import unittest
 from pathlib import Path
 
 
-SKILL_ROOT = Path(__file__).resolve().parents[2]
-PLUGIN_ROOT = SKILL_ROOT.parents[1]
-REPOSITORY_ROOT = PLUGIN_ROOT.parents[1]
-VALIDATOR = SKILL_ROOT / "scripts" / "validate-models.py"
+REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
+PLUGIN_ROOT = REPOSITORY_ROOT / "plugins" / "pstack"
+VALIDATOR = REPOSITORY_ROOT / "scripts" / "validate-models.py"
 
 _spec = importlib.util.spec_from_file_location("validate_models", VALIDATOR)
 validate_models = importlib.util.module_from_spec(_spec)

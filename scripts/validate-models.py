@@ -28,7 +28,7 @@ HARNESSES: tuple[str, ...] = ("claude", "codex", "copilot")
 
 
 def plugin_root() -> Path:
-    return Path(__file__).resolve().parents[3]
+    return Path(__file__).resolve().parents[1] / "plugins" / "pstack"
 
 
 def available_slugs(data: dict) -> dict[str, set[str]]:
