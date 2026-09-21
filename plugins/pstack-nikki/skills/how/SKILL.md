@@ -26,23 +26,23 @@ or Critique output unless requested.
 
 ## Output selection
 
-Output is separate from mode. Honor the user's chosen format or an established
-preference for this task. Otherwise use chat, including for change walkthroughs
-without a requested artifact. For a requested rich artifact with no format
-specified, ask whether the user wants HTML or Notion while continuing any
-independent exploration.
-Resolve the format before creating an artifact or publishing a page.
+Output is separate from mode. Chat is the default, and a change walkthrough
+is no exception: it goes to chat too unless an artifact was asked for. Leave
+chat only when the user asks for a rich artifact or has an established
+preference for one.
 
 - **Chat.** Use the mode's outline directly in the reply. For a change quiz,
   keep answers separate from the questions so the reader can attempt them.
-- **HTML.** Read [references/html-output.md](references/html-output.md).
-- **Notion.** Read [references/notion-output.md](references/notion-output.md).
-  This creates native Notion content, with selective HTML where useful.
+- **A rich artifact.** Follow
+  [create-artifact](../create-artifact/SKILL.md). That skill settles HTML
+  against Notion, renders the mode's outline, and verifies the result.
 
-Read only the selected output reference. Pass the chosen mode, output format,
-and applicable references to the agent writing the explanation. Codebase
-inspection is read-only; output writing is limited to the selected artifact
-or Notion destination. Inspection-only explorers do not publish pages.
+Pass the chosen mode, its outline, and the chosen format to the agent writing
+the explanation. That agent returns content and structure; it emits no format
+markup and reads no format reference. The coordinator renders the result.
+Codebase inspection is read-only; output writing is limited to the selected
+artifact or Notion destination. Inspection-only explorers do not publish
+pages.
 
 ## Change walkthrough mode
 
@@ -68,7 +68,8 @@ Parse what the user is asking about:
 Identify the scope. If ambiguous, state your best-guess interpretation before exploring. Don't ask. Let the user redirect if you're off.
 
 Exceptions: resolve material diff ambiguity as the change reference directs,
-and missing artifact choices as the output instructions direct.
+and a missing artifact format as
+[create-artifact](../create-artifact/SKILL.md) directs.
 
 **Assess complexity to decide the approach:**
 
@@ -132,9 +133,10 @@ files or publish pages; the coordinator owns those writes in Step 4.
 
 Present the explainer's output to the user. You may lightly edit for clarity or add context from the conversation, but don't substantially rewrite. The explainer's communication is the product.
 
-For HTML or Notion, the coordinator creates the selected artifact or page,
-runs the output reference's verification, and returns the artifact path or
-page URL. Report any rendering or publishing limitation.
+For HTML or Notion, the coordinator creates the selected artifact or page as
+[create-artifact](../create-artifact/SKILL.md) directs, runs that skill's
+verification, and returns the artifact path or page URL. Report any rendering
+or publishing limitation.
 
 ### Output Format
 

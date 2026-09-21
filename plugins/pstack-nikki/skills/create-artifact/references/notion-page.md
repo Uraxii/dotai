@@ -1,8 +1,8 @@
-# Notion output
+# Notion page
 
-Use the selected mode's outline to author a native Notion page. Headings,
-paragraphs, lists, code blocks, tables, callouts, and quiz answers remain native
-and editable. Do not embed the complete HTML explanation as the page body.
+Use the outline the caller supplies to author a native Notion page. Headings,
+paragraphs, lists, code blocks, tables, callouts, and quiz answers remain
+native and editable. Do not embed a complete HTML rendering as the page body.
 
 Read [notion-cli](../../notion-cli/SKILL.md) before interacting with Notion.
 Use `ntn` for supported page and upload operations, then return the page URL.
@@ -19,10 +19,11 @@ Do not replace an existing page unless the user requests an update.
 
 ## Quiz and figures
 
-For a change walkthrough, use five native multiple-choice questions. Put each
-answer's explanation inside a toggle so the reader can try the question before
-revealing feedback. Keep the visible option text neutral; show correctness
-inside the toggle. Follow the current specification for toggle nesting.
+When the caller's outline includes a quiz, use native multiple-choice
+questions. Put each answer's explanation inside a toggle so the reader can try
+the question before revealing feedback. Keep the visible option text neutral;
+show correctness inside the toggle. Follow the current specification for
+toggle nesting.
 
 Use native diagrams or static figures where sufficient. Embed HTML only for
 a specific interactive figure or simulation whose controls reveal something
@@ -33,9 +34,10 @@ For such a figure, create a self-contained HTML attachment through the
 CLI or Notion connector upload tools, then embed the returned upload source
 using that interface's documented syntax. Do not assume CLI upload IDs accept
 the connector's embed syntax. An HTML code block displays source; it is not an
-interactive embed. Do not load the full HTML-output reference just to create
-one figure. Keep the figure independent of external assets and verify its
-controls before publishing it.
+interactive embed. Do not load
+[html-document.md](html-document.md) just to create one figure. Keep the
+figure independent of external assets and verify its controls before
+publishing it.
 
 ## Verify and deliver
 

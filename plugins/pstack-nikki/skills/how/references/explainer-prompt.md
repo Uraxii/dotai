@@ -2,7 +2,7 @@
 
 Build the explainer subagent's prompt from this template. Fill in the placeholders.
 For direct explanation, omit the Explorer Findings section and gather the
-evidence yourself. Pass the selected mode and output instructions below.
+evidence yourself. Pass the selected mode and the chosen format below.
 
 ---
 
@@ -19,9 +19,12 @@ You are writing an architectural explanation for a senior engineer. Multiple exp
 - Change comparison, when applicable: {CHANGE_SCOPE}
 - Destination or local artifact directory, when applicable: {DESTINATION}
 
-Read the selected references supplied with this brief. Use the mode's outline
-and the output format's presentation rules. Do not default to the ordinary
-architecture outline for a Change walkthrough.
+Read the selected references supplied with this brief and write to the mode's
+outline. Do not default to the ordinary architecture outline for a Change
+walkthrough. The output format is context, not an instruction to format:
+let it tell you what content is worth writing, such as whether an
+interactive figure earns a description. Do not read a format reference and
+do not emit format markup.
 
 ## Explorer Findings
 
@@ -35,9 +38,9 @@ Write an explanation a senior engineer unfamiliar with this area could read and 
 
 You have read-only access to the codebase to check anything, clarify a detail, or fill a gap. Read files and search as needed. The explorers did the heavy lifting, so you shouldn't need to re-explore from scratch.
 
-Return the explanation and any selected-format markup to the coordinator.
-Do not create files or publish pages. The coordinator owns output creation
-and verification in Step 4, including when explaining directly.
+Return the explanation's content and section structure to the coordinator.
+Do not create files or publish pages. The coordinator renders, saves, and
+verifies it in Step 4, including when explaining directly.
 
 ## Output Format
 
@@ -47,9 +50,10 @@ Critique use the Output Format in [../SKILL.md](../SKILL.md).
 Adapt the depth to the reader.
 
 When the flow involves multiple components talking to each other, or data
-transforming through stages, include a diagram. Follow the selected output
-reference for diagram presentation; use Mermaid or a small ASCII diagram in
-chat. Use your judgment. A diagram should clarify, not decorate. If prose
+transforming through stages, include a diagram. Describe what the diagram
+shows, and draw it as Mermaid or a small ASCII diagram. The coordinator
+converts it to the selected format. Use your judgment. A diagram should
+clarify, not decorate. If prose
 covers the flow, skip the diagram.
 
 ## Communication Style
