@@ -22,6 +22,15 @@ RUN = f"{REPO}/.nikki-agents/codex-runs/sample-run"
 WORKTREE = f"{REPO}/.nikki-agents/worktrees/sample-run"
 
 
+def writer_exec(directory: str) -> str:
+    """The developer watcher's `codex exec` step, run from `directory`."""
+    return (
+        "codex exec -m gpt-5.6-terra -s workspace-write "
+        f"-c agents.enabled=false -C {directory} "
+        f"-o {RUN}/report.md - < {RUN}/prompt.txt"
+    )
+
+
 def payload(agent_type: str | None, tool_name: str, **tool_input: object) -> dict:
     event = {"tool_name": tool_name, "tool_input": tool_input}
     if agent_type is not None:
@@ -103,22 +112,30 @@ class CodexWatcherGuardTests(unittest.TestCase):
         # the guard keeps it inside the repo that receives the report. A
         # sibling worktree beside the repo looks legitimate and is still
         # outside that boundary.
-        def exec_command(directory: str) -> str:
-            return (
-                "codex exec -m gpt-5.6-terra -s workspace-write "
-                f"-c agents.enabled=false -C {directory} "
-                f"-o {RUN}/report.md - < {RUN}/prompt.txt"
-            )
-
-        self.assert_allowed("pstack:developer-codex", exec_command(f"{REPO}/wt/sample-run"))
+        self.assert_allowed("pstack:developer-codex", writer_exec(f"{REPO}/wt/sample-run"))
         self.assert_denied(
             payload(
                 "pstack:developer-codex",
                 "Bash",
-                command=exec_command(f"{REPO}-worktrees/sample-run"),
+                command=writer_exec(f"{REPO}-worktrees/sample-run"),
             ),
             "Bash",
         )
+
+    def test_dot_segment_worktree_is_denied(self) -> None:
+        # `<repo>/.` names the repo root itself, so "repo plus at least one
+        # segment" does not by itself keep a workspace-write sandbox out of
+        # the main checkout. A `.` segment is rejected wherever a `..`
+        # segment is, and a real worktree name still passes.
+        self.assert_allowed("pstack:developer-codex", writer_exec(f"{REPO}/wt/sample-run"))
+        for directory in (f"{REPO}/.", f"{REPO}/./.", f"{REPO}/wt/."):
+            with self.subTest(directory=directory):
+                self.assert_denied(
+                    payload(
+                        "pstack:developer-codex", "Bash", command=writer_exec(directory)
+                    ),
+                    "Bash",
+                )
 
     def test_playbook_prompt_write_is_allowed_for_both_watchers(self) -> None:
         for agent_type in WATCHERS:
