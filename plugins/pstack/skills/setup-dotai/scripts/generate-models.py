@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Stamp plugins/pstack-nikki/models.json into every skill file that names
+"""Stamp plugins/pstack/models.json into every skill file that names
 a role from it.
 
 models.json is the single source of model picks. A row's "models" is an
 object keyed by harness (`claude`, `codex`, `copilot`), each value an
 ordered preference list for that harness, or the name of a shared list
 under "panels". This script finds, in each markdown file under
-plugins/pstack-nikki/skills, every role name from models.json that the
+plugins/pstack/skills, every role name from models.json that the
 file's prose mentions (outside fenced code), and stamps a "## Models" block
 listing that role's current models per harness between marker comments.
 Rerun after editing models.json; `--check` fails without writing when a
@@ -222,7 +222,7 @@ def main(arguments: list[str] | None = None) -> int:
     except ValueError as error:
         print(f"invalid models.json: {error}", file=sys.stderr)
         return 1
-    expected = expected_files(root / "skills", roles, "plugins/pstack-nikki/models.json")
+    expected = expected_files(root / "skills", roles, "plugins/pstack/models.json")
 
     if not options.check:
         write_files(expected)

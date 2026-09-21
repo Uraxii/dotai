@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate plugins/pstack-nikki/skills: links resolve inside the tree, and
+"""Validate plugins/pstack/skills: links resolve inside the tree, and
 every SKILL.md frontmatter names its own directory and carries a
 description."""
 

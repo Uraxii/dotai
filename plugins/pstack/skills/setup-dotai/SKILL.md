@@ -32,7 +32,7 @@ Install dotai on a new machine:
 
 ```
 /plugin marketplace add Uraxii/dotai
-/plugin install pstack-nikki@Uraxii
+/plugin install pstack@Uraxii
 ```
 
 Claude Code loads the plugin's agent files from
@@ -48,7 +48,7 @@ Install dotai on a new machine:
 
 ```
 copilot plugin marketplace add Uraxii/dotai
-copilot plugin install pstack-nikki@Uraxii
+copilot plugin install pstack@Uraxii
 ```
 
 Copilot CLI keeps its own config directory and reads neither `CLAUDE.md`
@@ -86,7 +86,7 @@ Install dotai on a new machine:
 
 ```
 codex plugin marketplace add Uraxii/dotai --ref main
-codex plugin add pstack-nikki@uraxii
+codex plugin add pstack@uraxii
 ```
 
 Codex loads personal custom agents from `<codex-home>/agents/`. Resolve
@@ -167,7 +167,7 @@ looks up `session_start_context.py` as a sibling file at runtime:
 
 ```
 mkdir -p ~/.config/opencode/plugin
-ln -s "$(pwd)/plugins/pstack-nikki/hooks/opencode-reminder-plugin.ts" ~/.config/opencode/plugin/
+ln -s "$(pwd)/plugins/pstack/hooks/opencode-reminder-plugin.ts" ~/.config/opencode/plugin/
 ```
 
 Run from the cloned repo root. LIVE-UNVERIFIED: proven by a `node
@@ -203,7 +203,7 @@ config file, so ask first, same as the Preamble below):
 ```yaml
 hooks:
   pre_llm_call:
-    - command: "python3 <path-to-clone>/plugins/pstack-nikki/hooks/session_start_context.py --harness hermes"
+    - command: "python3 <path-to-clone>/plugins/pstack/hooks/session_start_context.py --harness hermes"
 ```
 
 Use the absolute path to the cloned repo's copy; Hermes does not require the
@@ -224,7 +224,7 @@ then continue to Models. Start a new session after changing `SOUL.md`,
 
 ## Models
 
-You edit `plugins/pstack-nikki/models.json` on the user's request. Each
+You edit `plugins/pstack/models.json` on the user's request. Each
 `roles` entry's `models` is an object keyed by harness (`claude`, `codex`,
 `copilot`), each value an ordered preference list, or the name of a shared
 list under `panels`; a spawner reads the entry for its own harness and pins
@@ -256,7 +256,7 @@ directory.
    generator so every skill's stamped Models block matches:
 
    ```
-   python3 plugins/pstack-nikki/skills/setup-dotai/scripts/generate-models.py
+   python3 plugins/pstack/skills/setup-dotai/scripts/generate-models.py
    ```
 
    Report the rows changed and confirm

@@ -1,5 +1,5 @@
 {
-  "name": "pstack-nikki",
+  "name": "pstack",
   "version": "1.0.8",
   "description": "Skills and thin named agents: poteto-mode, principles, playbooks, tools.",
   "author": {
@@ -16,7 +16,7 @@
   "skills": "./skills/",
   "hooks": "./hooks/codex-hooks.json",
   "interface": {
-    "displayName": "pstack-nikki",
+    "displayName": "pstack",
     "shortDescription": "Reusable skills for software development work.",
     "longDescription": "A collection of reusable workflows, principles, playbooks, and tools for Codex and other coding agents.",
     "developerName": "Uraxii",
@@ -26,9 +26,9 @@
       "Hooks"
     ],
     "defaultPrompt": [
-      "Show me which pstack-nikki skills can help with this task.",
+      "Show me which pstack skills can help with this task.",
       "Use poteto-mode to work through this task.",
-      "Set up pstack-nikki for this Codex environment."
+      "Set up pstack for this Codex environment."
     ]
   }
 }

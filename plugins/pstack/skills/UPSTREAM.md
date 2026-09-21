@@ -24,10 +24,9 @@ commit; see that commit's message for what the swap changes.
 
 ## Local to this plugin
 
-Every other skill under `plugins/pstack-nikki/skills/` is specific to this
+Every other skill under `plugins/pstack/skills/` is specific to this
 project and was not touched by the port: `caveman`, `create-artifact`,
-`decisions`, `handoff`,
-`wayfinder`, `podman-sandbox`, `notion-cli`, `principle-code-quality`,
+`decisions`, `handoff`, `wayfinder`, `podman-sandbox`, `notion-cli`, `principle-code-quality`,
 `principle-naming`, `principle-decomposition`, `principle-output-to-user`,
 `azure-devops`, `cloudflare`, `codebase-memory`, `domain-modeling`,
 `grilling`, `llm-wiki`, `ox-security`, `prototype`, `rotate-agent`,

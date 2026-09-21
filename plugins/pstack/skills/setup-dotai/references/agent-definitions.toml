@@ -31,6 +31,12 @@ color = "purple"
 instructions = "poteto-agent-body.md"
 targets = ["claude", "codex"]
 
+[agents.poteto-agent]
+description = "Routing target for `/poteto-mode` and any request for poteto's style. Resume an existing `poteto-agent` for the conversation rather than spawning a sibling. Reads the `poteto-mode` skill's `SKILL.md` in full before any work, including its inline Principles index. Substituting `general-purpose` skips that read and drifts."
+color = "blue"
+instructions = "poteto-agent-body.md"
+targets = ["claude"]
+
 [agents.researcher]
 description = "Answers a question from primary sources and writes the findings down. Spawn for lookups, doc gathering, or reading legwork. Model pinned per call. Same thin agent as the others; the name exists so the agent graph reads."
 color = "cyan"

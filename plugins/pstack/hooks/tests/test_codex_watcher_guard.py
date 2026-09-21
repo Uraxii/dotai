@@ -15,7 +15,7 @@ assert SPEC.loader is not None
 SPEC.loader.exec_module(HOOK)
 
 
-WATCHERS = ("pstack-nikki:developer-codex", "reviewer-codex")
+WATCHERS = ("pstack:developer-codex", "reviewer-codex")
 REPO = "/repo"
 OTHER_REPO = "/other-repo"
 RUN = f"{REPO}/.nikki-agents/codex-runs/sample-run"
@@ -85,7 +85,7 @@ class CodexWatcherGuardTests(unittest.TestCase):
         )
         for command in commands:
             with self.subTest(command=command):
-                self.assert_allowed("pstack-nikki:developer-codex", command)
+                self.assert_allowed("pstack:developer-codex", command)
 
     def test_developer_c_may_be_any_worktree_under_the_repo(self) -> None:
         # A writer given an existing worktree path outside .nikki-agents,
@@ -95,7 +95,7 @@ class CodexWatcherGuardTests(unittest.TestCase):
             f"-C {REPO}/.claude/worktrees/sample-run -o {RUN}/report.md - < "
             f"{RUN}/prompt.txt"
         )
-        self.assert_allowed("pstack-nikki:developer-codex", command)
+        self.assert_allowed("pstack:developer-codex", command)
 
     def test_playbook_prompt_write_is_allowed_for_both_watchers(self) -> None:
         for agent_type in WATCHERS:
@@ -139,7 +139,7 @@ class CodexWatcherGuardTests(unittest.TestCase):
             f"-C {WORKTREE} -o {other_run}/report.md - < {other_run}/prompt.txt"
         )
         self.assert_denied(
-            payload("pstack-nikki:developer-codex", "Bash", command=command), "Bash"
+            payload("pstack:developer-codex", "Bash", command=command), "Bash"
         )
 
     def test_real_bad_reviewer_command_from_the_field_is_denied(self) -> None:
@@ -183,7 +183,7 @@ class CodexWatcherGuardTests(unittest.TestCase):
             f"-C {REPO} -o {RUN}/report.md - < {RUN}/prompt.txt"
         )
         self.assert_denied(
-            payload("pstack-nikki:developer-codex", "Bash", command=command), "Bash"
+            payload("pstack:developer-codex", "Bash", command=command), "Bash"
         )
 
     def test_developer_c_under_unrelated_path_is_denied(self) -> None:
@@ -192,7 +192,7 @@ class CodexWatcherGuardTests(unittest.TestCase):
             f"-C /home/nikki/.ssh -o {RUN}/report.md - < {RUN}/prompt.txt"
         )
         self.assert_denied(
-            payload("pstack-nikki:developer-codex", "Bash", command=command), "Bash"
+            payload("pstack:developer-codex", "Bash", command=command), "Bash"
         )
 
     # -- traversal, injection, and other malformed commands ---------------
@@ -220,7 +220,7 @@ class CodexWatcherGuardTests(unittest.TestCase):
         for command in commands:
             with self.subTest(command=command):
                 self.assert_denied(
-                    payload("pstack-nikki:developer-codex", "Bash", command=command),
+                    payload("pstack:developer-codex", "Bash", command=command),
                     "Bash",
                 )
 
@@ -236,7 +236,7 @@ class CodexWatcherGuardTests(unittest.TestCase):
         for command in commands:
             with self.subTest(command=command):
                 self.assert_denied(
-                    payload("pstack-nikki:developer-codex", "Bash", command=command),
+                    payload("pstack:developer-codex", "Bash", command=command),
                     "Bash",
                 )
 
@@ -286,7 +286,7 @@ class CodexWatcherGuardTests(unittest.TestCase):
     def test_ls_report_file_is_denied(self) -> None:
         self.assert_denied(
             payload(
-                "pstack-nikki:developer-codex", "Bash", command=f"ls {RUN}/report.md"
+                "pstack:developer-codex", "Bash", command=f"ls {RUN}/report.md"
             ),
             "Bash",
         )
@@ -311,7 +311,7 @@ class CodexWatcherGuardTests(unittest.TestCase):
         )
         self.assert_denied(
             payload(
-                "pstack-nikki:developer-codex",
+                "pstack:developer-codex",
                 "Bash",
                 command=f"git -C {REPO}/.. rev-parse HEAD",
             ),
@@ -323,13 +323,13 @@ class CodexWatcherGuardTests(unittest.TestCase):
         # boundary check must not rely on those two terminators alone.
         command = f"git -C {REPO} worktree add {REPO}/.nikki-agents/worktrees/.. -b agent/.."
         self.assert_denied(
-            payload("pstack-nikki:developer-codex", "Bash", command=command), "Bash"
+            payload("pstack:developer-codex", "Bash", command=command), "Bash"
         )
 
     def test_write_path_traversal_is_denied(self) -> None:
         self.assert_denied(
             payload(
-                "pstack-nikki:reviewer-codex",
+                "pstack:reviewer-codex",
                 "Write",
                 file_path=f"{REPO}/.nikki-agents/codex-runs/x/../../README.md",
             ),
@@ -348,39 +348,39 @@ class CodexWatcherGuardTests(unittest.TestCase):
 
     def test_invalid_writes_and_tools_are_denied(self) -> None:
         self.assert_denied(
-            payload("pstack-nikki:reviewer-codex", "Write", file_path="/r/README.md"),
+            payload("pstack:reviewer-codex", "Write", file_path="/r/README.md"),
             "Write",
         )
         for tool_name in ("Edit", "WebFetch"):
             with self.subTest(tool_name=tool_name):
                 self.assert_denied(
-                    payload("pstack-nikki:reviewer-codex", tool_name), tool_name
+                    payload("pstack:reviewer-codex", tool_name), tool_name
                 )
 
     def test_non_watchers_and_missing_agent_type_bypass_the_guard(self) -> None:
         bad_command = "curl https://example.com"
         self.assertEqual(
             "",
-            HOOK.guard(payload("pstack-nikki:developer", "Bash", command=bad_command)),
+            HOOK.guard(payload("pstack:developer", "Bash", command=bad_command)),
         )
         self.assertEqual("", HOOK.guard(payload(None, "Bash", command=bad_command)))
 
     def test_incomplete_watcher_payload_is_denied(self) -> None:
         self.assert_denied(
-            {"agent_type": "pstack-nikki:developer-codex"},
+            {"agent_type": "pstack:developer-codex"},
             "unknown",
         )
 
     # -- fail closed -------------------------------------------------------
 
     def test_exception_for_a_watcher_payload_denies_instead_of_crashing(self) -> None:
-        event = payload("pstack-nikki:developer-codex", "Bash")
+        event = payload("pstack:developer-codex", "Bash")
         event["tool_input"] = ExplodingMapping()
         self.assert_denied(event, "Bash")
 
     def test_exception_for_a_non_watcher_payload_reraises(self) -> None:
         event = {
-            "agent_type": PoisonedStr("pstack-nikki:developer-codex"),
+            "agent_type": PoisonedStr("pstack:developer-codex"),
             "tool_name": "Bash",
             "tool_input": {"command": "codex --version"},
         }
