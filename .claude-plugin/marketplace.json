@@ -6,8 +6,8 @@
   "description": "Skills and thin named agents for software development work.",
   "plugins": [
     {
-      "name": "pstack-nikki",
-      "source": "./plugins/pstack-nikki",
+      "name": "pstack",
+      "source": "./plugins/pstack",
       "description": "Skills and thin named agents: poteto-mode, principles, playbooks, tools."
     }
   ]
