@@ -168,8 +168,8 @@ levels from there. Codex and Copilot agents open the skill file themselves,
 so they count up two levels from the directory of the file they opened.
 
 `models.json` is keyed by role and then by harness (`claude`, `codex`,
-`copilot`), each value an ordered preference list. A spawner reads the entry for its own harness and pins the first name
-in it. A row for the same role in your own harness's override sheet
+`copilot`), each value an ordered preference list. A spawner reads the entry
+for its own harness and pins the first name in it. A row for the same role in your own harness's override sheet
 (`~/.claude/pstack-models.md` on Claude Code, `~/.codex/pstack-models.md` on
 Codex) wins over it; the sheet's path is its harness key, so it can only
 override that harness. See `setup-pstack` to write one. A role with no
