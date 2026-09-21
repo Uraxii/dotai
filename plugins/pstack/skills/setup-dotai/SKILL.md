@@ -252,15 +252,19 @@ directory.
    harness key outside `claude`, `codex`, `copilot`.
 
 5. **Write.** Update only the confirmed harness entries in `models.json`.
-   Leave every other row and every other harness untouched. Then run the
-   generator so every skill's stamped Models block matches:
+   Leave every other row and every other harness untouched. No skill
+   carries a copy to update; they all point at `models.json` by path.
+   Then confirm the file still only names models it can back:
 
    ```
-   python3 plugins/pstack/skills/setup-dotai/scripts/generate-models.py
+   python3 plugins/pstack/skills/setup-dotai/scripts/validate-models.py
    ```
 
-   Report the rows changed and confirm
-   `generate-models.py --check` exits 0.
+   Report the rows changed and confirm that command exits 0.
+
+   To change a model for this machine only, without touching `models.json`
+   or this repository, use the `setup-pstack` skill instead: it writes the
+   current harness's override sheet in the user's own config directory.
 
 ## Auto mode: let agents use Proton Pass
 

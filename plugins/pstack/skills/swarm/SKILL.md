@@ -23,7 +23,7 @@ Open a todolist with one entry per phase before launching anything.
 1. State the done predicate and the artifact or report the swarm must return.
 2. Choose the shape. Partition into slices, race N workers on identical briefs, or mix both. For a race or mixed shape, declare `first pass`, `rank all`, or `best-of` before spawning.
 3. Set N from the user or derive it from the shape. N is total workers, not the number that run at once.
-4. Pick the worker model from `swarm workers` in `~/.claude/pstack-models.md` when present. Otherwise use the default in [Models](#models). For a model race, name each arm's model up front.
+4. Pick the worker model from the `swarm workers` row in your harness's override sheet (see `setup-pstack`) when present. Otherwise use that role's first name for your harness in `plugins/pstack/models.json`; see [Models](#models). For a model race, name each arm's model up front.
 5. Give each worker its own writable output when it writes.
 
 ## Phase B: Fan out
@@ -48,6 +48,12 @@ Return one consolidated in-chat report with the table, issue one-liners, gaps or
 
 ## Models
 
-Role defaults, stamped from `plugins/pstack/models.json` (edit there, rerun `tools/generate.mjs`). A matching role line in `~/.claude/pstack-models.md` overrides each at runtime; see `/setup-pstack`.
-
-- swarm workers: `claude-opus-5`
+Role picks live in `plugins/pstack/models.json`, keyed by role and then by
+harness (`claude`, `codex`, `copilot`), each value an ordered preference
+list. A spawner reads the entry for its own harness and pins the first name
+in it. A row for the same role in your own harness's override sheet
+(`~/.claude/pstack-models.md` on Claude Code, `~/.codex/pstack-models.md` on
+Codex) wins over it; the sheet's path is its harness key, so it can only
+override that harness. See `setup-pstack` to write one. A role with no
+override row and no entry for your harness spawns unpinned: the `Agent` call
+omits `model` and the child inherits yours.

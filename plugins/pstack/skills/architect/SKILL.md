@@ -89,6 +89,12 @@ The caller's usage is written first and the type sketch derived from it. One fil
 
 ## Models
 
-Role defaults, stamped from `plugins/pstack/models.json` (edit there, rerun `tools/generate.mjs`). A matching role line in `~/.claude/pstack-models.md` overrides each at runtime; see `/setup-pstack`.
-
-- architect runners: `claude-opus-5`, `claude-fable-5-1`, `claude-sonnet-5`
+Role picks live in `plugins/pstack/models.json`, keyed by role and then by
+harness (`claude`, `codex`, `copilot`), each value an ordered preference
+list. A spawner reads the entry for its own harness and pins the first name
+in it. A row for the same role in your own harness's override sheet
+(`~/.claude/pstack-models.md` on Claude Code, `~/.codex/pstack-models.md` on
+Codex) wins over it; the sheet's path is its harness key, so it can only
+override that harness. See `setup-pstack` to write one. A role with no
+override row and no entry for your harness spawns unpinned: the `Agent` call
+omits `model` and the child inherits yours.

@@ -34,17 +34,11 @@ Write one clear paragraph. If you're unsure about the intent, ask the user befor
 
 ## Step 3, Spawn Reviewers
 
-Launch all reviewers in a single message using the `Agent` tool. Use the `interrogate reviewers` list from `~/.claude/pstack-models.md` when present, one reviewer per entry, extending or shrinking the Reviewer A/B/C/D labels below to the configured entry count; otherwise use the table defaults.
-
-| Subagent | Default model |
-|----------|---------------|
-| Reviewer A | `claude-opus-5` |
-| Reviewer B | `claude-fable-5-1` |
-| Reviewer C | `claude-sonnet-5` |
+Launch all reviewers in a single message using the `Agent` tool. Take the `interrogate reviewers` list from your harness's override sheet (see `setup-pstack`) when it has a row, otherwise from that role's entry for your harness in `plugins/pstack/models.json` (see [Models](#models)). Spawn one reviewer per entry, in order, labelling them Reviewer A, B, C, D as far as the list runs: the list length sets the reviewer count. The panel is only as adversarial as it is model-diverse, so keep the entries from different model families where the harness offers them.
 
 For each reviewer:
 - `subagent_type`: `general-purpose`
-- `model`: the configured `interrogate reviewers` entry, or the table default with no configured line
+- `model`: this reviewer's entry from that list
 - `readonly`: `true`
 
 If a model slug is rejected as unresolvable when you try to spawn the subagent, check the valid slugs in the Agent tool's error message, pick the closest equivalent (prefer the highest-reasoning tier of the same family), spawn with the valid slug, and open a separate PR to update the configured value or default table. Do not block the review on the slug issue. If the configured value is `inherit-parent` or `auto`, omit `model` instead; never treat those aliases as broken slugs or enter this fallback for them.
@@ -109,3 +103,15 @@ Present the verdict in this structure:
 
 ### Agreement Map
 [Where did models agree, where did they diverge, and what does the pattern of agreement/disagreement tell us?]
+
+## Models
+
+Role picks live in `plugins/pstack/models.json`, keyed by role and then by
+harness (`claude`, `codex`, `copilot`), each value an ordered preference
+list. A spawner reads the entry for its own harness and pins the first name
+in it. A row for the same role in your own harness's override sheet
+(`~/.claude/pstack-models.md` on Claude Code, `~/.codex/pstack-models.md` on
+Codex) wins over it; the sheet's path is its harness key, so it can only
+override that harness. See `setup-pstack` to write one. A role with no
+override row and no entry for your harness spawns unpinned: the `Agent` call
+omits `model` and the child inherits yours.

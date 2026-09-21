@@ -6,11 +6,10 @@ description: Change which model a pstack role runs on without editing the repo. 
 # Setup pstack
 
 Model picks live in two places. `plugins/pstack/models.json` holds the
-committed defaults, and every skill carries a stamped `## Models` block
-listing them. This skill writes the other place: a per-harness **override
-sheet** in the user's own config directory, loaded as session context, whose
-rows win over the stamped defaults. Changing a model then touches no file in
-the repo and needs no generator run.
+committed defaults; no skill repeats them, each points at that file. This
+skill writes the other place: a per-harness **override sheet** in the user's
+own config directory, loaded as session context, whose rows win over the
+committed defaults. Changing a model then touches no file in the repo.
 
 On Codex, read the [platform mapping](../poteto-mode/references/codex-tools.md),
 including its per-skill notes, before following this skill. On another
@@ -52,18 +51,19 @@ so the file is loaded as context for every session.
 ### 1. Detect available models
 
 Enumerate the model slugs you can pass to an `Agent` subagent in this session
-— that is the dependable source. Cross-check them against this harness's
-`available` list in [Models](#models) below. Ask the user to confirm or paste
-any additional slugs they want available. Never write a real slug you have not
+— that is the dependable source. Cross-check them against this
+harness's `available` list in `plugins/pstack/models.json`. Ask the user to
+confirm or paste any additional slugs they want available. Never write a real slug you have not
 confirmed is available. The aliases `inherit-parent` and `auto` are always
 valid even though they are not detected slugs; both mean the role runs on the
 parent session's model, which the `Agent` call expresses by omitting `model`.
 
 ### 2. Load current state
 
-The defaults are this harness's entries in [Models](#models) below. If this
-harness's sheet already exists, read it and treat its rows as the current
-choices for the roles it names. Every other role stays on the default.
+The defaults are this harness's entries in `plugins/pstack/models.json`,
+under `roles` (a role whose `models` is a string names a shared list under
+`panels`). If this harness's sheet already exists, read it and treat its rows
+as the current choices for the roles it names. Every other role stays on the default.
 
 ### 3. Map and confirm
 
@@ -88,8 +88,8 @@ the two have come apart on this machine.
 ### 4. Validate
 
 Every real slug written must be in the detected set and in this harness's
-`available` list; `inherit-parent` and `auto` always pass. If a chosen slug is
-not available, stop and ask again. Never write a slug belonging to another
+`available` list in `plugins/pstack/models.json`; `inherit-parent` and `auto`
+always pass. If a chosen slug is not available, stop and ask again. Never write a slug belonging to another
 harness — a `gpt-*` name in `~/.claude/pstack-models.md` pins nothing and
 silently drops the role back to the default.
 
@@ -99,15 +99,16 @@ Write this harness's sheet with the shape below, filled with the harness's own
 slugs. Overwrite the whole file so re-runs stay idempotent. Include only the
 roles the user chose to override; a role left at its default belongs in no row.
 
-The Claude Code shape, with this repo's current defaults as the example
-values:
+The Claude Code shape, with this repo's current committed defaults as the
+example values. Read the live ones from `plugins/pstack/models.json` rather
+than trusting the example, which is a snapshot:
 
 ```markdown
 # pstack model configuration
 
 Per-role model overrides for pstack skills, for Claude Code only. The
-committed defaults live in `plugins/pstack/models.json` and are repeated in
-each skill's stamped Models section; the rows here override them. Delete a row
+committed defaults live in `plugins/pstack/models.json`; the rows here
+override them. Delete a row
 to fall back to the default. Values are ordered: a single-model role takes the
 first, a panel role runs one subagent per entry. A value of `inherit-parent`
 or `auto` runs that role on the parent session's model (the `Agent` call omits

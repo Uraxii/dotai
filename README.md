@@ -10,7 +10,7 @@ lives under `plugins/pstack/`, the same place pstack-claude keeps its own.
 | Path      | What                                                    |
 |-----------|---------------------------------------------------------|
 | `plugins/pstack/skills/` | Every skill, `skills/<name>/SKILL.md`. Source of truth. |
-| `plugins/pstack/models.json` | Model picks per role. Source of truth; stamped into skills. |
+| `plugins/pstack/models.json` | Model picks per role and harness. The only copy; skills point at it by path, and a per-harness override sheet in the user's config directory replaces a role for one harness without touching this repo (see the `setup-pstack` skill). |
 | `plugins/pstack/agents/` | Generated Claude and Copilot agent files. |
 | `plugins/pstack/skills/setup-dotai/references/` | Platform-neutral agent definitions. |
 | `plugins/pstack/skills/setup-dotai/assets/codex-agents/` | Generated Codex agent files. |
@@ -81,12 +81,15 @@ python3 plugins/pstack/skills/setup-dotai/scripts/generate-agent-configs.py
 python3 plugins/pstack/skills/setup-dotai/scripts/generate-agent-configs.py --check
 ```
 
-After changing `plugins/pstack/models.json`, stamp its picks into the
-skills that name a role from it, then check the tree for broken links and
-malformed skill frontmatter:
+`plugins/pstack/models.json` is the only copy of the model picks. No skill
+repeats it; each points at the file by path, and a per-harness override sheet
+in the user's own config directory can replace a role for one harness without
+touching this repo (see the `setup-pstack` skill). After changing
+`models.json`, check that it only names models it can back, then check the
+tree for broken links and malformed skill frontmatter:
 
 ```
-python3 plugins/pstack/skills/setup-dotai/scripts/generate-models.py
+python3 plugins/pstack/skills/setup-dotai/scripts/validate-models.py
 python3 plugins/pstack/skills/setup-dotai/scripts/validate-skills.py plugins/pstack/skills
 ```
 

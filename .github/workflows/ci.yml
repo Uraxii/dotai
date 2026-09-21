@@ -17,8 +17,8 @@ jobs:
       - name: Install pytest
         run: pip install pytest
 
-      - name: Check models.json is stamped into every consuming skill
-        run: python3 plugins/pstack/skills/setup-dotai/scripts/generate-models.py --check
+      - name: Check models.json only names models it can back
+        run: python3 plugins/pstack/skills/setup-dotai/scripts/validate-models.py
 
       - name: Check generated agent configs are current
         run: python3 plugins/pstack/skills/setup-dotai/scripts/generate-agent-configs.py --check

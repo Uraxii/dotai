@@ -35,9 +35,10 @@ See the skill itself for the rest.
 No file from upstream's `tools/` was taken. Upstream's `tools/generate.mjs` is
 the stamper for the flat schema, and it also stamps a `VERSION` file,
 `CHANGES.md`, `docs/reference.md`, Codex prompt stubs, and a marketplace
-manifest that this repo does not have. This repo's
-`skills/setup-dotai/scripts/generate-models.py` already stamps the per-harness
-schema and stays the only owner of the stamped `## Models` blocks. Upstream's
+manifest that this repo does not have. Nothing stamps model picks here any
+more: this repo's own stamper was retired along with the copied-out `##
+Models` tables, and `skills/setup-dotai/scripts/validate-models.py` keeps only
+its validation half. Upstream's
 `sync.mjs`, `substitutions.json`, `upstream.json`, `validate-skills.mjs`, and
 `verify-merge-safety.mjs` serve upstream's own release pipeline and were not
 taken either.
