@@ -2,7 +2,7 @@
 
 **In plain words:** hand one coding or review job to Codex, a different AI tool, instead of doing it here. A small watcher agent starts the Codex run and tells you where it landed; you read the result yourself and check it against git.
 
-**You own the run.** Claude Code only; skip this playbook on any other harness. The watcher carries its own steps in `plugins/pstack/agents/developer-codex.md` and `plugins/pstack/agents/reviewer-codex.md`, and `hooks/codex_watcher_guard.py` locks it to exactly those commands. This page is the owner's half.
+**You own the run.** Claude Code only; skip this playbook on any other harness. The watcher's own steps are `references/codex-watcher-body.md`, which is the whole body of both watchers, and `hooks/codex_watcher_guard.py` locks it to exactly those commands. This page is the owner's half.
 
 1. Reach for Codex when the unit is one scoped implementation (`pstack:developer-codex`) or one review gate (`pstack:reviewer-codex`). Multi-kind work, tests, search, and orchestration stay on Claude: the watcher holds only Bash and Write, and the run starts with `-c agents.enabled=false`, so Codex does the brief itself and spawns no helpers. Codex already known unavailable this session: spawn plain `pstack:developer` or `pstack:reviewer` instead.
 2. Pick a run `name` fresh for this repo, lowercase letters, digits, and dashes. A reused name either fails the watcher's `git worktree add` step or leaves the previous run's `report.md` for you to misread as this one's.
