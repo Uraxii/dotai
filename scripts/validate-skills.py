@@ -34,26 +34,21 @@ HISTORY_UNAVAILABLE = (
     "checkout; CI needs actions/checkout with fetch-depth: 0."
 )
 
-# Skills that ship with the harness or another plugin, including two this
-# plugin dropped but upstream still carries, so they are named here on purpose
-# but never resolve inside this tree.
+# Skills that ship with the harness or another plugin, so this tree names them
+# on purpose and they never resolve to a directory here.
 #
-# Membership means the name still resolves somewhere else: UPSTREAM.md shows
-# bro and teach shipping in the pstack-claude plugin. A skill this repo deleted
-# and nobody else ships does not belong here. That carries a known cost: a
-# deleted skill whose name is also an ordinary English word gets flagged when a
-# document emphasises the word as prose, as prototype would. The remedy then is
-# one allowlist entry with its reason written down, on the day a document needs
-# the word. It is never a weaker rule, which would trade away a real
-# stale-reference catch to prevent a collision that has not happened yet.
+# Membership means the name resolves for a reader, just not in this repository.
+# A skill this plugin deleted does not qualify, however loudly some document
+# says so. Exempting one globally hides every stale reference to it added
+# afterwards, and catching those is why this validator exists. A document that
+# has to discuss a deleted skill names it in plain prose, never in emphasis,
+# the way UPSTREAM.md does.
 EXTERNAL_SKILLS = frozenset(
     {
         "babysit",
-        "bro",
         "databricks-use-dbt-models",
         "loop",
         "recall",
-        "teach",
         "verify",
         "writing-skills",
     }
@@ -124,7 +119,11 @@ def skill_families(names: set[str]) -> set[str]:
 
 
 def skill_names_in_history(skills_dir: Path) -> set[str] | None:
-    """Every name that held a SKILL.md in this directory at any commit.
+    """Every name that held a SKILL.md in this directory along HEAD's history.
+
+    Scoped to the checked-out ref, not every ref: `--all` made the answer
+    depend on which branches a clone happens to carry, and let a name some
+    merged-and-abandoned branch once used count as historical for good.
 
     "Answer in **caveman** register" reads as prose until you know caveman was
     a skill here, which is why this set, and not the shape of the word, is what
@@ -147,7 +146,7 @@ def skill_names_in_history(skills_dir: Path) -> set[str] | None:
         if shallow != "false":
             return None
         listing = subprocess.run(
-            ["git", "log", "--all", "--format=", "--name-only", "--relative", "--", "."],
+            ["git", "log", "HEAD", "--format=", "--name-only", "--relative", "--", "."],
             cwd=skills_dir,
             capture_output=True,
             text=True,
@@ -188,18 +187,30 @@ def documents_naming_skills(skills_dir: Path) -> list[Path]:
     return sorted(documents)
 
 
-def skill_reference_problems(skills_dir: Path) -> list[str]:
+def reference_remedy(reference: str, historical: set[str]) -> str:
+    if reference in historical:
+        return "was a skill here and was deleted. Drop the reference or restore the directory"
+    return "no skill directory of that name. Drop the emphasis if the word is prose"
+
+
+def skill_reference_problems(skills_dir: Path, historical: set[str]) -> list[str]:
+    # Three rules, each covering what the others cannot. History catches a
+    # deleted name in any citation syntax, but only names git ever carried.
+    # Prefix families catch a hyphenated name that never existed, such as a
+    # misremembered principle-*. The "... skill" frame catches a non-hyphenated
+    # name that never existed, which has no other tell. Dropping any one of
+    # them leaves a class of stale reference with nothing looking for it.
     root = skills_dir.resolve()
     names = skill_names(root)
     families = skill_families(names)
-    historical = (skill_names_in_history(root) or set()) - EXTERNAL_SKILLS
     problems = []
     for path in documents_naming_skills(root):
         inside = path_is_inside(root, path)
         label = path.relative_to(root if inside else root.parent)
         for reference in sorted(referenced_skills(path.read_text(), families, historical)):
             if reference not in names:
-                problems.append(f"{label} -> **{reference}** (no such skill directory)")
+                remedy = reference_remedy(reference, historical)
+                problems.append(f"{label} -> **{reference}** ({remedy})")
     return problems
 
 
@@ -232,30 +243,42 @@ def skill_metadata_problems(skills_dir: Path) -> list[str]:
     return problems
 
 
-def validate_skills_tree(skills_dir: Path) -> list[str]:
+def validate_skills_tree(skills_dir: Path) -> tuple[list[str], bool]:
+    """Problems found, and whether the deleted-skill rule got to run.
+
+    Both halves are the result. A caller that reads only the problems cannot
+    tell a checked tree from one where git answered nothing.
+    """
+    historical = skill_names_in_history(skills_dir.resolve())
     return (
         link_problems(skills_dir)
-        + skill_reference_problems(skills_dir)
-        + skill_metadata_problems(skills_dir)
+        + skill_reference_problems(skills_dir, historical or set())
+        + skill_metadata_problems(skills_dir),
+        historical is not None,
     )
+
+
+def ci_enabled() -> bool:
+    return os.environ.get("CI", "").strip().lower() not in {"", "0", "false"}
 
 
 def main(arguments: list[str] | None = None) -> int:
     arguments = sys.argv[1:] if arguments is None else arguments
     default_dir = Path(__file__).resolve().parents[1] / "plugins" / "pstack" / "skills"
     skills_dir = Path(arguments[0]) if arguments else default_dir
-    problems = validate_skills_tree(skills_dir)
-    if problems:
-        for problem in problems:
-            print(f"FAIL: {problem}", file=sys.stderr)
-        return 1
-    if skill_names_in_history(skills_dir.resolve()) is None:
-        # Saying "ok" here would claim a check that did not run, which is the
-        # failure this script exists to catch. CI has no excuse for a history
-        # it cannot read, so it fails; a developer working from a tarball or an
-        # export gets the warning and the weaker rules.
+    problems, history_read = validate_skills_tree(skills_dir)
+    for problem in problems:
+        print(f"FAIL: {problem}", file=sys.stderr)
+    if not history_read:
+        # Said on every degraded run, passing or failing. Withholding it
+        # whenever something else failed would leave the runs that need it
+        # most looking exactly like a run that checked every deleted name.
+        # CI has no excuse for a history it cannot read, so it fails there. A
+        # developer working from a tarball gets the warning and weaker rules.
         print(f"DEGRADED: {HISTORY_UNAVAILABLE}", file=sys.stderr)
-        return 1 if os.environ.get("CI") else 0
+        return 1 if problems or ci_enabled() else 0
+    if problems:
+        return 1
     print(f"ok: {skills_dir} links and skill references resolve, every SKILL.md is named right")
     return 0
 
