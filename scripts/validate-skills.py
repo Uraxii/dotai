@@ -8,6 +8,7 @@ carried under this directory decide which emphasised words are skill names."""
 
 from __future__ import annotations
 
+import os
 import re
 import subprocess
 import sys
@@ -26,6 +27,12 @@ FRONTMATTER_RE = re.compile(r"^---\n(.*?)\n---", re.DOTALL)
 EMPHASIS_RE = re.compile(r"\*\*([^*\n]+)\*\*|`([^`\n]+)`")
 SKILL_FRAME_RE = re.compile(r"(?:\*\*([^*\n]+)\*\*|`([^`\n]+)`)\s+skill\b")
 SKILL_NAME_RE = re.compile(r"[a-z][a-z0-9]*(?:-[a-z0-9]+)+")
+
+HISTORY_UNAVAILABLE = (
+    "git could not read this tree's history, so references to deleted skills "
+    "went unchecked and only the weaker rules ran. Validate inside a full "
+    "checkout; CI needs actions/checkout with fetch-depth: 0."
+)
 
 # Skills that ship with the harness or another plugin, including two this
 # plugin dropped but upstream still carries, so they are named here on purpose
@@ -107,17 +114,29 @@ def skill_families(names: set[str]) -> set[str]:
     return {prefix for prefix, count in prefixes.items() if count >= 2}
 
 
-def skill_names_in_history(skills_dir: Path) -> set[str]:
+def skill_names_in_history(skills_dir: Path) -> set[str] | None:
     """Every name that held a SKILL.md in this directory at any commit.
 
     "Answer in **caveman** register" reads as prose until you know caveman was
     a skill here, which is why this set, and not the shape of the word, is what
     exposes a stale reference in every citation syntax.
 
-    Returns nothing when git cannot answer, as in a shallow clone or outside a
-    checkout. The remaining rules still apply.
+    Returns None when git cannot answer, outside a checkout or in a shallow
+    clone whose truncated log would omit the very commit that deleted a skill.
+    Callers report that rather than reading it as an empty history: this rule
+    having been skipped is the difference between a checked tree and an
+    unchecked one.
     """
     try:
+        shallow = subprocess.run(
+            ["git", "rev-parse", "--is-shallow-repository"],
+            cwd=skills_dir,
+            capture_output=True,
+            text=True,
+            check=True,
+        ).stdout.strip()
+        if shallow != "false":
+            return None
         listing = subprocess.run(
             ["git", "log", "--all", "--format=", "--name-only", "--relative", "--", "."],
             cwd=skills_dir,
@@ -126,7 +145,7 @@ def skill_names_in_history(skills_dir: Path) -> set[str]:
             check=True,
         ).stdout
     except (OSError, subprocess.CalledProcessError):
-        return set()
+        return None
     return {
         path.split("/")[0]
         for path in listing.split("\n")
@@ -164,7 +183,7 @@ def skill_reference_problems(skills_dir: Path) -> list[str]:
     root = skills_dir.resolve()
     names = skill_names(root)
     families = skill_families(names)
-    historical = skill_names_in_history(root) - EXTERNAL_SKILLS
+    historical = (skill_names_in_history(root) or set()) - EXTERNAL_SKILLS
     problems = []
     for path in documents_naming_skills(root):
         inside = path_is_inside(root, path)
@@ -221,6 +240,13 @@ def main(arguments: list[str] | None = None) -> int:
         for problem in problems:
             print(f"FAIL: {problem}", file=sys.stderr)
         return 1
+    if skill_names_in_history(skills_dir.resolve()) is None:
+        # Saying "ok" here would claim a check that did not run, which is the
+        # failure this script exists to catch. CI has no excuse for a history
+        # it cannot read, so it fails; a developer working from a tarball or an
+        # export gets the warning and the weaker rules.
+        print(f"DEGRADED: {HISTORY_UNAVAILABLE}", file=sys.stderr)
+        return 1 if os.environ.get("CI") else 0
     print(f"ok: {skills_dir} links and skill references resolve, every SKILL.md is named right")
     return 0
 

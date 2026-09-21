@@ -1,3 +1,4 @@
+import os
 import shutil
 import subprocess
 import sys
@@ -12,13 +13,19 @@ VALIDATOR = REPOSITORY_ROOT / "scripts" / "validate-skills.py"
 SKILLS_DIR = PLUGIN_ROOT / "skills"
 
 
-def run_validator(skills_dir: Path) -> subprocess.CompletedProcess[str]:
+def run_validator(
+    skills_dir: Path, ci: bool = False
+) -> subprocess.CompletedProcess[str]:
+    environment = {key: value for key, value in os.environ.items() if key != "CI"}
+    if ci:
+        environment["CI"] = "true"
     return subprocess.run(
         [sys.executable, str(VALIDATOR), str(skills_dir)],
         cwd=REPOSITORY_ROOT,
         text=True,
         capture_output=True,
         check=False,
+        env=environment,
     )
 
 
@@ -336,14 +343,70 @@ class RemovedSkillReferenceTests(unittest.TestCase):
 
             self.assertEqual(0, result.returncode, result.stderr)
 
-    def test_passes_outside_a_git_repository(self) -> None:
+class UnreadableHistoryTests(unittest.TestCase):
+    """History is one of the rules, so a run that could not read it has not
+    checked what the plain "ok:" line claims.
+
+    PR #56 shipped a stale reference behind a green line. A validator that
+    silently drops back to its weaker rules and still prints "ok:" reintroduces
+    exactly that failure, so an unreadable history has to be said out loud.
+    """
+
+    def assert_degraded(self, skills_dir: Path, ci: bool) -> None:
+        result = run_validator(skills_dir, ci=ci)
+
+        self.assertIn("DEGRADED", result.stderr)
+        self.assertNotIn("ok:", result.stdout)
+        self.assertEqual(1 if ci else 0, result.returncode, result.stderr)
+
+    def test_warns_and_withholds_the_ok_line_outside_a_git_repository(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             skills_dir = Path(directory) / "skills"
             write_skill(skills_dir, "sample", "Answer in **caveman** register.\n")
 
-            result = run_validator(skills_dir)
+            self.assert_degraded(skills_dir, ci=False)
 
-            self.assertEqual(0, result.returncode, result.stderr)
+    def test_fails_outside_a_git_repository_in_ci(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            skills_dir = Path(directory) / "skills"
+            write_skill(skills_dir, "sample", "Answer in **caveman** register.\n")
+
+            self.assert_degraded(skills_dir, ci=True)
+
+    def test_fails_in_a_shallow_clone_in_ci(self) -> None:
+        # A shallow clone answers `git log` without error and simply omits the
+        # commit that deleted a skill, so CI keeping fetch-depth: 0 is load
+        # bearing and a shallow checkout has to fail rather than look clean.
+        with tempfile.TemporaryDirectory() as directory:
+            origin = Path(directory) / "origin"
+            origin.mkdir()
+            skills_dir = origin / "skills"
+            write_removed_skill(origin, skills_dir, "caveman")
+            clone = Path(directory) / "clone"
+            subprocess.run(
+                ["git", "clone", "--depth", "1", origin.as_uri(), str(clone)],
+                check=True, capture_output=True,
+            )
+
+            self.assert_degraded(clone / "skills", ci=True)
+
+    def test_reads_history_from_a_full_clone(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            origin = Path(directory) / "origin"
+            origin.mkdir()
+            skills_dir = origin / "skills"
+            write_removed_skill(origin, skills_dir, "caveman")
+            clone = Path(directory) / "clone"
+            subprocess.run(
+                ["git", "clone", origin.as_uri(), str(clone)],
+                check=True, capture_output=True,
+            )
+            write_skill(clone / "skills", "sample", "Answer in **caveman** register.\n")
+
+            result = run_validator(clone / "skills", ci=True)
+
+            self.assertNotEqual(0, result.returncode, result.stdout)
+            self.assertIn("caveman", result.stderr)
 
 
 if __name__ == "__main__":
