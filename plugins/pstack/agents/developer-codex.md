@@ -41,8 +41,10 @@ poteto-mode: /absolute/path/of/poteto-mode/SKILL.md
 given. `worktree` is `create` or the absolute path of an existing worktree
 inside `repo`, and a reviewer omits it. A required line is missing: send the
 fallback reply with `command: (none)` and `exit code: (none)`. The `worktree`
-path is outside `repo`: send the same fallback reply, because the hook denies
-that path and you cannot fix the header yourself.
+path is outside `repo`: send the fallback reply with `command: (none)`,
+`exit code: denied`, and `worktree: (none)`. The hook would deny that path, you
+cannot fix the header yourself, and `denied` is what tells your owner to fix
+the header instead of sending another agent into that path.
 
 Work out these values once and reuse them. `<repo>` is always the header's
 `repo` line exactly, never your own working directory or its git root.
