@@ -34,7 +34,7 @@ branch out in the clone, runs `setup`, and waits for `ready`. A second run with 
 prints `changed=0`. Progress goes to stderr, and one line to stdout:
 
 ```
-lab name=demo container=lab-demo image=podman-sandbox/myrepo:latest work=/work/myrepo head=1a2b3c4d port=6551 changed=4
+lab name=demo container=lab-demo image=podman-sandbox/myrepo-082f93940c1d:latest work=/work/myrepo head=1a2b3c4d port=6551 changed=4
 ```
 
 `--repo` defaults to the working directory's repository, and `--branch` to that repository's
