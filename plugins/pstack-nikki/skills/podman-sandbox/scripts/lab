@@ -39,7 +39,6 @@ SHOT_CONTAINER_PATH = "/tmp/lab-shot.png"
 DEFAULT_SHOT_SECONDS = 30
 BLANK_MAX_COLORS = 2
 
-SHOT_COMMAND = "lab-shot"
 SHOT_COMMAND_NAME = "shot"
 THROWAWAY_DISPLAY = ":100"
 HEAD_DIGITS = 8
@@ -117,17 +116,19 @@ def command_up(args: argparse.Namespace) -> int:
 
     Prints to stdout:
 
-        lab name=demo container=lab-demo image=podman-sandbox/myrepo:latest
+        lab name=demo container=lab-demo
+        image=podman-sandbox/myrepo-082f93940c1d:latest
         work=/work/myrepo head=1a2b3c4d port=6551 changed=2
 
     as one line, with `port=` omitted when `--port` was not given. Progress
     goes to stderr, so stdout stays one parseable line.
 
     Converge order: build the image, recreate the container if the spec
-    changed, start it, sync the clone, run the `setup` hook, wait for the
-    `ready` hook. A second run with no input change prints `changed=0` and
-    rebuilds nothing. The ready check never counts as a change, because
-    polling alters nothing.
+    changed, start it, copy `lab-shot` in, sync the clone, run the `setup`
+    hook, wait for the `ready` hook. A second run with no input change
+    prints `changed=0` and rebuilds nothing. Neither the `lab-shot` copy nor
+    the ready check counts as a change: one overwrites a file with itself,
+    the other only polls.
     """
     lab_container.require_podman()
     repo = resolve_repo(args.repo)
@@ -153,6 +154,7 @@ def command_up(args: argparse.Namespace) -> int:
         changed += 1
     started = lab_container.start_container(lab)
     changed += int(started)
+    lab_container.install_shot_command(lab)
     clone = lab.clone_path(repo)
     logging.info("syncing clone %s to %s", clone, head[:HEAD_DIGITS])
     changed += int(lab_container.sync_clone(lab, repo, branch, head))
@@ -244,7 +246,8 @@ def command_shot(args: argparse.Namespace) -> int:
     logging.info("capturing display %s", display)
     stats = lab_container.exec_capture(
         lab,
-        [SHOT_COMMAND, SHOT_CONTAINER_PATH, display, str(args.seconds)] + argv,
+        [lab_container.SHOT_COMMAND_PATH, SHOT_CONTAINER_PATH, display,
+         str(args.seconds)] + argv,
         lab.clone_path(repo),
     )
     lab_container.copy_out(lab, SHOT_CONTAINER_PATH, out)

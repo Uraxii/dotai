@@ -143,8 +143,15 @@ class HostileBranchTest(unittest.TestCase):
             f"{GIT_COMMON}:{lab_container.MOUNT_GIT_COMMON_READONLY}:ro", create
         )
 
-    def test_create_copies_the_shot_command_into_the_container(self) -> None:
+    def test_create_does_not_bind_mount_the_shot_command(self) -> None:
         lab_container.create_container(self.lab, SPEC, REPO, GIT_COMMON)
+
+        create = [call for call in self.podman.calls if call[0] == "create"][0]
+        for element in create:
+            self.assertNotIn(lab_container.SHOT_COMMAND_PATH, element)
+
+    def test_installing_the_shot_command_copies_it_to_a_known_path(self) -> None:
+        lab_container.install_shot_command(self.lab)
 
         copies = [call for call in self.podman.calls if call[0] == "cp"]
         self.assertEqual(len(copies), 1)
@@ -153,7 +160,6 @@ class HostileBranchTest(unittest.TestCase):
         self.assertEqual(
             destination, f"lab-demo:{lab_container.SHOT_COMMAND_PATH}"
         )
-        self.assertNotIn(str(REPO), " ".join(copies[0]))
 
     def test_a_hostile_hook_argv_stays_argv(self) -> None:
         definition = definition_with(setup_command=(HOSTILE_BRANCH,))

@@ -94,12 +94,15 @@ class LoadDefinitionTest(unittest.TestCase):
             ("/src-ro/.sandbox-container/ready",),
         )
 
-    def test_the_image_tag_comes_from_the_repository_directory(self) -> None:
+    def test_the_image_tag_names_the_directory_and_the_recipe(self) -> None:
         write_definition(self.repo)
 
         definition = lab_container.load_definition(self.repo)
 
-        self.assertEqual(definition.image, "podman-sandbox/myrepo:latest")
+        self.assertEqual(
+            definition.image,
+            f"podman-sandbox/myrepo-{definition.recipe_sha256[:12]}:latest",
+        )
 
     def test_an_illegal_character_in_the_directory_name_is_replaced(self) -> None:
         repo = self.root / "My Repo+2"
@@ -108,7 +111,32 @@ class LoadDefinitionTest(unittest.TestCase):
 
         definition = lab_container.load_definition(repo)
 
-        self.assertEqual(definition.image, "podman-sandbox/my-repo-2:latest")
+        self.assertTrue(
+            definition.image.startswith("podman-sandbox/my-repo-2-"),
+            definition.image,
+        )
+
+    def test_two_repositories_of_one_name_get_different_image_tags(self) -> None:
+        images = []
+        for parent, recipe in (("left", RECIPE), ("right", "FROM debian:13\n")):
+            repo = self.root / parent / "myrepo"
+            repo.mkdir(parents=True)
+            write_definition(repo, recipe)
+            images.append(lab_container.load_definition(repo).image)
+
+        self.assertNotEqual(images[0], images[1])
+
+    def test_a_directory_name_of_separators_falls_back_to_a_stem(self) -> None:
+        repo = self.root / "-.-"
+        repo.mkdir()
+        write_definition(repo)
+
+        definition = lab_container.load_definition(repo)
+
+        self.assertTrue(
+            definition.image.startswith("podman-sandbox/repo-"),
+            definition.image,
+        )
 
 
 class HashDirectoryTest(unittest.TestCase):

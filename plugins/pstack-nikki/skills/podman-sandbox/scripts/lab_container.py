@@ -47,15 +47,16 @@ READY_NAME = "ready"
 READY_TIMEOUT_SEC = 180
 IMAGE_TAG_PREFIX = "podman-sandbox/"
 IMAGE_TAG_SUFFIX = ":latest"
+IMAGE_TAG_DIGEST_CHARS = 12
+IMAGE_TAG_FALLBACK_STEM = "repo"
 ILLEGAL_IN_IMAGE_TAG = re.compile("[^a-z0-9._-]")
+IMAGE_TAG_EDGE_SEPARATORS = "._-"
 
 SHOT_COMMAND_SOURCE = Path(__file__).resolve().parent / "lab-shot"
 SHOT_COMMAND_PATH = "/usr/local/bin/lab-shot"
 SHOT_COMMAND_MODE = 0o755
 
-RECIPE_LABEL = "lab.recipe.sha256"
 SPEC_QUERY = '{{index .Config.Labels "' + SPEC_LABEL + '"}}'
-RECIPE_QUERY = '{{index .Config.Labels "' + RECIPE_LABEL + '"}}'
 RUNNING_QUERY = "{{.State.Running}}"
 SETUP_SENTINEL_PREFIX = MOUNT_WORK + "/.lab-setup-"
 READY_POLL_SEC = 2.0
@@ -107,10 +108,11 @@ def load_definition(repo: Path) -> ContainerDefinition:
             f"write one there. Executables named {SETUP_NAME} and "
             f"{READY_NAME} beside it are optional"
         )
+    recipe_sha256 = hash_directory(directory)
     return ContainerDefinition(
         directory=directory,
-        image=image_tag(repo),
-        recipe_sha256=hash_directory(directory),
+        image=image_tag(repo, recipe_sha256),
+        recipe_sha256=recipe_sha256,
         setup_command=hook_command(directory, SETUP_NAME),
         ready_command=hook_command(directory, READY_NAME),
     )
@@ -127,10 +129,17 @@ def hook_command(directory: Path, name: str) -> tuple[str, ...]:
     return (f"{MOUNT_SOURCE_READONLY}/{DEFINITION_SUBPATH}/{name}",)
 
 
-def image_tag(repo: Path) -> str:
-    """Return the image tag for `repo`, built from its directory name."""
-    sanitized = ILLEGAL_IN_IMAGE_TAG.sub("-", repo.name.lower())
-    return f"{IMAGE_TAG_PREFIX}{sanitized}{IMAGE_TAG_SUFFIX}"
+def image_tag(repo: Path, recipe_sha256: str) -> str:
+    """Return the image tag for `repo`, naming it and its recipe hash.
+
+    The hash is part of the tag, so two repositories whose directories share
+    a name cannot build over each other's image, and a tag that exists is
+    always an image built from that exact directory.
+    """
+    stem = ILLEGAL_IN_IMAGE_TAG.sub("-", repo.name.lower())
+    stem = stem.strip(IMAGE_TAG_EDGE_SEPARATORS) or IMAGE_TAG_FALLBACK_STEM
+    digest = recipe_sha256[:IMAGE_TAG_DIGEST_CHARS]
+    return f"{IMAGE_TAG_PREFIX}{stem}-{digest}{IMAGE_TAG_SUFFIX}"
 
 
 def hash_directory(directory: Path) -> str:
@@ -269,15 +278,13 @@ def read_spec(lab: Lab) -> LabSpec | None:
 
 
 def build_image(definition: ContainerDefinition) -> bool:
-    """Build the image unless it already carries the recipe hash on disk.
+    """Build the image unless the tag already exists. True when a build ran.
 
-    Returns True when a build ran.
+    The tag carries the recipe hash, so existence is the whole check.
     """
-    query = ["image", "inspect", definition.image, "--format", RECIPE_QUERY]
-    if podman(query, check=False) == definition.recipe_sha256:
+    if podman_status(["image", "exists", definition.image]) == 0:
         return False
-    podman(["build", "--label", f"{RECIPE_LABEL}={definition.recipe_sha256}",
-            "--tag", definition.image,
+    podman(["build", "--tag", definition.image,
             "--file", str(definition.directory / RECIPE_NAME),
             str(definition.directory)])
     return True
@@ -310,11 +317,14 @@ def create_container(
         args += ["--publish", f"127.0.0.1:{spec.port}:{spec.port}",
                  "--env", f"LAB_PORT={spec.port}"]
     podman(args + [spec.image])
-    install_shot_command(lab)
 
 
 def install_shot_command(lab: Lab) -> None:
-    """Copy `lab-shot` into the container, once per container lifetime.
+    """Copy `lab-shot` into the container, overwriting any older copy.
+
+    `up` runs this every time, so editing the skill's own `lab-shot`
+    reaches an existing lab. It is not part of LabSpec: a container holding
+    an older copy is not worth destroying a clone over.
 
     Copied rather than bind-mounted: a bind mount would write a host path
     into the container's spec, and the spec is read back as lab state.
