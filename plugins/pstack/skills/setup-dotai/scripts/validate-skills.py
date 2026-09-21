@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
-"""Validate plugins/pstack/skills: links resolve inside the tree, and
-every SKILL.md frontmatter names its own directory and carries a
-description."""
+"""Validate plugins/pstack/skills: links resolve inside the tree, skill
+names cited in bold or backticks resolve to a skill directory, and every
+SKILL.md frontmatter names its own directory and carries a description."""
 
 from __future__ import annotations
 
 import re
 import sys
+from collections import Counter
 from pathlib import Path
 from urllib.parse import unquote
 
@@ -16,6 +17,24 @@ __all__ = ["main", "validate_skills_tree"]
 LINK_RE = re.compile(r"\]\(([^)\n]*)\)")
 FENCE_RE = re.compile(r"```.*?```", re.DOTALL)
 FRONTMATTER_RE = re.compile(r"^---\n(.*?)\n---", re.DOTALL)
+
+# Skills are cited as **name** or `name`, never as markdown links.
+EMPHASIS_RE = re.compile(r"\*\*([^*\n]+)\*\*|`([^`\n]+)`")
+SKILL_FRAME_RE = re.compile(r"(?:\*\*([^*\n]+)\*\*|`([^`\n]+)`)\s+skill\b")
+SKILL_NAME_RE = re.compile(r"[a-z][a-z0-9]*(?:-[a-z0-9]+)+")
+
+# Skills that ship with the harness or another plugin, so they are named
+# here on purpose but never resolve inside this tree.
+EXTERNAL_SKILLS = frozenset(
+    {
+        "babysit",
+        "databricks-use-dbt-models",
+        "loop",
+        "recall",
+        "verify",
+        "writing-skills",
+    }
+)
 
 
 def strip_fenced_code(text: str) -> str:
@@ -65,6 +84,60 @@ def link_problems(skills_dir: Path) -> list[str]:
     return problems
 
 
+def skill_names(skills_dir: Path) -> set[str]:
+    return {
+        entry.name
+        for entry in skills_dir.iterdir()
+        if entry.is_dir() and (entry / "SKILL.md").exists()
+    }
+
+
+def skill_families(names: set[str]) -> set[str]:
+    # A prefix shared by two or more real skill directories, such as
+    # "principle", marks a naming family. A hyphenated token in that family
+    # is a skill reference; "read-only" and other hyphenated prose is not.
+    prefixes = Counter(name.split("-")[0] for name in names if "-" in name)
+    return {prefix for prefix, count in prefixes.items() if count >= 2}
+
+
+def referenced_skills(text: str, families: set[str]) -> set[str]:
+    body = strip_fenced_code(text)
+    references = set()
+    for match in EMPHASIS_RE.finditer(body):
+        token = (match.group(1) or match.group(2)).strip()
+        if SKILL_NAME_RE.fullmatch(token) and token.split("-")[0] in families:
+            references.add(token)
+    for match in SKILL_FRAME_RE.finditer(body):
+        token = (match.group(1) or match.group(2)).strip()
+        if ":" in token or "*" in token:
+            continue
+        if re.fullmatch(r"[a-z][a-z0-9-]*", token):
+            references.add(token)
+    return references - EXTERNAL_SKILLS
+
+
+def documents_naming_skills(skills_dir: Path) -> list[Path]:
+    documents = list(skills_dir.rglob("*.md"))
+    agents_dir = skills_dir.parent / "agents"
+    if agents_dir.is_dir():
+        documents.extend(agents_dir.rglob("*.md"))
+    return sorted(documents)
+
+
+def skill_reference_problems(skills_dir: Path) -> list[str]:
+    root = skills_dir.resolve()
+    names = skill_names(root)
+    families = skill_families(names)
+    problems = []
+    for path in documents_naming_skills(root):
+        inside = path_is_inside(root, path)
+        label = path.relative_to(root if inside else root.parent)
+        for reference in sorted(referenced_skills(path.read_text(), families)):
+            if reference not in names:
+                problems.append(f"{label} -> **{reference}** (no such skill directory)")
+    return problems
+
+
 def frontmatter_value(text: str, key: str) -> str | None:
     block = FRONTMATTER_RE.match(text)
     if not block:
@@ -95,7 +168,11 @@ def skill_metadata_problems(skills_dir: Path) -> list[str]:
 
 
 def validate_skills_tree(skills_dir: Path) -> list[str]:
-    return link_problems(skills_dir) + skill_metadata_problems(skills_dir)
+    return (
+        link_problems(skills_dir)
+        + skill_reference_problems(skills_dir)
+        + skill_metadata_problems(skills_dir)
+    )
 
 
 def main(arguments: list[str] | None = None) -> int:
@@ -107,7 +184,7 @@ def main(arguments: list[str] | None = None) -> int:
         for problem in problems:
             print(f"FAIL: {problem}", file=sys.stderr)
         return 1
-    print(f"ok: {skills_dir} links resolve and every SKILL.md is named right")
+    print(f"ok: {skills_dir} links and skill references resolve, every SKILL.md is named right")
     return 0
 
 
