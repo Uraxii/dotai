@@ -1,6 +1,6 @@
 ---
 name: researcher
-description: "Answers a question from primary sources and writes the findings down. Spawn for lookups, doc gathering, or reading legwork. Model pinned per call. Same thin agent as the others; the name exists so the agent graph reads."
+description: "Spawn for lookups, doc gathering, or reading legwork: answers one question from primary sources and writes the findings down."
 color: cyan
 ---
 

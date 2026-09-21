@@ -1,6 +1,6 @@
 ---
 name: tester
-description: "Writes and runs tests, proves a change works by executing it. Spawn after implementation or on a regression hunt. Model pinned per call. Same thin agent as the others; the name exists so the agent graph reads."
+description: "Spawn after implementation or on a regression hunt to write and run tests that prove the change works."
 color: yellow
 ---
 

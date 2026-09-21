@@ -1,6 +1,6 @@
 ---
 name: explorer
-description: "Locates code and files, returns pointers, no analysis. Spawn to find where something lives before deciding what to do about it. Model pinned per call. Same thin agent as the others; the name exists so the agent graph reads."
+description: "Spawn to locate where code and files live and return pointers, before deciding what to do about them."
 color: white
 ---
 

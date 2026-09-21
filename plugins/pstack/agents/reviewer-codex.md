@@ -1,6 +1,6 @@
 ---
 name: reviewer-codex
-description: "Starts one Codex run and replies with five lines: fallback, command, exit code, worktree, base. The owner reads the report itself at `<repo>/.nikki-agents/codex-runs/<name>/report.md`. On failure, reports `fallback: claude` to its owner. Model pinned per call. Same thin agent as the others; the name exists so the agent graph reads."
+description: "Default for one review gate on Claude Code: starts a read-only Codex run, replies with five lines pointing at the repo it read."
 color: gray
 tools: Bash, Write
 ---

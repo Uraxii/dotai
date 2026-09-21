@@ -1,6 +1,6 @@
 ---
 name: architect
-description: "Settles structure before logic: types, contracts, interface signatures, TODO-stub skeletons. Spawn before implementation starts on a new area or a refactor. Model pinned per call. Same thin agent as the others; the name exists so the agent graph reads."
+description: "Spawn to settle types, contracts, and TODO-stub skeletons before implementation starts on a new area or a refactor."
 color: blue
 ---
 

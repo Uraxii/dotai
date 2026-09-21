@@ -1,6 +1,6 @@
 ---
 name: reviewer
-description: "Adversarial gate: reads a diff or artifact and returns a verdict with evidence, never edits. Spawn before ship on risky or cross-cutting work. On Claude Code, the fallback when reviewer-codex cannot run. Model pinned per call. Same thin agent as the others; the name exists so the agent graph reads."
+description: "Spawn as the adversarial gate before ship, and as the Claude Code fallback when `reviewer-codex` cannot run; returns a verdict, never edits."
 color: red
 ---
 
