@@ -26,9 +26,10 @@ or Critique output unless requested.
 
 ## Output selection
 
-Output is separate from mode. Use chat unless the user asks for a rich
-artifact or has an established preference for one, including for change
-walkthroughs with no requested artifact.
+Output is separate from mode. Chat is the default, and a change walkthrough
+is no exception: it goes to chat too unless an artifact was asked for. Leave
+chat only when the user asks for a rich artifact or has an established
+preference for one.
 
 - **Chat.** Use the mode's outline directly in the reply. For a change quiz,
   keep answers separate from the questions so the reader can attempt them.
@@ -36,10 +37,12 @@ walkthroughs with no requested artifact.
   [create-artifact](../create-artifact/SKILL.md). That skill settles HTML
   against Notion, renders the mode's outline, and verifies the result.
 
-Pass the chosen mode, output format, and applicable references to the agent
-writing the explanation. Codebase inspection is read-only; output writing is
-limited to the selected artifact or Notion destination. Inspection-only
-explorers do not publish pages.
+Pass the chosen mode, its outline, and the chosen format to the agent writing
+the explanation. That agent returns content and structure; it emits no format
+markup and reads no format reference. The coordinator renders the result.
+Codebase inspection is read-only; output writing is limited to the selected
+artifact or Notion destination. Inspection-only explorers do not publish
+pages.
 
 ## Change walkthrough mode
 

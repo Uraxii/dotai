@@ -47,5 +47,7 @@ definitions, key concepts, and important edge cases.
 
 Adapted from Geoffrey Litt's `explain-diff-html` and `explain-diff-notion`
 [skills](https://gist.github.com/geoffreylitt/a29df1b5f9865506e8952488eac3d524).
-Their shared teaching sequence is retained here; output rules live in the
-HTML and Notion references. Revision scope and quiz checks are dotai additions.
+Their shared teaching sequence is retained here. Output rules live in the
+format references of
+[create-artifact](../../create-artifact/SKILL.md). Revision scope and quiz
+checks are dotai additions.
