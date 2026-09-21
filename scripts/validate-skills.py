@@ -37,6 +37,15 @@ HISTORY_UNAVAILABLE = (
 # Skills that ship with the harness or another plugin, including two this
 # plugin dropped but upstream still carries, so they are named here on purpose
 # but never resolve inside this tree.
+#
+# Membership means the name still resolves somewhere else: UPSTREAM.md shows
+# bro and teach shipping in the pstack-claude plugin. A skill this repo deleted
+# and nobody else ships does not belong here. That carries a known cost: a
+# deleted skill whose name is also an ordinary English word gets flagged when a
+# document emphasises the word as prose, as prototype would. The remedy then is
+# one allowlist entry with its reason written down, on the day a document needs
+# the word. It is never a weaker rule, which would trade away a real
+# stale-reference catch to prevent a collision that has not happened yet.
 EXTERNAL_SKILLS = frozenset(
     {
         "babysit",
