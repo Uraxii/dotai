@@ -1,13 +1,15 @@
-# HTML output
+# HTML document
 
-Use the selected mode's outline. Render it as one self-contained HTML document
-with inline CSS and JavaScript. Use a continuous page, section headings, and
-a linked table of contents. Avoid top-level tabs. Make the layout readable
-on a phone, and keep it usable without external assets or network access.
+Use the outline the caller supplies. Render it as one self-contained HTML
+document with inline CSS and JavaScript. Use a continuous page, section
+headings, and a linked table of contents. Avoid top-level tabs. Make the
+layout readable on a phone, and keep it usable without external assets or
+network access.
 
-For a change walkthrough, present the five quiz questions as interactive
-multiple-choice controls. After the reader selects an answer, show whether
-it is correct and explain the reasoning. Keep feedback hidden until selection.
+When the caller's outline includes a quiz, present its questions as
+interactive multiple-choice controls. After the reader selects an answer,
+show whether it is correct and explain the reasoning. Keep feedback hidden
+until selection.
 
 Use HTML and CSS for diagrams and native HTML lists for lists. Interactive
 figures should expose a relationship through manipulation, such as coordinates
@@ -20,9 +22,9 @@ feedback so correctness does not depend on color alone.
 
 Save to the user's specified location or the project's established ignored
 artifact directory. If neither exists, use a temporary directory and disclose
-that the file is temporary. Use a descriptive date-prefixed filename. Include
-the comparison revisions when explaining a change, then return the absolute
-file path as a clickable link.
+that the file is temporary. Use a descriptive date-prefixed filename. When the
+content explains a change, include the compared revisions, then return the
+absolute file path as a clickable link.
 
 ## Verify
 

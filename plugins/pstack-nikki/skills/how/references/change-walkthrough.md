@@ -32,9 +32,11 @@ inferred motivation, and name any part that could not be verified.
    tradeoffs. Explain why each answer is correct or incorrect. Avoid gotchas.
 
 Keep distractors plausible, options comparable in length, and correct-answer
-positions varied. Use the selected output reference to present answers and
-feedback. A quiz helps find gaps; it does not certify correctness or block
-review. Do not answer on the user's behalf or record an unobserved quiz pass.
+positions varied. For a rich artifact, let
+[create-artifact](../../create-artifact/SKILL.md) present the answers and
+feedback in the selected format. A quiz helps find gaps; it does not certify
+correctness or block review. Do not answer on the user's behalf or record an
+unobserved quiz pass.
 
 Keep the prose clear and engaging, with smooth transitions between sections.
 Reuse a small set of diagram styles. Show simplified UI for UI changes, and
