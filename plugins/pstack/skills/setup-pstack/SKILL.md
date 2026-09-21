@@ -5,8 +5,12 @@ description: Change which model a pstack role runs on without editing the repo. 
 
 # Setup pstack
 
-Model picks live in two places. `plugins/pstack/models.json` holds the
-committed defaults; no skill repeats them, each points at that file. This
+Model picks live in two places. The plugin's `models.json` holds the
+committed defaults; no skill repeats them, each points at that file. That
+file sits two directories up from this skill's own directory, and its path
+in the repo is `plugins/pstack/models.json`. Every mention of that repo path
+below means the same file: resolve it from this skill's own location, not
+from your working directory. This
 skill writes the other place: a per-harness **override sheet** in the user's
 own config directory, loaded as session context, whose rows win over the
 committed defaults. Changing a model then touches no file in the repo.

@@ -65,7 +65,9 @@ preferences in `plugins/pstack/models.json` instead. skills.sh
 and opencode targets read `plugins/pstack/skills/` only.
 
 `plugins/pstack/models.json` is the only copy of the model picks. No skill
-repeats it; each points at the file by path, and a per-harness override sheet
+repeats it; each points at the file by path and tells the reader to resolve
+it two directories up from the skill's own directory, so a spawner working
+outside this repo still finds it. A per-harness override sheet
 in the user's own config directory can replace a role for one harness without
 touching this repo (see the `setup-pstack` skill). After changing
 `models.json`, check that it only names models it can back, then check the

@@ -18,7 +18,7 @@
    poteto-mode: /absolute/path/of/poteto-mode/SKILL.md
    ```
 
-   `kind` is `writer` or `reviewer`. `worktree` is `create` or an existing absolute path, and a reviewer omits it. Take `model` from `plugins/pstack/models.json`: the first `codex` entry of the `feature, refactoring` row for a writer, of `judgment and prose` for a reviewer.
+   `kind` is `writer` or `reviewer`. `worktree` is `create` or an existing absolute path, and a reviewer omits it. Take `model` from the plugin's `models.json`, two directories up from the `poteto-mode` skill's own directory and `plugins/pstack/models.json` in the repo (see that skill's Models section): the first `codex` entry of the `feature, refactoring` row for a writer, of `judgment and prose` for a reviewer.
 4. Spawn the watcher without `isolation`. Its worktree comes from the header, not from Claude's own worktree placement. Pin the watcher's own model from the `codex watchers` row.
 5. Read the reply. It is five lines and nothing else: `fallback`, `command`, `exit code`, `worktree`, `base`. The watcher never opens the report and never retypes Codex's output, so those five lines are all you get from it.
 6. `fallback: none`: open `<repo>/.nikki-agents/codex-runs/<name>/report.md` yourself, then run `git log` and `git diff <base>..HEAD` in the reply's `worktree`. A commit the report claims counts only when git shows it. No report file at that path despite `fallback: none` means the run failed anyway; treat it as step 7.
