@@ -1,3 +1,4 @@
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -232,6 +233,117 @@ class BoldSkillReferenceTests(unittest.TestCase):
 
             self.assertNotEqual(0, result.returncode, result.stdout)
             self.assertIn("principle-ghost", result.stderr)
+
+
+def commit_all(repository: Path, message: str) -> None:
+    subprocess.run(["git", "add", "-A"], cwd=repository, check=True, capture_output=True)
+    subprocess.run(
+        ["git", "-c", "user.name=Test", "-c", "user.email=test@example.invalid",
+         "commit", "-m", message],
+        cwd=repository, check=True, capture_output=True,
+    )
+
+
+def write_removed_skill(repository: Path, skills_dir: Path, name: str) -> None:
+    """Give the repository a history in which `name` was a skill and then went away.
+
+    The validator learns which names used to be skills from git, so a test for a
+    stale reference has to leave that history behind the same way a real deletion
+    does: commit the skill, remove the directory, commit again.
+    """
+    if not (repository / ".git").exists():
+        subprocess.run(["git", "init", "-b", "main"], cwd=repository, check=True,
+                       capture_output=True)
+        skills_dir.mkdir(parents=True, exist_ok=True)
+        (skills_dir / ".keep").write_text("")
+        commit_all(repository, "Start the tree")
+    write_skill(skills_dir, name)
+    commit_all(repository, f"Add {name}")
+    shutil.rmtree(skills_dir / name)
+    commit_all(repository, f"Delete {name}")
+
+
+class RemovedSkillReferenceTests(unittest.TestCase):
+    """PR #56 deleted thirteen skills while a planted **caveman** reference passed.
+
+    A name that is not a skill directory is worth flagging in every syntax the
+    tree uses to cite skills, which is what these cases pin down.
+    """
+
+    def assert_reference_is_flagged(self, citation: str) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            repository = Path(directory)
+            skills_dir = repository / "skills"
+            write_removed_skill(repository, skills_dir, "caveman")
+            write_skill(skills_dir, "sample", citation)
+
+            result = run_validator(skills_dir)
+
+            self.assertNotEqual(0, result.returncode, result.stdout)
+            self.assertIn("caveman", result.stderr)
+
+    def test_fails_on_a_bare_bold_reference_to_a_removed_skill(self) -> None:
+        self.assert_reference_is_flagged("Answer in **caveman** register.\n")
+
+    def test_fails_on_a_bare_backticked_reference_to_a_removed_skill(self) -> None:
+        self.assert_reference_is_flagged("Answer in `caveman` register.\n")
+
+    def test_fails_on_the_bold_skill_frame_for_a_removed_skill(self) -> None:
+        self.assert_reference_is_flagged("Load the **caveman** skill now.\n")
+
+    def test_fails_on_the_backticked_skill_frame_for_a_removed_skill(self) -> None:
+        self.assert_reference_is_flagged("Load the `caveman` skill now.\n")
+
+    def test_fails_on_a_removed_skill_whose_prefix_family_has_one_member(self) -> None:
+        # Deleting setup-dotai left setup-pstack alone in the setup- family, and the
+        # family threshold of two then hid every remaining setup-dotai reference.
+        with tempfile.TemporaryDirectory() as directory:
+            repository = Path(directory)
+            skills_dir = repository / "skills"
+            write_removed_skill(repository, skills_dir, "setup-dotai")
+            write_skill(skills_dir, "setup-pstack")
+            write_skill(skills_dir, "sample", "Run `setup-dotai` first.\n")
+
+            result = run_validator(skills_dir)
+
+            self.assertNotEqual(0, result.returncode, result.stdout)
+            self.assertIn("setup-dotai", result.stderr)
+
+    def test_accepts_a_skill_that_history_removed_and_a_later_commit_restored(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            repository = Path(directory)
+            skills_dir = repository / "skills"
+            write_removed_skill(repository, skills_dir, "caveman")
+            write_skill(skills_dir, "caveman")
+            write_skill(skills_dir, "sample", "Answer in **caveman** register.\n")
+
+            result = run_validator(skills_dir)
+
+            self.assertEqual(0, result.returncode, result.stderr)
+
+    def test_accepts_prose_words_that_were_never_skills(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            repository = Path(directory)
+            skills_dir = repository / "skills"
+            write_removed_skill(repository, skills_dir, "caveman")
+            write_skill(
+                skills_dir,
+                "sample",
+                "Keep it **read-only**, run `git status` on `main`, and **never** guess.\n",
+            )
+
+            result = run_validator(skills_dir)
+
+            self.assertEqual(0, result.returncode, result.stderr)
+
+    def test_passes_outside_a_git_repository(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            skills_dir = Path(directory) / "skills"
+            write_skill(skills_dir, "sample", "Answer in **caveman** register.\n")
+
+            result = run_validator(skills_dir)
+
+            self.assertEqual(0, result.returncode, result.stderr)
 
 
 if __name__ == "__main__":

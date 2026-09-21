@@ -1,11 +1,15 @@
 #!/usr/bin/env python3
 """Validate plugins/pstack/skills: links resolve inside the tree, skill
 names cited in bold or backticks resolve to a skill directory, and every
-SKILL.md frontmatter names its own directory and carries a description."""
+SKILL.md frontmatter names its own directory and carries a description.
+
+Deleting a skill is what leaves a dead reference behind, so the names git has
+carried under this directory decide which emphasised words are skill names."""
 
 from __future__ import annotations
 
 import re
+import subprocess
 import sys
 from collections import Counter
 from pathlib import Path
@@ -23,14 +27,17 @@ EMPHASIS_RE = re.compile(r"\*\*([^*\n]+)\*\*|`([^`\n]+)`")
 SKILL_FRAME_RE = re.compile(r"(?:\*\*([^*\n]+)\*\*|`([^`\n]+)`)\s+skill\b")
 SKILL_NAME_RE = re.compile(r"[a-z][a-z0-9]*(?:-[a-z0-9]+)+")
 
-# Skills that ship with the harness or another plugin, so they are named
-# here on purpose but never resolve inside this tree.
+# Skills that ship with the harness or another plugin, including two this
+# plugin dropped but upstream still carries, so they are named here on purpose
+# but never resolve inside this tree.
 EXTERNAL_SKILLS = frozenset(
     {
         "babysit",
+        "bro",
         "databricks-use-dbt-models",
         "loop",
         "recall",
+        "teach",
         "verify",
         "writing-skills",
     }
@@ -100,12 +107,41 @@ def skill_families(names: set[str]) -> set[str]:
     return {prefix for prefix, count in prefixes.items() if count >= 2}
 
 
-def referenced_skills(text: str, families: set[str]) -> set[str]:
+def skill_names_in_history(skills_dir: Path) -> set[str]:
+    """Every name that held a SKILL.md in this directory at any commit.
+
+    "Answer in **caveman** register" reads as prose until you know caveman was
+    a skill here, which is why this set, and not the shape of the word, is what
+    exposes a stale reference in every citation syntax.
+
+    Returns nothing when git cannot answer, as in a shallow clone or outside a
+    checkout. The remaining rules still apply.
+    """
+    try:
+        listing = subprocess.run(
+            ["git", "log", "--all", "--format=", "--name-only", "--relative", "--", "."],
+            cwd=skills_dir,
+            capture_output=True,
+            text=True,
+            check=True,
+        ).stdout
+    except (OSError, subprocess.CalledProcessError):
+        return set()
+    return {
+        path.split("/")[0]
+        for path in listing.split("\n")
+        if path.endswith("/SKILL.md") and path.count("/") == 1
+    }
+
+
+def referenced_skills(text: str, families: set[str], historical: set[str]) -> set[str]:
     body = strip_fenced_code(text)
     references = set()
     for match in EMPHASIS_RE.finditer(body):
         token = (match.group(1) or match.group(2)).strip()
-        if SKILL_NAME_RE.fullmatch(token) and token.split("-")[0] in families:
+        if token in historical:
+            references.add(token)
+        elif SKILL_NAME_RE.fullmatch(token) and token.split("-")[0] in families:
             references.add(token)
     for match in SKILL_FRAME_RE.finditer(body):
         token = (match.group(1) or match.group(2)).strip()
@@ -128,11 +164,12 @@ def skill_reference_problems(skills_dir: Path) -> list[str]:
     root = skills_dir.resolve()
     names = skill_names(root)
     families = skill_families(names)
+    historical = skill_names_in_history(root) - EXTERNAL_SKILLS
     problems = []
     for path in documents_naming_skills(root):
         inside = path_is_inside(root, path)
         label = path.relative_to(root if inside else root.parent)
-        for reference in sorted(referenced_skills(path.read_text(), families)):
+        for reference in sorted(referenced_skills(path.read_text(), families, historical)):
             if reference not in names:
                 problems.append(f"{label} -> **{reference}** (no such skill directory)")
     return problems
