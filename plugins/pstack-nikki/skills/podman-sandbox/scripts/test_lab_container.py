@@ -18,7 +18,6 @@ from pathlib import Path
 from unittest import mock
 
 import lab_container
-import lab_profile
 
 HOSTILE_BRANCH = "x;rm -rf / #$(touch /tmp/lab-injection-proof)`id`"
 HOSTILE_BRANCH_REF = f"refs/heads/{HOSTILE_BRANCH}"
@@ -27,6 +26,22 @@ SHORT_SHA = HEAD[:12]
 REPO = Path("/src/myrepo")
 GIT_COMMON = Path("/src/myrepo.git")
 SHELL_WORDS = ("bash", "sh", "-c", "-lc", "eval")
+SPEC = lab_container.LabSpec(
+    repo=str(REPO), branch="main", port=None, image="test:latest",
+    recipe_sha256="deadbeef", git_common_dir=str(GIT_COMMON),
+)
+
+
+def definition_with(**fields: object) -> lab_container.ContainerDefinition:
+    """Return a container definition with no hooks, overridden by `fields`."""
+    defaults: dict[str, object] = {
+        "directory": Path("/src/myrepo/.sandbox-container"),
+        "image": "test:latest",
+        "recipe_sha256": "deadbeef",
+        "setup_command": (),
+        "ready_command": (),
+    }
+    return lab_container.ContainerDefinition(**(defaults | fields))
 
 
 class FakePodman:
@@ -121,30 +136,28 @@ class HostileBranchTest(unittest.TestCase):
         )
 
     def test_create_mounts_the_common_git_directory_read_only(self) -> None:
-        spec = lab_container.LabSpec(
-            repo=str(REPO), branch="main", profile="base", port=None,
-            image="test:latest", recipe_sha256="deadbeef",
-            git_common_dir=str(GIT_COMMON),
-        )
-
-        lab_container.create_container(self.lab, spec, REPO, GIT_COMMON)
+        lab_container.create_container(self.lab, SPEC, REPO, GIT_COMMON)
 
         create = [call for call in self.podman.calls if call[0] == "create"][0]
         self.assertIn(
             f"{GIT_COMMON}:{lab_container.MOUNT_GIT_COMMON_READONLY}:ro", create
         )
 
-    def test_a_hostile_hook_argv_stays_argv(self) -> None:
-        profile = lab_profile.Profile(
-            name="evil",
-            directory=Path("/tmp/evil"),
-            port=None,
-            setup=(HOSTILE_BRANCH,),
-            ready=(),
-            ready_timeout_sec=1,
-            recipe_sha256="deadbeef",
+    def test_create_copies_the_shot_command_into_the_container(self) -> None:
+        lab_container.create_container(self.lab, SPEC, REPO, GIT_COMMON)
+
+        copies = [call for call in self.podman.calls if call[0] == "cp"]
+        self.assertEqual(len(copies), 1)
+        source, destination = copies[0][1:]
+        self.assertEqual(Path(source).name, "lab-shot")
+        self.assertEqual(
+            destination, f"lab-demo:{lab_container.SHOT_COMMAND_PATH}"
         )
-        lab_container.run_setup(self.lab, profile, "/work/myrepo")
+        self.assertNotIn(str(REPO), " ".join(copies[0]))
+
+    def test_a_hostile_hook_argv_stays_argv(self) -> None:
+        definition = definition_with(setup_command=(HOSTILE_BRANCH,))
+        lab_container.run_setup(self.lab, definition, "/work/myrepo")
         self.assertIn(HOSTILE_BRANCH, self.podman.elements())
         for element in self.podman.elements():
             self.assertNotIn(element, SHELL_WORDS)
@@ -173,39 +186,31 @@ class SetupRestartTest(unittest.TestCase):
         patch.start()
         self.addCleanup(patch.stop)
         self.lab = lab_container.Lab("demo")
-        self.profile = lab_profile.Profile(
-            name="app",
-            directory=Path("/tmp/app"),
-            port=None,
-            setup=("start-app",),
-            ready=(),
-            ready_timeout_sec=1,
-            recipe_sha256="deadbeef",
-        )
+        self.definition = definition_with(setup_command=("start-app",))
 
     def test_an_external_restart_reruns_setup(self) -> None:
-        self.assertTrue(lab_container.run_setup(self.lab, self.profile, "/work/myrepo"))
+        self.assertTrue(lab_container.run_setup(self.lab, self.definition, "/work/myrepo"))
         self.podman.started_at = "2026-09-14T12:00:01.000000000Z"
 
-        changed = lab_container.run_setup(self.lab, self.profile, "/work/myrepo")
+        changed = lab_container.run_setup(self.lab, self.definition, "/work/myrepo")
 
         self.assertTrue(changed)
         self.assertEqual(self.podman.elements().count("start-app"), 2)
 
     def test_an_unchanged_running_container_skips_setup(self) -> None:
-        self.assertTrue(lab_container.run_setup(self.lab, self.profile, "/work/myrepo"))
+        self.assertTrue(lab_container.run_setup(self.lab, self.definition, "/work/myrepo"))
 
-        changed = lab_container.run_setup(self.lab, self.profile, "/work/myrepo")
+        changed = lab_container.run_setup(self.lab, self.definition, "/work/myrepo")
 
         self.assertFalse(changed)
         self.assertEqual(self.podman.elements().count("start-app"), 1)
 
     def test_a_retry_after_up_failed_before_setup_reruns_setup(self) -> None:
-        self.assertTrue(lab_container.run_setup(self.lab, self.profile, "/work/myrepo"))
+        self.assertTrue(lab_container.run_setup(self.lab, self.definition, "/work/myrepo"))
         # A failed `up` started the container again, then raised before setup.
         self.podman.started_at = "2026-09-14T12:05:00.000000000Z"
 
-        changed = lab_container.run_setup(self.lab, self.profile, "/work/myrepo")
+        changed = lab_container.run_setup(self.lab, self.definition, "/work/myrepo")
 
         self.assertTrue(changed)
         self.assertEqual(self.podman.elements().count("start-app"), 2)
