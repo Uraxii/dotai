@@ -1,6 +1,6 @@
 # pstack skill tree source
 
-42 skills in this plugin are a port from `michael-denyer/pstack-claude`, replacing
+40 skills in this plugin are a port from `michael-denyer/pstack-claude`, replacing
 an earlier, less maintained port of the same Cursor `pstack` origin.
 
 - Source: https://github.com/michael-denyer/pstack-claude
