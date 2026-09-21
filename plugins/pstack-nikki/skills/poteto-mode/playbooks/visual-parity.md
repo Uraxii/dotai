@@ -1,25 +1,11 @@
-# Visual parity
+### Visual parity
 
-Pick when: "make X match Y exactly", styling-system migrations, porting a UI
-across frameworks. You own pixel-exact equivalence. The baseline is the spec;
-you do not touch it. Equivalence is verified by image diff, not by eye.
+**You own pixel-exact equivalence. The baseline is the spec; you do not touch it.** Equivalence is verified by image diff, not by eye.
 
-1. Establish the baseline first, before any migration: a visual regression
-   harness screenshotting the current component across its states, plus the
-   target when matching two implementations. No baseline, no parity claim. A
-   blocking prerequisite, not a follow-up.
-2. Anti-shortcut clauses, stated and held: no harness edits, no baseline
-   tampering, no restructuring to make a diff pass. Baseline looks wrong ->
-   stop and ask, do not edit it.
-3. Migrate one component at a time. Independent artifacts, so parallelize
-   across worktrees, one owner per component
-   (`principle-code-quality`). Shared primitives migrate first as a blocking
-   phase.
-4. Verify each component against its baseline by image diff on the matching
-   surface. A nonzero diff is a fail; investigate the pixel delta, do not wave
-   it through. Iterate per component until the diff is zero, on a recurring
-   run if the harness has one.
-5. Run Opening a PR (`playbooks/opening-a-pr.md`) per component or per safe batch.
+1. Establish the baseline first, before any migration: a visual regression harness that screenshots the current component across its states, plus the target when matching two implementations. No baseline, no parity claim. A blocking prerequisite, not a follow-up.
+2. Anti-shortcut clauses, stated and held: no harness modifications, no baseline tampering, no component restructuring to make a diff pass. If the baseline looks wrong, stop and ask, don't edit it.
+3. Migrate one component at a time. Parallelize across worktrees, one owner per component (the **separate-before-serializing-shared-state** principle skill). Shared primitives migrate first as a blocking phase.
+4. Verify each component against its baseline via image diff on the matching surface via the driver skill. A nonzero diff is a fail; investigate the pixel delta. `/loop` per component until the diff is zero.
+5. Run **Opening a PR** per component or per safe batch.
 
-**Reply:** components migrated, the diff for each, the baseline harness
-location, what is left.
+**Reply:** components migrated, the diff result for each, the baseline harness location, what's left.

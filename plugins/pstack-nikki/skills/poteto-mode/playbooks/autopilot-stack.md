@@ -1,61 +1,16 @@
-# Autopilot-stack
+### Autopilot-stack
 
-Pick when: "autopilot-stack", "stack them, do not ship", "build the stack, I
-will land it". You own the stack, never the landing. Build and verify the
-queue with full autonomy, then hand the user one linear stack she reviews and
-lands herself.
+**You own the stack, never the landing. Build and verify the queue with full autonomy, then hand the operator one linear base-branch stack she reviews and lands herself.** The sibling of **Autopilot-full**.
 
-The sibling of Autopilot-full (`playbooks/autopilot-full.md`). The owner loop and
-the verification gate are the same; only the terminal differs. There a clean
-verdict authorizes the owner's merge. Here it appends a link to the one
-reviewed chain, and nothing auto-ships.
+1. **Run the owner loop unchanged.** Resolve the forge once for the program. GitHub CLI (`gh`) is the default. If `command -v origin` succeeds and Origin can resolve the repository, use `origin pr ...` for PR create, edit, view, watch, and merge operations; otherwise stay on `gh` and record the fallback. Never require Graphite (`gt`). One background subagent per PR, in its own worktree, owns its change end to end: build, first push, a ready PR opened before self-proof, self-proof (gates, CI, receipts), skeptical review-bot triage per `../references/bugbot-triage.md`, a slop-strip (the **deslop** skill, `/deslop`), `/no-comments` (the **no-comments** skill), and babysit to green per `playbooks/babysit.md`. Owners parallelize when the work is self-contained. Within about 15 minutes, every owner starts a `decisions.tsv` trail per the **show-me-your-work** skill, pushes its first branch snapshot, and opens the PR ready, never draft. Keep the trail uncommitted and return it in the report.
+2. **Audit on the wake chain.** The root runs an audit tick roughly every 30 minutes. Arm each tick as a real `/loop` in dynamic mode, which schedules its own wake-up rather than blocking on a sleep. Never leave the cadence to memory or lossy completion notifications. At each tick, re-read this playbook from disk (`skills/poteto-mode/playbooks/autopilot-stack.md` under the installed plugin), then re-read the standing objective. Audit the operation against both. Fix drift during that tick. Probe each owner with a generic liveness or status check. Count only side effects as progress: commits, pushes, PR or check deltas, and store reports. Treat a lane that passes its expected runtime without a side effect as stuck. Stand it down and dispatch a replacement at once. Do not wait for a polite return.
+3. **Hold the operator gates.** State-then-wait, so a request to state the plan is not a go. On her explicit go, write the full program objective into the standing orders and restate it in your todolist. That objective stands across turns until the chain is done. On her stop, every owner takes an immediate zero-writes hold.
+4. **Verify at STACK-READY.** The owner reports STACK-READY with the exact head SHA. Record each verdict's head SHA, base SHA, base branch, and stable base-to-head patch-id so later rewrites can be compared with the reviewed context. The root swarm-verifies that SHA, fan-out per the **swarm** skill: parallel independent verifiers re-running the gates at that SHA, a live runtime floor over the load-bearing behavior, and a receipts-and-diff audit that distrusts the PR body. The swarm aggregates to one verdict. Findings go back to the owner, and nothing enters the stack unverified.
+5. **Append on a clean verdict, never ship.** No owner merges, arms auto-merge, or closes. A clean verdict appends the PR to the one linear base-branch stack, in verified order or an order the operator specified.
+6. **Single writer on topology, parallel writers on builds.** Owners push only their own branches and report the tip, current base, and intended parent. The root is the only topology writer. Before any rewrite or retarget, follow [Merge and restack safety](../references/merge-safety.md): capture the affected chain and remote heads, cancel both auto-merge requests and queue membership for that chain, and verify cancellation. Leave unrelated PRs alone. To append a PR, fetch the intended parent, rebase the child branch onto that exact parent tip, push with `--force-with-lease=refs/heads/<branch>:<captured-remote-head>` using the remote SHA captured before rewriting, and set the PR base to the parent branch. Create it with `origin pr create --status open --base <parent-branch>` or `gh pr create --base <parent-branch>` according to the resolved forge. Retarget an existing PR with `origin pr edit <pr> --base <parent-branch>` or `gh pr edit <pr> --base <parent-branch>`. Only the root PR targets trunk. Never submit or register the chain through `gt`.
+7. **Absorb drift at the root, then re-verify what moved.** The root fetches current trunk and rebases the chain from bottom to top. When a rebase surfaces conflicts in an owner's files, that owner fixes its own slice and the root pushes the result. A rebase rewrites every SHA above it and voids verdicts at the old SHAs. Compare the stable `git patch-id` for each PR's base-to-head diff at its verdict SHA against its new base-to-head diff. An unchanged patch-id may preserve the substantive code verdict after checking that it still applies to the new base and context; changed patches or uncertain applicability go back through step 4 before delivery. Re-run mergeability and CI after every rewritten push even when the patch-id is unchanged. The countersign rule is unchanged from Autopilot-full. A genuinely new pin raises a stop for the root's fresh countersign; absorbing drift of landed values is not a raise.
+8. **Deliver the chain.** The deliverable is one linear chain of verified PRs, reviewable bottom-up in the resolved forge, every link carrying its verifier verdict in the PR body or a comment. The operator reviews and lands it, with her own clicks or with merge-when-ready she arms herself.
 
-1. **Run the owner loop unchanged.** One `orchestrator` subagent per PR owns
-   its change end to end: build, registration of its own PR with the stacking
-   tool, self-proof (gates, CI, receipts), skeptical triage of review-bot
-   comments, a pass of `unslop` over the diff, the comment rule in
-   `principle-code-quality`, and Babysit to green (`playbooks/babysit.md`). Owners
-   parallelize when the work is self-contained. Every owner keeps a decision
-   trail per `show-me-your-work`, never committed, returned in its report.
-2. **Audit on a wake chain.** The root runs audit ticks roughly every 30
-   minutes on a recurring run if the harness has one: liveness per owner,
-   progress, protocol adherence.
-3. **Hold the user's gates.** State-then-wait, so a request to state the plan
-   is not a go. On her stop, every owner takes an immediate zero-writes hold.
-4. **Verify at STACK-READY.** The owner reports STACK-READY with the exact
-   head SHA. The root fans out verifiers over that SHA per `swarm`: parallel
-   independent verifiers re-running the gates at that SHA, a live runtime
-   floor over the load-bearing behaviour, and a receipts-and-diff audit that
-   distrusts the PR body. They aggregate to one verdict. Findings go back to
-   the owner, and nothing enters the stack unverified.
-5. **Append on a clean verdict, never ship.** No owner merges, arms
-   merge-when-ready, or closes. A clean verdict appends the PR to the one
-   linear stack, in verified order or an order the user specified.
-6. **Single writer on topology, parallel writers on builds.** Stack mechanics
-   follow whatever stacking tool the team uses. An owner pushes only its own
-   branch, `git push --force-with-lease` after an `ls-remote` check, and
-   reports its tip and intended parent. The root owns stack topology and
-   registers each append itself, submitting from the tip. A stack submit walks
-   from trunk, and an owner must never pull branches below its own into that
-   walk; when instructed, it may set its bottom PR's base directly instead.
-7. **Absorb drift at the root, then re-verify what moved.** The root absorbs
-   trunk movement by restacking the chain; when a restack surfaces conflicts
-   in an owner's files, that owner fixes its own slice and the root pushes the
-   result. A restack rewrites every SHA above it and voids the verdicts at the
-   old SHAs. Compare `git patch-id` at each verdict SHA against the new head.
-   Anything that actually drifted goes back through step 4 before delivery.
-   The countersign rule is unchanged from Autopilot-full: a genuinely new pin
-   raises a stop for the root's fresh countersign, and absorbing drift of
-   landed values is not a raise.
-8. **Deliver the chain.** The deliverable is one linear chain of verified PRs,
-   reviewable bottom-up, every link carrying its verifier verdict in the PR
-   body or a comment. The user reviews and lands it, with her own clicks or
-   with merge-when-ready she arms herself.
+**Choosing between the autopilots.** Autopilot-full when the PRs are independent and landing authority is granted. Autopilot-stack when the operator wants review before landing, the work is sequenced or coupled, or merge authority is withheld.
 
-**Choosing between the autopilots.** Autopilot-full when the PRs are
-independent and landing authority is granted. Autopilot-stack when the user
-wants review before landing, the work is sequenced or coupled, or merge
-authority is withheld.
-
-**Reply:** links to the stack root and tip, a one-line verdict summary per
-link, and anything parked or excluded with the reason.
+**Reply:** links to the stack root and tip, a one-line verdict summary per link, and anything parked or excluded with the reason.

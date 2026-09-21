@@ -1,23 +1,12 @@
-# Authoring or modifying a skill
+### Authoring or modifying a skill
 
-Pick when: writing or changing a skill. You own the skill's voice.
-Agent-facing prose has a higher bar than human prose; an unhelpful sentence
-becomes an instruction.
+**You own the skill's voice.**
 
-1. Structure: frontmatter carries `name` and `description` only; the body
-   opens with rules, not a restatement; bulk goes to `references/` files
-   loaded on demand; the description is the only text an agent sees when
-   deciding to load, so it names the situations, not the contents.
-2. Validate: frontmatter has `name` and `description`, referenced files exist,
-   cross-skill links resolve, no em-dashes, lines reflowed to 80 columns.
+1. Use the **plugin-dev:skill-development** skill (Claude Code's skill for authoring SKILL.md files).
+2. Validate the skill: frontmatter has `name` and `description`, referenced files exist, cross-skill links resolve.
 3. Test cases if structural; skip if subjective.
-4. Run Opening a PR (`playbooks/opening-a-pr.md`).
+4. Run **Opening a PR**.
 
-When in doubt, delete. Prose earns its keep by changing a decision. Tell it to
-do the thing, skip the reason. Explain only when the rule is confusing without
-one. Match tone to scope. Point at structural sources (types, READMEs,
-config); hardcoded detail goes stale
-(`principle-encode-lessons-in-structure`). Delegate to other skills by path.
-Workflow you keep hitting but not captured -> propose a new skill.
+When in doubt, delete; keep only prose that changes a decision. Tell it to do the thing and skip the reason. Explain only when the rule is confusing without one. Match tone to scope. Point at structural sources (types, READMEs, config) per the **encode-lessons-in-structure** principle skill. Delegate to other skills by path; don't restate. A workflow you keep hitting but isn't captured → propose a new skill.
 
-**Reply:** skill summary, key design decisions, validation notes.
+**Reply:** summary of the skill, key design decisions, validation notes.
