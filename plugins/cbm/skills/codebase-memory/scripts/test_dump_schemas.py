@@ -102,13 +102,17 @@ class DumpSchemasTest(unittest.TestCase):
 
         self.assertIn("café ✓", self.output.read_text(encoding="utf-8"))
 
-    def test_propagates_a_failing_binary_and_reports_nothing(self) -> None:
+    def test_propagates_a_failing_binary_and_leaves_the_output_untouched(
+        self,
+    ) -> None:
+        self.output.write_text("stale contents", encoding="utf-8")
         self.write_stub("raise SystemExit(3)\n")
 
         result = self.run_dump()
 
         self.assertEqual(result.returncode, 3)
         self.assertEqual(result.stdout, "")
+        self.assertEqual(self.output.read_text(encoding="utf-8"), "stale contents")
 
     def test_an_error_response_counts_as_no_tools(self) -> None:
         self.write_replying_stub(INIT_RESPONSE, ERROR_RESPONSE)
@@ -120,6 +124,7 @@ class DumpSchemasTest(unittest.TestCase):
                         result.stdout)
 
     def test_a_line_that_is_not_json_fails_the_way_jq_did(self) -> None:
+        self.output.write_text("stale contents", encoding="utf-8")
         self.write_stub(f"print({BANNER_LINE!r})\n"
                         f"print({json.dumps(LIST_RESPONSE)!r})\n")
 
@@ -127,16 +132,34 @@ class DumpSchemasTest(unittest.TestCase):
 
         self.assertEqual(result.returncode, PARSE_ERROR_EXIT)
         self.assertEqual(result.stdout, "")
-        self.assertEqual(self.output.read_text(encoding="utf-8"), "")
+        self.assertEqual(self.output.read_text(encoding="utf-8"), "stale contents")
 
-    def test_empties_the_output_when_the_binary_is_absent(self) -> None:
+    def test_leaves_the_output_untouched_when_the_binary_is_absent(self) -> None:
         self.output.write_text("stale contents", encoding="utf-8")
 
         result = self.run_dump()
 
         self.assertEqual(result.returncode, 127)
         self.assertIn(BINARY, result.stderr)
-        self.assertEqual(self.output.read_text(encoding="utf-8"), "")
+        self.assertEqual(self.output.read_text(encoding="utf-8"), "stale contents")
+
+    def test_leaves_the_output_untouched_on_a_nonzero_exit_with_a_reply(
+        self,
+    ) -> None:
+        # The binary answers tools/list and then still exits non-zero (e.g.
+        # a crash after replying). The reply parsed clean, but a non-zero
+        # exit is still a failed run: the prior tools.json must survive it.
+        self.output.write_text("stale contents", encoding="utf-8")
+        self.write_stub(
+            f"print({json.dumps(INIT_RESPONSE)!r})\n"
+            f"print({json.dumps(LIST_RESPONSE)!r})\n"
+            "sys.exit(9)\n"
+        )
+
+        result = self.run_dump()
+
+        self.assertEqual(result.returncode, 9)
+        self.assertEqual(self.output.read_text(encoding="utf-8"), "stale contents")
 
 
 if __name__ == "__main__":
