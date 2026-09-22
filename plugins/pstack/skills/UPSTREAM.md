@@ -64,10 +64,28 @@ half. Upstream's `sync.mjs`, `substitutions.json`, `upstream.json`,
 `validate-skills.mjs`, and `verify-merge-safety.mjs` serve upstream's own
 release pipeline and were not taken either.
 
+## Ported from a gist
+
+- Source: https://gist.github.com/geoffreylitt/a29df1b5f9865506e8952488eac3d524
+- Revision: `126e7fe9eecaafadfe1ac8bb183d135812b608f2`
+- Skills: explain-diff-html and explain-diff-notion, each a verbatim copy of
+  its gist file.
+- License: none stated.
+
+A local skill named create-artifact merged both of them into one. It has been
+deleted in favour of the two originals, so that name no longer resolves to a
+skill here. No skill name in this section is emphasised, and that is
+deliberate. `scripts/validate-skills.py` reads a bolded or backticked name as
+a citation of a live skill, and the two gist skills move to a package of
+their own, which this tree must not cite. When they move, this whole section
+moves with them, because the source and the revision belong to those two
+skills and not to this tree.
+
 ## Local to this plugin
 
-Every other skill under `plugins/pstack/skills/` is specific to this
-project and was not touched by the port: `azure-devops`, `codebase-memory`,
-`create-artifact`, `decisions`, `handoff`, `llm-wiki`, `notion-cli`,
-`podman-sandbox`, `principle-code-quality`, `principle-decomposition`,
-`principle-naming`, `principle-output-to-user`, `skill-quality`.
+Every skill directory in this tree is local to this project unless a section
+above lists its name among the skills that section took from a source. Those
+lists are the enumerations of skill names in each section. A name that a
+section mentions only in surrounding prose is not one of them. Read the
+directory listing for the current set. A list written out here would go stale
+every time a skill arrives or leaves, and it already did once.
