@@ -209,7 +209,10 @@ def documents_naming_skills(skills_dir: Path) -> list[Path]:
 
 
 def reference_remedy(
-    reference: str, historical: set[str], elsewhere: dict[str, str]
+    reference: str,
+    historical: set[str],
+    elsewhere: dict[str, str],
+    live_names: set[str],
 ) -> str:
     owner = elsewhere.get(reference)
     if owner:
@@ -220,17 +223,16 @@ def reference_remedy(
         )
     if reference in historical:
         return "was a skill here and was deleted. Drop the reference or restore the directory"
-    return "no skill directory of that name. Drop the emphasis if the word is prose"
-
-
-def prefixed_reference_remedy(
-    reference: str, historical: set[str], elsewhere: dict[str, str]
-) -> str:
     prefixed = f"principle-{reference}"
-    remedy = f"cite **{prefixed}** instead"
-    if prefixed in elsewhere:
-        return f"{remedy}; {reference_remedy(prefixed, historical, elsewhere)}"
-    return remedy
+    if prefixed in live_names:
+        remedy = f"cite **{prefixed}** instead"
+        if prefixed in elsewhere:
+            return (
+                f"{remedy}; "
+                f"{reference_remedy(prefixed, historical, elsewhere, live_names)}"
+            )
+        return remedy
+    return "no skill directory of that name. Drop the emphasis if the word is prose"
 
 
 def skill_reference_problems(
@@ -260,12 +262,9 @@ def skill_reference_problems(
             referenced_skills(path.read_text(), families, known, live_names)
         ):
             if reference not in names:
-                if f"principle-{reference}" in live_names:
-                    remedy = prefixed_reference_remedy(
-                        reference, historical, elsewhere
-                    )
-                else:
-                    remedy = reference_remedy(reference, historical, elsewhere)
+                remedy = reference_remedy(
+                    reference, historical, elsewhere, live_names
+                )
                 problems.append(f"{label} -> **{reference}** ({remedy})")
     return problems
 

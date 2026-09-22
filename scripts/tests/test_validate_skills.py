@@ -158,34 +158,53 @@ class BoldSkillReferenceTests(unittest.TestCase):
             self.assertIn("principle-prove-it-works", result.stderr)
             self.assertIn("owning", result.stderr)
 
+            write_skill(owning_tree, "principle-code-quality")
+            write_skill(citing_tree, "sample", "Apply **code-quality** first.\n")
+
+            result = run_validator(citing_tree, owning_tree)
+
+            self.assertNotEqual(0, result.returncode, result.stdout)
+            self.assertIn("cite **principle-code-quality** instead", result.stderr)
+
             write_skill(citing_tree, "principle-prove-it-works")
             write_skill(
                 citing_tree, "sample", "Apply **principle-prove-it-works** first.\n"
             )
+            # Only hyphenated prose reaches SKILL_NAME_RE. Single words here
+            # are silent because of that regex, not because they are safe.
             write_skill(
                 citing_tree,
                 "safe-words",
-                " ".join(
-                    f"**{word}**"
-                    for word in (
-                        "tutorial",
-                        "reference",
-                        "explanation",
-                        "how-to",
-                        "must",
-                        "evidence",
-                        "target",
-                        "question",
-                        "recall",
-                        "babysit",
-                    )
-                )
-                + "\n",
+                "**how-to**\n",
             )
 
             result = run_validator(citing_tree, owning_tree)
 
             self.assertEqual(0, result.returncode, result.stderr)
+
+    def test_prefers_the_owner_of_an_unprefixed_live_skill(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            repository = Path(directory)
+            alpha = repository / "alpha" / "skills"
+            beta = repository / "beta" / "skills"
+            gamma = repository / "gamma" / "skills"
+            write_skill(alpha, "naming")
+            write_skill(beta, "principle-naming")
+            write_skill(gamma, "sample", "Apply **naming** first.\n")
+            subprocess.run(
+                ["git", "init", "-b", "main"],
+                cwd=repository,
+                check=True,
+                capture_output=True,
+            )
+            commit_all(repository, "Add collision fixtures")
+
+            result = run_validator(alpha, beta, gamma)
+
+            self.assertNotEqual(0, result.returncode, result.stdout)
+            self.assertIn("naming", result.stderr)
+            self.assertIn("alpha plugin", result.stderr)
+            self.assertNotIn("cite **principle-naming** instead", result.stderr)
 
     def test_fails_on_a_bold_reference_to_a_missing_skill(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
