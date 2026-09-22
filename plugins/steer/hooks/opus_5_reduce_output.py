@@ -120,12 +120,11 @@ COMMAND_SEPARATOR = re.compile(r"&&|\|\||;|\||\n")
 
 # A prompt, not config. Keep it short; it is injected on every turn.
 RECAP_INSTRUCTION = (
-    "Type a clean recap. Keep it short, light, and plain — a few sentences "
-    "of what changed and what it means, not a report. Write for someone who "
-    "has not read the code: no file paths, no function or variable names, no "
-    "line numbers, no code blocks, and assume nothing about what they already "
-    "know of the internals. Skip the caveats and next-steps unless something "
-    "is genuinely broken or unfinished. If they want the detail, they will ask."
+    "Write a plain recap in a few sentences about what changed and why it "
+    "matters. Do not write a report, headers, or structured output. The reader "
+    "has not seen the code, so use no paths, identifiers, line numbers, or code "
+    "blocks. Leave out caveats and next steps unless something is broken or "
+    "unfinished."
 )
 
 
