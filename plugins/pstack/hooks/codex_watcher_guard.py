@@ -29,8 +29,8 @@ FORBIDDEN_COMMAND_CHARS = re.compile(r"[\n\r;&|$`>]")
 
 # Commands both watcher kinds share: no repo/name coupling to enforce.
 COMMON_BASH = (
-    re.compile(r"codex --version"),
-    re.compile(r"codex login status"),
+    re.compile(r"codex-agent --version"),
+    re.compile(r"codex-agent login status"),
     re.compile(rf"git -C {PATH} rev-parse HEAD"),
 )
 
@@ -38,7 +38,7 @@ COMMON_BASH = (
 # report/prompt paths must sit under that same repo and run name.
 REVIEWER_BASH = COMMON_BASH + (
     re.compile(
-        rf"codex exec -m {SLUG} -s read-only -c agents\.enabled=false"
+        rf"codex-agent exec -m {SLUG} -s read-only -c agents\.enabled=false"
         rf" -C (?P<repo>{PATH})"
         rf" -o (?P=repo)/\.nikki-agents/codex-runs/(?P<name>{NAME})/report\.md"
         rf" - < (?P=repo)/\.nikki-agents/codex-runs/(?P=name)/prompt\.txt"
@@ -50,7 +50,7 @@ REVIEWER_BASH = COMMON_BASH + (
 # run name the `-C` worktree belongs to.
 DEVELOPER_BASH = COMMON_BASH + (
     re.compile(
-        rf"codex exec -m {SLUG} -s workspace-write -c agents\.enabled=false"
+        rf"codex-agent exec -m {SLUG} -s workspace-write -c agents\.enabled=false"
         rf" -C (?P<repo>{PATH})/{PATH_SEGMENT}(?:/{PATH_SEGMENT})*"
         rf" -o (?P=repo)/\.nikki-agents/codex-runs/(?P<name>{NAME})/report\.md"
         rf" - < (?P=repo)/\.nikki-agents/codex-runs/(?P=name)/prompt\.txt"
