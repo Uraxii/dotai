@@ -68,20 +68,19 @@ release pipeline and were not taken either.
 
 - Source: https://gist.github.com/geoffreylitt/a29df1b5f9865506e8952488eac3d524
 - Revision: `126e7fe9eecaafadfe1ac8bb183d135812b608f2`
-- Skills: `explain-diff-html` and `explain-diff-notion`, each a verbatim copy
-  of its gist file.
+- Skills: explain-diff-html and explain-diff-notion, each a verbatim copy of
+  its gist file.
 
 A local skill named create-artifact merged both of them into one. It has been
 deleted in favour of the two originals, so that name no longer resolves to a
-skill here. That name stays in plain prose, never in bold or backticks,
-because `scripts/validate-skills.py` reads an emphasised name as a citation
-of a live skill and fails the build.
+skill here. No skill name in this section is emphasised, and that is
+deliberate. `scripts/validate-skills.py` reads a bolded or backticked name as
+a citation of a live skill, and the two gist skills move to a package of
+their own, which this tree must not cite.
 
 ## Local to this plugin
 
-Every skill under `plugins/pstack/skills/` that neither section above names
-is specific to this project and was not touched by either port:
-`azure-devops`, `beads`,
-`codebase-memory`, `handoff`, `llm-wiki`, `notion-cli`, `podman`,
-`principle-code-quality`, `principle-decomposition`, `principle-naming`,
-`principle-output-to-user`, `proton-pass-cli`, `skill-quality`.
+Every skill directory in this tree that no section above names is local to
+this project and came from neither port. Read the directory listing for the
+current set. A list written out here would go stale every time a skill
+arrives or leaves, and it already did once.
