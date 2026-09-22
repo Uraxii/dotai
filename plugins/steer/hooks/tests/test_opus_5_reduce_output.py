@@ -356,6 +356,12 @@ class Opus5ReduceOutputTests(unittest.TestCase):
             "python3 -c 'print(1 >= 0)'",
             "grep -n foo /workspace/x | head -5",
             "ps aux | grep node",
+            # Redirecting to /dev/null discards, it does not write.
+            "python3 scripts/validate-skills.py >/dev/null 2>&1",
+            "python3 scripts/validate-skills.py > /dev/null",
+            "python3 scripts/validate-skills.py >>/dev/null",
+            "python3 scripts/validate-skills.py >> /dev/null",
+            "git rev-parse HEAD 2>/dev/null",
         ]:
             with self.subTest(command=command):
                 self.assertFalse(HOOK._command_mutates(command))
@@ -397,6 +403,16 @@ class Opus5ReduceOutputTests(unittest.TestCase):
             HOOK._command_mutates("cat /workspace/a || touch /workspace/a")
         )
         self.assertFalse(HOOK._command_mutates("git status && git diff"))
+
+    def test_the_dev_null_carve_out_does_not_swallow_a_later_write(self) -> None:
+        """Excusing the discard must not excuse the rest of the line."""
+        self.assertTrue(
+            HOOK._command_mutates("check >/dev/null && rm -rf /workspace/d")
+        )
+        self.assertTrue(HOOK._command_mutates("check >/dev/null; touch /workspace/x"))
+        self.assertTrue(
+            HOOK._command_mutates("check >/dev/null 2>&1 > /workspace/out")
+        )
 
     # -- loop guard --------------------------------------------------------
 

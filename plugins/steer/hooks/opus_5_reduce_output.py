@@ -92,6 +92,11 @@ MUTATING_COMMAND_PREFIXES = (
     ("gh", "repo", "create"), ("gh", "release", "create"),
 )
 
+# Redirecting to /dev/null discards output rather than writing it, and it is
+# one of the commonest read-only idioms there is. Stripped before the write
+# check so only the discard is excused, never a redirect later in the line.
+DISCARD_REDIRECT = re.compile(r">{1,2}\s*/dev/null\b")
+
 # Shell redirection into a file. The lookarounds keep `2>&1`, `&>`, `>=`
 # and a `->` arrow inside a larger token from reading as a write.
 REDIRECT_TO_FILE = re.compile(r"(?<![-=<>!0-9&])>{1,2}(?![&=])")
@@ -222,6 +227,7 @@ def _current_turn_tool_uses(transcript_path: Path) -> list[dict] | None:
 def _command_mutates(command: str) -> bool:
     """True when any segment of a shell command line writes something."""
     for segment in COMMAND_SEPARATOR.split(command):
+        segment = DISCARD_REDIRECT.sub("", segment)
         if REDIRECT_TO_FILE.search(segment):
             return True
         try:
