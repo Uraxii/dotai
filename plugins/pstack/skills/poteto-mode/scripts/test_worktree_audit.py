@@ -4,9 +4,9 @@ The bucket table is the part that decides whether a human deletes a
 directory, so its two safety invariants are asserted over every combination
 of its six inputs. The ordering is checked differentially against the GNU
 `sort` the shell version piped through. The rest of the suite drives the real
-script against a real repository with real worktrees: a local bare remote stands in for origin and a stub `gh` on PATH
-stands in for the API, so nothing here touches the network, the user's
-checkout, or the user's transcripts.
+script against a real repository with real worktrees: a local bare remote
+stands in for origin and a stub `gh` on PATH stands in for the API, so nothing
+here touches the network, the user's checkout, or the user's transcripts.
 """
 
 from __future__ import annotations
