@@ -109,6 +109,9 @@ class CiWorkflowTests(unittest.TestCase):
     def test_generated_manifests_are_checked(self) -> None:
         command_starting_with("python3 scripts/generate-plugin-manifests.py --check")
 
+    def test_home_paths_are_checked(self) -> None:
+        command_starting_with("python3 scripts/validate-no-home-paths.py")
+
     def test_checkout_keeps_the_full_history(self) -> None:
         # validate-skills.py learns deleted skill names from git log.
         self.assertIn("fetch-depth: 0", WORKFLOW.read_text())

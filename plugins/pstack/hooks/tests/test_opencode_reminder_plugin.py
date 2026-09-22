@@ -1,7 +1,7 @@
 """Static checks for the opencode plugin shim.
 
 opencode plugins run under Bun; nothing on this machine installs opencode or
-Bun (see /home/nikki/dotai's dev-machine rules), so this cannot be exercised
+Bun (see this repo's dev-machine rules), so this cannot be exercised
 live. `node --experimental-strip-types` type-strips and loads the file the
 same way Bun would, without executing any hook body (the file only defines
 and exports the plugin, it never calls it), so a clean exit proves the
