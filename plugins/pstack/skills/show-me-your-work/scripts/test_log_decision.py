@@ -95,6 +95,19 @@ class LogDecisionTest(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertTrue(nested.is_file())
 
+    def test_writes_a_cell_whose_bytes_are_not_utf8(self) -> None:
+        result = subprocess.run(
+            [sys.executable, str(LOG_DECISION), str(self.logfile),
+             b"phase", b"caf\xe9", b"why", b"evidence", b"result"],
+            capture_output=True,
+            check=False,
+        )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        written = self.logfile.read_bytes().splitlines()
+        self.assertEqual(len(written), 2)
+        self.assertEqual(written[1].split(b"\t")[2], b"caf\xe9")
+
     def test_rejects_a_wrong_argument_count(self) -> None:
         for cells in (("phase", "decision", "why", "evidence"),
                       ("phase", "decision", "why", "evidence", "result",
