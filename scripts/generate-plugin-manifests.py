@@ -3,9 +3,10 @@
 
 The repository ships eleven plugins. Each needs a `plugin.json`, a
 `.claude-plugin/plugin.json`, and a `.codex-plugin/plugin.json`, and each
-must appear in `.claude-plugin/marketplace.json` and
-`.agents/plugins/marketplace.json`. That is 33 manifests and 22
-marketplace entries whose names, versions, and descriptions have to agree.
+must appear in `.claude-plugin/marketplace.json`, in
+`.agents/plugins/marketplace.json`, and in the plugin table in `README.md`.
+That is 33 manifests, 22 marketplace entries, and 11 table rows whose names,
+versions, and descriptions have to agree.
 
 Edit PLUGINS below and rerun this script. Never hand-edit a generated
 file: `--check` exits 2 when one has drifted.
@@ -29,6 +30,9 @@ MARKETPLACE_DESCRIPTION = (
 
 # Every plugin except pstack is a first release, so it starts at 1.0.0.
 FIRST_RELEASE = "1.0.0"
+
+PLUGIN_TABLE_START = "<!-- dotai:plugins:start -->"
+PLUGIN_TABLE_END = "<!-- dotai:plugins:end -->"
 
 PLUGINS: list[dict[str, object]] = [
     {
@@ -326,11 +330,36 @@ def agents_marketplace() -> dict[str, object]:
     }
 
 
+def plugin_table() -> str:
+    rows = "\n".join(
+        f"| `{plugin['name']}` | {plugin['description']} |" for plugin in PLUGINS
+    )
+    return f"| Plugin | What it does |\n|---|---|\n{rows}"
+
+
+def readme_with_plugin_table() -> str:
+    """The README as it should read, with only its plugin table restamped.
+
+    Eleven names and descriptions copied into the README by hand is a list
+    nothing re-asserts, and it drifts the first time a description here
+    changes. The prose around the markers stays whatever a person wrote.
+    """
+    current = (REPOSITORY_ROOT / "README.md").read_text()
+    before, start, rest = current.partition(PLUGIN_TABLE_START)
+    _, end, after = rest.partition(PLUGIN_TABLE_END)
+    if not start or not end:
+        raise SystemExit(
+            f"README.md needs a {PLUGIN_TABLE_START} ... {PLUGIN_TABLE_END} block"
+        )
+    return f"{before}{start}\n\n{plugin_table()}\n\n{end}{after}"
+
+
 def wanted_files() -> dict[Path, str]:
     """Map every generated path to the exact text it should hold."""
     files: dict[Path, str] = {
         Path(".claude-plugin/marketplace.json"): render(claude_marketplace()),
         Path(".agents/plugins/marketplace.json"): render(agents_marketplace()),
+        Path("README.md"): readme_with_plugin_table(),
     }
     for plugin in PLUGINS:
         root = Path("plugins") / str(plugin["name"])
