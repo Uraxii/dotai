@@ -25,6 +25,8 @@ LIST_RESPONSE = {"jsonrpc": "2.0", "id": 2, "result": {"tools": TOOLS}}
 INIT_RESPONSE = {"jsonrpc": "2.0", "id": 1, "result": {"serverInfo": {}}}
 ERROR_RESPONSE = {"jsonrpc": "2.0", "id": 2,
                   "error": {"code": -32601, "message": "no such method"}}
+BANNER_LINE = "codebase-memory-mcp v9 starting up"
+PARSE_ERROR_EXIT = 5
 
 
 class DumpSchemasTest(unittest.TestCase):
@@ -116,6 +118,16 @@ class DumpSchemasTest(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertTrue(result.stdout.rstrip("\n").endswith(": 0 tools"),
                         result.stdout)
+
+    def test_a_line_that_is_not_json_fails_the_way_jq_did(self) -> None:
+        self.write_stub(f"print({BANNER_LINE!r})\n"
+                        f"print({json.dumps(LIST_RESPONSE)!r})\n")
+
+        result = self.run_dump()
+
+        self.assertEqual(result.returncode, PARSE_ERROR_EXIT)
+        self.assertEqual(result.stdout, "")
+        self.assertEqual(self.output.read_text(encoding="utf-8"), "")
 
     def test_empties_the_output_when_the_binary_is_absent(self) -> None:
         self.output.write_text("stale contents", encoding="utf-8")

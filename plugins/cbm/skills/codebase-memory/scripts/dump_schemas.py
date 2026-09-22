@@ -25,6 +25,7 @@ CLIENT_NAME = "dump_schemas"
 CLIENT_VERSION = "0"
 TIMEOUT_EXIT = 124
 NOT_FOUND_EXIT = 127
+PARSE_ERROR_EXIT = 5
 
 HANDSHAKE = (
     {"jsonrpc": "2.0", "id": 1, "method": "initialize",
@@ -57,7 +58,13 @@ def run_handshake() -> subprocess.CompletedProcess[str]:
 
 
 def responses_with_id(stdout: str, wanted: int) -> list[dict]:
-    """Parse `stdout` as one JSON message per line, keeping id `wanted`."""
+    """Parse `stdout` as one JSON message per line, keeping id `wanted`.
+
+    Raises `json.JSONDecodeError` on a line that is not JSON, which the
+    caller turns into the exit status jq gave the shell version for the
+    same input: a banner or progress line on stdout is a failure, not a
+    line to skip.
+    """
     messages = [json.loads(line) for line in stdout.splitlines() if line]
     return [message for message in messages if message.get("id") == wanted]
 
@@ -92,7 +99,12 @@ def main(argv: list[str]) -> int:
             print(f"{BINARY} answered nothing in {TIMEOUT_SEC}s",
                   file=sys.stderr)
             return TIMEOUT_EXIT
-        responses = responses_with_id(done.stdout, LIST_REQUEST_ID)
+        try:
+            responses = responses_with_id(done.stdout, LIST_REQUEST_ID)
+        except json.JSONDecodeError as error:
+            print(f"{BINARY} sent a line that is not JSON: {error}",
+                  file=sys.stderr)
+            return PARSE_ERROR_EXIT
         for message in responses:
             stream.write(json.dumps(message, ensure_ascii=False,
                                     separators=COMPACT) + "\n")
