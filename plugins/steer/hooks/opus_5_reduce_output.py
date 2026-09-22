@@ -76,6 +76,16 @@ MUTATING_COMMANDS = frozenset(
 # Editors that only mutate when asked to edit in place.
 IN_PLACE_EDITORS = frozenset({"sed", "perl", "ruby"})
 
+# Programs that run another program. The wrapped name is the one to classify.
+COMMAND_WRAPPERS = frozenset({"sudo", "env", "command", "nohup", "time", "xargs"})
+
+# Global options sit between a program and its verb, so `git -C <dir> push`
+# has to reach the same verdict as `git push`. These take a value, so both
+# tokens go; any other leading option is dropped on its own.
+GLOBAL_OPTIONS_TAKING_A_VALUE = frozenset(
+    {"-C", "-R", "-c", "--repo", "--git-dir", "--work-tree"}
+)
+
 # Mutating verbs that live one or two tokens past the program name.
 MUTATING_COMMAND_PREFIXES = (
     ("git", "add"), ("git", "am"), ("git", "apply"), ("git", "cherry-pick"),
@@ -97,9 +107,10 @@ MUTATING_COMMAND_PREFIXES = (
 # check so only the discard is excused, never a redirect later in the line.
 DISCARD_REDIRECT = re.compile(r">{1,2}\s*/dev/null\b")
 
-# Shell redirection into a file. The lookarounds keep `2>&1`, `&>`, `>=`
-# and a `->` arrow inside a larger token from reading as a write.
-REDIRECT_TO_FILE = re.compile(r"(?<![-=<>!0-9&])>{1,2}(?![&=])")
+# Shell redirection into a file, including the `1>` and `&>` spellings. Only
+# a trailing `&` means a descriptor dup rather than a write, so `2>&1` and
+# `>&2` are excluded there. The lookbehind drops `>=` and a `->` arrow.
+REDIRECT_TO_FILE = re.compile(r"(?<![-=<>!])>{1,2}(?![&=])")
 
 # A chain runs every segment, so every segment gets classified.
 COMMAND_SEPARATOR = re.compile(r"&&|\|\||;|\||\n")
@@ -224,6 +235,19 @@ def _current_turn_tool_uses(transcript_path: Path) -> list[dict] | None:
     return None
 
 
+def _without_global_options(arguments: list[str]) -> list[str]:
+    """The arguments from the first non-option token on, so a verb is found.
+
+    `git -C <dir> push` and `gh -R <repo> pr create` mutate exactly as much
+    as the bare forms do. Stops at the first non-option, so a flag that is
+    part of the verb itself, as in `git branch -D`, survives.
+    """
+    rest = list(arguments)
+    while rest and rest[0].startswith("-"):
+        del rest[: 2 if rest[0] in GLOBAL_OPTIONS_TAKING_A_VALUE else 1]
+    return rest
+
+
 def _command_mutates(command: str) -> bool:
     """True when any segment of a shell command line writes something."""
     for segment in COMMAND_SEPARATOR.split(command):
@@ -234,9 +258,11 @@ def _command_mutates(command: str) -> bool:
             tokens = shlex.split(segment)
         except ValueError:
             tokens = segment.split()
-        # Drop `sudo` and leading VAR=value assignments so the program name
-        # is the token actually classified.
-        while tokens and (tokens[0] == "sudo" or "=" in tokens[0]):
+        # Drop wrappers and leading VAR=value assignments so the program
+        # name is the token actually classified.
+        while tokens and (
+            Path(tokens[0]).name in COMMAND_WRAPPERS or "=" in tokens[0]
+        ):
             tokens.pop(0)
         if not tokens:
             continue
@@ -247,7 +273,7 @@ def _command_mutates(command: str) -> bool:
             token.startswith("-i") for token in tokens[1:]
         ):
             return True
-        normalized = (program, *tokens[1:])
+        normalized = (program, *_without_global_options(tokens[1:]))
         if any(
             normalized[: len(prefix)] == prefix
             for prefix in MUTATING_COMMAND_PREFIXES

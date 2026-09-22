@@ -362,6 +362,12 @@ class Opus5ReduceOutputTests(unittest.TestCase):
             "python3 scripts/validate-skills.py >>/dev/null",
             "python3 scripts/validate-skills.py >> /dev/null",
             "git rev-parse HEAD 2>/dev/null",
+            # A global option before the verb does not make a read verb write.
+            "git -C /workspace/wt status",
+            "git --no-pager log -5",
+            "gh -R owner/repo pr view 12",
+            # A trailing & is a descriptor dup, not a write.
+            "cmd >&2",
         ]:
             with self.subTest(command=command):
                 self.assertFalse(HOOK._command_mutates(command))
@@ -392,6 +398,21 @@ class Opus5ReduceOutputTests(unittest.TestCase):
             "gh pr merge 12",
             "sudo chmod 600 /workspace/key",
             "FOO=bar rm /workspace/x",
+            # A global option between the program and its verb. This is the
+            # form an agent working in a worktree actually uses.
+            "git -C /workspace/wt push origin develop",
+            "git -C . add -A",
+            "git -C /workspace/wt worktree remove --force /workspace/gone",
+            "git -c user.name=x commit -m 'wip'",
+            "gh -R owner/repo pr create --base develop",
+            # Redirect spellings other than a bare >.
+            "make &> /workspace/build.log",
+            "python3 gen.py 1> /workspace/out.txt",
+            "make 2> /workspace/build.log",
+            # Wrappers that run the real program.
+            "env FOO=1 rm /workspace/x",
+            "command rm /workspace/x",
+            "find /workspace -name '*.tmp' | xargs rm -f",
         ]:
             with self.subTest(command=command):
                 self.assertTrue(HOOK._command_mutates(command))
