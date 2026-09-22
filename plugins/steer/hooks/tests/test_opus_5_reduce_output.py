@@ -326,6 +326,33 @@ class Opus5ReduceOutputTests(unittest.TestCase):
         )
         self.assertIn("BLOCK", self.log_path.read_text(encoding="utf-8"))
 
+    def test_malformed_model_pattern_falls_back_to_the_default_instead_of_silently_skipping(
+        self,
+    ) -> None:
+        # The same defect one env var over, quieter than the max-bytes one:
+        # an invalid CLEAN_RECAP_MODEL_PATTERN used to raise inside
+        # re.search with no guard, so the hook exited 0 with empty stdout
+        # and no log line at all, and a recap was skipped every turn.
+        environment = {**self.environment, "CLEAN_RECAP_MODEL_PATTERN": "opus-5("}
+        result = subprocess.run(
+            [str(HOOK_PATH)],
+            input=json.dumps(
+                {"transcript_path": self.transcript("work", WORKING_TURN)}
+            ),
+            capture_output=True,
+            text=True,
+            env=environment,
+        )
+
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertEqual(
+            {"decision": "block", "reason": HOOK.RECAP_INSTRUCTION},
+            json.loads(result.stdout),
+        )
+        log_contents = self.log_path.read_text(encoding="utf-8")
+        self.assertIn("rejected", log_contents)
+        self.assertIn("BLOCK", log_contents)
+
     def test_every_decision_is_logged_to_the_configured_path(self) -> None:
         self.decide({"transcript_path": self.transcript("work", WORKING_TURN)})
         self.decide({})

@@ -49,6 +49,7 @@ from pathlib import Path
 # audit trail for the current stretch of sessions, not a record kept
 # across rollovers.
 DEFAULT_LOG_MAX_BYTES = 1_000_000
+DEFAULT_MODEL_PATTERN = "opus-5|fable"
 
 # A prompt, not config. Keep it short; it is injected on every turn.
 RECAP_INSTRUCTION = (
@@ -127,10 +128,20 @@ def main() -> int:
         _log("fired  no readable transcript_path -> allow")
         return 0
 
-    pattern = os.environ.get("CLEAN_RECAP_MODEL_PATTERN") or "opus-5|fable"
+    pattern = os.environ.get("CLEAN_RECAP_MODEL_PATTERN") or DEFAULT_MODEL_PATTERN
     model = _current_model(Path(transcript))
 
-    if not re.search(pattern, model, re.IGNORECASE):
+    try:
+        matched = re.search(pattern, model, re.IGNORECASE)
+    except re.error as error:
+        _log(
+            f"fired  CLEAN_RECAP_MODEL_PATTERN {pattern!r} rejected ({error}) "
+            f"-> using default {DEFAULT_MODEL_PATTERN!r}"
+        )
+        pattern = DEFAULT_MODEL_PATTERN
+        matched = re.search(pattern, model, re.IGNORECASE)
+
+    if not matched:
         _log(
             f"fired  model={model} -> allow "
             f"(model does not match '{pattern}')"
