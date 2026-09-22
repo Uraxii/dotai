@@ -14,18 +14,13 @@
     "harness",
     "hooks"
   ],
-  "skills": "./skills/",
-  "hooks": "./hooks/codex-hooks.json",
   "interface": {
     "displayName": "steer",
     "shortDescription": "Harness hooks independent of skills.",
     "longDescription": "Installs harness hooks that steer agent behaviour without being coupled to a skill.",
     "developerName": "Uraxii",
     "category": "Developer Tools",
-    "capabilities": [
-      "Skills",
-      "Hooks"
-    ],
+    "capabilities": [],
     "defaultPrompt": [
       "Install the steer harness hooks."
     ]
