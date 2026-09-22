@@ -584,5 +584,50 @@ class MultipleSkillsTreeTests(unittest.TestCase):
             self.assertEqual(0, result.returncode, result.stderr)
 
 
+class BareInvocationTests(unittest.TestCase):
+    """What the command does when a person types it with no argument.
+
+    The default used to be `plugins/pstack/skills`: one tree of eleven, both
+    whole-picture rules off, exit 0. That is the defect this script exists to
+    catch, reproduced by the shortest thing anyone would type.
+    """
+
+    def test_it_covers_every_tree_the_glob_covers(self) -> None:
+        trees = sorted((REPOSITORY_ROOT / "plugins").glob("*/skills"))
+        self.assertGreater(len(trees), 1)
+
+        bare = run_validator()
+        explicit = run_validator(*trees)
+
+        self.assertEqual(0, bare.returncode, bare.stderr)
+        self.assertEqual(explicit.stdout, bare.stdout)
+        self.assertIn(f"in {len(trees)} trees", bare.stdout)
+
+
+class SuccessLineTests(unittest.TestCase):
+    def test_it_says_one_tree_rather_than_1_trees(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            repository = Path(directory)
+            skills_dir = repository / "plugins" / "solo" / "skills"
+            subprocess.run(
+                ["git", "init", "-b", "main"],
+                cwd=repository,
+                check=True,
+                capture_output=True,
+            )
+            write_skill(skills_dir, "sample")
+            commit_all(repository, "Add the only skill")
+
+            result = run_validator(skills_dir)
+
+            self.assertIn("ok: 1 skill in 1 tree.", result.stdout)
+
+    def test_it_says_which_citations_go_unchecked(self) -> None:
+        result = run_validator(SKILLS_DIR)
+
+        self.assertIn("in backticks or bold", result.stdout)
+        self.assertIn("plain prose is not checked", result.stdout)
+
+
 if __name__ == "__main__":
     unittest.main()

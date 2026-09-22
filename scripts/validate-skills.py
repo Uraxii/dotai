@@ -7,13 +7,16 @@ own directory and carries a description.
 Deleting a skill is what leaves a dead reference behind, so the names git has
 carried under these directories decide which emphasised words are skill names.
 
-Pass every tree at once, `validate-skills.py plugins/*/skills`. Two rules need
-the whole picture and a per-plugin loop cannot give it to them. A citation of
-a skill that lives in a sibling plugin looks like ordinary prose to a run that
-cannot see the sibling, and each plugin installs on its own, so that citation
-is a defect. A tree split off an older one has a git history starting at the
-move, so the deleted-skill rule only works when the trees share one historical
-set."""
+Every tree goes in one run. Two rules need the whole picture and a per-plugin
+loop cannot give it to them. A citation of a skill that lives in a sibling
+plugin looks like ordinary prose to a run that cannot see the sibling, and
+each plugin installs on its own, so that citation is a defect. A tree split
+off an older one has a git history starting at the move, so the
+deleted-skill rule only works when the trees share one historical set.
+
+With no argument this validates every `plugins/*/skills` tree, which is what
+CI runs. Naming trees on the command line checks only those, and turns both
+whole-picture rules off for the trees left out."""
 
 from __future__ import annotations
 
@@ -311,10 +314,28 @@ def ci_enabled() -> bool:
     return os.environ.get("CI", "").strip().lower() not in {"", "0", "false"}
 
 
+def count_phrase(number: int, noun: str) -> str:
+    return f"{number} {noun}" if number == 1 else f"{number} {noun}s"
+
+
+def default_trees() -> list[Path]:
+    """Every skills tree in the repository, swept rather than named.
+
+    The default used to be `plugins/pstack/skills` alone. That is one tree
+    of eleven, with both whole-picture rules switched off, and it exited 0,
+    so the bare command gave a false pass on exactly the narrowing this
+    script was written to catch. Sweeping the directory cannot go stale
+    when a plugin arrives.
+    """
+    return sorted((Path(__file__).resolve().parents[1] / "plugins").glob("*/skills"))
+
+
 def main(arguments: list[str] | None = None) -> int:
     arguments = sys.argv[1:] if arguments is None else arguments
-    default_dir = Path(__file__).resolve().parents[1] / "plugins" / "pstack" / "skills"
-    trees = [Path(argument) for argument in arguments] or [default_dir]
+    trees = [Path(argument) for argument in arguments] or default_trees()
+    if not trees:
+        print("FAIL: no plugins/*/skills tree to validate", file=sys.stderr)
+        return 1
     absent = [tree for tree in trees if not tree.is_dir()]
     if absent:
         for tree in absent:
@@ -335,8 +356,12 @@ def main(arguments: list[str] | None = None) -> int:
         return 1
     skills = sum(len(skill_names(tree.resolve())) for tree in trees)
     print(
-        f"ok: {skills} skills in {len(trees)} trees. Links and skill "
-        "references resolve, every SKILL.md is named right."
+        f"ok: {count_phrase(skills, 'skill')} in "
+        f"{count_phrase(len(trees), 'tree')}. Every markdown link resolves, "
+        "every skill name in backticks or bold resolves to a skill in the "
+        "same plugin, and every SKILL.md frontmatter names its own directory "
+        "and carries a description. A skill named in plain prose is not "
+        "checked."
     )
     return 0
 
