@@ -1,4 +1,57 @@
-#!/usr/bin/env bash
-# cbm <tool> [json]  -> codebase-memory-mcp cli, init log line dropped, jq-pretty
-set -o pipefail
-codebase-memory-mcp cli "$1" "${2:-{\}}" 2> >(grep -v 'msg=mem.init' >&2) | jq .
+#!/usr/bin/env python3
+"""cbm <tool> ['<json>'] -> codebase-memory-mcp cli, pretty, init line dropped.
+
+The arguments default to `{}`. The exit status is the binary's own, so a
+caller can branch on it; stdout that is not JSON exits 5, the status the jq
+pipeline this replaced returned for a parse error.
+
+Python standard library only, forever. No pip dependency.
+"""
+
+from __future__ import annotations
+
+import json
+import subprocess
+import sys
+
+__all__ = ["without_init_log", "main"]
+
+BINARY = "codebase-memory-mcp"
+SUBCOMMAND = "cli"
+NO_ARGUMENTS = "{}"
+INIT_LOG_MARK = "msg=mem.init"
+INDENT = 2
+PARSE_ERROR_EXIT = 5
+NOT_FOUND_EXIT = 127
+
+
+def without_init_log(stderr: str) -> str:
+    """Drop the binary's startup log line, keeping every other line."""
+    kept = [line for line in stderr.splitlines() if INIT_LOG_MARK not in line]
+    return "".join(line + "\n" for line in kept)
+
+
+def main(argv: list[str]) -> int:
+    """Run one tool, pretty-print its JSON, and return the binary's status."""
+    tool = argv[0] if argv else ""
+    arguments = argv[1] if len(argv) > 1 and argv[1] else NO_ARGUMENTS
+    try:
+        done = subprocess.run([BINARY, SUBCOMMAND, tool, arguments],
+                              capture_output=True, check=False, text=True)
+    except FileNotFoundError:
+        print(f"{BINARY} is not on PATH", file=sys.stderr)
+        return NOT_FOUND_EXIT
+    sys.stderr.write(without_init_log(done.stderr))
+    if not done.stdout.strip():
+        return done.returncode
+    try:
+        answer = json.loads(done.stdout)
+    except json.JSONDecodeError as err:
+        print(f"{BINARY} did not answer JSON: {err}", file=sys.stderr)
+        return PARSE_ERROR_EXIT
+    print(json.dumps(answer, ensure_ascii=False, indent=INDENT))
+    return done.returncode
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

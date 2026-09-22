@@ -14,8 +14,6 @@ Options:
   https://github.com/DeusData/codebase-memory-mcp/releases/latest and put it
   on `PATH` as `codebase-memory-mcp`. No Node needed.
 
-`scripts/cbm` also needs `jq` on `PATH`.
-
 Stop after the install. Do NOT run `codebase-memory-mcp install`, even
 though the upstream README lists it as the next step: it rewrites every
 detected agent's settings and rebuilds every index. The CLI works without it.

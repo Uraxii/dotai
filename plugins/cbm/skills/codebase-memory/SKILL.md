@@ -9,7 +9,7 @@ One tool per process. JSON in, JSON out on stdout, one `level=info msg=mem.init`
 
 ```bash
 codebase-memory-mcp cli <tool> '<json>' 2>/dev/null
-scripts/cbm <tool> ['<json>']   # same, init line dropped, jq-pretty, json defaults to {}
+scripts/cbm <tool> ['<json>']   # same, init line dropped, pretty-printed, json defaults to {}
 alias cbm=<skilldir>/scripts/cbm   # skilldir = directory holding this SKILL.md; examples below assume this
 ```
 
@@ -19,7 +19,7 @@ Every tool but `list_projects` and `index_repository` requires `project`. The na
 `/var/home/nicole/Projects/lodestar` -> `var-home-nicole-Projects-lodestar`. Confirm with:
 
 ```bash
-cbm list_projects | jq -r '.projects[] | "\(.name)\t\(.root_path)"'
+cbm list_projects   # each entry pairs a name with its root_path
 ```
 
 Not listed -> index first: `cbm index_repository '{"repo_path":"/abs/path","mode":"fast"}'` (`full` adds similarity edges, slower). Re-index only when `detect_changes` shows changed files.
