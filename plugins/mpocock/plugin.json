@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "mpocock",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Compact a conversation into a handoff document another agent can pick the work up from.",
   "author": {
     "name": "Uraxii",
