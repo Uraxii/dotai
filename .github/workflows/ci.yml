@@ -28,6 +28,11 @@ jobs:
       - name: Check the generated manifests match the generator
         run: python3 scripts/generate-plugin-manifests.py --check
 
+      # This is public. A machine account name in a committed path has
+      # leaked here three times, each caught only by a human reviewer.
+      - name: Check for machine-specific home paths
+        run: python3 scripts/validate-no-home-paths.py
+
       # Every tree in one run. A plugin citing a skill in another plugin only
       # shows up to a run that can see both, and a tree split out of another
       # only remembers deletions through the tree it came from.
