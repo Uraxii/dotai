@@ -38,6 +38,11 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
+# The audit log rolls over once it reaches this size instead of growing
+# forever. One rollover, no numbered backups: this log is an audit trail
+# for the current stretch of sessions, not a record kept across rollovers.
+DEFAULT_LOG_MAX_BYTES = 1_000_000
+
 # A prompt, not config. Keep it short; it is injected on every turn.
 RECAP_INSTRUCTION = (
     "Type a clean recap. Keep it short, light, and plain — a few sentences "
@@ -50,13 +55,28 @@ RECAP_INSTRUCTION = (
 
 
 def _log(message: str) -> None:
-    """Append one audit line. Logging must never break the hook."""
+    """Append one audit line, rolling the log over once it grows too big.
+
+    Logging must never break the hook. The bound is a plain size check: if
+    the file is already at or past the limit, this write opens it in "w"
+    mode instead of "a", truncating it, so the log restarts from this line
+    rather than growing without limit across a machine's whole lifetime.
+    """
     path = os.environ.get("CLEAN_RECAP_LOG") or str(
         Path.home() / ".claude" / "clean-recap.log"
     )
+    max_bytes = int(
+        os.environ.get("CLEAN_RECAP_LOG_MAX_BYTES") or DEFAULT_LOG_MAX_BYTES
+    )
     try:
         stamp = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
-        with open(path, "a", encoding="utf-8") as f:
+        mode = "a"
+        try:
+            if Path(path).stat().st_size >= max_bytes:
+                mode = "w"
+        except OSError:
+            pass
+        with open(path, mode, encoding="utf-8") as f:
             f.write(f"{stamp} {message}\n")
     except OSError:
         pass

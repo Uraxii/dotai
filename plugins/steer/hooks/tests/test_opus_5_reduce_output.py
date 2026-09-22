@@ -277,6 +277,22 @@ class Opus5ReduceOutputTests(unittest.TestCase):
 
     # -- logging and real invocation ---------------------------------------
 
+    def test_the_log_rolls_over_instead_of_growing_without_bound(self) -> None:
+        # Drive the real _log() call path (through main(), not a helper)
+        # past the rollover threshold repeatedly and confirm the file
+        # never grows past it, and that early lines are actually gone
+        # afterward -- proof of a rollover, not just a lucky small write.
+        environment = {**self.environment, "CLEAN_RECAP_LOG_MAX_BYTES": "500"}
+        with mock.patch.dict(os.environ, environment, clear=True):
+            for _ in range(80):
+                self.decide({})
+
+        contents = self.log_path.read_text(encoding="utf-8")
+        self.assertLessEqual(self.log_path.stat().st_size, 500 + 200)
+        lines = contents.splitlines()
+        self.assertLess(len(lines), 80, "expected old lines to be dropped")
+        self.assertTrue(all("no readable transcript_path" in line for line in lines))
+
     def test_every_decision_is_logged_to_the_configured_path(self) -> None:
         self.decide({"transcript_path": self.transcript("work", WORKING_TURN)})
         self.decide({})
