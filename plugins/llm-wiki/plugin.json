@@ -1,0 +1,10 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "llm-wiki",
+  "version": "1.0.0",
+  "description": "Keep research findings in a searchable project knowledgebase instead of re-deriving them.",
+  "author": {
+    "name": "Uraxii",
+    "url": "https://github.com/Uraxii"
+  }
+}

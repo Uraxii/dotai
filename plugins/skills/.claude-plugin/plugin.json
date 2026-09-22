@@ -1,0 +1,9 @@
+{
+  "name": "skills",
+  "version": "1.0.0",
+  "description": "Review and author SKILL.md files, finding and repairing the smells that stop a skill triggering.",
+  "author": {
+    "name": "Uraxii",
+    "url": "https://github.com/Uraxii"
+  }
+}

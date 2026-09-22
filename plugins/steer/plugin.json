@@ -1,0 +1,10 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "steer",
+  "version": "1.0.0",
+  "description": "Harness hooks that steer agent behaviour, independent of any skill.",
+  "author": {
+    "name": "Uraxii",
+    "url": "https://github.com/Uraxii"
+  }
+}

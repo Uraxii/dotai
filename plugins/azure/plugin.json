@@ -1,0 +1,10 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "azure",
+  "version": "1.0.0",
+  "description": "Read Azure DevOps projects, repos, pipelines, releases, and work items over the REST API.",
+  "author": {
+    "name": "Uraxii",
+    "url": "https://github.com/Uraxii"
+  }
+}

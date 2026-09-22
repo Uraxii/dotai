@@ -1,0 +1,32 @@
+{
+  "name": "cbm",
+  "version": "1.0.0",
+  "description": "Query the codebase-memory code graph from a shell: callers, dependencies, impact, dead code, and ADRs.",
+  "author": {
+    "name": "Uraxii",
+    "url": "https://github.com/Uraxii"
+  },
+  "homepage": "https://github.com/Uraxii/dotai",
+  "repository": "https://github.com/Uraxii/dotai",
+  "keywords": [
+    "codex",
+    "skills",
+    "code-intelligence",
+    "static-analysis"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "cbm",
+    "shortDescription": "Shell queries over the codebase-memory code graph.",
+    "longDescription": "Runs codebase-memory-mcp cli against an indexed repository with no MCP server involved, so a shell script or an agent without the MCP tools can still ask structural questions: who calls a function, how a change propagates, which modules cluster together, which functions have no callers, and what a symbol's source says.",
+    "developerName": "Uraxii",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Skills"
+    ],
+    "defaultPrompt": [
+      "Who calls this function?",
+      "What breaks if I change this symbol?"
+    ]
+  }
+}

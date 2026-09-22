@@ -1,0 +1,32 @@
+{
+  "name": "azure",
+  "version": "1.0.0",
+  "description": "Read Azure DevOps projects, repos, pipelines, releases, and work items over the REST API.",
+  "author": {
+    "name": "Uraxii",
+    "url": "https://github.com/Uraxii"
+  },
+  "homepage": "https://github.com/Uraxii/dotai",
+  "repository": "https://github.com/Uraxii/dotai",
+  "keywords": [
+    "codex",
+    "skills",
+    "azure-devops",
+    "ci"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "azure",
+    "shortDescription": "Read-only Azure DevOps queries.",
+    "longDescription": "Answers inventory questions about an Azure DevOps organization over the read-only REST API: which projects and repositories exist, what the build and release pipelines did, which environments and Kubernetes resources they deploy to, and which work items a WIQL query returns.",
+    "developerName": "Uraxii",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Skills"
+    ],
+    "defaultPrompt": [
+      "List the build pipelines in this Azure DevOps project.",
+      "Which release last deployed to the production environment?"
+    ]
+  }
+}

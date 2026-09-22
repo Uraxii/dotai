@@ -6,9 +6,64 @@
   "description": "Skills and thin named agents for software development work.",
   "plugins": [
     {
-      "name": "pstack-nikki",
-      "source": "./plugins/pstack-nikki",
+      "name": "pstack",
+      "source": "./plugins/pstack",
       "description": "Skills and thin named agents: poteto-mode, principles, playbooks, tools."
+    },
+    {
+      "name": "artifact",
+      "source": "./plugins/artifact",
+      "description": "Explain a code change as a self-contained interactive HTML page."
+    },
+    {
+      "name": "notion",
+      "source": "./plugins/notion",
+      "description": "Reach Notion from the command line, and publish a code-change explainer as a Notion page."
+    },
+    {
+      "name": "azure",
+      "source": "./plugins/azure",
+      "description": "Read Azure DevOps projects, repos, pipelines, releases, and work items over the REST API."
+    },
+    {
+      "name": "llm-wiki",
+      "source": "./plugins/llm-wiki",
+      "description": "Keep research findings in a searchable project knowledgebase instead of re-deriving them."
+    },
+    {
+      "name": "proton",
+      "source": "./plugins/proton",
+      "description": "Read and store secrets in Proton Pass through pass-cli, so none lands in a repo or a shell history."
+    },
+    {
+      "name": "sandbox",
+      "source": "./plugins/sandbox",
+      "description": "Give an agent a throwaway podman container with its own clone of the repo, ports, and a virtual display."
+    },
+    {
+      "name": "mpocock",
+      "source": "./plugins/mpocock",
+      "description": "Compact a conversation into a handoff document another agent can pick the work up from."
+    },
+    {
+      "name": "skills",
+      "source": "./plugins/skills",
+      "description": "Review and author SKILL.md files, finding and repairing the smells that stop a skill triggering."
+    },
+    {
+      "name": "bd",
+      "source": "./plugins/bd",
+      "description": "Track, create, claim, and close repo issues with the bd (beads) tool, including dependency links."
+    },
+    {
+      "name": "cbm",
+      "source": "./plugins/cbm",
+      "description": "Query the codebase-memory code graph from a shell: callers, dependencies, impact, dead code, and ADRs."
+    },
+    {
+      "name": "steer",
+      "source": "./plugins/steer",
+      "description": "Harness hooks that steer agent behaviour, independent of any skill."
     }
   ]
 }

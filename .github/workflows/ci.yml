@@ -9,6 +9,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # validate-skills.py reads which names used to be skills from the
+          # git history of the plugin skills trees, so the default shallow
+          # clone would hide stale references.
+          fetch-depth: 0
 
       - uses: actions/setup-python@v5
         with:
@@ -17,14 +22,25 @@ jobs:
       - name: Install pytest
         run: pip install pytest
 
-      - name: Check models.json is stamped into every consuming skill
-        run: python3 plugins/pstack-nikki/skills/setup-dotai/scripts/generate-models.py --check
+      - name: Check models.json only names models it can back
+        run: python3 scripts/validate-models.py
 
-      - name: Check generated agent configs are current
-        run: python3 plugins/pstack-nikki/skills/setup-dotai/scripts/generate-agent-configs.py --check
+      - name: Check the generated manifests match the generator
+        run: python3 scripts/generate-plugin-manifests.py --check
 
+      # This is public. A machine account name in a committed path has
+      # leaked here three times, each caught only by a human reviewer.
+      - name: Check for machine-specific home paths
+        run: python3 scripts/validate-no-home-paths.py
+
+      # Every tree in one run. A plugin citing a skill in another plugin only
+      # shows up to a run that can see both, and a tree split out of another
+      # only remembers deletions through the tree it came from.
       - name: Validate skill links and frontmatter
-        run: python3 plugins/pstack-nikki/skills/setup-dotai/scripts/validate-skills.py plugins/pstack-nikki/skills
+        run: python3 scripts/validate-skills.py plugins/*/skills
 
+      # No paths. Naming them is how eighty tests went uncollected when the
+      # skills moved out of plugins/pstack. test_ci_workflow.py keeps it that
+      # way.
       - name: Run pytest
-        run: pytest plugins/pstack-nikki -q
+        run: pytest -q

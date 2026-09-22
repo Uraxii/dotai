@@ -1,0 +1,32 @@
+{
+  "name": "artifact",
+  "version": "1.0.0",
+  "description": "Explain a code change as a self-contained interactive HTML page.",
+  "author": {
+    "name": "Uraxii",
+    "url": "https://github.com/Uraxii"
+  },
+  "homepage": "https://github.com/Uraxii/dotai",
+  "repository": "https://github.com/Uraxii/dotai",
+  "keywords": [
+    "codex",
+    "skills",
+    "html",
+    "code-review"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "artifact",
+    "shortDescription": "Rich HTML explanations of a diff, branch, or PR.",
+    "longDescription": "Turns a diff, branch, or pull request into one HTML file that explains what moved, why it moved, and what a reviewer should look at first. The page carries its own styles and scripts, so it opens in a browser with no server behind it.",
+    "developerName": "Uraxii",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Skills"
+    ],
+    "defaultPrompt": [
+      "Explain this branch as an HTML page.",
+      "Turn the diff against main into a reviewable HTML explainer."
+    ]
+  }
+}

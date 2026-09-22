@@ -5,12 +5,166 @@
   },
   "plugins": [
     {
-      "name": "pstack-nikki",
+      "name": "pstack",
       "source": {
         "source": "url",
         "url": "https://github.com/Uraxii/dotai.git",
         "ref": "main",
-        "path": "plugins/pstack-nikki"
+        "path": "plugins/pstack"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    },
+    {
+      "name": "artifact",
+      "source": {
+        "source": "url",
+        "url": "https://github.com/Uraxii/dotai.git",
+        "ref": "main",
+        "path": "plugins/artifact"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    },
+    {
+      "name": "notion",
+      "source": {
+        "source": "url",
+        "url": "https://github.com/Uraxii/dotai.git",
+        "ref": "main",
+        "path": "plugins/notion"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    },
+    {
+      "name": "azure",
+      "source": {
+        "source": "url",
+        "url": "https://github.com/Uraxii/dotai.git",
+        "ref": "main",
+        "path": "plugins/azure"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    },
+    {
+      "name": "llm-wiki",
+      "source": {
+        "source": "url",
+        "url": "https://github.com/Uraxii/dotai.git",
+        "ref": "main",
+        "path": "plugins/llm-wiki"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    },
+    {
+      "name": "proton",
+      "source": {
+        "source": "url",
+        "url": "https://github.com/Uraxii/dotai.git",
+        "ref": "main",
+        "path": "plugins/proton"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    },
+    {
+      "name": "sandbox",
+      "source": {
+        "source": "url",
+        "url": "https://github.com/Uraxii/dotai.git",
+        "ref": "main",
+        "path": "plugins/sandbox"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    },
+    {
+      "name": "mpocock",
+      "source": {
+        "source": "url",
+        "url": "https://github.com/Uraxii/dotai.git",
+        "ref": "main",
+        "path": "plugins/mpocock"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    },
+    {
+      "name": "skills",
+      "source": {
+        "source": "url",
+        "url": "https://github.com/Uraxii/dotai.git",
+        "ref": "main",
+        "path": "plugins/skills"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    },
+    {
+      "name": "bd",
+      "source": {
+        "source": "url",
+        "url": "https://github.com/Uraxii/dotai.git",
+        "ref": "main",
+        "path": "plugins/bd"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    },
+    {
+      "name": "cbm",
+      "source": {
+        "source": "url",
+        "url": "https://github.com/Uraxii/dotai.git",
+        "ref": "main",
+        "path": "plugins/cbm"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    },
+    {
+      "name": "steer",
+      "source": {
+        "source": "url",
+        "url": "https://github.com/Uraxii/dotai.git",
+        "ref": "main",
+        "path": "plugins/steer"
       },
       "policy": {
         "installation": "AVAILABLE",
