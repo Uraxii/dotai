@@ -67,6 +67,18 @@ class LogDecisionTest(unittest.TestCase):
                          ["'=cmd|'/bin/sh'!A1", "'+formula", "'-minus",
                           "'@import", "plain"])
 
+    def test_guards_a_formula_hidden_behind_leading_whitespace(self) -> None:
+        for lead in ("\t", "\r", "\n", " ", " \t\r\n "):
+            for character in ("=", "+", "-", "@"):
+                payload = f"{lead}{character}HYPERLINK(\"http://x\",\"c\")"
+                with self.subTest(lead=lead, character=character):
+                    self.logfile.unlink(missing_ok=True)
+
+                    self.log("phase", payload, "why", "evidence", "result")
+
+                    self.assertTrue(self.rows()[1][2].startswith("'"),
+                                    self.rows()[1][2])
+
     def test_guards_only_the_first_character(self) -> None:
         self.log("phase", "a=b", "c+d", "e-f", "g@h")
 

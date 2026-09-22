@@ -32,9 +32,14 @@ def clean(value: str) -> str:
     to be opened in a spreadsheet and its cells carry text an attacker
     chooses (PR titles, filenames, generated output), so the guard is the
     difference between reading a row and running it.
+
+    The guard is decided on the value with its leading whitespace stripped,
+    because flattening turns a leading tab, CR or newline into a space and
+    a spreadsheet still reads what follows as a formula. The written cell
+    keeps the whitespace; only the decision ignores it.
     """
     flat = value.translate(ROW_BREAKING)
-    if flat.startswith(FORMULA_LEADS):
+    if flat.lstrip().startswith(FORMULA_LEADS):
         return FORMULA_GUARD + flat
     return flat
 
