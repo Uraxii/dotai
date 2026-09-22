@@ -70,17 +70,22 @@ release pipeline and were not taken either.
 - Revision: `126e7fe9eecaafadfe1ac8bb183d135812b608f2`
 - Skills: explain-diff-html and explain-diff-notion, each a verbatim copy of
   its gist file.
+- License: none stated.
 
 A local skill named create-artifact merged both of them into one. It has been
 deleted in favour of the two originals, so that name no longer resolves to a
 skill here. No skill name in this section is emphasised, and that is
 deliberate. `scripts/validate-skills.py` reads a bolded or backticked name as
 a citation of a live skill, and the two gist skills move to a package of
-their own, which this tree must not cite.
+their own, which this tree must not cite. When they move, this whole section
+moves with them, because the source and the revision belong to those two
+skills and not to this tree.
 
 ## Local to this plugin
 
-Every skill directory in this tree that no section above names is local to
-this project and came from neither port. Read the directory listing for the
-current set. A list written out here would go stale every time a skill
-arrives or leaves, and it already did once.
+Every skill directory in this tree is local to this project unless a section
+above lists its name among the skills that section took from a source. Those
+lists are the enumerations of skill names in each section. A name that a
+section mentions only in surrounding prose is not one of them. Read the
+directory listing for the current set. A list written out here would go stale
+every time a skill arrives or leaves, and it already did once.
