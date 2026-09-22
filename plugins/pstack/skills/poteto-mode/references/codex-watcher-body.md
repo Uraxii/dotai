@@ -49,18 +49,22 @@ Work out these values once and reuse them. `<repo>` is always the header's
 - DIR is `<repo>/.nikki-agents/worktrees/<name>` for a writer with
   `worktree: create`, the given path for a writer with a worktree path, and
   `<repo>` for a reviewer. DIR always sits inside `<repo>`.
+- BASENAME is DIR's last path segment. Git keys a linked worktree's admin
+  directory under `.git/worktrees/` on that basename, never on the branch or
+  the run `name`, so BASENAME is the only value that names the directory git
+  will write to.
 - MODEL is the header's `model` value.
 - ROOTS is the writer's extra `-c` flag, printed below. Codex's
   `workspace-write` sandbox denies every write under a `.git` directory, so
   without this flag a `git commit` inside DIR fails with a read-only
   filesystem error. The flag names the four git paths a commit writes, and
-  nothing else, so `.git/hooks` and `.git/config` stay unwritable. `<name>`
-  is the header's `name`, which is also DIR's basename, so the last root is
-  DIR's own git admin directory. Type ROOTS single-quoted, on one line, in
-  this order, with no spaces inside the brackets. A reviewer has no ROOTS.
+  nothing else, so `.git/hooks` and `.git/config` stay unwritable, and the
+  last root is DIR's own admin directory. Type ROOTS single-quoted, on one
+  line, in this order, with no spaces inside the brackets, and place it after
+  `-C <DIR>` as step 6 shows. A reviewer has no ROOTS.
 
   ```
-  -c 'sandbox_workspace_write.writable_roots=["<repo>/.git/objects","<repo>/.git/refs","<repo>/.git/logs","<repo>/.git/worktrees/<name>"]'
+  -c 'sandbox_workspace_write.writable_roots=["<repo>/.git/objects","<repo>/.git/refs","<repo>/.git/logs","<repo>/.git/worktrees/<BASENAME>"]'
   ```
 
 ## Steps
@@ -113,7 +117,7 @@ fallback reply, with that step's command and its exit code, `timeout`, or
 6. Run the one command for your kind. A reviewer runs
    `CODEX exec -m <MODEL> -s read-only -c agents.enabled=false -C <DIR> -o <RUN>/report.md - < <RUN>/prompt.txt`.
    A writer runs
-   `CODEX exec -m <MODEL> -s workspace-write -c agents.enabled=false ROOTS -C <DIR> -o <RUN>/report.md - < <RUN>/prompt.txt`,
+   `CODEX exec -m <MODEL> -s workspace-write -c agents.enabled=false -C <DIR> ROOTS -o <RUN>/report.md - < <RUN>/prompt.txt`,
    with ROOTS replaced by the flag above. The hook requires ROOTS in a
    writer's command and denies it in a reviewer's.
 7. Send the reply.

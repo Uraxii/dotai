@@ -61,18 +61,25 @@ REVIEWER_BASH = COMMON_BASH + (
 # directory, so a writer cannot commit until its command names the git paths
 # a commit writes. This flag is the only way to grant them, which makes it
 # the guard's job to pin every root it grants. Each root is tied by
-# backreference to the same repo and run name as `-C`, `-o`, and stdin, so a
-# watcher cannot hand a write-enabled Codex session a directory outside this
-# run's repo. The set is exactly four paths in a fixed order. `.git/hooks`
-# and `.git/config` are not among them, so a hostile run cannot plant a hook
-# that later executes on the owner's machine, and `.git/worktrees/<name>` is
-# this run's own admin directory, not another worktree's index.
+# backreference to the `-C` directory itself, so a watcher cannot hand a
+# write-enabled Codex session a directory outside this run's repo. The set
+# is exactly four paths in a fixed order. `.git/hooks` and `.git/config` are
+# not among them, so a hostile run cannot plant a hook that later executes
+# on the owner's machine.
+#
+# Git keys a linked worktree's admin directory on the worktree directory's
+# basename, not on its branch or the run name: `git worktree add
+# <repo>/m/custom-dir -b agent/sample-run` creates
+# `.git/worktrees/custom-dir`. The `worktree` group is that basename, taken
+# from `-C`, so the fourth root can only be the admin directory git will
+# actually write to. A regex backreference reads backwards only, which is
+# why this flag has to follow `-C` in the command.
 WRITABLE_ROOTS = (
     r" -c 'sandbox_workspace_write\.writable_roots="
-    rf"\[\"(?P<repo>{PATH})/\.git/objects\""
+    r"\[\"(?P=repo)/\.git/objects\""
     r",\"(?P=repo)/\.git/refs\""
     r",\"(?P=repo)/\.git/logs\""
-    rf",\"(?P=repo)/\.git/worktrees/(?P<name>{NAME})\"\]'"
+    r",\"(?P=repo)/\.git/worktrees/(?P=worktree)\"\]'"
 )
 
 # A developer writes inside a worktree under the repo (never the repo
@@ -81,9 +88,9 @@ WRITABLE_ROOTS = (
 DEVELOPER_BASH = COMMON_BASH + (
     re.compile(
         rf"{CODEX} exec -m {SLUG} -s workspace-write -c agents\.enabled=false"
+        rf" -C (?P<repo>{PATH})/(?:{PATH_SEGMENT}/)*(?P<worktree>{PATH_SEGMENT})"
         rf"{WRITABLE_ROOTS}"
-        rf" -C (?P=repo)/{PATH_SEGMENT}(?:/{PATH_SEGMENT})*"
-        rf" -o (?P=repo)/\.nikki-agents/codex-runs/(?P=name)/report\.md"
+        rf" -o (?P=repo)/\.nikki-agents/codex-runs/(?P<name>{NAME})/report\.md"
         rf" - < (?P=repo)/\.nikki-agents/codex-runs/(?P=name)/prompt\.txt"
     ),
     re.compile(

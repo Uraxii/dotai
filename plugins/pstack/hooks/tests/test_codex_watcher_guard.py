@@ -31,12 +31,16 @@ RUN = f"{REPO}/.nikki-agents/codex-runs/sample-run"
 WORKTREE = f"{REPO}/.nikki-agents/worktrees/sample-run"
 
 
-def writable_roots(repo: str = REPO, name: str = "sample-run") -> str:
-    """The writer's `-c` flag granting the four git paths a commit writes."""
+def writable_roots(repo: str = REPO, basename: str = "sample-run") -> str:
+    """The writer's `-c` flag granting the four git paths a commit writes.
+
+    `basename` is the `-C` worktree directory's own last path segment,
+    because git keys `.git/worktrees/` on that and not on the run name.
+    """
     return (
         "-c 'sandbox_workspace_write.writable_roots="
         f'["{repo}/.git/objects","{repo}/.git/refs","{repo}/.git/logs",'
-        f'"{repo}/.git/worktrees/{name}"]\''
+        f'"{repo}/.git/worktrees/{basename}"]\''
     )
 
 
@@ -54,7 +58,7 @@ def writer_exec(
     flag = f" {roots}" if roots else ""
     return (
         f"{codex} exec -m gpt-5.6-terra -s workspace-write "
-        f"-c agents.enabled=false{flag} -C {directory} "
+        f"-c agents.enabled=false -C {directory}{flag} "
         f"-o {run}/report.md - < {run}/prompt.txt"
     )
 
@@ -345,18 +349,39 @@ class CodexWatcherGuardTests(unittest.TestCase):
                     "Bash",
                 )
 
-    def test_writer_roots_naming_another_run_name_are_denied(self) -> None:
-        # `.git/worktrees/<name>` is one worktree's index and admin files.
-        # Another run's name there is another agent's worktree.
+    def test_writer_roots_naming_another_worktree_are_denied(self) -> None:
+        # `.git/worktrees/<basename>` is one worktree's index and admin
+        # files. Another basename there is another agent's worktree.
         self.assert_denied(
             payload(
                 "pstack:developer-codex",
                 "Bash",
                 command=writer_exec(
-                    WORKTREE, roots=writable_roots(name="other-run")
+                    WORKTREE, roots=writable_roots(basename="other-run")
                 ),
             ),
             "Bash",
+        )
+
+    def test_writer_roots_keyed_on_the_run_name_not_the_directory_are_denied(
+        self,
+    ) -> None:
+        # Git keys the admin directory on the worktree directory's basename,
+        # so a grant keyed on the run name would name a directory that does
+        # not exist and the real one would stay read-only. The watcher may be
+        # handed an existing worktree whose basename is anything.
+        directory = f"{REPO}/.claude/worktrees/custom-dir"
+        self.assert_denied(
+            payload(
+                "pstack:developer-codex",
+                "Bash",
+                command=writer_exec(directory, roots=writable_roots()),
+            ),
+            "Bash",
+        )
+        self.assert_allowed(
+            "pstack:developer-codex",
+            writer_exec(directory, roots=writable_roots(basename="custom-dir")),
         )
 
     def test_writer_roots_reaching_hooks_or_bare_git_are_denied(self) -> None:
@@ -398,7 +423,7 @@ class CodexWatcherGuardTests(unittest.TestCase):
         # A reviewer stays read-only and gains no roots.
         command = (
             f"codex-agent exec -m gpt-5.6-terra -s read-only -c agents.enabled=false "
-            f"{ROOTS} -C {REPO} -o {RUN}/report.md - < {RUN}/prompt.txt"
+            f"-C {REPO} {ROOTS} -o {RUN}/report.md - < {RUN}/prompt.txt"
         )
         self.assert_denied(
             payload("reviewer-codex", "Bash", command=command), "Bash"

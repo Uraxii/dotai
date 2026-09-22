@@ -34,7 +34,7 @@ MODEL = "gpt-5.6-terra"
 
 STEP_COMMAND = re.compile(r"`(CODEX exec [^`]+)`")
 ROOTS_LINE = "-c 'sandbox_workspace_write.writable_roots="
-PLACEHOLDER = re.compile(r"<[A-Za-z][A-Za-z -]*>")
+PLACEHOLDER = re.compile(r"<[A-Za-z][A-Za-z_]*>")
 
 
 def roots_flag(text: str) -> str:
@@ -65,7 +65,7 @@ def fill(template: str, *, directory: str, roots: str) -> str:
         ("<RUN>", f"{REPO}/.nikki-agents/codex-runs/{RUN_NAME}"),
         ("<repo>", REPO),
         ("<name>", RUN_NAME),
-        ("<basename of DIR>", WORKTREE_BASENAME),
+        ("<BASENAME>", WORKTREE_BASENAME),
     ):
         filled = filled.replace(token, value)
     return filled
