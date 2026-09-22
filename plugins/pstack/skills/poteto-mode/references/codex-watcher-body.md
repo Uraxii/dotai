@@ -32,11 +32,14 @@ poteto-mode: /absolute/path/of/poteto-mode/SKILL.md
 ```
 
 `kind` is `writer` or `reviewer`. `model` is the Codex model to run, copied as
-given. `worktree` is `create` or the absolute path of an existing worktree
-inside `repo`, and a reviewer omits it. `base` is the commit-ish the new
-worktree starts from, required when `worktree: create` and omitted otherwise.
-A required line is missing: send the fallback reply with `command: (none)`
-and `exit code: (none)`. The `worktree` path is outside `repo`: send the
+given. `worktree` is `create` or the absolute path of an existing worktree,
+and a reviewer omits it. An existing worktree must be exactly
+`<repo>/.nikki-agents/worktrees/<x>` or `<repo>/.claude/worktrees/<x>`, where
+`<x>` is one path segment that is not `.`, `..`, or `.git`. `base` is the
+commit-ish the new worktree starts from, required when `worktree: create` and
+omitted otherwise. If a required line is missing, send the fallback reply
+with `command: (none)` and `exit code: (none)`. If the `worktree` path is
+anywhere else, including deeper under one of those two directories, send the
 fallback reply with `command: (none)`, `exit code: denied`, and
 `worktree: (none)`. The hook would deny that path, you cannot fix the header
 yourself, and `denied` is what tells your owner to fix the header instead of
@@ -48,7 +51,8 @@ Work out these values once and reuse them. `<repo>` is always the header's
 - RUN is `<repo>/.nikki-agents/codex-runs/<name>`.
 - DIR is `<repo>/.nikki-agents/worktrees/<name>` for a writer with
   `worktree: create`, the given path for a writer with a worktree path, and
-  `<repo>` for a reviewer. DIR always sits inside `<repo>`.
+  `<repo>` for a reviewer. A writer's DIR is always one segment below
+  `<repo>/.nikki-agents/worktrees` or `<repo>/.claude/worktrees`.
 - BASENAME is DIR's last path segment. Git keys a linked worktree's admin
   directory under `.git/worktrees/` on that basename, never on the branch or
   the run `name`, so BASENAME is the only value that names the directory git

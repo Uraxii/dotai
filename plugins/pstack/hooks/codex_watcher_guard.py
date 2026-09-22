@@ -69,17 +69,19 @@ REVIEWER_BASH = COMMON_BASH + (
 #
 # The ref and reflog roots stop at `refs/heads/agent`, not at `refs` and
 # `logs`, which would hand every writer write access to `main`, `develop`,
-# and every other agent's branch and reflog in the owner's real checkout.
-# The narrow roots create an invariant: a Codex writer can commit only to a
-# branch under `agent/`, which is what step 3 of the watcher body creates,
-# and a writer handed an existing worktree on a branch outside `agent/`
-# cannot commit. Measured with everything else under `.git` made read-only,
+# and every other branch and reflog in the owner's real checkout. They do
+# not separate one agent from another, because every writer shares
+# `refs/heads/agent` and `logs/refs/heads/agent`, so a hostile run can still
+# move or delete another `agent/` branch. The narrow roots create an
+# invariant. A Codex writer can commit only to a branch under `agent/`,
+# which is what step 3 of the watcher body creates, and a writer handed an
+# existing worktree on a branch outside `agent/` cannot commit. Measured with everything else under `.git` made read-only,
 # a linked-worktree commit writes only `objects`, `refs/heads/<branch>`,
 # `logs/refs/heads/<branch>`, and `worktrees/<basename>`.
 #
 # Git keys a linked worktree's admin directory on the worktree directory's
-# basename, not on its branch or the run name: `git worktree add
-# <repo>/m/custom-dir -b agent/sample-run` creates
+# basename, not on its branch or the run name. `git worktree add
+# <repo>/.claude/worktrees/custom-dir -b agent/sample-run` creates
 # `.git/worktrees/custom-dir`. The `worktree` group is that basename, taken
 # from `-C`, so the fourth root can only be the admin directory git will
 # actually write to. A regex backreference reads backwards only, which is
@@ -92,13 +94,26 @@ WRITABLE_ROOTS = (
     r",\"(?P=repo)/\.git/worktrees/(?P=worktree)\"\]'"
 )
 
-# A developer writes inside a worktree under the repo (never the repo
-# itself), and its report/prompt paths must still sit under the repo and
-# run name the `-C` worktree belongs to.
+# A writer's `-C` is exactly one directory below one of the two worktree
+# parents, never the repo, `.git`, or anything deeper. Any looser shape lets
+# the repo group split somewhere else. `-C <repo>/.git/hooks` makes `.git`
+# the workspace root, where Codex's own `.git` carve-out no longer applies.
+# `-C /x/repo` parses as repo `/x` plus worktree `repo`, handing the writer
+# the real checkout and `.git` grants on its parent. A nested
+# `<repo>/.nikki-agents/worktrees/a/b` would grant `.git/worktrees/b`,
+# another worktree's admin directory, and so would a repo group that is
+# itself a worktree (`<repo>/.nikki-agents/worktrees/a/.claude/worktrees/b`).
+WORKTREE_PARENT = r"\.(?:nikki-agents|claude)/worktrees"
+WORKTREE_GROUP = rf"(?!\.git(?![A-Za-z0-9._-])){NAME}"
+WRITER_REPO = rf"(?:/(?!{WORKTREE_PARENT}/){PATH_SEGMENT})+"
+WRITER_DIR = rf"(?P<repo>{WRITER_REPO})/{WORKTREE_PARENT}/(?P<worktree>{WORKTREE_GROUP})"
+
+# A developer's report/prompt paths must still sit under the repo and run
+# name the `-C` worktree belongs to.
 DEVELOPER_BASH = COMMON_BASH + (
     re.compile(
         rf"{CODEX} exec -m {SLUG} -s workspace-write -c agents\.enabled=false"
-        rf" -C (?P<repo>{PATH})/(?:{PATH_SEGMENT}/)*(?P<worktree>{PATH_SEGMENT})"
+        rf" -C {WRITER_DIR}"
         rf"{WRITABLE_ROOTS}"
         rf" -o (?P=repo)/\.nikki-agents/codex-runs/(?P<name>{NAME})/report\.md"
         rf" - < (?P=repo)/\.nikki-agents/codex-runs/(?P=name)/prompt\.txt"

@@ -128,11 +128,16 @@ class CodexWatcherGuardTests(unittest.TestCase):
             with self.subTest(command=command):
                 self.assert_allowed("pstack:developer-codex", command)
 
-    def test_developer_c_may_be_any_worktree_under_the_repo(self) -> None:
-        # A writer given an existing worktree path outside .nikki-agents,
-        # e.g. one Claude itself placed under .claude/worktrees/<x>.
-        command = writer_exec(f"{REPO}/.claude/worktrees/sample-run")
-        self.assert_allowed("pstack:developer-codex", command)
+    def test_developer_c_may_be_a_worktree_in_either_worktree_parent(self) -> None:
+        # The watcher creates `.nikki-agents/worktrees/<name>`; Claude places
+        # its own worktrees under `.claude/worktrees/<x>`.
+        for parent in (".nikki-agents", ".claude"):
+            directory = f"{REPO}/{parent}/worktrees/custom-dir"
+            with self.subTest(directory=directory):
+                self.assert_allowed(
+                    "pstack:developer-codex",
+                    writer_exec(directory, roots=writable_roots(basename="custom-dir")),
+                )
 
     def test_bare_codex_command_is_allowed_for_both_watchers(self) -> None:
         # `codex-agent` is a machine-local wrapper that isolates CODEX_HOME;
@@ -169,7 +174,6 @@ class CodexWatcherGuardTests(unittest.TestCase):
         # the guard keeps it inside the repo that receives the report. A
         # sibling worktree beside the repo looks legitimate and is still
         # outside that boundary.
-        self.assert_allowed("pstack:developer-codex", writer_exec(f"{REPO}/wt/sample-run"))
         self.assert_denied(
             payload(
                 "pstack:developer-codex",
@@ -179,13 +183,57 @@ class CodexWatcherGuardTests(unittest.TestCase):
             "Bash",
         )
 
+    def test_writer_c_that_moves_the_repo_or_workspace_root_is_denied(self) -> None:
+        # Each directory below passes a looser "somewhere under the repo"
+        # check with roots matching how that check would split it, and each
+        # breaks the promise that `.git/hooks` and `.git/config` stay
+        # read-only or that a writer touches only its own worktree.
+        probes = (
+            # `.git` itself becomes the workspace root, which Codex's own
+            # `.git` carve-out does not cover.
+            (f"{REPO}/.git", REPO, ".git"),
+            (f"{REPO}/.git/hooks", REPO, "hooks"),
+            # A parent split, repo `/workspace` and worktree `repo`, which is
+            # the owner's real checkout, with `.git` grants on its parent.
+            ("/workspace/repo", "/workspace", "repo"),
+            # A nested directory names another worktree's admin directory.
+            (f"{REPO}/.nikki-agents/worktrees/sample-run/other", REPO, "other"),
+            (f"{REPO}/.claude/worktrees/sample-run/other", REPO, "other"),
+            # The worktree segment may not be `.git` in either parent.
+            (f"{REPO}/.nikki-agents/worktrees/.git", REPO, ".git"),
+            (f"{REPO}/.claude/worktrees/.git", REPO, ".git"),
+            # A worktree inside a worktree, so the repo group is a worktree.
+            (
+                f"{REPO}/.nikki-agents/worktrees/a/.claude/worktrees/b",
+                f"{REPO}/.nikki-agents/worktrees/a",
+                "b",
+            ),
+            # Any other directory under the repo.
+            (f"{REPO}/wt/sample-run", REPO, "sample-run"),
+        )
+        for directory, repo, basename in probes:
+            run = f"{repo}/.nikki-agents/codex-runs/sample-run"
+            command = writer_exec(
+                directory, roots=writable_roots(repo=repo, basename=basename), run=run
+            )
+            with self.subTest(directory=directory):
+                self.assert_denied(
+                    payload("pstack:developer-codex", "Bash", command=command), "Bash"
+                )
+
     def test_dot_segment_worktree_is_denied(self) -> None:
         # `<repo>/.` names the repo root itself, so "repo plus at least one
         # segment" does not by itself keep a workspace-write sandbox out of
         # the main checkout. A `.` segment is rejected wherever a `..`
         # segment is, and a real worktree name still passes.
-        self.assert_allowed("pstack:developer-codex", writer_exec(f"{REPO}/wt/sample-run"))
-        for directory in (f"{REPO}/.", f"{REPO}/./.", f"{REPO}/wt/."):
+        self.assert_allowed("pstack:developer-codex", writer_exec(WORKTREE))
+        for directory in (
+            f"{REPO}/.",
+            f"{REPO}/./.",
+            f"{REPO}/.nikki-agents/worktrees/.",
+            f"{REPO}/.nikki-agents/worktrees/..",
+            f"{REPO}/.claude/worktrees/.",
+        ):
             with self.subTest(directory=directory):
                 self.assert_denied(
                     payload(
@@ -352,7 +400,7 @@ class CodexWatcherGuardTests(unittest.TestCase):
 
     def test_writer_roots_naming_another_worktree_are_denied(self) -> None:
         # `.git/worktrees/<basename>` is one worktree's index and admin
-        # files. Another basename there is another agent's worktree.
+        # files. Another basename there is some other worktree's.
         self.assert_denied(
             payload(
                 "pstack:developer-codex",
@@ -406,10 +454,11 @@ class CodexWatcherGuardTests(unittest.TestCase):
                 )
 
     def test_writer_roots_reaching_every_ref_or_reflog_are_denied(self) -> None:
-        # `.git/refs` and `.git/logs` are repo-wide: they let a writer
-        # repoint `main` in the owner's real checkout, delete another
-        # agent's branch, and rewrite the reflog that would recover it.
-        # Parallel writers would share both.
+        # `.git/refs` and `.git/logs` are repo-wide, so they would let a
+        # writer repoint `main` or `develop` in the owner's real checkout and
+        # rewrite the reflog that would recover it. The narrow roots protect
+        # only branches outside `agent/`, since every writer still shares
+        # `refs/heads/agent` and `logs/refs/heads/agent`.
         for roots in (
             ROOTS.replace(f"{REPO}/.git/refs/heads/agent", f"{REPO}/.git/refs"),
             ROOTS.replace(f"{REPO}/.git/refs/heads/agent", f"{REPO}/.git/refs/heads"),
@@ -693,7 +742,9 @@ FORBIDDEN_CHARACTERS = "\n\r;&|$`>"
 # classes; IN wraps them; MAX_REPEAT covers `+`, `*`, and `?`; SUBPATTERN
 # is a capturing or non-capturing group; ASSERT_NOT is the `(?!...)`
 # traversal guard; GROUPREF is the `(?P=name)` backreference that couples
-# -C/-o/stdin to the same repo and run name. An allowlist, not a denylist:
+# -C/-o/stdin to the same repo and run name; BRANCH is the `a|b` choice of
+# worktree parent, admitting nothing itself while the walk checks each
+# alternative node by node. An allowlist, not a denylist:
 # an op nobody anticipated (CATEGORY from `\S`/`\s`, ANY from `.`, NEGATE
 # from `[^...]`, or anything else) fails the test instead of passing it
 # silently, so loosening a class to use one requires touching this list.
@@ -706,6 +757,7 @@ ALLOWED_PARSE_TREE_OPS = frozenset(
         regex_parser.SUBPATTERN,
         regex_parser.ASSERT_NOT,
         regex_parser.GROUPREF,
+        regex_parser.BRANCH,
     }
 )
 
