@@ -27,6 +27,14 @@ PATH_SEGMENT = r"(?!\.\.?(?![A-Za-z0-9._@+-]))[A-Za-z0-9._@+-]+"
 PATH = rf"/(?:{PATH_SEGMENT})(?:/{PATH_SEGMENT})*"
 FORBIDDEN_COMMAND_CHARS = re.compile(r"[\n\r;&|$`>]")
 
+# The commit-ish `git worktree add` starts the new worktree from: a plain
+# branch name (`develop`), a branch with a namespace (`agent/pr2-split`), or
+# a hex SHA. Each segment must start with a letter or digit, which both
+# blocks git-option injection (a value beginning with `-`) and rejects a
+# bare `.` or `..` segment, so no separate lookahead is needed here.
+BASE_SEGMENT = r"[A-Za-z0-9][A-Za-z0-9._-]*"
+BASE = rf"{BASE_SEGMENT}(?:/{BASE_SEGMENT})*"
+
 # Both `codex-agent`, the machine-local wrapper that isolates `CODEX_HOME`,
 # and bare `codex` are allowed: the wrapper is preferred, but a machine
 # without it must still let the watcher fall back to the real binary.
@@ -63,6 +71,7 @@ DEVELOPER_BASH = COMMON_BASH + (
     re.compile(
         rf"git -C (?P<repo>{PATH}) worktree add"
         rf" (?P=repo)/\.nikki-agents/worktrees/(?P<name>{NAME}) -b agent/(?P=name)"
+        rf" {BASE}"
     ),
 )
 

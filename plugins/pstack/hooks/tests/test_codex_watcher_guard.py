@@ -88,7 +88,7 @@ class CodexWatcherGuardTests(unittest.TestCase):
             "codex-agent --version",
             "codex-agent login status",
             f"git -C {WORKTREE} rev-parse HEAD",
-            f"git -C {REPO} worktree add {WORKTREE} -b agent/sample-run",
+            f"git -C {REPO} worktree add {WORKTREE} -b agent/sample-run develop",
             f"codex-agent exec -m gpt-5.6-terra -s workspace-write -c agents.enabled=false "
             f"-C {WORKTREE} -o {RUN}/report.md - < {RUN}/prompt.txt",
         )
@@ -187,9 +187,39 @@ class CodexWatcherGuardTests(unittest.TestCase):
         )
 
     def test_reviewer_worktree_add_is_denied(self) -> None:
-        command = f"git -C {REPO} worktree add {WORKTREE} -b agent/sample-run"
+        command = f"git -C {REPO} worktree add {WORKTREE} -b agent/sample-run develop"
         self.assert_denied(
             payload("reviewer-codex", "Bash", command=command), "Bash"
+        )
+
+    # -- worktree add's trailing base commit-ish ---------------------------
+
+    def test_worktree_add_without_a_base_is_denied(self) -> None:
+        # The pre-fix form: no start point, so `git worktree add` branches
+        # from the watcher's own checkout instead of the requested base.
+        command = f"git -C {REPO} worktree add {WORKTREE} -b agent/sample-run"
+        self.assert_denied(
+            payload("pstack:developer-codex", "Bash", command=command), "Bash"
+        )
+
+    def test_worktree_add_base_may_be_a_branch_sha_or_namespaced_branch(self) -> None:
+        for base in ("develop", "agent/pr2-split", "1a2b3c4"):
+            with self.subTest(base=base):
+                command = f"git -C {REPO} worktree add {WORKTREE} -b agent/sample-run {base}"
+                self.assert_allowed("pstack:developer-codex", command)
+
+    def test_worktree_add_base_starting_with_a_dash_is_denied(self) -> None:
+        # A base of `--foo` would be read as a git option, not a commit-ish,
+        # at the end of the command line.
+        command = f"git -C {REPO} worktree add {WORKTREE} -b agent/sample-run --foo"
+        self.assert_denied(
+            payload("pstack:developer-codex", "Bash", command=command), "Bash"
+        )
+
+    def test_worktree_add_base_with_a_space_is_denied(self) -> None:
+        command = f"git -C {REPO} worktree add {WORKTREE} -b agent/sample-run bad base"
+        self.assert_denied(
+            payload("pstack:developer-codex", "Bash", command=command), "Bash"
         )
 
     # -- repo/name coupling between -C, -o, and stdin ---------------------
@@ -393,7 +423,7 @@ class CodexWatcherGuardTests(unittest.TestCase):
     def test_worktree_add_name_traversal_is_denied(self) -> None:
         # `..` sits before " -b", not before "/" or end of string: the name
         # boundary check must not rely on those two terminators alone.
-        command = f"git -C {REPO} worktree add {REPO}/.nikki-agents/worktrees/.. -b agent/.."
+        command = f"git -C {REPO} worktree add {REPO}/.nikki-agents/worktrees/.. -b agent/.. develop"
         self.assert_denied(
             payload("pstack:developer-codex", "Bash", command=command), "Bash"
         )
