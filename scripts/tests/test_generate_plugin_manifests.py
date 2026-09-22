@@ -42,6 +42,15 @@ generator = load_generator()
 PLUGIN_NAMES = {str(plugin["name"]) for plugin in generator.PLUGINS}
 
 
+def plugin_directories() -> set[str]:
+    """Every plugin directory on disk, swept rather than enumerated."""
+    return {
+        entry.name
+        for entry in (REPOSITORY_ROOT / "plugins").iterdir()
+        if entry.is_dir()
+    }
+
+
 def working_tree_state() -> str:
     return subprocess.run(
         ["git", "status", "--porcelain"],
@@ -112,6 +121,21 @@ def snapshot(root: Path) -> dict[Path, str]:
     return {path: path.read_text() for path in generated_paths(root)}
 
 
+class GeneratorInventoryTest(unittest.TestCase):
+    def test_every_plugin_directory_is_in_the_generator(self) -> None:
+        on_disk = plugin_directories()
+        self.assertEqual(
+            PLUGIN_NAMES,
+            on_disk,
+            "PLUGINS in the generator and the directories under plugins/ "
+            "must match. A directory the generator does not know about gets "
+            "no manifest, no marketplace entry, and no README row, so "
+            "nobody can install it and every check still passes. "
+            f"Only on disk: {sorted(on_disk - PLUGIN_NAMES)}. "
+            f"Only in PLUGINS: {sorted(PLUGIN_NAMES - on_disk)}.",
+        )
+
+
 class GeneratorOutputTest(unittest.TestCase):
     def setUp(self) -> None:
         self.root = generation_root(self)
@@ -135,6 +159,12 @@ class GeneratorOutputTest(unittest.TestCase):
                 document = json.loads((self.root / relative).read_text())
                 listed = {entry["name"] for entry in document["plugins"]}
                 self.assertEqual(listed, PLUGIN_NAMES)
+                for name in sorted(listed):
+                    self.assertTrue(
+                        (REPOSITORY_ROOT / "plugins" / name).is_dir(),
+                        f"{relative} lists {name}, but plugins/{name} is not "
+                        "a directory, so the entry installs nothing.",
+                    )
 
     def test_only_pstack_declares_hooks(self) -> None:
         for name in sorted(PLUGIN_NAMES):
@@ -162,10 +192,15 @@ class GeneratorOutputTest(unittest.TestCase):
         )
         for entry in document["plugins"]:
             with self.subTest(plugin=entry["name"]):
-                self.assertEqual(
-                    entry["source"]["path"], f"plugins/{entry['name']}"
-                )
+                path = f"plugins/{entry['name']}"
+                self.assertEqual(entry["source"]["path"], path)
                 self.assertEqual(entry["source"]["ref"], "main")
+                self.assertTrue(
+                    (REPOSITORY_ROOT / path).is_dir(),
+                    f"the marketplace points at {path}, which is not a "
+                    "directory in this repository. A dangling source shipped "
+                    "once already, when the entry still said pstack-nikki.",
+                )
 
 
 class GeneratorRerunTest(unittest.TestCase):
