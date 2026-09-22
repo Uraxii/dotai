@@ -67,6 +67,16 @@ REVIEWER_BASH = COMMON_BASH + (
 # not among them, so a hostile run cannot plant a hook that later executes
 # on the owner's machine.
 #
+# The ref and reflog roots stop at `refs/heads/agent`, not at `refs` and
+# `logs`, which would hand every writer write access to `main`, `develop`,
+# and every other agent's branch and reflog in the owner's real checkout.
+# The narrow roots create an invariant: a Codex writer can commit only to a
+# branch under `agent/`, which is what step 3 of the watcher body creates,
+# and a writer handed an existing worktree on a branch outside `agent/`
+# cannot commit. Measured with everything else under `.git` made read-only,
+# a linked-worktree commit writes only `objects`, `refs/heads/<branch>`,
+# `logs/refs/heads/<branch>`, and `worktrees/<basename>`.
+#
 # Git keys a linked worktree's admin directory on the worktree directory's
 # basename, not on its branch or the run name: `git worktree add
 # <repo>/m/custom-dir -b agent/sample-run` creates
@@ -77,8 +87,8 @@ REVIEWER_BASH = COMMON_BASH + (
 WRITABLE_ROOTS = (
     r" -c 'sandbox_workspace_write\.writable_roots="
     r"\[\"(?P=repo)/\.git/objects\""
-    r",\"(?P=repo)/\.git/refs\""
-    r",\"(?P=repo)/\.git/logs\""
+    r",\"(?P=repo)/\.git/refs/heads/agent\""
+    r",\"(?P=repo)/\.git/logs/refs/heads/agent\""
     r",\"(?P=repo)/\.git/worktrees/(?P=worktree)\"\]'"
 )
 

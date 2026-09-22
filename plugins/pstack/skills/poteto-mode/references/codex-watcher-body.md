@@ -59,12 +59,16 @@ Work out these values once and reuse them. `<repo>` is always the header's
   without this flag a `git commit` inside DIR fails with a read-only
   filesystem error. The flag names the four git paths a commit writes, and
   nothing else, so `.git/hooks` and `.git/config` stay unwritable, and the
-  last root is DIR's own admin directory. Type ROOTS single-quoted, on one
-  line, in this order, with no spaces inside the brackets, and place it after
-  `-C <DIR>` as step 6 shows. A reviewer has no ROOTS.
+  last root is DIR's own admin directory. The ref and reflog roots stop at
+  `refs/heads/agent`, so Codex can commit only to a branch under `agent/`,
+  which is the branch step 3 creates. A writer handed an existing worktree
+  whose branch sits outside `agent/` cannot commit, and that limit is
+  deliberate. Type ROOTS single-quoted, on one line, in this order, with no
+  spaces inside the brackets, and place it after `-C <DIR>` as step 6 shows.
+  A reviewer has no ROOTS.
 
   ```
-  -c 'sandbox_workspace_write.writable_roots=["<repo>/.git/objects","<repo>/.git/refs","<repo>/.git/logs","<repo>/.git/worktrees/<BASENAME>"]'
+  -c 'sandbox_workspace_write.writable_roots=["<repo>/.git/objects","<repo>/.git/refs/heads/agent","<repo>/.git/logs/refs/heads/agent","<repo>/.git/worktrees/<BASENAME>"]'
   ```
 
 ## Steps

@@ -39,7 +39,8 @@ def writable_roots(repo: str = REPO, basename: str = "sample-run") -> str:
     """
     return (
         "-c 'sandbox_workspace_write.writable_roots="
-        f'["{repo}/.git/objects","{repo}/.git/refs","{repo}/.git/logs",'
+        f'["{repo}/.git/objects","{repo}/.git/refs/heads/agent",'
+        f'"{repo}/.git/logs/refs/heads/agent",'
         f'"{repo}/.git/worktrees/{basename}"]\''
     )
 
@@ -333,8 +334,8 @@ class CodexWatcherGuardTests(unittest.TestCase):
         # write-enabled Codex session another tree's git directory.
         for roots in (
             writable_roots(repo=OTHER_REPO),
-            ROOTS.replace(f"{REPO}/.git/refs", f"{OTHER_REPO}/.git/refs"),
-            ROOTS.replace(f"{REPO}/.git/logs", f"{OTHER_REPO}/.git/logs"),
+            ROOTS.replace(f"{REPO}/.git/refs/", f"{OTHER_REPO}/.git/refs/"),
+            ROOTS.replace(f"{REPO}/.git/logs/", f"{OTHER_REPO}/.git/logs/"),
             ROOTS.replace(
                 f"{REPO}/.git/worktrees", f"{OTHER_REPO}/.git/worktrees"
             ),
@@ -389,7 +390,7 @@ class CodexWatcherGuardTests(unittest.TestCase):
         # owner's machine; bare `.git` grants hooks and config along with it.
         broadened = (
             ROOTS.replace(f"{REPO}/.git/objects", f"{REPO}/.git/hooks"),
-            ROOTS.replace(f"{REPO}/.git/refs", f"{REPO}/.git/hooks"),
+            ROOTS.replace(f"{REPO}/.git/refs/heads/agent", f"{REPO}/.git/hooks"),
             ROOTS.replace(f"{REPO}/.git/objects", f"{REPO}/.git"),
             "-c 'sandbox_workspace_write.writable_roots=" f'["{REPO}/.git"]\'',
         )
@@ -404,10 +405,34 @@ class CodexWatcherGuardTests(unittest.TestCase):
                     "Bash",
                 )
 
+    def test_writer_roots_reaching_every_ref_or_reflog_are_denied(self) -> None:
+        # `.git/refs` and `.git/logs` are repo-wide: they let a writer
+        # repoint `main` in the owner's real checkout, delete another
+        # agent's branch, and rewrite the reflog that would recover it.
+        # Parallel writers would share both.
+        for roots in (
+            ROOTS.replace(f"{REPO}/.git/refs/heads/agent", f"{REPO}/.git/refs"),
+            ROOTS.replace(f"{REPO}/.git/refs/heads/agent", f"{REPO}/.git/refs/heads"),
+            ROOTS.replace(f"{REPO}/.git/logs/refs/heads/agent", f"{REPO}/.git/logs"),
+            ROOTS.replace(
+                f"{REPO}/.git/logs/refs/heads/agent", f"{REPO}/.git/logs/refs/heads"
+            ),
+        ):
+            with self.subTest(roots=roots):
+                self.assert_denied(
+                    payload(
+                        "pstack:developer-codex",
+                        "Bash",
+                        command=writer_exec(WORKTREE, roots=roots),
+                    ),
+                    "Bash",
+                )
+
     def test_writer_roots_out_of_order_are_denied(self) -> None:
         reordered = (
             "-c 'sandbox_workspace_write.writable_roots="
-            f'["{REPO}/.git/refs","{REPO}/.git/objects","{REPO}/.git/logs",'
+            f'["{REPO}/.git/refs/heads/agent","{REPO}/.git/objects",'
+            f'"{REPO}/.git/logs/refs/heads/agent",'
             f'"{REPO}/.git/worktrees/sample-run"]\''
         )
         self.assert_denied(
