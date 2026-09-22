@@ -148,7 +148,7 @@ class DumpSchemasTest(unittest.TestCase):
     ) -> None:
         # The binary answers tools/list and then still exits non-zero (e.g.
         # a crash after replying). The reply parsed clean, but a non-zero
-        # exit is still a failed run: the prior tools.json must survive it.
+        # exit is still a failed run. The prior tools.json must survive it.
         self.output.write_text("stale contents", encoding="utf-8")
         self.write_stub(
             f"print({json.dumps(INIT_RESPONSE)!r})\n"

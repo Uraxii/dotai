@@ -9,6 +9,7 @@ Python standard library only, forever. No pip dependency.
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -93,11 +94,15 @@ def main(argv: list[str]) -> int:
     Writes to a sibling temp file first and only replaces OUTPUT_PATH once
     the binary has exited successfully and its reply parsed clean. A failed
     run (binary missing, timed out, non-JSON reply, or non-zero exit) must
-    leave whatever OUTPUT_PATH already held untouched (principle-make-
-    operations-idempotent): a broken run is not a license to blank out the
-    last good schema dump.
+    leave whatever OUTPUT_PATH already held untouched, per
+    principle-make-operations-idempotent. A broken run is not a license to
+    blank out the last good schema dump.
+
+    The temp file's name includes this process's pid so two concurrent
+    runs never share one: without that, the winner's cleanup could unlink
+    the loser's still-open temp file out from under it.
     """
-    tmp_path = OUTPUT_PATH.parent / f"{OUTPUT_PATH.name}.tmp"
+    tmp_path = OUTPUT_PATH.parent / f"{OUTPUT_PATH.name}.{os.getpid()}.tmp"
     try:
         try:
             done = run_handshake()
