@@ -12,10 +12,12 @@ Env vars, all optional:
 
 Fires when Claude tries to end its turn. Returns `{"decision": "block"}`,
 which does not stop at all: it hands Claude one more instruction, to write
-a short recap for someone who has not read the code. Every stop gets one
-as long as the model that answered matches `opus-5|fable`; that and the
-loop guard below are the whole gate. Every invocation appends one line to
-an audit log so a declined gate never looks like a hook that never ran.
+a short recap for someone who has not read the code. Three gates decide,
+in order: the loop guard below, the model that answered matching
+`opus-5|fable`, and the turn having changed something. A turn that mutated
+nothing has nothing to recap, so it is allowed to end silently. Every
+invocation appends one line to an audit log so a declined gate never looks
+like a hook that never ran.
 
 Rationale: a consistent close-out enforced by the harness, instead of the
 user remembering to ask for a summary every time.
@@ -40,6 +42,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import shlex
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -50,6 +53,51 @@ from pathlib import Path
 # across rollovers.
 DEFAULT_LOG_MAX_BYTES = 1_000_000
 DEFAULT_MODEL_PATTERN = "opus-5|fable"
+
+# Tools whose presence alone means the turn changed something. Agent and
+# Task are in here because a delegate's own edits never reach this
+# transcript, so a turn that spawned one has to be assumed to have changed
+# something. Bash is deliberately absent: it is classified by its command.
+MUTATING_TOOLS = frozenset({"Write", "Edit", "NotebookEdit", "Agent", "Task"})
+
+# Bash is classified by a DENYLIST of mutating shapes rather than an
+# allowlist of safe ones, because an unrecognised command is far more
+# likely to be a read-only inspection than a mutation, and the two ways of
+# being wrong do not cost the same. A wrong skip costs one missing recap.
+# A wrong recap is the bug this gate exists to fix, and it lands on every
+# turn. So the unknown command falls on the recap side.
+MUTATING_COMMANDS = frozenset(
+    {
+        "rm", "rmdir", "mv", "cp", "mkdir", "touch", "install", "ln",
+        "tee", "dd", "truncate", "chmod", "chown", "patch",
+    }
+)
+
+# Editors that only mutate when asked to edit in place.
+IN_PLACE_EDITORS = frozenset({"sed", "perl", "ruby"})
+
+# Mutating verbs that live one or two tokens past the program name.
+MUTATING_COMMAND_PREFIXES = (
+    ("git", "add"), ("git", "am"), ("git", "apply"), ("git", "cherry-pick"),
+    ("git", "checkout"), ("git", "clean"), ("git", "commit"), ("git", "merge"),
+    ("git", "mv"), ("git", "push"), ("git", "rebase"), ("git", "reset"),
+    ("git", "restore"), ("git", "revert"), ("git", "rm"), ("git", "stash"),
+    ("git", "switch"), ("git", "tag"),
+    ("git", "branch", "-D"), ("git", "branch", "-d"),
+    ("git", "branch", "-M"), ("git", "branch", "-m"),
+    ("git", "worktree", "add"), ("git", "worktree", "remove"),
+    ("git", "worktree", "prune"),
+    ("gh", "pr", "create"), ("gh", "pr", "merge"), ("gh", "pr", "close"),
+    ("gh", "pr", "edit"), ("gh", "pr", "comment"),
+    ("gh", "repo", "create"), ("gh", "release", "create"),
+)
+
+# Shell redirection into a file. The lookarounds keep `2>&1`, `&>`, `>=`
+# and a `->` arrow inside a larger token from reading as a write.
+REDIRECT_TO_FILE = re.compile(r"(?<![-=<>!0-9&])>{1,2}(?![&=])")
+
+# A chain runs every segment, so every segment gets classified.
+COMMAND_SEPARATOR = re.compile(r"&&|\|\||;|\||\n")
 
 # A prompt, not config. Keep it short; it is injected on every turn.
 RECAP_INSTRUCTION = (
@@ -116,6 +164,105 @@ def _current_model(transcript_path: Path) -> str:
     return "-"
 
 
+def _is_real_user_prompt(entry: dict) -> bool:
+    """True for a typed prompt, false for a tool result or an injection.
+
+    Both arrive as `type: "user"`. A tool result carries only `tool_result`
+    blocks, and harness injections such as a loaded skill carry `isMeta`.
+    Treating either as a turn boundary would cut the turn at its first tool
+    call, so the gate would see no tools and skip every recap.
+    """
+    if entry.get("type") != "user" or entry.get("isMeta"):
+        return False
+    content = entry.get("message", {}).get("content")
+    if isinstance(content, str):
+        return True
+    if not isinstance(content, list):
+        return False
+    return any(
+        isinstance(block, dict) and block.get("type") == "text"
+        for block in content
+    )
+
+
+def _current_turn_tool_uses(transcript_path: Path) -> list[dict] | None:
+    """Tool calls made since the last real user prompt, or None if unreadable.
+
+    None means the gate cannot see the turn: an unparseable transcript, or
+    one with no user prompt in it at all. The caller must then fall through
+    to requesting the recap. A gate that cannot see must not suppress.
+    """
+    try:
+        lines = transcript_path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return None
+
+    tool_uses: list[dict] = []
+    for line in reversed(lines.splitlines()):
+        try:
+            entry = json.loads(line)
+        except ValueError:
+            continue
+        if not isinstance(entry, dict) or entry.get("isSidechain"):
+            continue
+        if _is_real_user_prompt(entry):
+            return tool_uses
+        if entry.get("type") == "assistant":
+            content = entry.get("message", {}).get("content")
+            if not isinstance(content, list):
+                continue
+            tool_uses.extend(
+                block
+                for block in content
+                if isinstance(block, dict) and block.get("type") == "tool_use"
+            )
+    return None
+
+
+def _command_mutates(command: str) -> bool:
+    """True when any segment of a shell command line writes something."""
+    for segment in COMMAND_SEPARATOR.split(command):
+        if REDIRECT_TO_FILE.search(segment):
+            return True
+        try:
+            tokens = shlex.split(segment)
+        except ValueError:
+            tokens = segment.split()
+        # Drop `sudo` and leading VAR=value assignments so the program name
+        # is the token actually classified.
+        while tokens and (tokens[0] == "sudo" or "=" in tokens[0]):
+            tokens.pop(0)
+        if not tokens:
+            continue
+        program = Path(tokens[0]).name
+        if program in MUTATING_COMMANDS:
+            return True
+        if program in IN_PLACE_EDITORS and any(
+            token.startswith("-i") for token in tokens[1:]
+        ):
+            return True
+        normalized = (program, *tokens[1:])
+        if any(
+            normalized[: len(prefix)] == prefix
+            for prefix in MUTATING_COMMAND_PREFIXES
+        ):
+            return True
+    return False
+
+
+def _turn_mutated(tool_uses: list[dict]) -> bool:
+    """True when the turn ran at least one tool that changed something."""
+    for block in tool_uses:
+        name = block.get("name")
+        if name in MUTATING_TOOLS:
+            return True
+        if name == "Bash":
+            command = (block.get("input") or {}).get("command")
+            if isinstance(command, str) and _command_mutates(command):
+                return True
+    return False
+
+
 def main() -> int:
     payload = json.loads(sys.stdin.read())
 
@@ -148,7 +295,21 @@ def main() -> int:
         )
         return 0
 
-    _log(f"fired  model={model} -> BLOCK (requesting recap)")
+    tool_uses = _current_turn_tool_uses(Path(transcript))
+    if tool_uses is None:
+        _log(
+            f"fired  model={model} -> BLOCK (requesting recap; "
+            "no user prompt found, turn boundary unknown)"
+        )
+    elif not _turn_mutated(tool_uses):
+        _log(
+            f"fired  model={model} -> allow "
+            "(turn used no mutating tool, nothing to recap)"
+        )
+        return 0
+    else:
+        _log(f"fired  model={model} -> BLOCK (requesting recap)")
+
     print(json.dumps({"decision": "block", "reason": RECAP_INSTRUCTION}))
     return 0
 
