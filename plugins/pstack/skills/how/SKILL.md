@@ -1,6 +1,6 @@
 ---
 name: how
-description: "Use for \"how does X work\", code walkthroughs before changing something, and placement / ownership / layering questions (\"where should this live\", \"which package owns this\", \"is this the right layer\"). Explains subsystem architecture, runtime flow, onboarding mental models, in chat or as a saved artifact. Use why for motivation."
+description: "Use for \"how does X work\", code walkthroughs before changing something, and placement / ownership / layering questions (\"where should this live\", \"which package owns this\", \"is this the right layer\"). Explains subsystem architecture, runtime flow, onboarding mental models. Use why for motivation."
 ---
 
 # How
@@ -51,13 +51,6 @@ Build its prompt from `references/explainer-prompt.md` with every explorer's fin
 ## Step 4. Present
 
 Present the explainer's output to the user. Light edits for clarity or context from the conversation are fine. Do not substantially rewrite it.
-
-Chat is the default. Leave it only when the user asks for a rich artifact or
-has an established preference for one. For a rich artifact, the coordinator
-follows [create-artifact](../create-artifact/SKILL.md), which settles HTML
-against Notion, renders the explainer's outline, and verifies the result.
-Return the artifact path or the page URL, and report any rendering or
-publishing limitation. The explainer never creates files or publishes pages.
 
 ## Output Format
 
