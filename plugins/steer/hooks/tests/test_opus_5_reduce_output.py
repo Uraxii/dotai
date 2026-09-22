@@ -145,6 +145,9 @@ class Opus5ReduceOutputTests(unittest.TestCase):
         self.assertFalse((PLUGIN_ROOT / "hooks" / "codex-hooks.json").exists())
         self.assertFalse((PLUGIN_ROOT / "hooks.json").exists())
 
+    def test_recap_instruction_has_no_em_dash(self) -> None:
+        self.assertNotIn("—", HOOK.RECAP_INSTRUCTION)
+
     # -- the gate ----------------------------------------------------------
 
     def test_fresh_turn_of_real_work_blocks(self) -> None:
