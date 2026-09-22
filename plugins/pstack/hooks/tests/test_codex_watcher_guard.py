@@ -31,12 +31,31 @@ RUN = f"{REPO}/.nikki-agents/codex-runs/sample-run"
 WORKTREE = f"{REPO}/.nikki-agents/worktrees/sample-run"
 
 
-def writer_exec(directory: str) -> str:
-    """The developer watcher's `codex-agent exec` step, run from `directory`."""
+def writable_roots(repo: str = REPO, name: str = "sample-run") -> str:
+    """The writer's `-c` flag granting the four git paths a commit writes."""
     return (
-        "codex-agent exec -m gpt-5.6-terra -s workspace-write "
-        f"-c agents.enabled=false -C {directory} "
-        f"-o {RUN}/report.md - < {RUN}/prompt.txt"
+        "-c 'sandbox_workspace_write.writable_roots="
+        f'["{repo}/.git/objects","{repo}/.git/refs","{repo}/.git/logs",'
+        f'"{repo}/.git/worktrees/{name}"]\''
+    )
+
+
+ROOTS = writable_roots()
+
+
+def writer_exec(
+    directory: str,
+    *,
+    codex: str = "codex-agent",
+    roots: str = ROOTS,
+    run: str = RUN,
+) -> str:
+    """The developer watcher's `codex-agent exec` step, run from `directory`."""
+    flag = f" {roots}" if roots else ""
+    return (
+        f"{codex} exec -m gpt-5.6-terra -s workspace-write "
+        f"-c agents.enabled=false{flag} -C {directory} "
+        f"-o {run}/report.md - < {run}/prompt.txt"
     )
 
 
@@ -98,8 +117,7 @@ class CodexWatcherGuardTests(unittest.TestCase):
             "codex-agent login status",
             f"git -C {WORKTREE} rev-parse HEAD",
             f"git -C {REPO} worktree add {WORKTREE} -b agent/sample-run develop",
-            f"codex-agent exec -m gpt-5.6-terra -s workspace-write -c agents.enabled=false "
-            f"-C {WORKTREE} -o {RUN}/report.md - < {RUN}/prompt.txt",
+            writer_exec(WORKTREE),
         )
         for command in commands:
             with self.subTest(command=command):
@@ -108,11 +126,7 @@ class CodexWatcherGuardTests(unittest.TestCase):
     def test_developer_c_may_be_any_worktree_under_the_repo(self) -> None:
         # A writer given an existing worktree path outside .nikki-agents,
         # e.g. one Claude itself placed under .claude/worktrees/<x>.
-        command = (
-            f"codex-agent exec -m gpt-5.6-terra -s workspace-write -c agents.enabled=false "
-            f"-C {REPO}/.claude/worktrees/sample-run -o {RUN}/report.md - < "
-            f"{RUN}/prompt.txt"
-        )
+        command = writer_exec(f"{REPO}/.claude/worktrees/sample-run")
         self.assert_allowed("pstack:developer-codex", command)
 
     def test_bare_codex_command_is_allowed_for_both_watchers(self) -> None:
@@ -124,10 +138,7 @@ class CodexWatcherGuardTests(unittest.TestCase):
             f"codex exec -m gpt-5.6-terra -s read-only -c agents.enabled=false "
             f"-C {REPO} -o {RUN}/report.md - < {RUN}/prompt.txt"
         )
-        developer_exec = (
-            f"codex exec -m gpt-5.6-terra -s workspace-write -c agents.enabled=false "
-            f"-C {WORKTREE} -o {RUN}/report.md - < {RUN}/prompt.txt"
-        )
+        developer_exec = writer_exec(WORKTREE, codex="codex")
         for agent_type in WATCHERS:
             with self.subTest(agent_type=agent_type):
                 self.assert_allowed(agent_type, "codex --version")
@@ -245,10 +256,7 @@ class CodexWatcherGuardTests(unittest.TestCase):
 
     def test_o_repo_differs_from_c_repo_is_denied_for_developer(self) -> None:
         other_run = f"{OTHER_REPO}/.nikki-agents/codex-runs/sample-run"
-        command = (
-            f"codex-agent exec -m gpt-5.6-terra -s workspace-write -c agents.enabled=false "
-            f"-C {WORKTREE} -o {other_run}/report.md - < {other_run}/prompt.txt"
-        )
+        command = writer_exec(WORKTREE, run=other_run)
         self.assert_denied(
             payload("pstack:developer-codex", "Bash", command=command), "Bash"
         )
@@ -289,21 +297,111 @@ class CodexWatcherGuardTests(unittest.TestCase):
         )
 
     def test_developer_c_equal_to_bare_repo_is_denied(self) -> None:
-        command = (
-            f"codex-agent exec -m gpt-5.6-terra -s workspace-write -c agents.enabled=false "
-            f"-C {REPO} -o {RUN}/report.md - < {RUN}/prompt.txt"
-        )
         self.assert_denied(
-            payload("pstack:developer-codex", "Bash", command=command), "Bash"
+            payload("pstack:developer-codex", "Bash", command=writer_exec(REPO)),
+            "Bash",
         )
 
     def test_developer_c_under_unrelated_path_is_denied(self) -> None:
-        command = (
-            "codex-agent exec -m gpt-5.6-terra -s workspace-write -c agents.enabled=false "
-            f"-C /root/.ssh -o {RUN}/report.md - < {RUN}/prompt.txt"
+        self.assert_denied(
+            payload("pstack:developer-codex", "Bash", command=writer_exec("/root/.ssh")),
+            "Bash",
+        )
+
+    # -- the writer's writable-roots flag ---------------------------------
+
+    def test_writer_command_with_the_four_roots_is_allowed(self) -> None:
+        self.assert_allowed("pstack:developer-codex", writer_exec(WORKTREE))
+
+    def test_writer_command_without_the_roots_flag_is_denied(self) -> None:
+        # Without the flag Codex's workspace-write sandbox denies every write
+        # under .git, so the writer cannot commit. The flag is required, not
+        # optional, so the guard rejects the pre-fix command shape.
+        self.assert_denied(
+            payload(
+                "pstack:developer-codex", "Bash", command=writer_exec(WORKTREE, roots="")
+            ),
+            "Bash",
+        )
+
+    def test_writer_roots_under_a_different_repo_are_denied(self) -> None:
+        # A root the guard does not pin to this run's repo would hand a
+        # write-enabled Codex session another tree's git directory.
+        for roots in (
+            writable_roots(repo=OTHER_REPO),
+            ROOTS.replace(f"{REPO}/.git/refs", f"{OTHER_REPO}/.git/refs"),
+            ROOTS.replace(f"{REPO}/.git/logs", f"{OTHER_REPO}/.git/logs"),
+            ROOTS.replace(
+                f"{REPO}/.git/worktrees", f"{OTHER_REPO}/.git/worktrees"
+            ),
+        ):
+            with self.subTest(roots=roots):
+                self.assert_denied(
+                    payload(
+                        "pstack:developer-codex",
+                        "Bash",
+                        command=writer_exec(WORKTREE, roots=roots),
+                    ),
+                    "Bash",
+                )
+
+    def test_writer_roots_naming_another_run_name_are_denied(self) -> None:
+        # `.git/worktrees/<name>` is one worktree's index and admin files.
+        # Another run's name there is another agent's worktree.
+        self.assert_denied(
+            payload(
+                "pstack:developer-codex",
+                "Bash",
+                command=writer_exec(
+                    WORKTREE, roots=writable_roots(name="other-run")
+                ),
+            ),
+            "Bash",
+        )
+
+    def test_writer_roots_reaching_hooks_or_bare_git_are_denied(self) -> None:
+        # `.git/hooks` would let a run plant a hook that later executes on the
+        # owner's machine; bare `.git` grants hooks and config along with it.
+        broadened = (
+            ROOTS.replace(f"{REPO}/.git/objects", f"{REPO}/.git/hooks"),
+            ROOTS.replace(f"{REPO}/.git/refs", f"{REPO}/.git/hooks"),
+            ROOTS.replace(f"{REPO}/.git/objects", f"{REPO}/.git"),
+            "-c 'sandbox_workspace_write.writable_roots=" f'["{REPO}/.git"]\'',
+        )
+        for roots in broadened:
+            with self.subTest(roots=roots):
+                self.assert_denied(
+                    payload(
+                        "pstack:developer-codex",
+                        "Bash",
+                        command=writer_exec(WORKTREE, roots=roots),
+                    ),
+                    "Bash",
+                )
+
+    def test_writer_roots_out_of_order_are_denied(self) -> None:
+        reordered = (
+            "-c 'sandbox_workspace_write.writable_roots="
+            f'["{REPO}/.git/refs","{REPO}/.git/objects","{REPO}/.git/logs",'
+            f'"{REPO}/.git/worktrees/sample-run"]\''
         )
         self.assert_denied(
-            payload("pstack:developer-codex", "Bash", command=command), "Bash"
+            payload(
+                "pstack:developer-codex",
+                "Bash",
+                command=writer_exec(WORKTREE, roots=reordered),
+            ),
+            "Bash",
+        )
+
+    def test_reviewer_command_carrying_the_roots_flag_is_denied(self) -> None:
+        # A reviewer stays read-only and gains no roots.
+        command = (
+            f"codex-agent exec -m gpt-5.6-terra -s read-only -c agents.enabled=false "
+            f"{ROOTS} -C {REPO} -o {RUN}/report.md - < {RUN}/prompt.txt"
+        )
+        self.assert_denied(
+            payload("reviewer-codex", "Bash", command=command), "Bash"
         )
 
     # -- traversal, injection, and other malformed commands ---------------
