@@ -12,7 +12,7 @@ from unittest import mock
 
 
 HOOK_PATH = Path(__file__).resolve().parents[1] / "opus_5_reduce_output.py"
-REPOSITORY_ROOT = HOOK_PATH.parents[1]
+PLUGIN_ROOT = HOOK_PATH.parents[1]
 SPEC = importlib.util.spec_from_file_location("opus_5_reduce_output", HOOK_PATH)
 HOOK = importlib.util.module_from_spec(SPEC)
 assert SPEC.loader is not None
@@ -87,7 +87,7 @@ class Opus5ReduceOutputTests(unittest.TestCase):
         self,
     ) -> None:
         config = json.loads(
-            (REPOSITORY_ROOT / "hooks" / "hooks.json").read_text()
+            (PLUGIN_ROOT / "hooks" / "hooks.json").read_text()
         )
 
         stop_entries = config["hooks"]["Stop"]
@@ -108,14 +108,8 @@ class Opus5ReduceOutputTests(unittest.TestCase):
     def test_sibling_manifests_do_not_install_the_stop_hook(self) -> None:
         # Codex documents no turn-end event, and Copilot's agentStop envelope
         # is camelCase, so its stopHookActive loop guard would never trip.
-        pstack_root = REPOSITORY_ROOT.parent / "pstack"
-        codex = json.loads(
-            (pstack_root / "hooks" / "codex-hooks.json").read_text()
-        )
-        copilot = json.loads((pstack_root / "hooks.json").read_text())
-
-        self.assertNotIn("Stop", codex["hooks"])
-        self.assertNotIn("opus_5_reduce_output", json.dumps(copilot))
+        self.assertFalse((PLUGIN_ROOT / "hooks" / "codex-hooks.json").exists())
+        self.assertFalse((PLUGIN_ROOT / "hooks.json").exists())
 
     # -- the gate ----------------------------------------------------------
 
