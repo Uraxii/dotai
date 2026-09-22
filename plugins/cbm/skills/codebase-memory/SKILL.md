@@ -16,7 +16,7 @@ alias cbm=<skilldir>/scripts/cbm   # skilldir = directory holding this SKILL.md;
 ## Project name
 
 Every tool but `list_projects` and `index_repository` requires `project`. The name is the repo root path with `/` turned into `-` and the leading slash dropped:
-`/var/home/nicole/Projects/lodestar` -> `var-home-nicole-Projects-lodestar`. Confirm with:
+`/workspace/Projects/myapp` -> `workspace-Projects-myapp`. Confirm with:
 
 ```bash
 cbm list_projects | jq -r '.projects[] | "\(.name)\t\(.root_path)"'
