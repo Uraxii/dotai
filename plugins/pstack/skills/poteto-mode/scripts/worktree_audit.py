@@ -39,6 +39,7 @@ __all__ = [
 HEADER = ("SIZE\tAGE\tMERGED\tDIRTY\tREMOTE\tPR\tLAST_CHAT\tBUCKET"
           "\tWORKTREE")
 UNKNOWN = "?"
+BYTE_ROUND_TRIP = "surrogateescape"
 ABSENT = "-"
 FALLBACK_BASE_BRANCH = "main"
 RECENT_CHAT_DAYS = 4
@@ -107,10 +108,15 @@ def command_text(argv: list[str], stdout: int, stderr: int) -> tuple[int, str]:
     Exactly one of `stdout` and `stderr` is captured. A missing executable
     becomes status 127 and the OS error text, which is what a shell reports
     for the same call.
+
+    Decoding is `surrogateescape`, the same handler argv arrives under, so a
+    worktree path holding a byte that is not valid UTF-8 flows through this
+    boundary and back out to the table instead of aborting the whole audit
+    before its first line is printed.
     """
     try:
         done = subprocess.run(argv, stdout=stdout, stderr=stderr,
-                              text=True, check=False)
+                              text=True, errors=BYTE_ROUND_TRIP, check=False)
     except OSError as error:
         return 127, str(error)
     captured = done.stdout if done.stdout is not None else done.stderr
@@ -364,7 +370,8 @@ def chat_stamps(worktrees: list[str],
     stamps = {worktree: 0 for worktree in worktrees}
     if not transcripts.is_dir():
         return stamps, True
-    needles = {worktree: (f"{worktree}/".encode(), f'{worktree}"'.encode())
+    needles = {worktree: (f"{worktree}/".encode(errors=BYTE_ROUND_TRIP),
+                          f'{worktree}"'.encode(errors=BYTE_ROUND_TRIP))
                for worktree in worktrees}
     files, known = transcript_files(transcripts)
     for path in files:
@@ -489,4 +496,6 @@ def main(argv: list[str]) -> int:
 
 
 if __name__ == "__main__":
+    sys.stdout.reconfigure(errors=BYTE_ROUND_TRIP)
+    sys.stderr.reconfigure(errors=BYTE_ROUND_TRIP)
     sys.exit(main(sys.argv[1:]))

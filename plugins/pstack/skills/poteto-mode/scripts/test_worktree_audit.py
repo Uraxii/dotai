@@ -38,6 +38,7 @@ RECENT_TRANSCRIPT = "recent.jsonl"
 STALE_TRANSCRIPT = "stale.jsonl"
 STALE_MTIME_EPOCH = 1_700_000_000
 METACHARACTER_DIRECTORY = "wt-a+b[c].d"
+UNDECODABLE_DIRECTORY = os.fsdecode(b"wt-\xff-bad")
 WORKTREE_BRANCHES = {
     "wt-clean": "clean-branch",
     "wt-wip": "wip-branch",
@@ -353,6 +354,36 @@ class AuditOutputTest(unittest.TestCase):
 
     def test_nothing_is_warned_about_when_every_fact_is_readable(self) -> None:
         self.assertEqual(self.errors, "")
+
+
+class UndecodablePathTest(unittest.TestCase):
+    """A worktree path holding a byte that is not UTF-8."""
+
+    def test_the_table_still_prints_and_carries_the_raw_bytes(self) -> None:
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        root = Path(temporary.name)
+        repo = build_repository(root)
+        odd = repo / UNDECODABLE_DIRECTORY
+        git(repo, "worktree", "add", "--quiet", str(odd), "-b",
+            "undecodable-branch", "main")
+        transcripts = build_transcripts(root, repo / "wt-clean", odd)
+        stub_bin = build_stub_gh(root, [])
+        home = root / "home"
+        home.mkdir()
+
+        done = subprocess.run(
+            [sys.executable, str(SCRIPT), str(repo), str(transcripts)],
+            capture_output=True, check=False,
+            env=dict(os.environ, HOME=str(home),
+                     PATH=f"{stub_bin}{os.pathsep}{os.environ['PATH']}"))
+
+        rows = done.stdout.splitlines()
+        self.assertEqual(done.returncode, 0, done.stderr)
+        self.assertEqual(rows[0], worktree_audit.HEADER.encode())
+        self.assertEqual(len(rows), len(WORKTREE_BRANCHES) + 2)
+        self.assertTrue(any(row.endswith(b"\t" + os.fsencode(str(odd)))
+                            for row in rows[1:]), done.stdout)
 
 
 class AuditArgumentTest(unittest.TestCase):
