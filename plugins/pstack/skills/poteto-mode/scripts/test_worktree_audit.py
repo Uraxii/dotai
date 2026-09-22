@@ -1,9 +1,10 @@
 """Tests for the worktree prune audit.
 
 The bucket table is the part that decides whether a human deletes a
-directory, so it is exercised over every combination of its six inputs. The
-rest of the suite drives the real script against a real repository with real
-worktrees: a local bare remote stands in for origin and a stub `gh` on PATH
+directory, so its two safety invariants are asserted over every combination
+of its six inputs. The ordering is checked differentially against the GNU
+`sort` the shell version piped through. The rest of the suite drives the real
+script against a real repository with real worktrees: a local bare remote stands in for origin and a stub `gh` on PATH
 stands in for the API, so nothing here touches the network, the user's
 checkout, or the user's transcripts.
 """
@@ -22,9 +23,15 @@ import tempfile
 import unittest
 from pathlib import Path
 
+import locale
+
 import worktree_audit
 
 SCRIPT = Path(__file__).resolve().parent / "worktree_audit.py"
+EXPECTED_HEADER = ("SIZE\tAGE\tMERGED\tDIRTY\tREMOTE\tPR\tLAST_CHAT"
+                   "\tBUCKET\tWORKTREE")
+SORT_COMMAND = ["sort", "-t\t", "-k1,1", "-rh"]
+COLLATION_LOCALES = ("C", "C.UTF-8", "en_US.UTF-8")
 
 BUCKETS = {"safe", "review", "hold-wip", "hold-open-pr", "verify-recent-chat"}
 DIRTY_STATES = ("clean", "wip:1", "wip:12", "scratch:3", "unknown")
@@ -190,9 +197,13 @@ class HumanSizeTest(unittest.TestCase):
         self.assertGreater(worktree_audit.human_size("31M"),
                            worktree_audit.human_size("2.4M"))
 
-    def test_an_unknown_size_ranks_as_nothing(self) -> None:
-        self.assertEqual(worktree_audit.human_size("?"), (0, 0.0))
-        self.assertEqual(worktree_audit.human_size("-"), (0, -0.0))
+    def test_an_unknown_size_ranks_with_a_zero_byte_count(self) -> None:
+        for size in ("?", "-"):
+            with self.subTest(size=size):
+                self.assertEqual(worktree_audit.human_size(size),
+                                 worktree_audit.human_size("0"))
+                self.assertLess(worktree_audit.human_size(size),
+                                worktree_audit.human_size("1"))
 
 
 def git(repo: Path, *arguments: str) -> str:
@@ -300,7 +311,7 @@ class AuditOutputTest(unittest.TestCase):
         return matches[0].split("\t")[index]
 
     def test_the_header_names_every_column_in_order(self) -> None:
-        self.assertEqual(self.rows[0], worktree_audit.HEADER)
+        self.assertEqual(self.rows[0], EXPECTED_HEADER)
 
     def test_the_primary_worktree_is_not_listed(self) -> None:
         own_row = f"\t{self.repo}"
@@ -347,13 +358,78 @@ class AuditOutputTest(unittest.TestCase):
     def test_a_worktree_on_the_trunk_is_merged(self) -> None:
         self.assertEqual(self.column("wt-clean", 2), "YES")
 
-    def test_rows_are_ordered_by_size_largest_first(self) -> None:
-        sizes = [worktree_audit.human_size(row.split("\t")[0])
-                 for row in self.rows[1:]]
-        self.assertEqual(sizes, sorted(sizes, reverse=True))
-
     def test_nothing_is_warned_about_when_every_fact_is_readable(self) -> None:
         self.assertEqual(self.errors, "")
+
+
+def gnu_sort_available() -> bool:
+    """Whether a GNU `sort` this test can compare against is on PATH."""
+    try:
+        done = subprocess.run(["sort", "--version"], capture_output=True,
+                              text=True, check=False)
+    except OSError:
+        return False
+    return done.returncode == 0 and "GNU coreutils" in done.stdout
+
+
+def sort_fixture_lines() -> list[str]:
+    """Rows spanning several sizes, with deliberate ties inside each size.
+
+    The tied rows differ in columns the size key never reads, so only a
+    fallback that collates the whole line can order them. They are listed
+    here in no particular order; the test asserts nothing about this order.
+    """
+    spread = ["1.0G", "31M", "2.4M", "8.0K", "8.0K", "8.0K", "512", "512",
+              "0", "-", "?"]
+    return [
+        "\t".join([size, f"{index}d", "YES", "clean", "no-remote", "-", "-",
+                    "safe", f"/w/tree-{chr(ord('a') + index)}"])
+        for index, size in enumerate(spread)
+    ]
+
+
+@unittest.skipUnless(gnu_sort_available(), "needs GNU sort to compare against")
+class SortFidelityTest(unittest.TestCase):
+    """The row order, against the GNU sort the shell version piped through.
+
+    The oracle is `sort -t$'\\t' -k1,1 -rh` itself, run as a subprocess, so
+    nothing here can agree with the implementation by construction. Ties on
+    the size key are the point: GNU sort settles them by collating the whole
+    line under LC_COLLATE, which is the behaviour `size_sort_key` models.
+    """
+
+    def gnu_sorted(self, lines: list[str], name: str) -> list[str]:
+        done = subprocess.run(
+            SORT_COMMAND, input="\n".join(lines) + "\n", capture_output=True,
+            text=True, check=True, env=dict(os.environ, LC_ALL=name))
+        return done.stdout.splitlines()
+
+    def python_sorted(self, lines: list[str]) -> list[str]:
+        rows = [worktree_audit.Row(*line.split("\t")) for line in lines]
+        rows.sort(key=worktree_audit.size_sort_key, reverse=True)
+        return [row.rendered() for row in rows]
+
+    def test_the_order_matches_gnu_sort_in_every_usable_locale(self) -> None:
+        lines = sort_fixture_lines()
+        self.addCleanup(locale.setlocale, locale.LC_COLLATE,
+                        locale.setlocale(locale.LC_COLLATE))
+        compared = 0
+        for name in COLLATION_LOCALES:
+            try:
+                locale.setlocale(locale.LC_COLLATE, name)
+            except locale.Error:
+                continue
+            compared += 1
+            with self.subTest(collation=name):
+                self.assertEqual(self.python_sorted(lines),
+                                 self.gnu_sorted(lines, name))
+        self.assertGreater(compared, 0, "no collation locale was usable")
+
+    def test_the_fixture_actually_ties_and_actually_spreads(self) -> None:
+        sizes = [line.split("\t")[0] for line in sort_fixture_lines()]
+
+        self.assertLess(len(set(sizes)), len(sizes))
+        self.assertGreater(len(set(sizes)), 1)
 
 
 class UndecodablePathTest(unittest.TestCase):
