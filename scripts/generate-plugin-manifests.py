@@ -283,7 +283,7 @@ PLUGINS: list[dict[str, object]] = [
     },
     {
         "name": "steer",
-        "version": "1.1.0",
+        "version": "1.2.0",
         "hooks": ["claude"],
         "skills": False,
         "description": (
