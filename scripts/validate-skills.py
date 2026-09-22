@@ -1,17 +1,18 @@
 #!/usr/bin/env python3
 """Validate one or more plugin skills trees in a single run: links resolve
 inside their own tree, skill names cited in bold or backticks resolve to a
-skill directory in the checked trees, and every SKILL.md frontmatter names its
+skill directory in the same plugin, and every SKILL.md frontmatter names its
 own directory and carries a description.
 
 Deleting a skill is what leaves a dead reference behind, so the names git has
 carried under these directories decide which emphasised words are skill names.
 
 Every tree goes in one run. Two rules need the whole picture and a per-plugin
-loop cannot give it to them. A citation can name a skill in a sibling plugin,
-and a missing principle- prefix can only be recognised when that sibling is
-visible. A tree split off an older one has a git history starting at the move,
-so the deleted-skill rule only works when the trees share one historical set.
+loop cannot give it to them. A citation of a skill that lives in a sibling
+plugin looks like ordinary prose to a run that cannot see the sibling, and a
+missing principle- prefix can only be recognised when that sibling is visible.
+A tree split off an older one has a git history starting at the move, so the
+deleted-skill rule only works when the trees share one historical set.
 
 With no argument this validates every `plugins/*/skills` tree, which is what
 CI runs. Naming trees on the command line checks only those, and turns both
@@ -185,7 +186,6 @@ def referenced_skills(
             references.add(token)
         elif (
             SKILL_NAME_RE.fullmatch(token)
-            and token not in live_names
             and f"principle-{token}" in live_names
         ):
             references.add(token)
@@ -206,14 +206,29 @@ def documents_naming_skills(skills_dir: Path) -> list[Path]:
     return sorted(documents)
 
 
-def reference_remedy(reference: str, historical: set[str]) -> str:
+def reference_remedy(
+    reference: str, historical: set[str], elsewhere: dict[str, str]
+) -> str:
+    owner = elsewhere.get(reference)
+    if owner:
+        return (
+            f"that skill lives in the {owner} plugin. A plugin installs on "
+            "its own, so it must not cite a skill in another plugin. Say what "
+            "to do in plain prose, or move the skill"
+        )
     if reference in historical:
         return "was a skill here and was deleted. Drop the reference or restore the directory"
     return "no skill directory of that name. Drop the emphasis if the word is prose"
 
 
-def prefixed_reference_remedy(reference: str) -> str:
-    return f"cite **principle-{reference}** instead"
+def prefixed_reference_remedy(
+    reference: str, historical: set[str], elsewhere: dict[str, str]
+) -> str:
+    prefixed = f"principle-{reference}"
+    remedy = f"cite **{prefixed}** instead"
+    if prefixed in elsewhere:
+        return f"{remedy}; {reference_remedy(prefixed, historical, elsewhere)}"
+    return remedy
 
 
 def skill_reference_problems(
@@ -230,8 +245,9 @@ def skill_reference_problems(
     root = skills_dir.resolve()
     names = skill_names(root)
     families = skill_families(names)
-    # A sibling can own a cited skill or the corresponding prefixed skill.
-    # Both cases need the shared live-name set from this invocation.
+    # A live skill in a sibling plugin is a name a reader recognises, so it
+    # has to be recognised here too. The shared live-name set also identifies
+    # an omitted principle- prefix when the prefixed skill lives in a sibling.
     known = historical | set(elsewhere)
     live_names = names | set(elsewhere)
     problems = []
@@ -241,11 +257,13 @@ def skill_reference_problems(
         for reference in sorted(
             referenced_skills(path.read_text(), families, known, live_names)
         ):
-            if reference not in live_names:
+            if reference not in names:
                 if f"principle-{reference}" in live_names:
-                    remedy = prefixed_reference_remedy(reference)
+                    remedy = prefixed_reference_remedy(
+                        reference, historical, elsewhere
+                    )
                 else:
-                    remedy = reference_remedy(reference, historical)
+                    remedy = reference_remedy(reference, historical, elsewhere)
                 problems.append(f"{label} -> **{reference}** ({remedy})")
     return problems
 
@@ -369,7 +387,7 @@ def main(arguments: list[str] | None = None) -> int:
         f"ok: {count_phrase(skills, 'skill')} in "
         f"{count_phrase(len(trees), 'tree')}. Every markdown link resolves, "
         "every skill citation in backticks or bold resolves to a skill in the "
-        "checked trees and keeps a required principle- prefix, and every "
+        "same plugin and keeps a required principle- prefix, and every "
         "SKILL.md frontmatter names its own directory and carries a "
         "description. A skill named in plain prose is not checked."
     )
