@@ -8,6 +8,7 @@ import subprocess
 import sys
 import tempfile
 import textwrap
+import threading
 import unittest
 from pathlib import Path
 
@@ -17,6 +18,8 @@ BINARY = "codebase-memory-mcp"
 INIT_LOG = "level=info msg=mem.init store=/tmp/x"
 OTHER_LOG = "level=warn msg=index.stale"
 ANSWER = {"b": 1, "a": [1, 2], "u": "café ✓", "n": None, "e": {}, "l": []}
+PROGRESS_LOG = "level=info msg=index.progress files=1200"
+RELEASE_AFTER_SEC = 10.0
 
 
 class CbmTest(unittest.TestCase):
@@ -123,6 +126,39 @@ class CbmTest(unittest.TestCase):
         self.assertEqual(result.returncode, 5)
         self.assertEqual(result.stdout, "")
         self.assertIn("did not answer JSON", result.stderr)
+
+    def test_relays_stderr_while_the_binary_is_still_running(self) -> None:
+        gate = self.root / "gate"
+        self.write_stub(
+            "import os, time\n"
+            f"print({PROGRESS_LOG!r}, file=sys.stderr, flush=True)\n"
+            f"while not os.path.exists({str(gate)!r}):\n"
+            "    time.sleep(0.01)\n"
+            f"print({json.dumps(ANSWER)!r})\n")
+        released = threading.Event()
+
+        def release() -> None:
+            released.set()
+            gate.write_text("go")
+
+        watchdog = threading.Timer(RELEASE_AFTER_SEC, release)
+        watchdog.start()
+        self.addCleanup(watchdog.cancel)
+        process = subprocess.Popen(
+            [sys.executable, str(CBM), "index_repository"],
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+            env=self.env)
+        self.addCleanup(process.wait)
+
+        relayed = [process.stderr.readline(), process.stderr.readline()]
+        arrived_before_the_binary_could_exit = not released.is_set()
+        release()
+        process.wait()
+
+        self.assertTrue(arrived_before_the_binary_could_exit,
+                        "stderr only arrived once the binary had exited")
+        self.assertEqual(relayed[0].rstrip("\n"), OTHER_LOG)
+        self.assertEqual(relayed[1].rstrip("\n"), PROGRESS_LOG)
 
     def test_reports_a_missing_binary(self) -> None:
         result = self.run_cbm("some_tool")

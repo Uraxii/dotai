@@ -13,8 +13,10 @@ from __future__ import annotations
 import json
 import subprocess
 import sys
+import tempfile
+from typing import TextIO
 
-__all__ = ["without_init_log", "main"]
+__all__ = ["is_init_log", "run_streaming_stderr", "main"]
 
 BINARY = "codebase-memory-mcp"
 SUBCOMMAND = "cli"
@@ -25,32 +27,52 @@ PARSE_ERROR_EXIT = 5
 NOT_FOUND_EXIT = 127
 
 
-def without_init_log(stderr: str) -> str:
-    """Drop the binary's startup log line, keeping every other line."""
-    kept = [line for line in stderr.splitlines() if INIT_LOG_MARK not in line]
-    return "".join(line + "\n" for line in kept)
+def is_init_log(line: str) -> bool:
+    """Whether `line` is the startup log line, the only one dropped."""
+    return INIT_LOG_MARK in line
+
+
+def run_streaming_stderr(argv: list[str], sink: TextIO) -> int:
+    """Run `argv` into `sink`, relaying its stderr live minus the init log.
+
+    index_repository logs progress for minutes on a large repo, and a silent
+    terminal for that long reads as a hang, so each line is written out as it
+    arrives rather than after the exit. stdout goes to a file instead of a
+    second pipe so this loop cannot deadlock on an answer larger than a pipe
+    buffer; it is pretty-printed after the exit, which is also the first
+    moment `jq .` could have printed one JSON document.
+    """
+    process = subprocess.Popen(argv, stdout=sink, stderr=subprocess.PIPE,
+                               text=True)
+    for line in process.stderr:
+        if not is_init_log(line):
+            sys.stderr.write(line)
+            sys.stderr.flush()
+    return process.wait()
 
 
 def main(argv: list[str]) -> int:
     """Run one tool, pretty-print its JSON, and return the binary's status."""
     tool = argv[0] if argv else ""
     arguments = argv[1] if len(argv) > 1 and argv[1] else NO_ARGUMENTS
+    with tempfile.TemporaryFile("w+") as sink:
+        try:
+            status = run_streaming_stderr(
+                [BINARY, SUBCOMMAND, tool, arguments], sink)
+        except FileNotFoundError:
+            print(f"{BINARY} is not on PATH", file=sys.stderr)
+            return NOT_FOUND_EXIT
+        sink.seek(0)
+        stdout = sink.read()
+    if not stdout.strip():
+        return status
     try:
-        done = subprocess.run([BINARY, SUBCOMMAND, tool, arguments],
-                              capture_output=True, check=False, text=True)
-    except FileNotFoundError:
-        print(f"{BINARY} is not on PATH", file=sys.stderr)
-        return NOT_FOUND_EXIT
-    sys.stderr.write(without_init_log(done.stderr))
-    if not done.stdout.strip():
-        return done.returncode
-    try:
-        answer = json.loads(done.stdout)
+        answer = json.loads(stdout)
     except json.JSONDecodeError as err:
         print(f"{BINARY} did not answer JSON: {err}", file=sys.stderr)
         return PARSE_ERROR_EXIT
     print(json.dumps(answer, ensure_ascii=False, indent=INDENT))
-    return done.returncode
+    return status
 
 
 if __name__ == "__main__":
