@@ -64,10 +64,24 @@ half. Upstream's `sync.mjs`, `substitutions.json`, `upstream.json`,
 `validate-skills.mjs`, and `verify-merge-safety.mjs` serve upstream's own
 release pipeline and were not taken either.
 
+## Ported from a gist
+
+- Source: https://gist.github.com/geoffreylitt/a29df1b5f9865506e8952488eac3d524
+- Revision: `126e7fe9eecaafadfe1ac8bb183d135812b608f2`
+- Skills: `explain-diff-html` and `explain-diff-notion`, each a verbatim copy
+  of its gist file.
+
+A local skill named create-artifact merged both of them into one. It has been
+deleted in favour of the two originals, so that name no longer resolves to a
+skill here. That name stays in plain prose, never in bold or backticks,
+because `scripts/validate-skills.py` reads an emphasised name as a citation
+of a live skill and fails the build.
+
 ## Local to this plugin
 
-Every other skill under `plugins/pstack/skills/` is specific to this
-project and was not touched by the port: `azure-devops`, `beads`,
+Every skill under `plugins/pstack/skills/` that neither section above names
+is specific to this project and was not touched by either port:
+`azure-devops`, `beads`,
 `codebase-memory`, `handoff`, `llm-wiki`, `notion-cli`, `podman`,
 `principle-code-quality`, `principle-decomposition`, `principle-naming`,
 `principle-output-to-user`, `proton-pass-cli`, `skill-quality`.
