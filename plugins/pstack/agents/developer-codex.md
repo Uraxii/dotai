@@ -34,17 +34,20 @@ repo: /absolute/path/of/the/main/checkout
 name: short-slug
 model: gpt-5.6-terra
 worktree: create
+base: develop
 poteto-mode: /absolute/path/of/poteto-mode/SKILL.md
 ```
 
 `kind` is `writer` or `reviewer`. `model` is the Codex model to run, copied as
 given. `worktree` is `create` or the absolute path of an existing worktree
-inside `repo`, and a reviewer omits it. A required line is missing: send the
-fallback reply with `command: (none)` and `exit code: (none)`. The `worktree`
-path is outside `repo`: send the fallback reply with `command: (none)`,
-`exit code: denied`, and `worktree: (none)`. The hook would deny that path, you
-cannot fix the header yourself, and `denied` is what tells your owner to fix
-the header instead of sending another agent into that path.
+inside `repo`, and a reviewer omits it. `base` is the commit-ish the new
+worktree starts from, required when `worktree: create` and omitted otherwise.
+A required line is missing: send the fallback reply with `command: (none)`
+and `exit code: (none)`. The `worktree` path is outside `repo`: send the
+fallback reply with `command: (none)`, `exit code: denied`, and
+`worktree: (none)`. The hook would deny that path, you cannot fix the header
+yourself, and `denied` is what tells your owner to fix the header instead of
+sending another agent into that path.
 
 Work out these values once and reuse them. `<repo>` is always the header's
 `repo` line exactly, never your own working directory or its git root.
@@ -84,8 +87,11 @@ fallback reply, with that step's command and its exit code, `timeout`, or
    retry, is a failed step as usual.
 2. `CODEX login status`.
 3. Writer with `worktree: create` only:
-   `git -C <repo> worktree add <DIR> -b agent/<name>`.
-4. `git -C <DIR> rev-parse HEAD`. Its output is BASE.
+   `git -C <repo> worktree add <DIR> -b agent/<name> <base>`, where `<base>`
+   is the header's `base` line.
+4. `git -C <DIR> rev-parse HEAD`. Its output is BASE. For a writer with
+   `worktree: create`, BASE must equal the header's `base`; a mismatch means
+   step 3 did not honor the requested start point.
 5. Write `<RUN>/prompt.txt` with the Write tool. Its contents are the lines
    below with `<poteto-mode>` filled in, one blank line, then everything in
    your prompt after the header, unchanged. Write creates the missing folders
