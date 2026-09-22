@@ -24,6 +24,7 @@ import unittest
 from pathlib import Path
 
 import locale
+from unittest import mock
 
 import worktree_audit
 
@@ -31,6 +32,7 @@ SCRIPT = Path(__file__).resolve().parent / "worktree_audit.py"
 EXPECTED_HEADER = ("SIZE\tAGE\tMERGED\tDIRTY\tREMOTE\tPR\tLAST_CHAT"
                    "\tBUCKET\tWORKTREE")
 SORT_COMMAND = ["sort", "-t\t", "-k1,1", "-rh"]
+SIZE_ORDER_MEGA = 2
 COLLATION_LOCALES = ("C", "C.UTF-8", "en_US.UTF-8")
 
 BUCKETS = {"safe", "review", "hold-wip", "hold-open-pr", "verify-recent-chat"}
@@ -144,6 +146,33 @@ class ClassifyBucketTest(unittest.TestCase):
                     worktree_audit.classify_bucket(dirty, "-", False, "YES",
                                                    False, True),
                     "hold-wip")
+
+
+class CommaRadixSizeTest(unittest.TestCase):
+    """Sizes as `du -sh` prints them where the locale decimal point is a comma.
+
+    No comma-decimal locale is guaranteed installed, so the radix is taken
+    from a stubbed `localeconv`, which is the boundary the real code reads
+    it from.
+    """
+
+    def setUp(self) -> None:
+        patch = mock.patch.object(worktree_audit.locale, "localeconv",
+                                  return_value={"decimal_point": ","})
+        patch.start()
+        self.addCleanup(patch.stop)
+
+    def test_a_comma_decimal_size_keeps_its_magnitude(self) -> None:
+        self.assertEqual(worktree_audit.human_size("1,5M"),
+                         (SIZE_ORDER_MEGA, 1.5))
+
+    def test_a_comma_decimal_size_outranks_a_smaller_one(self) -> None:
+        self.assertGreater(worktree_audit.human_size("2,4M"),
+                           worktree_audit.human_size("1,5M"))
+
+    def test_a_megabyte_still_outranks_a_kilobyte(self) -> None:
+        self.assertGreater(worktree_audit.human_size("1,5M"),
+                           worktree_audit.human_size("900,0K"))
 
 
 class ParseWorktreesTest(unittest.TestCase):

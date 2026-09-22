@@ -50,7 +50,7 @@ TRANSCRIPTS_SUBPATH = Path(".claude") / "projects"
 WORKTREE_FIELD_PREFIX = "worktree "
 PRUNABLE_FIELD_PREFIX = "prunable"
 SYMREF_HEAD = re.compile(r"ref: refs/heads/(.*)[ \t]HEAD$")
-LEADING_NUMBER = re.compile(r"\d*\.?\d*")
+DEFAULT_RADIX = "."
 SIZE_UNIT_ORDER = {
     "k": 1, "K": 1, "M": 2, "G": 3, "T": 4,
     "P": 5, "E": 6, "Z": 7, "Y": 8, "R": 9, "Q": 10,
@@ -421,6 +421,16 @@ def prunable_row(worktree: str) -> Row:
                "prunable", worktree)
 
 
+def radix_point() -> str:
+    """The decimal separator `du -sh` prints, per the numeric locale.
+
+    A comma-decimal locale such as de_DE makes du emit `1,5M`, which a
+    period-only parser reads as 1 byte. The locale is the authority on which
+    character it is, so it is asked rather than assumed.
+    """
+    return locale.localeconv()["decimal_point"] or DEFAULT_RADIX
+
+
 def human_size(size: str) -> tuple[int, float]:
     """Unit order and magnitude of a size, as `sort -h` reads it.
 
@@ -430,9 +440,11 @@ def human_size(size: str) -> tuple[int, float]:
     text = size.lstrip(" \t")
     sign = -1 if text.startswith("-") else 1
     digits = text[1:] if sign < 0 else text
-    number = LEADING_NUMBER.match(digits).group()
+    radix = radix_point()
+    number = re.match(rf"\d*{re.escape(radix)}?\d*", digits).group()
     unit = digits[len(number):len(number) + 1]
-    magnitude = float(number) if number.strip(".") else 0.0
+    magnitude = (float(number.replace(radix, DEFAULT_RADIX))
+                 if number.strip(radix) else 0.0)
     order = SIZE_UNIT_ORDER.get(unit, 0) if magnitude else 0
     return sign * order, sign * magnitude
 
@@ -471,7 +483,7 @@ def repo_root() -> str:
 def main(argv: list[str]) -> int:
     """Audit every worktree of the repo and print the table."""
     try:
-        locale.setlocale(locale.LC_COLLATE, "")
+        locale.setlocale(locale.LC_ALL, "")
     except locale.Error:
         pass
     repo = (argv[0] if argv and argv[0] else "") or repo_root()
