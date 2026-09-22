@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""recap_on_stop — Stop hook asking for a plain-English recap of the turn.
+"""opus_5_reduce_output — Stop hook asking for a plain-English recap of the turn.
 
 Wired in the plugin's `hooks/hooks.json` under `Stop`.
 
