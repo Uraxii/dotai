@@ -25,13 +25,47 @@ def assistant(model="claude-opus-5", tools=(), sidechain=False):
         "isSidechain": sidechain,
         "message": {
             "model": model,
-            "content": [{"type": "tool_use", "name": name} for name in tools],
+            "content": [
+                tool
+                if isinstance(tool, dict)
+                else {"type": "tool_use", "name": tool}
+                for tool in tools
+            ],
         },
     }
 
 
+def bash(command):
+    return {"type": "tool_use", "name": "Bash", "input": {"command": command}}
+
+
 def user_prompt(text="do the thing"):
     return {"type": "user", "message": {"content": text}}
+
+
+def tool_result(tool_use_id="toolu_first"):
+    """A tool result. Same `type: "user"` as a prompt, not a turn boundary."""
+    return {
+        "type": "user",
+        "message": {
+            "content": [
+                {
+                    "type": "tool_result",
+                    "tool_use_id": tool_use_id,
+                    "content": "ok",
+                }
+            ]
+        },
+    }
+
+
+def injected_prompt(text="Base directory for this skill: /workspace/skills/x"):
+    """A harness injection, e.g. a loaded skill. Carries isMeta, not typed."""
+    return {
+        "type": "user",
+        "isMeta": True,
+        "message": {"content": [{"type": "text", "text": text}]},
+    }
 
 
 WORKING_TURN = [
@@ -111,6 +145,9 @@ class Opus5ReduceOutputTests(unittest.TestCase):
         self.assertFalse((PLUGIN_ROOT / "hooks" / "codex-hooks.json").exists())
         self.assertFalse((PLUGIN_ROOT / "hooks.json").exists())
 
+    def test_recap_instruction_has_no_em_dash(self) -> None:
+        self.assertNotIn("—", HOOK.RECAP_INSTRUCTION)
+
     # -- the gate ----------------------------------------------------------
 
     def test_fresh_turn_of_real_work_blocks(self) -> None:
@@ -119,24 +156,20 @@ class Opus5ReduceOutputTests(unittest.TestCase):
         self.assertEqual("block", self.decide(payload))
         self.assertIn("BLOCK", self.log_path.read_text(encoding="utf-8"))
 
-    def test_a_turn_that_did_nothing_still_asks_for_a_recap(self) -> None:
-        """The regression the edit gate caused: this user delegates every
-        edit to a subagent, so the main turn window sees no edits and no
-        tool calls. The old gate allowed all 198 logged invocations."""
+    def test_a_turn_with_no_tool_calls_at_all_skips(self) -> None:
+        """A turn that ran nothing changed nothing, so it has no recap."""
         entries = [user_prompt(), assistant(tools=[])]
 
         self.assertEqual(
-            "block",
+            "allow",
             self.decide({"transcript_path": self.transcript("idle", entries)}),
         )
 
-    def test_a_read_only_turn_asks_for_a_recap(self) -> None:
-        """Replaces the old "wrote no code allows" case. Writing code is no
-        longer part of the gate."""
+    def test_a_read_only_turn_skips(self) -> None:
         entries = [user_prompt(), assistant(tools=["Read"] * 8)]
 
         self.assertEqual(
-            "block",
+            "allow",
             self.decide({"transcript_path": self.transcript("read", entries)}),
         )
 
@@ -147,6 +180,280 @@ class Opus5ReduceOutputTests(unittest.TestCase):
         self.assertEqual(
             "block",
             self.decide({"transcript_path": self.transcript("small", entries)}),
+        )
+
+    # -- the mutation gate -------------------------------------------------
+
+    def test_a_turn_of_one_read_only_shell_command_skips(self) -> None:
+        """The reported bug. One read-only command and an answer got a recap
+        that only restated a reply already short and plain."""
+        entries = [
+            user_prompt("which python is on PATH?"),
+            assistant(tools=[bash("which python3")]),
+        ]
+
+        self.assertEqual(
+            "allow",
+            self.decide({"transcript_path": self.transcript("look", entries)}),
+        )
+        self.assertIn(
+            "turn used no mutating tool",
+            self.log_path.read_text(encoding="utf-8"),
+        )
+
+    def test_a_turn_containing_an_edit_asks_for_a_recap(self) -> None:
+        entries = [
+            user_prompt(),
+            assistant(tools=[bash("rg todo"), "Edit"]),
+        ]
+
+        self.assertEqual(
+            "block",
+            self.decide({"transcript_path": self.transcript("edit", entries)}),
+        )
+
+    def test_a_turn_containing_a_mutating_shell_command_asks_for_a_recap(
+        self,
+    ) -> None:
+        entries = [
+            user_prompt(),
+            assistant(tools=[bash("rm -rf /workspace/build")]),
+        ]
+
+        self.assertEqual(
+            "block",
+            self.decide({"transcript_path": self.transcript("rm", entries)}),
+        )
+
+    def test_a_turn_that_spawned_an_agent_asks_for_a_recap(self) -> None:
+        """A delegate's own edits never reach this transcript, so a turn
+        that spawned one is assumed to have changed something."""
+        entries = [user_prompt(), assistant(tools=["Agent"])]
+
+        self.assertEqual(
+            "block",
+            self.decide({"transcript_path": self.transcript("agent", entries)}),
+        )
+
+    def test_a_turn_containing_a_multi_edit_asks_for_a_recap(self) -> None:
+        entries = [user_prompt(), assistant(tools=["MultiEdit"])]
+
+        self.assertEqual(
+            "block",
+            self.decide({"transcript_path": self.transcript("multi", entries)}),
+        )
+
+    def test_a_turn_that_resumed_a_delegate_asks_for_a_recap(self) -> None:
+        """SendMessage makes a live delegate work, on the same argument that
+        puts Agent and Task here. Its edits never reach this transcript."""
+        entries = [user_prompt(), assistant(tools=["SendMessage"])]
+
+        self.assertEqual(
+            "block",
+            self.decide({"transcript_path": self.transcript("resume", entries)}),
+        )
+
+    def test_a_turn_that_spawned_a_task_asks_for_a_recap(self) -> None:
+        entries = [user_prompt(), assistant(tools=["Task"])]
+
+        self.assertEqual(
+            "block",
+            self.decide({"transcript_path": self.transcript("task", entries)}),
+        )
+
+    def test_tool_results_do_not_truncate_the_turn(self) -> None:
+        """Boundary-detection guard. A tool result is `type: "user"` too.
+        Mistaking one for a prompt cuts the turn at its first tool call, so
+        the mutating command later in the turn would go unseen."""
+        entries = [
+            user_prompt(),
+            assistant(tools=[bash("cat /workspace/notes.md")]),
+            tool_result(),
+            assistant(tools=[bash("git commit -m 'save the notes'")]),
+        ]
+
+        self.assertEqual(
+            "block",
+            self.decide({"transcript_path": self.transcript("chain", entries)}),
+        )
+
+        # The mutation has to sit on the far side of the tool result too:
+        # a boundary mistake truncates to the tail, which reads clean.
+        entries = [
+            user_prompt(),
+            assistant(tools=[bash("git commit -m 'save the notes'")]),
+            tool_result(),
+            assistant(tools=[bash("git show --stat HEAD")]),
+        ]
+
+        self.assertEqual(
+            "block",
+            self.decide({"transcript_path": self.transcript("tail", entries)}),
+        )
+
+    def test_an_injected_prompt_does_not_truncate_the_turn(self) -> None:
+        """A loaded skill arrives as a `type: "user"` text block with isMeta.
+        It is not something the human typed, so it is not a boundary."""
+        entries = [
+            user_prompt(),
+            assistant(tools=[bash("mkdir /workspace/out"), "Skill"]),
+            injected_prompt(),
+            assistant(tools=[bash("ls /workspace/out")]),
+        ]
+
+        self.assertEqual(
+            "block",
+            self.decide({"transcript_path": self.transcript("skill", entries)}),
+        )
+
+    def test_a_promptless_transcript_asks_for_a_recap(self) -> None:
+        """A gate that cannot see the turn boundary must not suppress."""
+        entries = [assistant(tools=[bash("ls /workspace")])]
+
+        self.assertEqual(
+            "block",
+            self.decide({"transcript_path": self.transcript("orphan", entries)}),
+        )
+        self.assertIn(
+            "turn boundary unknown", self.log_path.read_text(encoding="utf-8")
+        )
+
+    def test_unparseable_lines_around_the_turn_ask_for_a_recap(self) -> None:
+        """Malformed lines are skipped, so the prompt is lost and the turn
+        boundary is unknown. That falls through to requesting the recap."""
+        path = self.directory / "garbage.jsonl"
+        path.write_text(
+            "not json\n"
+            + json.dumps(assistant(tools=[bash("ls /workspace")]))
+            + "\n{ also not json\n",
+            encoding="utf-8",
+        )
+
+        self.assertEqual("block", self.decide({"transcript_path": str(path)}))
+        self.assertIn(
+            "turn boundary unknown", self.log_path.read_text(encoding="utf-8")
+        )
+
+    def test_a_wholly_unparseable_transcript_allows_at_the_model_gate(
+        self,
+    ) -> None:
+        """Unchanged pre-existing behaviour. With no readable reply there is
+        no model to match, so the model gate allows before the new one runs."""
+        path = self.directory / "rubble.jsonl"
+        path.write_text("not json\n{ also not json\n", encoding="utf-8")
+
+        self.assertEqual("allow", self.decide({"transcript_path": str(path)}))
+        self.assertIn(
+            "model does not match", self.log_path.read_text(encoding="utf-8")
+        )
+
+    def test_only_the_current_turn_is_examined(self) -> None:
+        """An earlier turn's edits must not keep requesting recaps forever."""
+        entries = [
+            user_prompt("older turn"),
+            assistant(tools=["Edit", "Write"]),
+            user_prompt("this turn"),
+            assistant(tools=[bash("git status")]),
+        ]
+
+        self.assertEqual(
+            "allow",
+            self.decide({"transcript_path": self.transcript("prior", entries)}),
+        )
+
+    # -- shell command classification --------------------------------------
+
+    def test_read_only_commands_are_not_mutations(self) -> None:
+        for command in [
+            "which python3",
+            "ls -la /workspace",
+            "git status",
+            "git log --oneline -20",
+            "git diff HEAD",
+            "gh pr view 12",
+            "rg --files-with-matches todo /workspace",
+            "cat /workspace/a.txt /workspace/b.txt",
+            "pytest -q 2>&1",
+            "python3 -c 'print(1 >= 0)'",
+            "grep -n foo /workspace/x | head -5",
+            "ps aux | grep node",
+            # Redirecting to /dev/null discards, it does not write.
+            "python3 scripts/validate-skills.py >/dev/null 2>&1",
+            "python3 scripts/validate-skills.py > /dev/null",
+            "python3 scripts/validate-skills.py >>/dev/null",
+            "python3 scripts/validate-skills.py >> /dev/null",
+            "git rev-parse HEAD 2>/dev/null",
+            # A global option before the verb does not make a read verb write.
+            "git -C /workspace/wt status",
+            "git --no-pager log -5",
+            "gh -R owner/repo pr view 12",
+            # A trailing & is a descriptor dup, not a write.
+            "cmd >&2",
+        ]:
+            with self.subTest(command=command):
+                self.assertFalse(HOOK._command_mutates(command))
+
+    def test_mutating_commands_are_detected(self) -> None:
+        for command in [
+            "rm -rf /workspace/build",
+            "mv /workspace/a /workspace/b",
+            "cp /workspace/a /workspace/b",
+            "mkdir -p /workspace/out",
+            "touch /workspace/marker",
+            "install -m 755 bin/tool /workspace/bin/tool",
+            "ln -s /workspace/a /workspace/b",
+            "sed -i 's/a/b/' /workspace/x",
+            "echo hi | tee /workspace/x",
+            "echo hi > /workspace/x",
+            "echo hi >> /workspace/x",
+            "git commit -m 'wip'",
+            "git push origin develop",
+            "git merge develop",
+            "git rebase develop",
+            "git reset --hard HEAD",
+            "git checkout develop",
+            "git branch -D stale",
+            "git worktree add /workspace/wt develop",
+            "git worktree remove /workspace/wt",
+            "gh pr create --base develop",
+            "gh pr merge 12",
+            "sudo chmod 600 /workspace/key",
+            "FOO=bar rm /workspace/x",
+            # A global option between the program and its verb. This is the
+            # form an agent working in a worktree actually uses.
+            "git -C /workspace/wt push origin develop",
+            "git -C . add -A",
+            "git -C /workspace/wt worktree remove --force /workspace/gone",
+            "git -c user.name=x commit -m 'wip'",
+            "gh -R owner/repo pr create --base develop",
+            # Redirect spellings other than a bare >.
+            "make &> /workspace/build.log",
+            "python3 gen.py 1> /workspace/out.txt",
+            "make 2> /workspace/build.log",
+            # Wrappers that run the real program.
+            "env FOO=1 rm /workspace/x",
+            "command rm /workspace/x",
+            "find /workspace -name '*.tmp' | xargs rm -f",
+        ]:
+            with self.subTest(command=command):
+                self.assertTrue(HOOK._command_mutates(command))
+
+    def test_every_segment_of_a_chain_is_classified(self) -> None:
+        self.assertTrue(HOOK._command_mutates("git status && git commit -m x"))
+        self.assertTrue(HOOK._command_mutates("ls; rm /workspace/x"))
+        self.assertTrue(
+            HOOK._command_mutates("cat /workspace/a || touch /workspace/a")
+        )
+        self.assertFalse(HOOK._command_mutates("git status && git diff"))
+
+    def test_the_dev_null_carve_out_does_not_swallow_a_later_write(self) -> None:
+        """Excusing the discard must not excuse the rest of the line."""
+        self.assertTrue(
+            HOOK._command_mutates("check >/dev/null && rm -rf /workspace/d")
+        )
+        self.assertTrue(HOOK._command_mutates("check >/dev/null; touch /workspace/x"))
+        self.assertTrue(
+            HOOK._command_mutates("check >/dev/null 2>&1 > /workspace/out")
         )
 
     # -- loop guard --------------------------------------------------------
