@@ -1,5 +1,5 @@
 ---
-name: podman-sandbox
+name: podman
 description: Gives an agent a throwaway podman container holding a private clone of a repository, the real checkout mounted read-only, an optional published port, and a virtual display it can screenshot. Use when work must not touch the real checkout, when several agents each need their own working tree and ports on one machine, when a test or a migration writes into the repository, or when a windowed app must run and be screenshotted with no desktop available. Covers bring-up from the project's own Containerfile, running commands in the clone, port publishing, screenshots with a blankness check, rescuing commits out of a container, and teardown.
 ---
 

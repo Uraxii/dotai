@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Command line for podman-sandbox: a throwaway podman container per agent.
+"""Command line for the podman skill: a throwaway podman container per agent.
 
     lab up NAME [--repo PATH] [--branch BRANCH] [--port N]
     lab exec NAME ARGV...
