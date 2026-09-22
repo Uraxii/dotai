@@ -337,14 +337,14 @@ def plugin_table() -> str:
     return f"| Plugin | What it does |\n|---|---|\n{rows}"
 
 
-def readme_with_plugin_table() -> str:
+def readme_with_plugin_table(root: Path) -> str:
     """The README as it should read, with only its plugin table restamped.
 
     Eleven names and descriptions copied into the README by hand is a list
     nothing re-asserts, and it drifts the first time a description here
     changes. The prose around the markers stays whatever a person wrote.
     """
-    current = (REPOSITORY_ROOT / "README.md").read_text()
+    current = (root / "README.md").read_text()
     before, start, rest = current.partition(PLUGIN_TABLE_START)
     _, end, after = rest.partition(PLUGIN_TABLE_END)
     if not start or not end:
@@ -354,12 +354,12 @@ def readme_with_plugin_table() -> str:
     return f"{before}{start}\n\n{plugin_table()}\n\n{end}{after}"
 
 
-def wanted_files() -> dict[Path, str]:
+def wanted_files(root: Path) -> dict[Path, str]:
     """Map every generated path to the exact text it should hold."""
     files: dict[Path, str] = {
         Path(".claude-plugin/marketplace.json"): render(claude_marketplace()),
         Path(".agents/plugins/marketplace.json"): render(agents_marketplace()),
-        Path("README.md"): readme_with_plugin_table(),
+        Path("README.md"): readme_with_plugin_table(root),
     }
     for plugin in PLUGINS:
         root = Path("plugins") / str(plugin["name"])
@@ -375,36 +375,42 @@ def render(document: dict[str, object]) -> str:
     return json.dumps(document, indent=2, ensure_ascii=False) + "\n"
 
 
-def drifted(files: dict[Path, str]) -> list[Path]:
+def drifted(files: dict[Path, str], root: Path) -> list[Path]:
     changed = []
     for relative, text in sorted(files.items()):
-        absolute = REPOSITORY_ROOT / relative
+        absolute = root / relative
         if not absolute.is_file() or absolute.read_text() != text:
             changed.append(relative)
     return changed
 
 
-def write(files: dict[Path, str]) -> list[Path]:
-    changed = drifted(files)
+def write(files: dict[Path, str], root: Path) -> list[Path]:
+    changed = drifted(files, root)
     for relative in changed:
-        absolute = REPOSITORY_ROOT / relative
+        absolute = root / relative
         absolute.parent.mkdir(parents=True, exist_ok=True)
         absolute.write_text(files[relative])
     return changed
 
 
-def main() -> int:
+def main(arguments: list[str] | None = None, root: Path = REPOSITORY_ROOT) -> int:
+    """Generate into `root`, which the tests point at a copy of the tree.
+
+    The output root used to be the module constant, so calling this script
+    at all rewrote the checkout it lives in. A test exercising write mode
+    then overwrote whatever the person running it had not committed yet.
+    """
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument(
         "--check",
         action="store_true",
         help="exit 2 if regenerating would change a file, and name the files",
     )
-    arguments = parser.parse_args()
-    files = wanted_files()
+    options = parser.parse_args(arguments)
+    files = wanted_files(root)
 
-    if arguments.check:
-        changed = drifted(files)
+    if options.check:
+        changed = drifted(files, root)
         if not changed:
             print(f"{len(files)} generated files are up to date.")
             return 0
@@ -414,7 +420,7 @@ def main() -> int:
         print("Edit PLUGINS in the generator and rerun it, never the file itself.")
         return 2
 
-    changed = write(files)
+    changed = write(files, root)
     for relative in changed:
         print(f"wrote {relative}")
     print(f"{len(files)} generated files, {len(changed)} rewritten.")
