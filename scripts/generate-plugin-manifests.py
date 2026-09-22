@@ -42,7 +42,7 @@ HOOK_WIRING_PATHS = {
 PLUGINS: list[dict[str, object]] = [
     {
         "name": "pstack",
-        "version": "1.1.0",
+        "version": "1.1.1",
         "hooks": ["claude", "codex", "copilot"],
         "description": (
             "Skills and thin named agents: poteto-mode, principles, "
@@ -239,6 +239,7 @@ PLUGINS: list[dict[str, object]] = [
     },
     {
         "name": "cbm",
+        "version": "1.0.1",
         "description": (
             "Query the codebase-memory code graph from a shell: callers, "
             "dependencies, impact, dead code, and ADRs."
@@ -260,6 +261,7 @@ PLUGINS: list[dict[str, object]] = [
     },
     {
         "name": "steer",
+        "version": "1.1.0",
         "hooks": ["claude"],
         "skills": False,
         "description": (
