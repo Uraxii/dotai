@@ -23,6 +23,8 @@ BINARY = "codebase-memory-mcp"
 TOOLS = [{"name": "list_projects"}, {"name": "index_repository"}]
 LIST_RESPONSE = {"jsonrpc": "2.0", "id": 2, "result": {"tools": TOOLS}}
 INIT_RESPONSE = {"jsonrpc": "2.0", "id": 1, "result": {"serverInfo": {}}}
+ERROR_RESPONSE = {"jsonrpc": "2.0", "id": 2,
+                  "error": {"code": -32601, "message": "no such method"}}
 
 
 class DumpSchemasTest(unittest.TestCase):
@@ -105,6 +107,15 @@ class DumpSchemasTest(unittest.TestCase):
 
         self.assertEqual(result.returncode, 3)
         self.assertEqual(result.stdout, "")
+
+    def test_an_error_response_counts_as_no_tools(self) -> None:
+        self.write_replying_stub(INIT_RESPONSE, ERROR_RESPONSE)
+
+        result = self.run_dump()
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue(result.stdout.rstrip("\n").endswith(": 0 tools"),
+                        result.stdout)
 
     def test_empties_the_output_when_the_binary_is_absent(self) -> None:
         self.output.write_text("stale contents", encoding="utf-8")

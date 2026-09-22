@@ -68,10 +68,16 @@ def tool_count(responses: list[dict]) -> str:
     An empty count is what the shell version printed when the binary sent
     no matching response, because it counted an empty file. Preserved
     rather than turned into a failure, so the two versions report alike.
+
+    A response carrying `error` instead of `result` counts as zero tools,
+    which is what `jq '.result.tools|length'` yielded on the same payload.
+    A version-skewed binary answering the request it does not know is the
+    case that reaches this, and it must report, not crash.
     """
     if not responses:
         return ""
-    return str(len(responses[0]["result"]["tools"]))
+    result = responses[0].get("result") or {}
+    return str(len(result.get("tools") or []))
 
 
 def main(argv: list[str]) -> int:
