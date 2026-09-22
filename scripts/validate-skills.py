@@ -7,11 +7,13 @@ own directory and carries a description.
 Deleting a skill is what leaves a dead reference behind, so the names git has
 carried under these directories decide which emphasised words are skill names.
 
-Every tree goes in one run. Two rules need the whole picture and a per-plugin
-loop cannot give it to them. A citation of a skill that lives in a sibling
-plugin looks like ordinary prose to a run that cannot see the sibling, and a
-missing principle- prefix can only be recognised when that sibling is visible.
-A tree split off an older one has a git history starting at the move, so the
+Every tree goes in one run. Three rules need the whole picture and a
+per-plugin loop cannot give it to them. A citation of a skill that lives in a
+sibling plugin looks like ordinary prose to a run that cannot see the sibling,
+and each plugin installs on its own, so that citation is a defect. A citation
+that dropped its principle- prefix is only recognisable as one when the
+prefixed skill is visible, which it may not be from the citing tree alone. A
+tree split off an older one has a git history starting at the move, so the
 deleted-skill rule only works when the trees share one historical set.
 
 With no argument this validates every `plugins/*/skills` tree, which is what
@@ -234,7 +236,7 @@ def prefixed_reference_remedy(
 def skill_reference_problems(
     skills_dir: Path, historical: set[str], elsewhere: dict[str, str]
 ) -> list[str]:
-    # Three rules, each covering what the others cannot. History catches a
+    # Four rules, each covering what the others cannot. History catches a
     # deleted name in any citation syntax, but only names git ever carried.
     # Prefix families catch a hyphenated name that never existed, such as a
     # misremembered principle-*. A missing principle- prefix has to be checked
