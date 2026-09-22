@@ -28,7 +28,7 @@ Open a todolist with one entry per phase before launching anything.
 
 ## Phase B: Fan out
 
-Spawn all N workers in one message with `subagent_type: "general-purpose"`, `run_in_background: true`, and the configured model. Claude Code subagents all run on this machine, so isolation comes from the worktree or output directory assigned in Phase A, not from a remote environment, per the **principle-separate-before-serializing-shared-state** principle skill.
+Spawn all N workers in one message with `subagent_type: "general-purpose"`, `run_in_background: true`, and the configured model. Claude Code subagents all run on this machine, so isolation comes from the worktree or output directory assigned in Phase A, not from a remote environment.
 
 When a worker must start from a non-default branch, check that branch out in the worker's own worktree and name the worktree path in its brief.
 
