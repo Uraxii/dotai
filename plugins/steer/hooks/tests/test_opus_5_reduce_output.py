@@ -11,9 +11,9 @@ from pathlib import Path
 from unittest import mock
 
 
-HOOK_PATH = Path(__file__).resolve().parents[1] / "recap_on_stop.py"
-REPOSITORY_ROOT = HOOK_PATH.parents[1]
-SPEC = importlib.util.spec_from_file_location("recap_on_stop", HOOK_PATH)
+HOOK_PATH = Path(__file__).resolve().parents[1] / "opus_5_reduce_output.py"
+PLUGIN_ROOT = HOOK_PATH.parents[1]
+SPEC = importlib.util.spec_from_file_location("opus_5_reduce_output", HOOK_PATH)
 HOOK = importlib.util.module_from_spec(SPEC)
 assert SPEC.loader is not None
 SPEC.loader.exec_module(HOOK)
@@ -40,7 +40,7 @@ WORKING_TURN = [
 ]
 
 
-class RecapOnStopTests(unittest.TestCase):
+class Opus5ReduceOutputTests(unittest.TestCase):
     def setUp(self) -> None:
         self.directory = Path(
             self.enterContext(tempfile.TemporaryDirectory())
@@ -87,7 +87,7 @@ class RecapOnStopTests(unittest.TestCase):
         self,
     ) -> None:
         config = json.loads(
-            (REPOSITORY_ROOT / "hooks" / "hooks.json").read_text()
+            (PLUGIN_ROOT / "hooks" / "hooks.json").read_text()
         )
 
         stop_entries = config["hooks"]["Stop"]
@@ -99,7 +99,7 @@ class RecapOnStopTests(unittest.TestCase):
         hook = stop_entry["hooks"][0]
         self.assertEqual("command", hook["type"])
         self.assertEqual(
-            "${CLAUDE_PLUGIN_ROOT}/hooks/recap_on_stop.py", hook["command"]
+            "${CLAUDE_PLUGIN_ROOT}/hooks/opus_5_reduce_output.py", hook["command"]
         )
         self.assertEqual(10, hook["timeout"])
         self.assertTrue(HOOK_PATH.is_file())
@@ -108,13 +108,8 @@ class RecapOnStopTests(unittest.TestCase):
     def test_sibling_manifests_do_not_install_the_stop_hook(self) -> None:
         # Codex documents no turn-end event, and Copilot's agentStop envelope
         # is camelCase, so its stopHookActive loop guard would never trip.
-        codex = json.loads(
-            (REPOSITORY_ROOT / "hooks" / "codex-hooks.json").read_text()
-        )
-        copilot = json.loads((REPOSITORY_ROOT / "hooks.json").read_text())
-
-        self.assertNotIn("Stop", codex["hooks"])
-        self.assertNotIn("recap_on_stop", json.dumps(copilot))
+        self.assertFalse((PLUGIN_ROOT / "hooks" / "codex-hooks.json").exists())
+        self.assertFalse((PLUGIN_ROOT / "hooks.json").exists())
 
     # -- the gate ----------------------------------------------------------
 

@@ -59,6 +59,11 @@
       "name": "cbm",
       "source": "./plugins/cbm",
       "description": "Query the codebase-memory code graph from a shell: callers, dependencies, impact, dead code, and ADRs."
+    },
+    {
+      "name": "steer",
+      "source": "./plugins/steer",
+      "description": "Harness hooks that steer agent behaviour, independent of any skill."
     }
   ]
 }

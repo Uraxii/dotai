@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""recap_on_stop — Stop hook asking for a plain-English recap of the turn.
+"""opus_5_reduce_output — Stop hook asking for a plain-English recap of the turn.
 
 Wired in the plugin's `hooks/hooks.json` under `Stop`.
+`CLEAN_RECAP_*` and `clean-recap.log` retain their original names deliberately.
 
 Fires when Claude tries to end its turn. Returns `{"decision": "block"}`,
 which does not stop at all: it hands Claude one more instruction, to write

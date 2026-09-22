@@ -1,7 +1,7 @@
 """Check the generator against a copy of the tree, never the tree itself.
 
 Write mode used to run against the checkout the script lives in, so running
-this file rewrote all 36 generated files, `README.md` among them, and threw
+this file rewrote all 39 generated files, `README.md` among them, and threw
 away whatever the person running it had not committed. Every test here
 generates into a temporary directory instead, and `setUpModule` records the
 working tree so `tearDownModule` fails if anything in this file writes to it.
@@ -13,6 +13,7 @@ import contextlib
 import importlib.util
 import io
 import json
+import shutil
 import subprocess
 import tempfile
 import unittest
@@ -27,6 +28,11 @@ MANIFEST_NAMES = (
     ".claude-plugin/plugin.json",
     ".codex-plugin/plugin.json",
 )
+HOOK_WIRING_PATHS = {
+    "claude": Path("hooks/hooks.json"),
+    "codex": Path("hooks/codex-hooks.json"),
+    "copilot": Path("hooks.json"),
+}
 
 
 def load_generator():
@@ -40,6 +46,10 @@ def load_generator():
 
 generator = load_generator()
 PLUGIN_NAMES = {str(plugin["name"]) for plugin in generator.PLUGINS}
+PLUGIN_HOOK_HARNESSES = {
+    str(plugin["name"]): list(plugin.get("hooks", []))
+    for plugin in generator.PLUGINS
+}
 
 
 def plugin_directories() -> set[str]:
@@ -102,6 +112,13 @@ def generation_root(case: unittest.TestCase) -> Path:
     """A throwaway tree holding the one file the generator reads back."""
     root = Path(case.enterContext(tempfile.TemporaryDirectory()))
     (root / "README.md").write_text((REPOSITORY_ROOT / "README.md").read_text())
+    for name, harnesses in PLUGIN_HOOK_HARNESSES.items():
+        for harness in harnesses:
+            wiring = HOOK_WIRING_PATHS[harness]
+            source = REPOSITORY_ROOT / "plugins" / name / wiring
+            destination = root / "plugins" / name / wiring
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(source, destination)
     return root
 
 
@@ -135,6 +152,20 @@ class GeneratorInventoryTest(unittest.TestCase):
             f"Only in PLUGINS: {sorted(PLUGIN_NAMES - on_disk)}.",
         )
 
+    def test_declared_hook_wiring_files_exist(self) -> None:
+        for name, harnesses in PLUGIN_HOOK_HARNESSES.items():
+            for harness in harnesses:
+                with self.subTest(plugin=name, harness=harness):
+                    wiring = (
+                        REPOSITORY_ROOT
+                        / "plugins"
+                        / name
+                        / HOOK_WIRING_PATHS[harness]
+                    )
+                    self.assertTrue(
+                        wiring.is_file(), f"missing declared hook wiring: {wiring}"
+                    )
+
 
 class GeneratorOutputTest(unittest.TestCase):
     def setUp(self) -> None:
@@ -166,7 +197,7 @@ class GeneratorOutputTest(unittest.TestCase):
                         "a directory, so the entry installs nothing.",
                     )
 
-    def test_only_pstack_declares_hooks(self) -> None:
+    def test_codex_hook_metadata_matches_declared_harnesses(self) -> None:
         for name in sorted(PLUGIN_NAMES):
             manifest = json.loads(
                 (
@@ -174,17 +205,30 @@ class GeneratorOutputTest(unittest.TestCase):
                 ).read_text()
             )
             with self.subTest(plugin=name):
-                if name == "pstack":
+                if "codex" in PLUGIN_HOOK_HARNESSES[name]:
                     self.assertEqual(manifest["hooks"], "./hooks/codex-hooks.json")
-                    self.assertTrue(
-                        (
-                            REPOSITORY_ROOT / "plugins/pstack/hooks/codex-hooks.json"
-                        ).is_file()
-                    )
                     self.assertIn("Hooks", manifest["interface"]["capabilities"])
                 else:
                     self.assertNotIn("hooks", manifest)
                     self.assertNotIn("Hooks", manifest["interface"]["capabilities"])
+
+    def test_codex_skills_metadata_matches_plugin_entry(self) -> None:
+        for plugin in generator.PLUGINS:
+            name = str(plugin["name"])
+            manifest = json.loads(
+                (
+                    self.root / "plugins" / name / ".codex-plugin" / "plugin.json"
+                ).read_text()
+            )
+            with self.subTest(plugin=name):
+                if plugin.get("skills", True):
+                    self.assertEqual(manifest["skills"], "./skills/")
+                    self.assertIn("Skills", manifest["interface"]["capabilities"])
+                    self.assertIn("skills", manifest["keywords"])
+                else:
+                    self.assertNotIn("skills", manifest)
+                    self.assertNotIn("Skills", manifest["interface"]["capabilities"])
+                    self.assertNotIn("skills", manifest["keywords"])
 
     def test_agents_marketplace_source_path_is_per_plugin(self) -> None:
         document = json.loads(
@@ -216,6 +260,28 @@ class GeneratorRerunTest(unittest.TestCase):
     def test_check_passes_on_generated_tree(self) -> None:
         result = run_generator(self.root, "--check")
         self.assertEqual(result.returncode, 0, result.stdout)
+
+    def test_check_fails_when_declared_hook_wiring_is_missing(self) -> None:
+        self.assertEqual(run_generator(self.root, "--check").returncode, 0)
+        (self.root / "plugins" / "steer" / "hooks" / "hooks.json").unlink()
+        result = run_generator(self.root, "--check")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("plugins/steer/hooks/hooks.json", result.stdout)
+
+    def test_check_fails_when_hook_wiring_is_undeclared(self) -> None:
+        pstack = next(
+            plugin for plugin in generator.PLUGINS if plugin["name"] == "pstack"
+        )
+        original_harnesses = pstack["hooks"]
+        pstack["hooks"] = ["claude", "copilot"]
+        try:
+            result = run_generator(self.root, "--check")
+        finally:
+            pstack["hooks"] = original_harnesses
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("undeclared", result.stdout)
+        self.assertIn("plugins/pstack/hooks/codex-hooks.json", result.stdout)
 
     def test_check_fails_after_a_hand_edit(self) -> None:
         edited = self.root / "plugins" / "bd" / "plugin.json"
