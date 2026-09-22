@@ -467,7 +467,7 @@ def main(argv: list[str]) -> int:
         locale.setlocale(locale.LC_COLLATE, "")
     except locale.Error:
         pass
-    repo =(argv[1] if len(argv) > 1 and argv[1] else "") or repo_root()
+    repo = (argv[0] if argv and argv[0] else "") or repo_root()
     if not repo:
         print("not in a git repo; pass a repo path", file=sys.stderr)
         return 1
@@ -476,7 +476,7 @@ def main(argv: list[str]) -> int:
     except OSError as error:
         print(f"cannot enter {repo}: {error}", file=sys.stderr)
         return 1
-    transcripts = Path(argv[2]) if len(argv) > 2 and argv[2] else (
+    transcripts = Path(argv[1]) if len(argv) > 1 and argv[1] else (
         Path.home() / TRANSCRIPTS_SUBPATH)
     now = int(time.time())
     discovery = discover()
@@ -489,4 +489,4 @@ def main(argv: list[str]) -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(main(sys.argv))
+    sys.exit(main(sys.argv[1:]))

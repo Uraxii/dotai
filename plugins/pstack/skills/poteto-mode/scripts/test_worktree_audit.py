@@ -10,6 +10,8 @@ checkout, or the user's transcripts.
 
 from __future__ import annotations
 
+import contextlib
+import io
 import itertools
 import json
 import os
@@ -372,6 +374,32 @@ class AuditArgumentTest(unittest.TestCase):
                 env=dict(os.environ, GIT_CEILING_DIRECTORIES=empty))
         self.assertEqual(done.returncode, 1)
         self.assertIn("not in a git repo", done.stderr)
+
+
+class MainCallTest(unittest.TestCase):
+    """`main` called as a function, with only the real arguments."""
+
+    def test_the_repo_and_transcripts_are_read_from_the_front(self) -> None:
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        root = Path(temporary.name)
+        repo = build_repository(root)
+        transcripts = build_transcripts(root, repo / "wt-clean",
+                                        repo / "wt-scratch")
+        stub_bin = build_stub_gh(root, [])
+        self.addCleanup(os.chdir, os.getcwd())
+        self.addCleanup(os.environ.__setitem__, "PATH", os.environ["PATH"])
+        os.environ["PATH"] = f"{stub_bin}{os.pathsep}{os.environ['PATH']}"
+        printed = io.StringIO()
+        with contextlib.redirect_stdout(printed):
+            status = worktree_audit.main([str(repo), str(transcripts)])
+        rows = printed.getvalue().splitlines()
+        clean = [row for row in rows[1:]
+                 if row.endswith(f"\t{repo / 'wt-clean'}")]
+        self.assertEqual(status, 0)
+        self.assertEqual(rows[0], worktree_audit.HEADER)
+        self.assertEqual(len(clean), 1)
+        self.assertNotEqual(clean[0].split("\t")[6], "-")
 
 
 if __name__ == "__main__":
