@@ -33,12 +33,17 @@ FIRST_RELEASE = "1.0.0"
 
 PLUGIN_TABLE_START = "<!-- dotai:plugins:start -->"
 PLUGIN_TABLE_END = "<!-- dotai:plugins:end -->"
+HOOK_WIRING_PATHS = {
+    "claude": Path("hooks/hooks.json"),
+    "codex": Path("hooks/codex-hooks.json"),
+    "copilot": Path("hooks.json"),
+}
 
 PLUGINS: list[dict[str, object]] = [
     {
         "name": "pstack",
         "version": "1.0.8",
-        "hooks": True,
+        "hooks": ["claude", "codex", "copilot"],
         "description": (
             "Skills and thin named agents: poteto-mode, principles, "
             "playbooks, tools."
@@ -255,7 +260,8 @@ PLUGINS: list[dict[str, object]] = [
     },
     {
         "name": "steer",
-        "hooks": True,
+        "hooks": ["claude"],
+        "skills": False,
         "description": (
             "Harness hooks that steer agent behaviour, independent of any skill."
         ),
@@ -286,21 +292,26 @@ def core_manifest(plugin: dict[str, object]) -> dict[str, object]:
 
 
 def codex_manifest(plugin: dict[str, object]) -> dict[str, object]:
-    ships_hooks = bool(plugin.get("hooks"))
+    hook_harnesses = plugin.get("hooks", [])
+    ships_skills = bool(plugin.get("skills", True))
     manifest = core_manifest(plugin)
     manifest["homepage"] = REPOSITORY_URL
     manifest["repository"] = REPOSITORY_URL
     manifest["keywords"] = ["codex", "skills", *plugin["keywords"]]
-    manifest["skills"] = "./skills/"
-    if ships_hooks:
+    capabilities = []
+    if ships_skills:
+        manifest["skills"] = "./skills/"
+        capabilities.append("Skills")
+    if "codex" in hook_harnesses:
         manifest["hooks"] = "./hooks/codex-hooks.json"
+        capabilities.append("Hooks")
     manifest["interface"] = {
         "displayName": plugin["name"],
         "shortDescription": plugin["short"],
         "longDescription": plugin["long"],
         "developerName": AUTHOR["name"],
         "category": "Developer Tools",
-        "capabilities": ["Skills", "Hooks"] if ships_hooks else ["Skills"],
+        "capabilities": capabilities,
         "defaultPrompt": plugin["prompts"],
     }
     return manifest
@@ -378,13 +389,29 @@ def wanted_files(root: Path) -> dict[Path, str]:
         Path("README.md"): readme_with_plugin_table(root),
     }
     for plugin in PLUGINS:
-        root = Path("plugins") / str(plugin["name"])
-        files[root / "plugin.json"] = render(
+        plugin_root = Path("plugins") / str(plugin["name"])
+        files[plugin_root / "plugin.json"] = render(
             {"$schema": PLUGIN_SCHEMA, **core_manifest(plugin)}
         )
-        files[root / ".claude-plugin/plugin.json"] = render(core_manifest(plugin))
-        files[root / ".codex-plugin/plugin.json"] = render(codex_manifest(plugin))
+        files[plugin_root / ".claude-plugin/plugin.json"] = render(
+            core_manifest(plugin)
+        )
+        files[plugin_root / ".codex-plugin/plugin.json"] = render(
+            codex_manifest(plugin)
+        )
     return files
+
+
+def missing_hook_wiring(root: Path) -> list[Path]:
+    """Return declared hook wiring paths that are absent from `root`."""
+    missing = []
+    for plugin in PLUGINS:
+        plugin_root = Path("plugins") / str(plugin["name"])
+        for harness in plugin.get("hooks", []):
+            wiring = plugin_root / HOOK_WIRING_PATHS[str(harness)]
+            if not (root / wiring).is_file():
+                missing.append(wiring)
+    return missing
 
 
 def render(document: dict[str, object]) -> str:
@@ -427,13 +454,19 @@ def main(arguments: list[str] | None = None, root: Path = REPOSITORY_ROOT) -> in
 
     if options.check:
         changed = drifted(files, root)
-        if not changed:
+        missing_wiring = missing_hook_wiring(root)
+        if not changed and not missing_wiring:
             print(f"{len(files)} generated files are up to date.")
             return 0
-        print("These generated files do not match generate-plugin-manifests.py:")
-        for relative in changed:
-            print(f"  {relative}")
-        print("Edit PLUGINS in the generator and rerun it, never the file itself.")
+        if changed:
+            print("These generated files do not match generate-plugin-manifests.py:")
+            for relative in changed:
+                print(f"  {relative}")
+            print("Edit PLUGINS in the generator and rerun it, never the file itself.")
+        if missing_wiring:
+            print("These declared plugin hook wiring files are missing:")
+            for relative in missing_wiring:
+                print(f"  {relative}")
         return 2
 
     changed = write(files, root)
