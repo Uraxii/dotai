@@ -1,11 +1,19 @@
 import importlib.util
 import io
 import json
-import sre_parse
 import sys
 import unittest
 from pathlib import Path
 from unittest import mock
+
+# Checked for a route to the regex parse tree that is not private or
+# deprecated: `sre_parse` is a deprecated shim (DeprecationWarning on
+# 3.11+) that forwards to this module; the public `re` API (`re.compile`,
+# `Pattern`/`Match`) exposes no node-level structure at all. `re._parser`
+# is that shim's target: private (leading underscore) but not deprecated,
+# and the only stdlib module that still returns this tree without a
+# warning. There is no supported alternative, so use it directly.
+import re._parser as regex_parser
 
 
 HOOK_PATH = Path(__file__).resolve().parents[1] / "codex_watcher_guard.py"
@@ -533,27 +541,49 @@ class CodexWatcherGuardTests(unittest.TestCase):
 
 FORBIDDEN_CHARACTERS = "\n\r;&|$`>"
 
+# Every op these patterns actually use today, verified by walking the real
+# parse trees rather than guessing: LITERAL and RANGE build the character
+# classes; IN wraps them; MAX_REPEAT covers `+`, `*`, and `?`; SUBPATTERN
+# is a capturing or non-capturing group; ASSERT_NOT is the `(?!...)`
+# traversal guard; GROUPREF is the `(?P=name)` backreference that couples
+# -C/-o/stdin to the same repo and run name. An allowlist, not a denylist:
+# an op nobody anticipated (CATEGORY from `\S`/`\s`, ANY from `.`, NEGATE
+# from `[^...]`, or anything else) fails the test instead of passing it
+# silently, so loosening a class to use one requires touching this list.
+ALLOWED_PARSE_TREE_OPS = frozenset(
+    {
+        regex_parser.LITERAL,
+        regex_parser.RANGE,
+        regex_parser.IN,
+        regex_parser.MAX_REPEAT,
+        regex_parser.SUBPATTERN,
+        regex_parser.ASSERT_NOT,
+        regex_parser.GROUPREF,
+    }
+)
 
-def _iter_character_nodes(parsed):
-    """Yield every LITERAL/RANGE/ANY/NEGATE node reachable from `parsed`.
 
-    Descends into branches, repeats, subpatterns, and lookaheads: every
-    construct in these patterns that can still hold a character acceptor.
+def _iter_nodes(parsed):
+    """Yield every node reachable from `parsed`, including composite ones.
+
+    Descends into branches, repeats, subpatterns, lookaheads, and character
+    classes: every construct in these patterns that can hold a nested node
+    or a character acceptor. A composite node is yielded itself and then
+    recursed into, so both the container and its contents are checked.
     """
     for op, argument in parsed:
-        if op is sre_parse.BRANCH:
+        yield op, argument
+        if op is regex_parser.BRANCH:
             for branch in argument[1]:
-                yield from _iter_character_nodes(branch)
-        elif op in (sre_parse.MAX_REPEAT, sre_parse.MIN_REPEAT):
-            yield from _iter_character_nodes(argument[2])
-        elif op is sre_parse.SUBPATTERN:
-            yield from _iter_character_nodes(argument[3])
-        elif op in (sre_parse.ASSERT, sre_parse.ASSERT_NOT):
-            yield from _iter_character_nodes(argument[1])
-        elif op is sre_parse.IN:
+                yield from _iter_nodes(branch)
+        elif op in (regex_parser.MAX_REPEAT, regex_parser.MIN_REPEAT):
+            yield from _iter_nodes(argument[2])
+        elif op is regex_parser.SUBPATTERN:
+            yield from _iter_nodes(argument[3])
+        elif op in (regex_parser.ASSERT, regex_parser.ASSERT_NOT):
+            yield from _iter_nodes(argument[1])
+        elif op is regex_parser.IN:
             yield from argument
-        else:
-            yield op, argument
 
 
 class AllowlistCharacterClassTests(unittest.TestCase):
@@ -566,22 +596,20 @@ class AllowlistCharacterClassTests(unittest.TestCase):
 
     def test_no_allowlist_pattern_can_match_a_forbidden_character(self) -> None:
         for pattern in self.all_patterns():
-            parsed = sre_parse.parse(pattern.pattern)
-            for op, argument in _iter_character_nodes(parsed):
+            parsed = regex_parser.parse(pattern.pattern)
+            for op, argument in _iter_nodes(parsed):
                 with self.subTest(pattern=pattern.pattern, op=op):
-                    self.assertIsNot(
+                    self.assertIn(
                         op,
-                        sre_parse.ANY,
-                        "a `.` node matches any character, forbidden ones included",
+                        ALLOWED_PARSE_TREE_OPS,
+                        f"unexpected parse-tree op {op} in {pattern.pattern!r}; "
+                        "extend ALLOWED_PARSE_TREE_OPS deliberately if this "
+                        "op is legitimate, after checking what characters it "
+                        "can admit",
                     )
-                    self.assertIsNot(
-                        op,
-                        sre_parse.NEGATE,
-                        "a negated class ([^...]) can admit a forbidden character",
-                    )
-                    if op is sre_parse.LITERAL:
+                    if op is regex_parser.LITERAL:
                         self.assertNotIn(chr(argument), FORBIDDEN_CHARACTERS)
-                    elif op is sre_parse.RANGE:
+                    elif op is regex_parser.RANGE:
                         low, high = argument
                         for character in FORBIDDEN_CHARACTERS:
                             self.assertFalse(
