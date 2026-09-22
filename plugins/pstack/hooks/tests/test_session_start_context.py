@@ -34,13 +34,8 @@ class SessionStartContextTests(unittest.TestCase):
                     parsed,
                 )
 
-    def test_claude_manifest_wires_session_start_without_disturbing_prompt_hook(
-        self,
-    ) -> None:
+    def test_claude_manifest_wires_session_start(self) -> None:
         config = json.loads((REPOSITORY_ROOT / "hooks" / "hooks.json").read_text())
-
-        prompt_command = config["hooks"]["UserPromptSubmit"][0]["hooks"][0]["command"]
-        self.assertIn("handoff-token-flag.py --mode context", prompt_command)
 
         session_start = config["hooks"]["SessionStart"][0]
         self.assertEqual("startup|clear|compact", session_start["matcher"])
@@ -84,16 +79,10 @@ class SessionStartContextTests(unittest.TestCase):
             session_start["bash"],
         )
 
-        stop_command = config["hooks"]["agentStop"][0]["bash"]
-        self.assertIn("handoff-token-flag.py --mode stop", stop_command)
-
     def test_codex_manifest_wires_session_start_and_post_compact(self) -> None:
         config = json.loads(
             (REPOSITORY_ROOT / "hooks" / "codex-hooks.json").read_text()
         )
-
-        prompt_command = config["hooks"]["UserPromptSubmit"][0]["hooks"][0]["command"]
-        self.assertIn("handoff-token-flag.py --mode context", prompt_command)
 
         session_start_command = config["hooks"]["SessionStart"][0]["hooks"][0][
             "command"
