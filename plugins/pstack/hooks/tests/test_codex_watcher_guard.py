@@ -106,11 +106,11 @@ class CodexWatcherGuardTests(unittest.TestCase):
         )
         self.assert_allowed("pstack:developer-codex", command)
 
-    def test_bare_codex_command_is_denied_for_both_watchers(self) -> None:
-        # The allowlist matches codex-agent, the machine-local wrapper that
-        # sets a dedicated CODEX_HOME before it execs the real codex binary.
-        # The bare codex binary must not match, even though it names the
-        # same underlying commands.
+    def test_bare_codex_command_is_allowed_for_both_watchers(self) -> None:
+        # `codex-agent` is a machine-local wrapper that isolates CODEX_HOME;
+        # it exists on no machine by default. The watcher body falls back to
+        # the bare `codex` binary when the wrapper is missing, so both
+        # command words must reach the same allowlisted commands.
         reviewer_exec = (
             f"codex exec -m gpt-5.6-terra -s read-only -c agents.enabled=false "
             f"-C {REPO} -o {RUN}/report.md - < {RUN}/prompt.txt"
@@ -121,17 +121,21 @@ class CodexWatcherGuardTests(unittest.TestCase):
         )
         for agent_type in WATCHERS:
             with self.subTest(agent_type=agent_type):
-                self.assert_denied(
-                    payload(agent_type, "Bash", command="codex --version"), "Bash"
-                )
-                self.assert_denied(
-                    payload(agent_type, "Bash", command="codex login status"), "Bash"
-                )
-        self.assert_denied(
-            payload("reviewer-codex", "Bash", command=reviewer_exec), "Bash"
+                self.assert_allowed(agent_type, "codex --version")
+                self.assert_allowed(agent_type, "codex login status")
+        self.assert_allowed("reviewer-codex", reviewer_exec)
+        self.assert_allowed("pstack:developer-codex", developer_exec)
+
+    def test_bare_codex_exec_still_enforces_repo_containment(self) -> None:
+        # The `codex` word must be subject to the same repo/name coupling as
+        # `codex-agent`, not a looser check that happens to share a prefix.
+        other_run = f"{OTHER_REPO}/.nikki-agents/codex-runs/sample-run"
+        command = (
+            f"codex exec -m gpt-5.6-terra -s read-only -c agents.enabled=false "
+            f"-C {REPO} -o {other_run}/report.md - < {other_run}/prompt.txt"
         )
         self.assert_denied(
-            payload("pstack:developer-codex", "Bash", command=developer_exec), "Bash"
+            payload("reviewer-codex", "Bash", command=command), "Bash"
         )
 
     def test_existing_worktree_must_sit_inside_the_repo(self) -> None:
