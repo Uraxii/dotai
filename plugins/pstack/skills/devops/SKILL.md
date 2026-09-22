@@ -1,9 +1,9 @@
 ---
-name: azure-devops
-description: Query Azure DevOps projects, repos, builds, pipelines, releases, environments, Kubernetes resources, and WIQL work item ids through read-only public REST APIs for CI, release, repository, and deployment inventory questions.
+name: devops
+description: Query an Azure DevOps organization read-only through its public REST API with this skill's azure_devops.py: projects, git repos and file contents, builds, pipelines, releases, release environments, Kubernetes resources, and WIQL work item ids. Use for CI, release, repository, and deployment inventory questions about Azure DevOps. Not for GitHub, GitLab, or any other hosting platform.
 ---
 
-# azure-devops
+# devops
 
 Paths below are relative to this skill's directory. Thin read-only reader; `wiql` is the only POST (read-only WIQL, returns ids only).
 
