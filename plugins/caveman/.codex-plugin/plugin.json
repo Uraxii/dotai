@@ -1,0 +1,32 @@
+{
+  "name": "caveman",
+  "version": "1.0.0",
+  "description": "Answer in a compressed register that drops filler and keeps every technical fact.",
+  "author": {
+    "name": "Uraxii",
+    "url": "https://github.com/Uraxii"
+  },
+  "homepage": "https://github.com/Uraxii/dotai",
+  "repository": "https://github.com/Uraxii/dotai",
+  "keywords": [
+    "codex",
+    "skills",
+    "writing-style",
+    "token-efficiency"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "caveman",
+    "shortDescription": "A terse reply style that keeps the substance.",
+    "longDescription": "Switches replies into a compressed style for the rest of the session: no pleasantries, no hedging, no narration of tool calls. Numbers, code, error strings, and negations stay exact, and the style steps aside for security warnings and for anything a reader could misread when compressed.",
+    "developerName": "Uraxii",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Skills"
+    ],
+    "defaultPrompt": [
+      "Turn on caveman mode for the rest of this session.",
+      "Be brief and use fewer tokens from here on."
+    ]
+  }
+}

@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """Generate every plugin manifest and both marketplace files from one list.
 
-The repository ships twelve plugins. Each needs a `plugin.json`, a
+Every plugin in the repository needs a `plugin.json`, a
 `.claude-plugin/plugin.json`, and a `.codex-plugin/plugin.json`, and each
 must appear in `.claude-plugin/marketplace.json`, in
 `.agents/plugins/marketplace.json`, and in the plugin table in `README.md`.
-That is 36 manifests, 24 marketplace entries, and 12 table rows whose names,
-versions, and descriptions have to agree.
+That is three manifests, two marketplace entries, and one table row per
+plugin, whose names, versions, and descriptions all have to agree.
 
 Edit PLUGINS below and rerun this script. Never hand-edit a generated
 file: `--check` exits 2 when one has drifted.
@@ -28,7 +28,7 @@ MARKETPLACE_DESCRIPTION = (
     "Skills and thin named agents for software development work."
 )
 
-# Every plugin except pstack is a first release, so it starts at 1.0.0.
+# The version a plugin gets when its entry below carries no explicit one.
 FIRST_RELEASE = "1.0.0"
 
 PLUGIN_TABLE_START = "<!-- dotai:plugins:start -->"
@@ -180,6 +180,7 @@ PLUGINS: list[dict[str, object]] = [
     },
     {
         "name": "mpocock",
+        "version": "1.1.0",
         "description": (
             "Compact a conversation into a handoff document another agent "
             "can pick the work up from."
@@ -257,6 +258,27 @@ PLUGINS: list[dict[str, object]] = [
         "prompts": [
             "Who calls this function?",
             "What breaks if I change this symbol?",
+        ],
+    },
+    {
+        "name": "caveman",
+        "version": "1.0.0",
+        "description": (
+            "Answer in a compressed register that drops filler and keeps "
+            "every technical fact."
+        ),
+        "short": "A terse reply style that keeps the substance.",
+        "long": (
+            "Switches replies into a compressed style for the rest of the "
+            "session: no pleasantries, no hedging, no narration of tool "
+            "calls. Numbers, code, error strings, and negations stay exact, "
+            "and the style steps aside for security warnings and for "
+            "anything a reader could misread when compressed."
+        ),
+        "keywords": ["writing-style", "token-efficiency"],
+        "prompts": [
+            "Turn on caveman mode for the rest of this session.",
+            "Be brief and use fewer tokens from here on.",
         ],
     },
     {

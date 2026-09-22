@@ -24,6 +24,7 @@ needs `pstack` installed.
 | `skills` | Review and author SKILL.md files, finding and repairing the smells that stop a skill triggering. |
 | `bd` | Track, create, claim, and close repo issues with the bd (beads) tool, including dependency links. |
 | `cbm` | Query the codebase-memory code graph from a shell: callers, dependencies, impact, dead code, and ADRs. |
+| `caveman` | Answer in a compressed register that drops filler and keeps every technical fact. |
 | `steer` | Harness hooks that steer agent behaviour, independent of any skill. |
 
 <!-- dotai:plugins:end -->
