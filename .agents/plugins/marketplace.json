@@ -159,6 +159,20 @@
       "category": "Productivity"
     },
     {
+      "name": "caveman",
+      "source": {
+        "source": "url",
+        "url": "https://github.com/Uraxii/dotai.git",
+        "ref": "main",
+        "path": "plugins/caveman"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    },
+    {
       "name": "steer",
       "source": {
         "source": "url",
