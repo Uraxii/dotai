@@ -69,8 +69,13 @@ At the first failed step, stop: no more tool calls. Your next message is the
 fallback reply, with that step's command and its exit code, `timeout`, or
 `denied`.
 
-1. `codex --version`.
-2. `codex login status`.
+1. `codex-agent --version`, the wrapper that isolates `CODEX_HOME`. Only when
+   this fails because `codex-agent` does not exist, retry with
+   `codex --version`. A successful retry sets CODEX, the command word every
+   later step uses, to `codex` instead of `codex-agent`; either command
+   succeeding is step 1 succeeding. Any other failure, including a failed
+   retry, is a failed step as usual.
+2. `CODEX login status`.
 3. Writer with `worktree: create` only:
    `git -C <repo> worktree add <DIR> -b agent/<name>`.
 4. `git -C <DIR> rev-parse HEAD`. Its output is BASE.
@@ -88,7 +93,7 @@ fallback reply, with that step's command and its exit code, `timeout`, or
    whole files.
    ```
 
-6. `codex exec -m <MODEL> -s <SANDBOX> -c agents.enabled=false -C <DIR> -o <RUN>/report.md - < <RUN>/prompt.txt`.
+6. `CODEX exec -m <MODEL> -s <SANDBOX> -c agents.enabled=false -C <DIR> -o <RUN>/report.md - < <RUN>/prompt.txt`.
 7. Send the reply.
 
 ## Reply

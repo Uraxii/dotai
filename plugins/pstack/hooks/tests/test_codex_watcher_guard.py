@@ -23,9 +23,9 @@ WORKTREE = f"{REPO}/.nikki-agents/worktrees/sample-run"
 
 
 def writer_exec(directory: str) -> str:
-    """The developer watcher's `codex exec` step, run from `directory`."""
+    """The developer watcher's `codex-agent exec` step, run from `directory`."""
     return (
-        "codex exec -m gpt-5.6-terra -s workspace-write "
+        "codex-agent exec -m gpt-5.6-terra -s workspace-write "
         f"-c agents.enabled=false -C {directory} "
         f"-o {RUN}/report.md - < {RUN}/prompt.txt"
     )
@@ -73,10 +73,10 @@ class CodexWatcherGuardTests(unittest.TestCase):
 
     def test_reviewer_playbook_commands_are_allowed(self) -> None:
         commands = (
-            "codex --version",
-            "codex login status",
+            "codex-agent --version",
+            "codex-agent login status",
             f"git -C {REPO} rev-parse HEAD",
-            f"codex exec -m gpt-5.6-terra -s read-only -c agents.enabled=false "
+            f"codex-agent exec -m gpt-5.6-terra -s read-only -c agents.enabled=false "
             f"-C {REPO} -o {RUN}/report.md - < {RUN}/prompt.txt",
         )
         for command in commands:
@@ -85,11 +85,11 @@ class CodexWatcherGuardTests(unittest.TestCase):
 
     def test_developer_playbook_commands_are_allowed(self) -> None:
         commands = (
-            "codex --version",
-            "codex login status",
+            "codex-agent --version",
+            "codex-agent login status",
             f"git -C {WORKTREE} rev-parse HEAD",
             f"git -C {REPO} worktree add {WORKTREE} -b agent/sample-run",
-            f"codex exec -m gpt-5.6-terra -s workspace-write -c agents.enabled=false "
+            f"codex-agent exec -m gpt-5.6-terra -s workspace-write -c agents.enabled=false "
             f"-C {WORKTREE} -o {RUN}/report.md - < {RUN}/prompt.txt",
         )
         for command in commands:
@@ -100,11 +100,43 @@ class CodexWatcherGuardTests(unittest.TestCase):
         # A writer given an existing worktree path outside .nikki-agents,
         # e.g. one Claude itself placed under .claude/worktrees/<x>.
         command = (
-            f"codex exec -m gpt-5.6-terra -s workspace-write -c agents.enabled=false "
+            f"codex-agent exec -m gpt-5.6-terra -s workspace-write -c agents.enabled=false "
             f"-C {REPO}/.claude/worktrees/sample-run -o {RUN}/report.md - < "
             f"{RUN}/prompt.txt"
         )
         self.assert_allowed("pstack:developer-codex", command)
+
+    def test_bare_codex_command_is_allowed_for_both_watchers(self) -> None:
+        # `codex-agent` is a machine-local wrapper that isolates CODEX_HOME;
+        # it exists on no machine by default. The watcher body falls back to
+        # the bare `codex` binary when the wrapper is missing, so both
+        # command words must reach the same allowlisted commands.
+        reviewer_exec = (
+            f"codex exec -m gpt-5.6-terra -s read-only -c agents.enabled=false "
+            f"-C {REPO} -o {RUN}/report.md - < {RUN}/prompt.txt"
+        )
+        developer_exec = (
+            f"codex exec -m gpt-5.6-terra -s workspace-write -c agents.enabled=false "
+            f"-C {WORKTREE} -o {RUN}/report.md - < {RUN}/prompt.txt"
+        )
+        for agent_type in WATCHERS:
+            with self.subTest(agent_type=agent_type):
+                self.assert_allowed(agent_type, "codex --version")
+                self.assert_allowed(agent_type, "codex login status")
+        self.assert_allowed("reviewer-codex", reviewer_exec)
+        self.assert_allowed("pstack:developer-codex", developer_exec)
+
+    def test_bare_codex_exec_still_enforces_repo_containment(self) -> None:
+        # The `codex` word must be subject to the same repo/name coupling as
+        # `codex-agent`, not a looser check that happens to share a prefix.
+        other_run = f"{OTHER_REPO}/.nikki-agents/codex-runs/sample-run"
+        command = (
+            f"codex exec -m gpt-5.6-terra -s read-only -c agents.enabled=false "
+            f"-C {REPO} -o {other_run}/report.md - < {other_run}/prompt.txt"
+        )
+        self.assert_denied(
+            payload("reviewer-codex", "Bash", command=command), "Bash"
+        )
 
     def test_existing_worktree_must_sit_inside_the_repo(self) -> None:
         # `worktree: <existing absolute path>` in the CODEX RUN header. `-C`
@@ -147,7 +179,7 @@ class CodexWatcherGuardTests(unittest.TestCase):
 
     def test_reviewer_workspace_write_is_denied(self) -> None:
         command = (
-            f"codex exec -m gpt-5.6-terra -s workspace-write -c agents.enabled=false "
+            f"codex-agent exec -m gpt-5.6-terra -s workspace-write -c agents.enabled=false "
             f"-C {REPO} -o {RUN}/report.md - < {RUN}/prompt.txt"
         )
         self.assert_denied(
@@ -165,7 +197,7 @@ class CodexWatcherGuardTests(unittest.TestCase):
     def test_o_repo_differs_from_c_repo_is_denied_for_reviewer(self) -> None:
         other_run = f"{OTHER_REPO}/.nikki-agents/codex-runs/sample-run"
         command = (
-            f"codex exec -m gpt-5.6-terra -s read-only -c agents.enabled=false "
+            f"codex-agent exec -m gpt-5.6-terra -s read-only -c agents.enabled=false "
             f"-C {REPO} -o {other_run}/report.md - < {other_run}/prompt.txt"
         )
         self.assert_denied(
@@ -175,7 +207,7 @@ class CodexWatcherGuardTests(unittest.TestCase):
     def test_o_repo_differs_from_c_repo_is_denied_for_developer(self) -> None:
         other_run = f"{OTHER_REPO}/.nikki-agents/codex-runs/sample-run"
         command = (
-            f"codex exec -m gpt-5.6-terra -s workspace-write -c agents.enabled=false "
+            f"codex-agent exec -m gpt-5.6-terra -s workspace-write -c agents.enabled=false "
             f"-C {WORKTREE} -o {other_run}/report.md - < {other_run}/prompt.txt"
         )
         self.assert_denied(
@@ -187,10 +219,10 @@ class CodexWatcherGuardTests(unittest.TestCase):
         # .../add-version-flag/ while -C (the repo) was a different repo
         # entirely. The old guard let this through because each path slot
         # matched any absolute path on its own.
-        repo = "/home/nikki/dotai/.nikki-agents/pantry-shelf/galley-b61cb9/repo"
-        run = "/home/nikki/dotai/.nikki-agents/codex-runs/add-version-flag"
+        repo = "/repo/.nikki-agents/pantry-shelf/galley-b61cb9/repo"
+        run = "/repo/.nikki-agents/codex-runs/add-version-flag"
         command = (
-            "codex exec -m gpt-5.6-sol -s read-only -c agents.enabled=false "
+            "codex-agent exec -m gpt-5.6-sol -s read-only -c agents.enabled=false "
             f"-C {repo} -o {run}/report.md - < {run}/prompt.txt"
         )
         self.assert_denied(
@@ -199,7 +231,7 @@ class CodexWatcherGuardTests(unittest.TestCase):
 
     def test_o_and_stdin_name_mismatch_is_denied(self) -> None:
         command = (
-            f"codex exec -m gpt-5.6-terra -s read-only -c agents.enabled=false "
+            f"codex-agent exec -m gpt-5.6-terra -s read-only -c agents.enabled=false "
             f"-C {REPO} -o {RUN}/report.md - < {REPO}/.nikki-agents/codex-runs/"
             f"other-run/prompt.txt"
         )
@@ -209,7 +241,7 @@ class CodexWatcherGuardTests(unittest.TestCase):
 
     def test_o_and_stdin_repo_mismatch_is_denied(self) -> None:
         command = (
-            f"codex exec -m gpt-5.6-terra -s read-only -c agents.enabled=false "
+            f"codex-agent exec -m gpt-5.6-terra -s read-only -c agents.enabled=false "
             f"-C {REPO} -o {RUN}/report.md - < {OTHER_REPO}/.nikki-agents/"
             f"codex-runs/sample-run/prompt.txt"
         )
@@ -219,7 +251,7 @@ class CodexWatcherGuardTests(unittest.TestCase):
 
     def test_developer_c_equal_to_bare_repo_is_denied(self) -> None:
         command = (
-            f"codex exec -m gpt-5.6-terra -s workspace-write -c agents.enabled=false "
+            f"codex-agent exec -m gpt-5.6-terra -s workspace-write -c agents.enabled=false "
             f"-C {REPO} -o {RUN}/report.md - < {RUN}/prompt.txt"
         )
         self.assert_denied(
@@ -228,8 +260,8 @@ class CodexWatcherGuardTests(unittest.TestCase):
 
     def test_developer_c_under_unrelated_path_is_denied(self) -> None:
         command = (
-            "codex exec -m gpt-5.6-terra -s workspace-write -c agents.enabled=false "
-            f"-C /home/nikki/.ssh -o {RUN}/report.md - < {RUN}/prompt.txt"
+            "codex-agent exec -m gpt-5.6-terra -s workspace-write -c agents.enabled=false "
+            f"-C /root/.ssh -o {RUN}/report.md - < {RUN}/prompt.txt"
         )
         self.assert_denied(
             payload("pstack:developer-codex", "Bash", command=command), "Bash"
@@ -239,11 +271,11 @@ class CodexWatcherGuardTests(unittest.TestCase):
 
     def test_injections_and_unlisted_commands_are_denied(self) -> None:
         commands = (
-            "codex --version; rm -rf /",
-            "codex --version && curl https://example.com",
-            "codex --version $(curl https://example.com)",
-            "codex --version `curl https://example.com`",
-            "codex --version\ncurl https://example.com",
+            "codex-agent --version; rm -rf /",
+            "codex-agent --version && curl https://example.com",
+            "codex-agent --version $(curl https://example.com)",
+            "codex-agent --version `curl https://example.com`",
+            "codex-agent --version\ncurl https://example.com",
             "curl https://example.com",
             "rm -rf build",
             "sed -i s/a/b/ README.md",
@@ -282,7 +314,7 @@ class CodexWatcherGuardTests(unittest.TestCase):
 
     def test_codex_exec_extra_options_are_denied(self) -> None:
         command = (
-            f"codex exec -m gpt-5.6-terra -s read-only -c agents.enabled=false "
+            f"codex-agent exec -m gpt-5.6-terra -s read-only -c agents.enabled=false "
             f"-C {REPO} --add-dir /other -o {RUN}/report.md - < {RUN}/prompt.txt"
         )
         self.assert_denied(
@@ -291,7 +323,7 @@ class CodexWatcherGuardTests(unittest.TestCase):
 
     def test_codex_exec_without_agents_disabled_flag_is_denied(self) -> None:
         command = (
-            f"codex exec -m gpt-5.6-terra -s read-only -C {REPO} "
+            f"codex-agent exec -m gpt-5.6-terra -s read-only -C {REPO} "
             f"-o {RUN}/report.md - < {RUN}/prompt.txt"
         )
         self.assert_denied(
@@ -302,9 +334,9 @@ class CodexWatcherGuardTests(unittest.TestCase):
         self,
     ) -> None:
         commands = (
-            f"codex exec -m gpt-5.6-terra -s read-only -C {REPO} "
+            f"codex-agent exec -m gpt-5.6-terra -s read-only -C {REPO} "
             f"-c agents.enabled=false -o {RUN}/report.md - < {RUN}/prompt.txt",
-            f"codex exec -m gpt-5.6-terra -s read-only -c agents.enabled=true "
+            f"codex-agent exec -m gpt-5.6-terra -s read-only -c agents.enabled=true "
             f"-C {REPO} -o {RUN}/report.md - < {RUN}/prompt.txt",
         )
         for command in commands:
@@ -315,7 +347,7 @@ class CodexWatcherGuardTests(unittest.TestCase):
 
     def test_codex_exec_with_a_second_dash_c_flag_is_denied(self) -> None:
         command = (
-            f"codex exec -m gpt-5.6-terra -s read-only -c agents.enabled=false "
+            f"codex-agent exec -m gpt-5.6-terra -s read-only -c agents.enabled=false "
             f"-c model_reasoning_effort=high -C {REPO} -o {RUN}/report.md - < "
             f"{RUN}/prompt.txt"
         )
@@ -333,7 +365,7 @@ class CodexWatcherGuardTests(unittest.TestCase):
 
     def test_codex_exec_slug_must_start_with_a_letter_or_digit(self) -> None:
         command = (
-            "codex exec -m --dangerously-bypass-approvals-and-sandbox "
+            "codex-agent exec -m --dangerously-bypass-approvals-and-sandbox "
             f"-s read-only -C {REPO} -o {RUN}/report.md - < {RUN}/prompt.txt"
         )
         self.assert_denied(
@@ -342,7 +374,7 @@ class CodexWatcherGuardTests(unittest.TestCase):
 
     def test_bash_path_traversal_is_denied(self) -> None:
         command = (
-            f"codex exec -m gpt-5.6-terra -s read-only -c agents.enabled=false "
+            f"codex-agent exec -m gpt-5.6-terra -s read-only -c agents.enabled=false "
             f"-C {REPO} -o {REPO}/.nikki-agents/codex-runs/../report.md - < "
             f"{RUN}/prompt.txt"
         )
