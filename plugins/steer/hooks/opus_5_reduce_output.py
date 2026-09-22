@@ -54,11 +54,14 @@ from pathlib import Path
 DEFAULT_LOG_MAX_BYTES = 1_000_000
 DEFAULT_MODEL_PATTERN = "opus-5|fable"
 
-# Tools whose presence alone means the turn changed something. Agent and
-# Task are in here because a delegate's own edits never reach this
-# transcript, so a turn that spawned one has to be assumed to have changed
-# something. Bash is deliberately absent: it is classified by its command.
-MUTATING_TOOLS = frozenset({"Write", "Edit", "NotebookEdit", "Agent", "Task"})
+# Tools whose presence alone means the turn changed something. Agent, Task
+# and SendMessage are in here because a delegate's own edits never reach
+# this transcript, so a turn that started or resumed one has to be assumed
+# to have changed something. Bash is deliberately absent: it is classified
+# by its command.
+MUTATING_TOOLS = frozenset(
+    {"Write", "Edit", "MultiEdit", "NotebookEdit", "Agent", "Task", "SendMessage"}
+)
 
 # Bash is classified by a DENYLIST of mutating shapes rather than an
 # allowlist of safe ones, because an unrecognised command is far more

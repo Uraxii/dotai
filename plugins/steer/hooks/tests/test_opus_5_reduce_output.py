@@ -232,6 +232,24 @@ class Opus5ReduceOutputTests(unittest.TestCase):
             self.decide({"transcript_path": self.transcript("agent", entries)}),
         )
 
+    def test_a_turn_containing_a_multi_edit_asks_for_a_recap(self) -> None:
+        entries = [user_prompt(), assistant(tools=["MultiEdit"])]
+
+        self.assertEqual(
+            "block",
+            self.decide({"transcript_path": self.transcript("multi", entries)}),
+        )
+
+    def test_a_turn_that_resumed_a_delegate_asks_for_a_recap(self) -> None:
+        """SendMessage makes a live delegate work, on the same argument that
+        puts Agent and Task here. Its edits never reach this transcript."""
+        entries = [user_prompt(), assistant(tools=["SendMessage"])]
+
+        self.assertEqual(
+            "block",
+            self.decide({"transcript_path": self.transcript("resume", entries)}),
+        )
+
     def test_a_turn_that_spawned_a_task_asks_for_a_recap(self) -> None:
         entries = [user_prompt(), assistant(tools=["Task"])]
 
