@@ -4,6 +4,12 @@
 Wired in the plugin's `hooks/hooks.json` under `Stop`.
 `CLEAN_RECAP_*` and `clean-recap.log` retain their original names deliberately.
 
+Env vars, all optional:
+- CLEAN_RECAP_LOG - path to the audit log. Default ~/.claude/clean-recap.log.
+- CLEAN_RECAP_LOG_MAX_BYTES - size at which the log rolls over. Default 1,000,000.
+- CLEAN_RECAP_MODEL_PATTERN - regex the current model must match to trigger
+  a recap. Default "opus-5|fable".
+
 Fires when Claude tries to end its turn. Returns `{"decision": "block"}`,
 which does not stop at all: it hands Claude one more instruction, to write
 a short recap for someone who has not read the code. Every stop gets one
@@ -39,8 +45,9 @@ from datetime import datetime
 from pathlib import Path
 
 # The audit log rolls over once it reaches this size instead of growing
-# forever. One rollover, no numbered backups: this log is an audit trail
-# for the current stretch of sessions, not a record kept across rollovers.
+# forever. It rolls over once, with no numbered backups, because it is an
+# audit trail for the current stretch of sessions, not a record kept
+# across rollovers.
 DEFAULT_LOG_MAX_BYTES = 1_000_000
 
 # A prompt, not config. Keep it short; it is injected on every turn.
@@ -65,18 +72,25 @@ def _log(message: str) -> None:
     path = os.environ.get("CLEAN_RECAP_LOG") or str(
         Path.home() / ".claude" / "clean-recap.log"
     )
-    max_bytes = int(
-        os.environ.get("CLEAN_RECAP_LOG_MAX_BYTES") or DEFAULT_LOG_MAX_BYTES
-    )
     try:
+        try:
+            max_bytes = int(
+                os.environ.get("CLEAN_RECAP_LOG_MAX_BYTES") or DEFAULT_LOG_MAX_BYTES
+            )
+        except ValueError:
+            max_bytes = DEFAULT_LOG_MAX_BYTES
         stamp = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
         mode = "a"
+        rolled_over = False
         try:
             if Path(path).stat().st_size >= max_bytes:
                 mode = "w"
+                rolled_over = True
         except OSError:
             pass
         with open(path, mode, encoding="utf-8") as f:
+            if rolled_over:
+                f.write(f"{stamp} clean-recap.log rolled over; earlier lines were dropped\n")
             f.write(f"{stamp} {message}\n")
     except OSError:
         pass
