@@ -5,7 +5,7 @@ argument-hint: "What will the next session be used for?"
 disable-model-invocation: true
 ---
 
-Write a handoff document Summarizing the objective plus the next-session focus.
+Write a handoff document summarizing the objective plus the next-session focus.
 
 Write handoffs into `.handoffs/` at the project root.
 
