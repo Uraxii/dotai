@@ -71,7 +71,7 @@ Tests alone are not sufficient verification. A PR is verified only when its unit
 
 ### Boot recipe, for every live lane
 
-Each live lane runs in its own worktree at the PR head. Drive through the skill path or exact commands recorded in this boot recipe.
+Each live lane runs in its own worktree at the PR head, per the **principle-separate-before-serializing-shared-state** principle skill. Drive through the skill path or exact commands recorded in this boot recipe.
 
 - [ ] `git fetch origin <head-branch> && git checkout <head SHA>`.
 - [ ] <Start the backend and the surface. Wait for ready.>
