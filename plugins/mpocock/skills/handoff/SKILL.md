@@ -5,7 +5,11 @@ argument-hint: "What will the next session be used for?"
 disable-model-invocation: true
 ---
 
-Write a handoff document summarising the current conversation so a fresh agent can continue the work. Save to the temporary directory of the user's OS - not the current workspace.
+Write a handoff document summarizing the objective plus the next-session focus.
+
+Write handoffs into `.handoffs/` at the project root.
+
+When this handoff is one link in a sequence, capture the whole workstream: overarching goal, full task list with done / current / remaining status, and every decision, convention, or constraint agreed up front that binds all tasks. That is carry-forward context and it must survive the entire chain.
 
 Include a "suggested skills" section in the document, naming which skills the next agent should call the Skill tool for.
 
