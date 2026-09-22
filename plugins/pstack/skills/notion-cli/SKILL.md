@@ -16,7 +16,8 @@ supported, use an available Notion connector and its current documentation.
 Keep the requested content format and destination unchanged.
 
 Check token presence without printing its value. For credentials stored in
-Proton Pass, retrieve the token from there.
+Proton Pass, retrieve the token with the Proton Pass CLI at use time. Never
+copy it into a file, an env file, or shell history.
 Read back writes to verify the requested result. Installing this skill does
 not authorize page replacement, deletion, or worker deployment.
 
