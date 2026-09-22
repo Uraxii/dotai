@@ -108,10 +108,11 @@ class Opus5ReduceOutputTests(unittest.TestCase):
     def test_sibling_manifests_do_not_install_the_stop_hook(self) -> None:
         # Codex documents no turn-end event, and Copilot's agentStop envelope
         # is camelCase, so its stopHookActive loop guard would never trip.
+        pstack_root = REPOSITORY_ROOT.parent / "pstack"
         codex = json.loads(
-            (REPOSITORY_ROOT / "hooks" / "codex-hooks.json").read_text()
+            (pstack_root / "hooks" / "codex-hooks.json").read_text()
         )
-        copilot = json.loads((REPOSITORY_ROOT / "hooks.json").read_text())
+        copilot = json.loads((pstack_root / "hooks.json").read_text())
 
         self.assertNotIn("Stop", codex["hooks"])
         self.assertNotIn("opus_5_reduce_output", json.dumps(copilot))
