@@ -61,11 +61,11 @@ Cypher for anything else: `cbm query_graph '{"project":"P","query":"MATCH (f:Fun
 - `manage_adr` modes are `get|update|sections`; unknown modes fall through to `get`.
 - Cypher subset: `NOT f.is_test` fails ("unexpected operator"). Write `f.is_test = false`.
 - Cold start ~0.1s per call; on a 60k-node DB the heavy tools (get_architecture, search_code, get_graph_schema) take 0.7-1.3s.
-- `get_architecture.languages` omits GDScript (fps-mp-test reports Bash/YAML). The .gd symbols are indexed; trust `node_labels`.
+- `get_architecture.languages` omits GDScript (a Godot repo reports Bash/YAML). The .gd symbols are indexed; trust `node_labels`.
 - Repos containing nested git worktrees get those indexed too (qualified names under `worktrees.*`). Filter with `file_pattern`, a glob anchored at the repo root: `"file_pattern":"src/**"` excludes them, `"*.gd"` does not.
 - Never run `codebase-memory-mcp install` to "fix" things: it rebuilds every index and writes hooks into user settings.
 - If a call fails with `command not found`, follow `references/SETUP.md`, then rerun `codebase-memory-mcp --version` before retrying.
-- Snippet line numbers not matching the file = stale index. `detect_changes` can still say 0 changed (seen on lodestar). Re-run `index_repository` on that repo.
+- Snippet line numbers not matching the file = stale index. `detect_changes` can still say 0 changed (observed on an indexed repo). Re-run `index_repository` on that repo.
 - `delete_project`, `index_repository`, `manage_adr update`, `ingest_traces` write. Everything else is read-only.
 
 Full arg table for all 14 tools: `references/tools.md`. Regenerate `references/tools.json` after a binary upgrade with `bash scripts/dump-schemas.sh`.
