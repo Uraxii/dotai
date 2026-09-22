@@ -1,0 +1,32 @@
+{
+  "name": "notion",
+  "version": "1.0.0",
+  "description": "Reach Notion from the command line, and publish a code-change explainer as a Notion page.",
+  "author": {
+    "name": "Uraxii",
+    "url": "https://github.com/Uraxii"
+  },
+  "homepage": "https://github.com/Uraxii/dotai",
+  "repository": "https://github.com/Uraxii/dotai",
+  "keywords": [
+    "codex",
+    "skills",
+    "notion",
+    "cli"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "notion",
+    "shortDescription": "Notion CLI access and Notion-page explainers.",
+    "longDescription": "Drives the Notion API through the ntn command line tool: read and search content, create pages, query databases, upload files, and deploy workers. Also publishes an explanation of a diff, branch, or pull request as a native Notion page.",
+    "developerName": "Uraxii",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Skills"
+    ],
+    "defaultPrompt": [
+      "Create a Notion page from these notes.",
+      "Explain this pull request as a Notion page."
+    ]
+  }
+}

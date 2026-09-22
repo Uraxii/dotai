@@ -1,0 +1,9 @@
+{
+  "name": "notion",
+  "version": "1.0.0",
+  "description": "Reach Notion from the command line, and publish a code-change explainer as a Notion page.",
+  "author": {
+    "name": "Uraxii",
+    "url": "https://github.com/Uraxii"
+  }
+}

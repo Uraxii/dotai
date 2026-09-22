@@ -1,0 +1,32 @@
+{
+  "name": "mpocock",
+  "version": "1.0.0",
+  "description": "Compact a conversation into a handoff document another agent can pick the work up from.",
+  "author": {
+    "name": "Uraxii",
+    "url": "https://github.com/Uraxii"
+  },
+  "homepage": "https://github.com/Uraxii/dotai",
+  "repository": "https://github.com/Uraxii/dotai",
+  "keywords": [
+    "codex",
+    "skills",
+    "handoff",
+    "context"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "mpocock",
+    "shortDescription": "Session handoff documents.",
+    "longDescription": "Writes down what a session established, what it decided, and what is still open, in a form a fresh agent reads instead of the transcript. Use it before context runs out, before handing a long pipeline to a successor, or when another session continues the work.",
+    "developerName": "Uraxii",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Skills"
+    ],
+    "defaultPrompt": [
+      "Write a handoff document for this session.",
+      "Compact what we have done so another agent can continue."
+    ]
+  }
+}

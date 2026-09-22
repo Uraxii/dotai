@@ -1,0 +1,396 @@
+#!/usr/bin/env python3
+"""Generate every plugin manifest and both marketplace files from one list.
+
+The repository ships eleven plugins. Each needs a `plugin.json`, a
+`.claude-plugin/plugin.json`, and a `.codex-plugin/plugin.json`, and each
+must appear in `.claude-plugin/marketplace.json` and
+`.agents/plugins/marketplace.json`. That is 33 manifests and 22
+marketplace entries whose names, versions, and descriptions have to agree.
+
+Edit PLUGINS below and rerun this script. Never hand-edit a generated
+file: `--check` exits 2 when one has drifted.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import sys
+from pathlib import Path
+
+
+REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
+REPOSITORY_URL = "https://github.com/Uraxii/dotai"
+AUTHOR = {"name": "Uraxii", "url": "https://github.com/Uraxii"}
+PLUGIN_SCHEMA = "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json"
+MARKETPLACE_DESCRIPTION = (
+    "Skills and thin named agents for software development work."
+)
+
+# Every plugin except pstack is a first release, so it starts at 1.0.0.
+FIRST_RELEASE = "1.0.0"
+
+PLUGINS: list[dict[str, object]] = [
+    {
+        "name": "pstack",
+        "version": "1.0.8",
+        "hooks": True,
+        "description": (
+            "Skills and thin named agents: poteto-mode, principles, "
+            "playbooks, tools."
+        ),
+        "short": "Reusable skills for software development work.",
+        "long": (
+            "A collection of reusable workflows, principles, playbooks, and "
+            "tools for Codex and other coding agents."
+        ),
+        "keywords": ["software-development"],
+        "prompts": [
+            "Show me which pstack skills can help with this task.",
+            "Use poteto-mode to work through this task.",
+            "Set up pstack for this Codex environment.",
+        ],
+    },
+    {
+        "name": "artifact",
+        "description": (
+            "Explain a code change as a self-contained interactive HTML page."
+        ),
+        "short": "Rich HTML explanations of a diff, branch, or PR.",
+        "long": (
+            "Turns a diff, branch, or pull request into one HTML file that "
+            "explains what moved, why it moved, and what a reviewer should "
+            "look at first. The page carries its own styles and scripts, so "
+            "it opens in a browser with no server behind it."
+        ),
+        "keywords": ["html", "code-review"],
+        "prompts": [
+            "Explain this branch as an HTML page.",
+            "Turn the diff against main into a reviewable HTML explainer.",
+        ],
+    },
+    {
+        "name": "notion",
+        "description": (
+            "Reach Notion from the command line, and publish a code-change "
+            "explainer as a Notion page."
+        ),
+        "short": "Notion CLI access and Notion-page explainers.",
+        "long": (
+            "Drives the Notion API through the ntn command line tool: read "
+            "and search content, create pages, query databases, upload "
+            "files, and deploy workers. Also publishes an explanation of a "
+            "diff, branch, or pull request as a native Notion page."
+        ),
+        "keywords": ["notion", "cli"],
+        "prompts": [
+            "Create a Notion page from these notes.",
+            "Explain this pull request as a Notion page.",
+        ],
+    },
+    {
+        "name": "azure",
+        "description": (
+            "Read Azure DevOps projects, repos, pipelines, releases, and "
+            "work items over the REST API."
+        ),
+        "short": "Read-only Azure DevOps queries.",
+        "long": (
+            "Answers inventory questions about an Azure DevOps organization "
+            "over the read-only REST API: which projects and repositories "
+            "exist, what the build and release pipelines did, which "
+            "environments and Kubernetes resources they deploy to, and "
+            "which work items a WIQL query returns."
+        ),
+        "keywords": ["azure-devops", "ci"],
+        "prompts": [
+            "List the build pipelines in this Azure DevOps project.",
+            "Which release last deployed to the production environment?",
+        ],
+    },
+    {
+        "name": "llm-wiki",
+        "description": (
+            "Keep research findings in a searchable project knowledgebase "
+            "instead of re-deriving them."
+        ),
+        "short": "Project knowledgebase for research findings.",
+        "long": (
+            "Captures a finding and the source it came from in a "
+            "project-local .kb store, or a global one, through the llmwiki "
+            "command line tool. Search matches on meaning, so an answer "
+            "written down in an earlier session comes back instead of being "
+            "researched again."
+        ),
+        "keywords": ["knowledge-base", "research"],
+        "prompts": [
+            "Save what we just found out to the knowledgebase.",
+            "Search the knowledgebase before researching this.",
+        ],
+    },
+    {
+        "name": "proton",
+        "description": (
+            "Read and store secrets in Proton Pass through pass-cli, so none "
+            "lands in a repo or a shell history."
+        ),
+        "short": "Proton Pass secret retrieval and storage.",
+        "long": (
+            "Fetches an API key, token, password, or SSH key from Proton "
+            "Pass with the pass-cli tool, authenticating with a personal "
+            "access token held in the operating system keyring. Every read "
+            "states its reason, an expired session recovers on its own, and "
+            "a new secret goes back to Proton Pass rather than into a file."
+        ),
+        "keywords": ["secrets", "proton-pass"],
+        "prompts": [
+            "Get the API key for this service from Proton Pass.",
+            "Store this new token in Proton Pass.",
+        ],
+    },
+    {
+        "name": "sandbox",
+        "description": (
+            "Give an agent a throwaway podman container with its own clone "
+            "of the repo, ports, and a virtual display."
+        ),
+        "short": "Throwaway podman containers for agent work.",
+        "long": (
+            "Brings up a disposable podman container holding a private clone "
+            "of a repository, published ports, and a virtual display the "
+            "agent can screenshot. Use it when work must not touch the real "
+            "checkout, when several agents each need their own tree and "
+            "ports on one machine, or when a windowed application has to run "
+            "with no desktop available."
+        ),
+        "keywords": ["podman", "containers"],
+        "prompts": [
+            "Run this migration in a throwaway podman sandbox.",
+            "Start a sandbox container and screenshot the app.",
+        ],
+    },
+    {
+        "name": "mpocock",
+        "description": (
+            "Compact a conversation into a handoff document another agent "
+            "can pick the work up from."
+        ),
+        "short": "Session handoff documents.",
+        "long": (
+            "Writes down what a session established, what it decided, and "
+            "what is still open, in a form a fresh agent reads instead of "
+            "the transcript. Use it before context runs out, before handing "
+            "a long pipeline to a successor, or when another session "
+            "continues the work."
+        ),
+        "keywords": ["handoff", "context"],
+        "prompts": [
+            "Write a handoff document for this session.",
+            "Compact what we have done so another agent can continue.",
+        ],
+    },
+    {
+        "name": "skills",
+        "description": (
+            "Review and author SKILL.md files, finding and repairing the "
+            "smells that stop a skill triggering."
+        ),
+        "short": "Review and repair SKILL.md files.",
+        "long": (
+            "Reads a SKILL.md against a list of known smells, such as a "
+            "description that never says when to use the skill, "
+            "instructions that restate what the model already does, and a "
+            "body too long to load. Reports each smell with its repair, and "
+            "writes a new skill to the same bar."
+        ),
+        "keywords": ["skill-authoring", "review"],
+        "prompts": [
+            "Review this SKILL.md and tell me why it never triggers.",
+            "Write a new skill for this workflow.",
+        ],
+    },
+    {
+        "name": "bd",
+        "description": (
+            "Track, create, claim, and close repo issues with the bd (beads) "
+            "tool, including dependency links."
+        ),
+        "short": "Issue tracking with bd (beads).",
+        "long": (
+            "Runs the bd command line issue tracker against a repository: "
+            "list what is ready to pick up, create and claim and close "
+            "issues, and record which issue blocks which. Use it to answer "
+            "what to work on next from the repository's own issue graph."
+        ),
+        "keywords": ["issue-tracking", "beads"],
+        "prompts": [
+            "What can I pick up next?",
+            "Create a bd issue for this and block it on the current one.",
+        ],
+    },
+    {
+        "name": "cbm",
+        "description": (
+            "Query the codebase-memory code graph from a shell: callers, "
+            "dependencies, impact, dead code, and ADRs."
+        ),
+        "short": "Shell queries over the codebase-memory code graph.",
+        "long": (
+            "Runs codebase-memory-mcp cli against an indexed repository with "
+            "no MCP server involved, so a shell script or an agent without "
+            "the MCP tools can still ask structural questions: who calls a "
+            "function, how a change propagates, which modules cluster "
+            "together, which functions have no callers, and what a symbol's "
+            "source says."
+        ),
+        "keywords": ["code-intelligence", "static-analysis"],
+        "prompts": [
+            "Who calls this function?",
+            "What breaks if I change this symbol?",
+        ],
+    },
+]
+
+
+def version_of(plugin: dict[str, object]) -> str:
+    return str(plugin.get("version", FIRST_RELEASE))
+
+
+def core_manifest(plugin: dict[str, object]) -> dict[str, object]:
+    return {
+        "name": plugin["name"],
+        "version": version_of(plugin),
+        "description": plugin["description"],
+        "author": AUTHOR,
+    }
+
+
+def codex_manifest(plugin: dict[str, object]) -> dict[str, object]:
+    ships_hooks = bool(plugin.get("hooks"))
+    manifest = core_manifest(plugin)
+    manifest["homepage"] = REPOSITORY_URL
+    manifest["repository"] = REPOSITORY_URL
+    manifest["keywords"] = ["codex", "skills", *plugin["keywords"]]
+    manifest["skills"] = "./skills/"
+    if ships_hooks:
+        manifest["hooks"] = "./hooks/codex-hooks.json"
+    manifest["interface"] = {
+        "displayName": plugin["name"],
+        "shortDescription": plugin["short"],
+        "longDescription": plugin["long"],
+        "developerName": AUTHOR["name"],
+        "category": "Developer Tools",
+        "capabilities": ["Skills", "Hooks"] if ships_hooks else ["Skills"],
+        "defaultPrompt": plugin["prompts"],
+    }
+    return manifest
+
+
+def claude_marketplace() -> dict[str, object]:
+    return {
+        "name": "Uraxii",
+        "owner": {"name": AUTHOR["name"]},
+        "description": MARKETPLACE_DESCRIPTION,
+        "plugins": [
+            {
+                "name": plugin["name"],
+                "source": f"./plugins/{plugin['name']}",
+                "description": plugin["description"],
+            }
+            for plugin in PLUGINS
+        ],
+    }
+
+
+def agents_marketplace() -> dict[str, object]:
+    return {
+        "name": "uraxii",
+        "interface": {"displayName": "Uraxii"},
+        "plugins": [
+            {
+                "name": plugin["name"],
+                "source": {
+                    "source": "url",
+                    "url": f"{REPOSITORY_URL}.git",
+                    "ref": "main",
+                    "path": f"plugins/{plugin['name']}",
+                },
+                "policy": {
+                    "installation": "AVAILABLE",
+                    "authentication": "ON_INSTALL",
+                },
+                "category": "Productivity",
+            }
+            for plugin in PLUGINS
+        ],
+    }
+
+
+def wanted_files() -> dict[Path, str]:
+    """Map every generated path to the exact text it should hold."""
+    files: dict[Path, str] = {
+        Path(".claude-plugin/marketplace.json"): render(claude_marketplace()),
+        Path(".agents/plugins/marketplace.json"): render(agents_marketplace()),
+    }
+    for plugin in PLUGINS:
+        root = Path("plugins") / str(plugin["name"])
+        files[root / "plugin.json"] = render(
+            {"$schema": PLUGIN_SCHEMA, **core_manifest(plugin)}
+        )
+        files[root / ".claude-plugin/plugin.json"] = render(core_manifest(plugin))
+        files[root / ".codex-plugin/plugin.json"] = render(codex_manifest(plugin))
+    return files
+
+
+def render(document: dict[str, object]) -> str:
+    return json.dumps(document, indent=2, ensure_ascii=False) + "\n"
+
+
+def drifted(files: dict[Path, str]) -> list[Path]:
+    changed = []
+    for relative, text in sorted(files.items()):
+        absolute = REPOSITORY_ROOT / relative
+        if not absolute.is_file() or absolute.read_text() != text:
+            changed.append(relative)
+    return changed
+
+
+def write(files: dict[Path, str]) -> list[Path]:
+    changed = drifted(files)
+    for relative in changed:
+        absolute = REPOSITORY_ROOT / relative
+        absolute.parent.mkdir(parents=True, exist_ok=True)
+        absolute.write_text(files[relative])
+    return changed
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help="exit 2 if regenerating would change a file, and name the files",
+    )
+    arguments = parser.parse_args()
+    files = wanted_files()
+
+    if arguments.check:
+        changed = drifted(files)
+        if not changed:
+            print(f"{len(files)} generated files are up to date.")
+            return 0
+        print("These generated files do not match generate-plugin-manifests.py:")
+        for relative in changed:
+            print(f"  {relative}")
+        print("Edit PLUGINS in the generator and rerun it, never the file itself.")
+        return 2
+
+    changed = write(files)
+    for relative in changed:
+        print(f"wrote {relative}")
+    print(f"{len(files)} generated files, {len(changed)} rewritten.")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

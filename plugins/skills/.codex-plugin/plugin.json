@@ -1,0 +1,32 @@
+{
+  "name": "skills",
+  "version": "1.0.0",
+  "description": "Review and author SKILL.md files, finding and repairing the smells that stop a skill triggering.",
+  "author": {
+    "name": "Uraxii",
+    "url": "https://github.com/Uraxii"
+  },
+  "homepage": "https://github.com/Uraxii/dotai",
+  "repository": "https://github.com/Uraxii/dotai",
+  "keywords": [
+    "codex",
+    "skills",
+    "skill-authoring",
+    "review"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "skills",
+    "shortDescription": "Review and repair SKILL.md files.",
+    "longDescription": "Reads a SKILL.md against a list of known smells, such as a description that never says when to use the skill, instructions that restate what the model already does, and a body too long to load. Reports each smell with its repair, and writes a new skill to the same bar.",
+    "developerName": "Uraxii",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Skills"
+    ],
+    "defaultPrompt": [
+      "Review this SKILL.md and tell me why it never triggers.",
+      "Write a new skill for this workflow."
+    ]
+  }
+}

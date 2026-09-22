@@ -1,0 +1,9 @@
+{
+  "name": "artifact",
+  "version": "1.0.0",
+  "description": "Explain a code change as a self-contained interactive HTML page.",
+  "author": {
+    "name": "Uraxii",
+    "url": "https://github.com/Uraxii"
+  }
+}
