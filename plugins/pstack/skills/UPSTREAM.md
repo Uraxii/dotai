@@ -64,22 +64,17 @@ half. Upstream's `sync.mjs`, `substitutions.json`, `upstream.json`,
 `validate-skills.mjs`, and `verify-merge-safety.mjs` serve upstream's own
 release pipeline and were not taken either.
 
-## Ported from a gist
+## create-artifact, deleted
 
-- Source: https://gist.github.com/geoffreylitt/a29df1b5f9865506e8952488eac3d524
-- Revision: `126e7fe9eecaafadfe1ac8bb183d135812b608f2`
-- Skills: explain-diff-html and explain-diff-notion, each a verbatim copy of
-  its gist file.
-- License: none stated.
+A local skill named create-artifact merged two skills ported from a gist into
+one. It has been deleted in favour of the two originals, which now live in
+the artifact and notion plugins with their own upstream-source.md beside each
+SKILL.md. The gist source and revision went with them, because both belong to
+those skills and not to this tree.
 
-A local skill named create-artifact merged both of them into one. It has been
-deleted in favour of the two originals, so that name no longer resolves to a
-skill here. No skill name in this section is emphasised, and that is
-deliberate. `scripts/validate-skills.py` reads a bolded or backticked name as
-a citation of a live skill, and the two gist skills move to a package of
-their own, which this tree must not cite. When they move, this whole section
-moves with them, because the source and the revision belong to those two
-skills and not to this tree.
+That name no longer resolves to a skill here, so it stays in plain prose.
+`scripts/validate-skills.py` reads a bolded or backticked name as a citation
+of a live skill and fails the build.
 
 ## Local to this plugin
 

@@ -1,0 +1,32 @@
+{
+  "name": "proton",
+  "version": "1.0.0",
+  "description": "Read and store secrets in Proton Pass through pass-cli, so none lands in a repo or a shell history.",
+  "author": {
+    "name": "Uraxii",
+    "url": "https://github.com/Uraxii"
+  },
+  "homepage": "https://github.com/Uraxii/dotai",
+  "repository": "https://github.com/Uraxii/dotai",
+  "keywords": [
+    "codex",
+    "skills",
+    "secrets",
+    "proton-pass"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "proton",
+    "shortDescription": "Proton Pass secret retrieval and storage.",
+    "longDescription": "Fetches an API key, token, password, or SSH key from Proton Pass with the pass-cli tool, authenticating with a personal access token held in the operating system keyring. Every read states its reason, an expired session recovers on its own, and a new secret goes back to Proton Pass rather than into a file.",
+    "developerName": "Uraxii",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Skills"
+    ],
+    "defaultPrompt": [
+      "Get the API key for this service from Proton Pass.",
+      "Store this new token in Proton Pass."
+    ]
+  }
+}

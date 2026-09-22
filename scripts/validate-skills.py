@@ -1,10 +1,22 @@
 #!/usr/bin/env python3
-"""Validate plugins/pstack/skills: links resolve inside the tree, skill
-names cited in bold or backticks resolve to a skill directory, and every
-SKILL.md frontmatter names its own directory and carries a description.
+"""Validate one or more plugin skills trees in a single run: links resolve
+inside their own tree, skill names cited in bold or backticks resolve to a
+skill directory in the same plugin, and every SKILL.md frontmatter names its
+own directory and carries a description.
 
 Deleting a skill is what leaves a dead reference behind, so the names git has
-carried under this directory decide which emphasised words are skill names."""
+carried under these directories decide which emphasised words are skill names.
+
+Every tree goes in one run. Two rules need the whole picture and a per-plugin
+loop cannot give it to them. A citation of a skill that lives in a sibling
+plugin looks like ordinary prose to a run that cannot see the sibling, and
+each plugin installs on its own, so that citation is a defect. A tree split
+off an older one has a git history starting at the move, so the
+deleted-skill rule only works when the trees share one historical set.
+
+With no argument this validates every `plugins/*/skills` tree, which is what
+CI runs. Naming trees on the command line checks only those, and turns both
+whole-picture rules off for the trees left out."""
 
 from __future__ import annotations
 
@@ -17,7 +29,7 @@ from pathlib import Path
 from urllib.parse import unquote
 
 
-__all__ = ["main", "validate_skills_tree"]
+__all__ = ["main", "validate_skills_tree", "validate_skills_trees"]
 
 LINK_RE = re.compile(r"\]\(([^)\n]*)\)")
 FENCE_RE = re.compile(r"```.*?```", re.DOTALL)
@@ -187,13 +199,24 @@ def documents_naming_skills(skills_dir: Path) -> list[Path]:
     return sorted(documents)
 
 
-def reference_remedy(reference: str, historical: set[str]) -> str:
+def reference_remedy(
+    reference: str, historical: set[str], elsewhere: dict[str, str]
+) -> str:
+    owner = elsewhere.get(reference)
+    if owner:
+        return (
+            f"that skill lives in the {owner} plugin. A plugin installs on "
+            "its own, so it must not cite a skill in another plugin. Say what "
+            "to do in plain prose, or move the skill"
+        )
     if reference in historical:
         return "was a skill here and was deleted. Drop the reference or restore the directory"
     return "no skill directory of that name. Drop the emphasis if the word is prose"
 
 
-def skill_reference_problems(skills_dir: Path, historical: set[str]) -> list[str]:
+def skill_reference_problems(
+    skills_dir: Path, historical: set[str], elsewhere: dict[str, str]
+) -> list[str]:
     # Three rules, each covering what the others cannot. History catches a
     # deleted name in any citation syntax, but only names git ever carried.
     # Prefix families catch a hyphenated name that never existed, such as a
@@ -203,13 +226,16 @@ def skill_reference_problems(skills_dir: Path, historical: set[str]) -> list[str
     root = skills_dir.resolve()
     names = skill_names(root)
     families = skill_families(names)
+    # A live skill in a sibling plugin is a name a reader recognises, so it
+    # has to be recognised here too, or the citation passes as prose.
+    known = historical | set(elsewhere)
     problems = []
     for path in documents_naming_skills(root):
         inside = path_is_inside(root, path)
         label = path.relative_to(root if inside else root.parent)
-        for reference in sorted(referenced_skills(path.read_text(), families, historical)):
+        for reference in sorted(referenced_skills(path.read_text(), families, known)):
             if reference not in names:
-                remedy = reference_remedy(reference, historical)
+                remedy = reference_remedy(reference, historical, elsewhere)
                 problems.append(f"{label} -> **{reference}** ({remedy})")
     return problems
 
@@ -243,30 +269,79 @@ def skill_metadata_problems(skills_dir: Path) -> list[str]:
     return problems
 
 
-def validate_skills_tree(skills_dir: Path) -> tuple[list[str], bool]:
-    """Problems found, and whether the deleted-skill rule got to run.
+def validate_skills_tree(
+    skills_dir: Path, historical: set[str], elsewhere: dict[str, str]
+) -> list[str]:
+    """Problems in one tree, given what every tree together knows.
+
+    `historical` is every name that ever held a SKILL.md in any of the trees
+    being validated. `elsewhere` maps a live skill name to the plugin that
+    owns it, for the skills this tree does not own.
+    """
+    return (
+        link_problems(skills_dir)
+        + skill_reference_problems(skills_dir, historical, elsewhere)
+        + skill_metadata_problems(skills_dir)
+    )
+
+
+def validate_skills_trees(trees: list[Path]) -> tuple[list[str], bool]:
+    """Problems across every tree, and whether the deleted-skill rule ran.
 
     Both halves are the result. A caller that reads only the problems cannot
     tell a checked tree from one where git answered nothing.
     """
-    historical = skill_names_in_history(skills_dir.resolve())
-    return (
-        link_problems(skills_dir)
-        + skill_reference_problems(skills_dir, historical or set())
-        + skill_metadata_problems(skills_dir),
-        historical is not None,
-    )
+    histories = [skill_names_in_history(tree.resolve()) for tree in trees]
+    # One shared set. A tree split out of another starts its own history at
+    # the move commit, so on its own it remembers no deletion at all.
+    historical: set[str] = set().union(*[names for names in histories if names])
+    owners = {
+        name: tree.resolve().parent.name
+        for tree in trees
+        for name in skill_names(tree.resolve())
+    }
+    problems = []
+    for tree in trees:
+        local = skill_names(tree.resolve())
+        elsewhere = {
+            name: owner for name, owner in owners.items() if name not in local
+        }
+        problems += validate_skills_tree(tree, historical, elsewhere)
+    return problems, all(names is not None for names in histories)
 
 
 def ci_enabled() -> bool:
     return os.environ.get("CI", "").strip().lower() not in {"", "0", "false"}
 
 
+def count_phrase(number: int, noun: str) -> str:
+    return f"{number} {noun}" if number == 1 else f"{number} {noun}s"
+
+
+def default_trees() -> list[Path]:
+    """Every skills tree in the repository, swept rather than named.
+
+    The default used to be `plugins/pstack/skills` alone. That is one tree
+    of eleven, with both whole-picture rules switched off, and it exited 0,
+    so the bare command gave a false pass on exactly the narrowing this
+    script was written to catch. Sweeping the directory cannot go stale
+    when a plugin arrives.
+    """
+    return sorted((Path(__file__).resolve().parents[1] / "plugins").glob("*/skills"))
+
+
 def main(arguments: list[str] | None = None) -> int:
     arguments = sys.argv[1:] if arguments is None else arguments
-    default_dir = Path(__file__).resolve().parents[1] / "plugins" / "pstack" / "skills"
-    skills_dir = Path(arguments[0]) if arguments else default_dir
-    problems, history_read = validate_skills_tree(skills_dir)
+    trees = [Path(argument) for argument in arguments] or default_trees()
+    if not trees:
+        print("FAIL: no plugins/*/skills tree to validate", file=sys.stderr)
+        return 1
+    absent = [tree for tree in trees if not tree.is_dir()]
+    if absent:
+        for tree in absent:
+            print(f"FAIL: {tree} (no skills tree there)", file=sys.stderr)
+        return 1
+    problems, history_read = validate_skills_trees(trees)
     for problem in problems:
         print(f"FAIL: {problem}", file=sys.stderr)
     if not history_read:
@@ -279,7 +354,15 @@ def main(arguments: list[str] | None = None) -> int:
         return 1 if problems or ci_enabled() else 0
     if problems:
         return 1
-    print(f"ok: {skills_dir} links and skill references resolve, every SKILL.md is named right")
+    skills = sum(len(skill_names(tree.resolve())) for tree in trees)
+    print(
+        f"ok: {count_phrase(skills, 'skill')} in "
+        f"{count_phrase(len(trees), 'tree')}. Every markdown link resolves, "
+        "every skill name in backticks or bold resolves to a skill in the "
+        "same plugin, and every SKILL.md frontmatter names its own directory "
+        "and carries a description. A skill named in plain prose is not "
+        "checked."
+    )
     return 0
 
 

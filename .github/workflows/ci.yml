@@ -10,8 +10,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          # validate-skills.py reads which names used to be skills from git
-          # history, so the default shallow clone would hide stale references.
+          # validate-skills.py reads which names used to be skills from the
+          # git history of the plugin skills trees, so the default shallow
+          # clone would hide stale references.
           fetch-depth: 0
 
       - uses: actions/setup-python@v5
@@ -24,8 +25,17 @@ jobs:
       - name: Check models.json only names models it can back
         run: python3 scripts/validate-models.py
 
-      - name: Validate skill links and frontmatter
-        run: python3 scripts/validate-skills.py plugins/pstack/skills
+      - name: Check the generated manifests match the generator
+        run: python3 scripts/generate-plugin-manifests.py --check
 
+      # Every tree in one run. A plugin citing a skill in another plugin only
+      # shows up to a run that can see both, and a tree split out of another
+      # only remembers deletions through the tree it came from.
+      - name: Validate skill links and frontmatter
+        run: python3 scripts/validate-skills.py plugins/*/skills
+
+      # No paths. Naming them is how eighty tests went uncollected when the
+      # skills moved out of plugins/pstack. test_ci_workflow.py keeps it that
+      # way.
       - name: Run pytest
-        run: pytest plugins/pstack scripts -q
+        run: pytest -q

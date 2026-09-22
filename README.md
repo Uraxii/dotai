@@ -1,18 +1,45 @@
 # dotai
 
 Skills and agents for Claude Code, Codex, GitHub Copilot CLI, opencode, and
-Hermes. One skills tree in the open Agent Skills format, shipped as the
-`pstack` plugin and installable elsewhere through skills.sh. The plugin
-lives under `plugins/pstack/`, the same place pstack-claude keeps its own.
+Hermes, written in the open Agent Skills format. Eleven plugins live under
+`plugins/`, and each one installs on its own. `pstack` carries the shared
+machinery: the poteto-mode workflow, the principles, the playbooks, and the
+agent files. The other ten each cover one tool or one job, and none of them
+needs `pstack` installed.
+
+## Plugins
+
+<!-- dotai:plugins:start -->
+
+| Plugin | What it does |
+|---|---|
+| `pstack` | Skills and thin named agents: poteto-mode, principles, playbooks, tools. |
+| `artifact` | Explain a code change as a self-contained interactive HTML page. |
+| `notion` | Reach Notion from the command line, and publish a code-change explainer as a Notion page. |
+| `azure` | Read Azure DevOps projects, repos, pipelines, releases, and work items over the REST API. |
+| `llm-wiki` | Keep research findings in a searchable project knowledgebase instead of re-deriving them. |
+| `proton` | Read and store secrets in Proton Pass through pass-cli, so none lands in a repo or a shell history. |
+| `sandbox` | Give an agent a throwaway podman container with its own clone of the repo, ports, and a virtual display. |
+| `mpocock` | Compact a conversation into a handoff document another agent can pick the work up from. |
+| `skills` | Review and author SKILL.md files, finding and repairing the smells that stop a skill triggering. |
+| `bd` | Track, create, claim, and close repo issues with the bd (beads) tool, including dependency links. |
+| `cbm` | Query the codebase-memory code graph from a shell: callers, dependencies, impact, dead code, and ADRs. |
+
+<!-- dotai:plugins:end -->
+
+Every plugin keeps its skills in `plugins/<plugin>/skills/<name>/SKILL.md`.
+No plugin cites a skill in another plugin, because a reader may have
+installed only one of them. `scripts/validate-skills.py` fails a build that
+breaks that rule.
 
 ## Layout
 
 | Path      | What                                                    |
 |-----------|---------------------------------------------------------|
-| `plugins/pstack/skills/` | Every skill, `skills/<name>/SKILL.md`. Source of truth. |
-| `plugins/pstack/models.json` | Model picks per role and harness. The only copy; skills point at it by path, and a per-harness override sheet in the user's config directory replaces a role for one harness without touching this repo (see the `setup-pstack` skill). |
+| `plugins/<plugin>/skills/` | Every skill, `skills/<name>/SKILL.md`. Source of truth. |
+| `plugins/pstack/models.json` | Model picks per role and harness. The only copy in the repository. The nine skills that spawn agents all ship in `pstack` and point at it by path. A per-harness override sheet in the user's config directory replaces a role for one harness without touching this repo (see the `setup-pstack` skill). |
 | `plugins/pstack/agents/` | Claude and Copilot agent files. |
-| `scripts/` | CI validators: `validate-models.py` checks `models.json` only names models it can back, `validate-skills.py` checks skill links and frontmatter. Tests in `scripts/tests/`. |
+| `scripts/` | CI checks: `validate-models.py` checks `models.json` only names models it can back, `validate-skills.py` checks skill links, cross-plugin citations, and frontmatter, and `generate-plugin-manifests.py` writes all 33 plugin manifests, both marketplace files, and the plugin table above from one list. Tests in `scripts/tests/`. |
 | `themes/` | Editor themes. Source of truth only. Nothing installs them, so copy one into `~/.claude/themes/` yourself. |
 | `output-styles/` | Output styles, `output-styles/<name>.md`. Nothing installs them, so copy one into `~/.claude/output-styles/` and select it with `/output-style` yourself. |
 | `statusline.sh` | Statusline command: usage bars and tokens per minute. Nothing installs it, so copy it to `~/.claude/statusline.sh` and set `statusLine` yourself. |
@@ -20,62 +47,74 @@ lives under `plugins/pstack/`, the same place pstack-claude keeps its own.
 
 ## Install
 
+Every plugin installs the same way. Replace `<plugin>` with a name from the
+table above.
+
 Claude Code:
 
 ```
 /plugin marketplace add Uraxii/dotai
-/plugin install pstack@Uraxii
+/plugin install <plugin>@Uraxii
 ```
 
 Codex CLI:
 
 ```
 codex plugin marketplace add Uraxii/dotai --ref main
-codex plugin add pstack@uraxii
+codex plugin add <plugin>@uraxii
 ```
 
-In the Codex app, open `/plugins`, add `Uraxii/dotai` as a marketplace,
-then install `pstack`.
+In the Codex app, open `/plugins`, add `Uraxii/dotai` as a marketplace, then
+install the plugins you want.
 
 Copilot CLI:
 
 ```
 copilot plugin marketplace add Uraxii/dotai
-copilot plugin install pstack@Uraxii
+copilot plugin install <plugin>@Uraxii
 ```
 
 Cursor and the other targets skills.sh lists:
 
 ```
-npx skills@latest add Uraxii/dotai/plugins/pstack
+npx skills@latest add Uraxii/dotai/plugins/<plugin>
 ```
 
-Hermes: `hermes skills tap add Uraxii/dotai/plugins/pstack`. opencode:
-clone the repo, point `~/.config/opencode/skills` at
-`plugins/pstack/skills/`, and symlink
-`plugins/pstack/hooks/opencode-reminder-plugin.ts` into
-`~/.config/opencode/plugin/` for the session-start reminder (a copy breaks
-the plugin's lookup of its sibling script, so symlink it).
+Hermes: `hermes skills tap add Uraxii/dotai/plugins/<plugin>`.
 
-Claude Code and Copilot CLI read the agent files in
-`plugins/pstack/agents/` from the plugin. OpenCode and Hermes use their
-native delegation with dotai roles carried in scoped briefs. This repo no
-longer ships Codex agent files, so a spawner on Codex reads the role
-preferences in `plugins/pstack/models.json` instead. skills.sh
-and opencode targets read `plugins/pstack/skills/` only.
+opencode: clone the repo and point `~/.config/opencode/skills` at
+`plugins/<plugin>/skills/`. For the session-start reminder, also symlink
+`plugins/pstack/hooks/opencode-reminder-plugin.ts` into
+`~/.config/opencode/plugin/` (a copy breaks the plugin's lookup of its
+sibling script, so symlink it).
+
+Claude Code and Copilot CLI read the agent files in `plugins/pstack/agents/`
+from the `pstack` plugin. opencode and Hermes use their native delegation
+with dotai roles carried in scoped briefs. This repo no longer ships Codex
+agent files, so a spawner on Codex reads the role preferences in
+`plugins/pstack/models.json` instead. The skills.sh and opencode targets read
+`plugins/<plugin>/skills/` only.
 
 `plugins/pstack/models.json` is the only copy of the model picks. No skill
-repeats it; each points at the file by path and tells the reader to resolve
-it two directories up from the skill's own directory, so a spawner working
-outside this repo still finds it. A per-harness override sheet
-in the user's own config directory can replace a role for one harness without
-touching this repo (see the `setup-pstack` skill). After changing
-`models.json`, check that it only names models it can back, then check the
-tree for broken links and malformed skill frontmatter:
+repeats it. The nine skills that spawn agents all ship in `pstack`, and each
+points at the file by path and tells the reader to resolve it two directories
+up from the skill's own directory, so a spawner working outside this repo
+still finds it. A per-harness override sheet in the user's own config
+directory can replace a role for one harness without touching this repo (see
+the `setup-pstack` skill). After changing `models.json`, check that it only
+names models it can back, then check every plugin for broken links, citations
+that cross a plugin boundary, and malformed skill frontmatter:
 
 ```
 python3 scripts/validate-models.py
-python3 scripts/validate-skills.py plugins/pstack/skills
+python3 scripts/validate-skills.py plugins/*/skills
+```
+
+After changing the plugin list in `scripts/generate-plugin-manifests.py`,
+rerun it and commit what it writes:
+
+```
+python3 scripts/generate-plugin-manifests.py
 ```
 
 Harness prefs (`CLAUDE.md`, `AGENTS.md`, `settings.json`, secrets) are not

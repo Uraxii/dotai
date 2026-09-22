@@ -1,0 +1,10 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "cbm",
+  "version": "1.0.0",
+  "description": "Query the codebase-memory code graph from a shell: callers, dependencies, impact, dead code, and ADRs.",
+  "author": {
+    "name": "Uraxii",
+    "url": "https://github.com/Uraxii"
+  }
+}
