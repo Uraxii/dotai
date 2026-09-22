@@ -233,8 +233,8 @@ def size_column(worktree: str) -> str:
     status, text = stdout_of(["du", "-sh", worktree])
     if status != 0:
         return UNKNOWN
-    fields = [line.split() for line in text.split("\n")]
-    return "\n".join(line[0] if line else "" for line in fields)
+    fields = text.split()
+    return fields[0] if fields else UNKNOWN
 
 
 def head_facts(worktree: str, now: int) -> tuple[str, str, bool]:
