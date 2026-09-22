@@ -224,9 +224,11 @@ class GeneratorOutputTest(unittest.TestCase):
                 if plugin.get("skills", True):
                     self.assertEqual(manifest["skills"], "./skills/")
                     self.assertIn("Skills", manifest["interface"]["capabilities"])
+                    self.assertIn("skills", manifest["keywords"])
                 else:
                     self.assertNotIn("skills", manifest)
                     self.assertNotIn("Skills", manifest["interface"]["capabilities"])
+                    self.assertNotIn("skills", manifest["keywords"])
 
     def test_agents_marketplace_source_path_is_per_plugin(self) -> None:
         document = json.loads(
@@ -265,6 +267,21 @@ class GeneratorRerunTest(unittest.TestCase):
         result = run_generator(self.root, "--check")
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("plugins/steer/hooks/hooks.json", result.stdout)
+
+    def test_check_fails_when_hook_wiring_is_undeclared(self) -> None:
+        pstack = next(
+            plugin for plugin in generator.PLUGINS if plugin["name"] == "pstack"
+        )
+        original_harnesses = pstack["hooks"]
+        pstack["hooks"] = ["claude", "copilot"]
+        try:
+            result = run_generator(self.root, "--check")
+        finally:
+            pstack["hooks"] = original_harnesses
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("undeclared", result.stdout)
+        self.assertIn("plugins/pstack/hooks/codex-hooks.json", result.stdout)
 
     def test_check_fails_after_a_hand_edit(self) -> None:
         edited = self.root / "plugins" / "bd" / "plugin.json"

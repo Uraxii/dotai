@@ -297,7 +297,11 @@ def codex_manifest(plugin: dict[str, object]) -> dict[str, object]:
     manifest = core_manifest(plugin)
     manifest["homepage"] = REPOSITORY_URL
     manifest["repository"] = REPOSITORY_URL
-    manifest["keywords"] = ["codex", "skills", *plugin["keywords"]]
+    manifest["keywords"] = [
+        "codex",
+        *(["skills"] if ships_skills else []),
+        *plugin["keywords"],
+    ]
     capabilities = []
     if ships_skills:
         manifest["skills"] = "./skills/"
@@ -414,6 +418,19 @@ def missing_hook_wiring(root: Path) -> list[Path]:
     return missing
 
 
+def undeclared_hook_wiring(root: Path) -> list[Path]:
+    """Return hook wiring paths on disk that their plugin does not declare."""
+    undeclared = []
+    for plugin in PLUGINS:
+        plugin_root = Path("plugins") / str(plugin["name"])
+        declared_harnesses = plugin.get("hooks", [])
+        for harness, relative_path in HOOK_WIRING_PATHS.items():
+            wiring = plugin_root / relative_path
+            if (root / wiring).is_file() and harness not in declared_harnesses:
+                undeclared.append(wiring)
+    return undeclared
+
+
 def render(document: dict[str, object]) -> str:
     return json.dumps(document, indent=2, ensure_ascii=False) + "\n"
 
@@ -455,7 +472,8 @@ def main(arguments: list[str] | None = None, root: Path = REPOSITORY_ROOT) -> in
     if options.check:
         changed = drifted(files, root)
         missing_wiring = missing_hook_wiring(root)
-        if not changed and not missing_wiring:
+        undeclared_wiring = undeclared_hook_wiring(root)
+        if not changed and not missing_wiring and not undeclared_wiring:
             print(f"{len(files)} generated files are up to date.")
             return 0
         if changed:
@@ -466,6 +484,10 @@ def main(arguments: list[str] | None = None, root: Path = REPOSITORY_ROOT) -> in
         if missing_wiring:
             print("These declared plugin hook wiring files are missing:")
             for relative in missing_wiring:
+                print(f"  {relative}")
+        if undeclared_wiring:
+            print("These plugin hook wiring files are undeclared:")
+            for relative in undeclared_wiring:
                 print(f"  {relative}")
         return 2
 
