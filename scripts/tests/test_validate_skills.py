@@ -143,6 +143,48 @@ class ValidateSkillsTests(unittest.TestCase):
 
 
 class BoldSkillReferenceTests(unittest.TestCase):
+    def test_requires_the_principle_prefix_across_plugin_trees(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            plugin_root = Path(directory)
+            citing_tree = plugin_root / "citing" / "skills"
+            owning_tree = plugin_root / "owning" / "skills"
+            write_skill(citing_tree, "sample", "Apply **prove-it-works** first.\n")
+            write_skill(owning_tree, "principle-prove-it-works")
+
+            result = run_validator(citing_tree, owning_tree)
+
+            self.assertNotEqual(0, result.returncode, result.stdout)
+            self.assertIn("prove-it-works", result.stderr)
+            self.assertIn("principle-prove-it-works", result.stderr)
+
+            write_skill(
+                citing_tree, "sample", "Apply **principle-prove-it-works** first.\n"
+            )
+            write_skill(
+                citing_tree,
+                "safe-words",
+                " ".join(
+                    f"**{word}**"
+                    for word in (
+                        "tutorial",
+                        "reference",
+                        "explanation",
+                        "how-to",
+                        "must",
+                        "evidence",
+                        "target",
+                        "question",
+                        "recall",
+                        "babysit",
+                    )
+                )
+                + "\n",
+            )
+
+            result = run_validator(citing_tree, owning_tree)
+
+            self.assertEqual(0, result.returncode, result.stderr)
+
     def test_fails_on_a_bold_reference_to_a_missing_skill(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             skills_dir = Path(directory)
@@ -517,13 +559,11 @@ def write_split_repository(repository: Path) -> tuple[Path, Path]:
 class MultipleSkillsTreeTests(unittest.TestCase):
     """One invocation over every tree, because a per-plugin loop cannot see across.
 
-    A plugin installs on its own, so a skill it cites has to live in it. A
-    validator run against one tree at a time has no way to tell a name that
-    belongs to a sibling plugin from a name that belongs to nobody, and the
-    sibling case is the one the split created.
+    A citation can name a skill in a sibling plugin. A validator run against
+    one tree at a time cannot see a prefixed skill that a sibling owns.
     """
 
-    def test_fails_on_a_citation_that_names_a_skill_in_another_plugin(self) -> None:
+    def test_accepts_a_citation_that_names_a_skill_in_another_plugin(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             repository = Path(directory)
             pstack, azure = write_split_repository(repository)
@@ -531,9 +571,7 @@ class MultipleSkillsTreeTests(unittest.TestCase):
 
             result = run_validator(pstack, azure)
 
-            self.assertNotEqual(0, result.returncode, result.stdout)
-            self.assertIn("principle-naming", result.stderr)
-            self.assertIn("pstack", result.stderr)
+            self.assertEqual(0, result.returncode, result.stderr)
 
     def test_accepts_a_citation_that_resolves_in_its_own_plugin(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
