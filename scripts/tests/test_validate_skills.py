@@ -16,13 +16,13 @@ SKILLS_DIR = PLUGIN_ROOT / "skills"
 
 
 def run_validator(
-    skills_dir: Path, ci: str | None = None
+    *skills_dirs: Path, ci: str | None = None
 ) -> subprocess.CompletedProcess[str]:
     environment = {key: value for key, value in os.environ.items() if key != "CI"}
     if ci is not None:
         environment["CI"] = ci
     return subprocess.run(
-        [sys.executable, str(VALIDATOR), str(skills_dir)],
+        [sys.executable, str(VALIDATOR), *(str(path) for path in skills_dirs)],
         cwd=REPOSITORY_ROOT,
         text=True,
         capture_output=True,
@@ -52,6 +52,23 @@ class ValidateSkillsTests(unittest.TestCase):
         result = run_validator(SKILLS_DIR)
 
         self.assertEqual(0, result.returncode, result.stderr)
+
+    def test_passes_on_every_plugin_skills_tree_at_once(self) -> None:
+        trees = sorted((REPOSITORY_ROOT / "plugins").glob("*/skills"))
+        self.assertGreater(len(trees), 1, "the repository ships several plugins")
+
+        result = run_validator(*trees)
+
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertIn(f"{len(trees)} trees", result.stdout)
+
+    def test_fails_when_a_named_tree_does_not_exist(self) -> None:
+        # CI passes plugins/*/skills. A glob that matches nothing arrives as
+        # that literal string, and validating nothing has to be loud.
+        result = run_validator(REPOSITORY_ROOT / "plugins" / "*" / "skills2")
+
+        self.assertNotEqual(0, result.returncode, result.stdout)
+        self.assertIn("no skills tree", result.stderr)
 
     def test_fails_on_a_broken_relative_link(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -478,6 +495,93 @@ class UnreadableHistoryTests(unittest.TestCase):
 
             self.assertNotEqual(0, result.returncode, result.stdout)
             self.assertIn("caveman", result.stderr)
+
+
+def write_split_repository(repository: Path) -> tuple[Path, Path]:
+    """A repository shaped like this one after the split: pstack plus one more.
+
+    The skills all began in pstack, so pstack is the tree whose git history
+    carries the deletions, and the second tree is the one whose own history
+    starts at the move commit.
+    """
+    pstack = repository / "plugins" / "pstack" / "skills"
+    azure = repository / "plugins" / "azure" / "skills"
+    write_removed_skill(repository, pstack, "caveman")
+    write_skill(pstack, "principle-naming")
+    write_skill(pstack, "principle-decomposition")
+    write_skill(azure, "devops")
+    commit_all(repository, "Split azure out of pstack")
+    return pstack, azure
+
+
+class MultipleSkillsTreeTests(unittest.TestCase):
+    """One invocation over every tree, because a per-plugin loop cannot see across.
+
+    A plugin installs on its own, so a skill it cites has to live in it. A
+    validator run against one tree at a time has no way to tell a name that
+    belongs to a sibling plugin from a name that belongs to nobody, and the
+    sibling case is the one the split created.
+    """
+
+    def test_fails_on_a_citation_that_names_a_skill_in_another_plugin(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            repository = Path(directory)
+            pstack, azure = write_split_repository(repository)
+            write_skill(azure, "sample", "Apply `principle-naming` first.\n")
+
+            result = run_validator(pstack, azure)
+
+            self.assertNotEqual(0, result.returncode, result.stdout)
+            self.assertIn("principle-naming", result.stderr)
+            self.assertIn("pstack", result.stderr)
+
+    def test_accepts_a_citation_that_resolves_in_its_own_plugin(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            repository = Path(directory)
+            pstack, azure = write_split_repository(repository)
+            write_skill(pstack, "sample", "Apply `principle-naming` first.\n")
+
+            result = run_validator(pstack, azure)
+
+            self.assertEqual(0, result.returncode, result.stderr)
+
+    def test_validates_every_tree_rather_than_only_the_first(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            repository = Path(directory)
+            pstack, azure = write_split_repository(repository)
+            write_skill(azure, "sample", "See [missing](./nope.md).\n")
+
+            result = run_validator(pstack, azure)
+
+            self.assertNotEqual(0, result.returncode, result.stdout)
+            self.assertIn("nope.md", result.stderr)
+
+    def test_catches_a_pre_move_deletion_in_a_tree_that_never_held_it(self) -> None:
+        # azure/skills begins at the move commit, so its own history knows
+        # nothing about caveman. The trees share one historical set for
+        # exactly this reason.
+        with tempfile.TemporaryDirectory() as directory:
+            repository = Path(directory)
+            pstack, azure = write_split_repository(repository)
+            write_skill(azure, "sample", "Answer in **caveman** register.\n")
+
+            result = run_validator(pstack, azure)
+
+            self.assertNotEqual(0, result.returncode, result.stdout)
+            self.assertIn("caveman", result.stderr)
+            self.assertIn("deleted", result.stderr)
+
+    def test_a_single_tree_alone_misses_the_pre_move_deletion(self) -> None:
+        # The measurement behind the one-invocation rule. Keep it, so a future
+        # change back to a per-plugin loop shows what it costs.
+        with tempfile.TemporaryDirectory() as directory:
+            repository = Path(directory)
+            _, azure = write_split_repository(repository)
+            write_skill(azure, "sample", "Answer in **caveman** register.\n")
+
+            result = run_validator(azure)
+
+            self.assertEqual(0, result.returncode, result.stderr)
 
 
 if __name__ == "__main__":
