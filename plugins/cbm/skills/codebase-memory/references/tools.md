@@ -1,6 +1,6 @@
 # codebase-memory tools (generated from tools.json, codebase-memory-mcp 0.8.1)
 
-Regenerate: `bash scripts/dump-schemas.sh` then rebuild this table. `project` is the name from `list_projects`.
+Regenerate: `python3 scripts/dump_schemas.py` then rebuild this table. `project` is the name from `list_projects`.
 
 | Tool | Purpose | Required | Optional | Example |
 |---|---|---|---|---|

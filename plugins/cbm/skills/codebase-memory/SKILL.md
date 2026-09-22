@@ -68,4 +68,4 @@ Cypher for anything else: `cbm query_graph '{"project":"P","query":"MATCH (f:Fun
 - Snippet line numbers not matching the file = stale index. `detect_changes` can still say 0 changed (seen on lodestar). Re-run `index_repository` on that repo.
 - `delete_project`, `index_repository`, `manage_adr update`, `ingest_traces` write. Everything else is read-only.
 
-Full arg table for all 14 tools: `references/tools.md`. Regenerate `references/tools.json` after a binary upgrade with `bash scripts/dump-schemas.sh`.
+Full arg table for all 14 tools: `references/tools.md`. Regenerate `references/tools.json` after a binary upgrade with `python3 scripts/dump_schemas.py`.
