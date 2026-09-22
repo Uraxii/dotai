@@ -7,11 +7,13 @@ own directory and carries a description.
 Deleting a skill is what leaves a dead reference behind, so the names git has
 carried under these directories decide which emphasised words are skill names.
 
-Every tree goes in one run. Two rules need the whole picture and a per-plugin
-loop cannot give it to them. A citation of a skill that lives in a sibling
-plugin looks like ordinary prose to a run that cannot see the sibling, and
-each plugin installs on its own, so that citation is a defect. A tree split
-off an older one has a git history starting at the move, so the
+Every tree goes in one run. Three rules need the whole picture and a
+per-plugin loop cannot give it to them. A citation of a skill that lives in a
+sibling plugin looks like ordinary prose to a run that cannot see the sibling,
+and each plugin installs on its own, so that citation is a defect. A citation
+that dropped its principle- prefix is only recognisable as one when the
+prefixed skill is visible, which it may not be from the citing tree alone. A
+tree split off an older one has a git history starting at the move, so the
 deleted-skill rule only works when the trees share one historical set.
 
 With no argument this validates every `plugins/*/skills` tree, which is what
@@ -173,7 +175,9 @@ def skill_names_in_history(skills_dir: Path) -> set[str] | None:
     }
 
 
-def referenced_skills(text: str, families: set[str], historical: set[str]) -> set[str]:
+def referenced_skills(
+    text: str, families: set[str], historical: set[str], live_names: set[str]
+) -> set[str]:
     body = strip_fenced_code(text)
     references = set()
     for match in EMPHASIS_RE.finditer(body):
@@ -181,6 +185,11 @@ def referenced_skills(text: str, families: set[str], historical: set[str]) -> se
         if token in historical:
             references.add(token)
         elif SKILL_NAME_RE.fullmatch(token) and token.split("-")[0] in families:
+            references.add(token)
+        elif (
+            SKILL_NAME_RE.fullmatch(token)
+            and f"principle-{token}" in live_names
+        ):
             references.add(token)
     for match in SKILL_FRAME_RE.finditer(body):
         token = (match.group(1) or match.group(2)).strip()
@@ -200,7 +209,10 @@ def documents_naming_skills(skills_dir: Path) -> list[Path]:
 
 
 def reference_remedy(
-    reference: str, historical: set[str], elsewhere: dict[str, str]
+    reference: str,
+    historical: set[str],
+    elsewhere: dict[str, str],
+    live_names: set[str],
 ) -> str:
     owner = elsewhere.get(reference)
     if owner:
@@ -211,31 +223,48 @@ def reference_remedy(
         )
     if reference in historical:
         return "was a skill here and was deleted. Drop the reference or restore the directory"
+    prefixed = f"principle-{reference}"
+    if prefixed in live_names:
+        remedy = f"cite **{prefixed}** instead"
+        if prefixed in elsewhere:
+            return (
+                f"{remedy}; "
+                f"{reference_remedy(prefixed, historical, elsewhere, live_names)}"
+            )
+        return remedy
     return "no skill directory of that name. Drop the emphasis if the word is prose"
 
 
 def skill_reference_problems(
     skills_dir: Path, historical: set[str], elsewhere: dict[str, str]
 ) -> list[str]:
-    # Three rules, each covering what the others cannot. History catches a
+    # Four rules, each covering what the others cannot. History catches a
     # deleted name in any citation syntax, but only names git ever carried.
     # Prefix families catch a hyphenated name that never existed, such as a
-    # misremembered principle-*. The "... skill" frame catches a non-hyphenated
-    # name that never existed, which has no other tell. Dropping any one of
-    # them leaves a class of stale reference with nothing looking for it.
+    # misremembered principle-*. A missing principle- prefix has to be checked
+    # separately because its first segment may not be a skill family. The
+    # "... skill" frame catches a non-hyphenated name that never existed,
+    # which has no other tell. Dropping any one leaves a stale reference class
+    # with nothing looking for it.
     root = skills_dir.resolve()
     names = skill_names(root)
     families = skill_families(names)
     # A live skill in a sibling plugin is a name a reader recognises, so it
-    # has to be recognised here too, or the citation passes as prose.
+    # has to be recognised here too. The shared live-name set also identifies
+    # an omitted principle- prefix when the prefixed skill lives in a sibling.
     known = historical | set(elsewhere)
+    live_names = names | set(elsewhere)
     problems = []
     for path in documents_naming_skills(root):
         inside = path_is_inside(root, path)
         label = path.relative_to(root if inside else root.parent)
-        for reference in sorted(referenced_skills(path.read_text(), families, known)):
+        for reference in sorted(
+            referenced_skills(path.read_text(), families, known, live_names)
+        ):
             if reference not in names:
-                remedy = reference_remedy(reference, historical, elsewhere)
+                remedy = reference_remedy(
+                    reference, historical, elsewhere, live_names
+                )
                 problems.append(f"{label} -> **{reference}** ({remedy})")
     return problems
 
@@ -358,10 +387,10 @@ def main(arguments: list[str] | None = None) -> int:
     print(
         f"ok: {count_phrase(skills, 'skill')} in "
         f"{count_phrase(len(trees), 'tree')}. Every markdown link resolves, "
-        "every skill name in backticks or bold resolves to a skill in the "
-        "same plugin, and every SKILL.md frontmatter names its own directory "
-        "and carries a description. A skill named in plain prose is not "
-        "checked."
+        "every skill citation in backticks or bold resolves to a skill in the "
+        "same plugin and keeps a required principle- prefix, and every "
+        "SKILL.md frontmatter names its own directory and carries a "
+        "description. A skill named in plain prose is not checked."
     )
     return 0
 
