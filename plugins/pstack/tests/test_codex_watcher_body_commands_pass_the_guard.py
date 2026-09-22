@@ -25,10 +25,11 @@ SPEC.loader.exec_module(HOOK)
 
 REPO = "/workspace/repo"
 RUN_NAME = "sample-run"
-WORKTREE = f"{REPO}/.nikki-agents/worktrees/{RUN_NAME}"
-# The watcher body writes DIR's basename as its own placeholder, because git
-# keys `.git/worktrees/<...>` on that basename and not on the run name.
-WORKTREE_BASENAME = WORKTREE.rsplit("/", 1)[1]
+# An existing worktree whose basename differs from the run name. Git keys
+# `.git/worktrees/<...>` on DIR's basename, so a body whose ROOTS named the
+# run instead would pass with a fixture where the two are equal.
+WORKTREE_BASENAME = "custom-dir"
+WORKTREE = f"{REPO}/.claude/worktrees/{WORKTREE_BASENAME}"
 CODEX = "codex-agent"
 MODEL = "gpt-5.6-terra"
 
