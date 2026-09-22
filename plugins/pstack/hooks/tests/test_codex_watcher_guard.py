@@ -1,6 +1,7 @@
 import importlib.util
 import io
 import json
+import sre_parse
 import sys
 import unittest
 from pathlib import Path
@@ -518,6 +519,75 @@ class CodexWatcherGuardTests(unittest.TestCase):
             },
             hooks["PreToolUse"][0],
         )
+
+
+# -- structural guarantee behind the deleted runtime check -----------------
+#
+# The runtime check that rejected a forbidden shell character was deleted as
+# provably dead: every allowlist pattern is built from explicit character
+# classes, so no surviving pattern could ever match one. That is a fact about
+# today's patterns, not an invariant. Nothing else stops a future edit from
+# loosening PATH_SEGMENT or BASE_SEGMENT to admit `$` or a backtick. This
+# walks every pattern's parse tree instead of trusting the source text, so a
+# loosened class fails a test rather than reopening the hole silently.
+
+FORBIDDEN_CHARACTERS = "\n\r;&|$`>"
+
+
+def _iter_character_nodes(parsed):
+    """Yield every LITERAL/RANGE/ANY/NEGATE node reachable from `parsed`.
+
+    Descends into branches, repeats, subpatterns, and lookaheads: every
+    construct in these patterns that can still hold a character acceptor.
+    """
+    for op, argument in parsed:
+        if op is sre_parse.BRANCH:
+            for branch in argument[1]:
+                yield from _iter_character_nodes(branch)
+        elif op in (sre_parse.MAX_REPEAT, sre_parse.MIN_REPEAT):
+            yield from _iter_character_nodes(argument[2])
+        elif op is sre_parse.SUBPATTERN:
+            yield from _iter_character_nodes(argument[3])
+        elif op in (sre_parse.ASSERT, sre_parse.ASSERT_NOT):
+            yield from _iter_character_nodes(argument[1])
+        elif op is sre_parse.IN:
+            yield from argument
+        else:
+            yield op, argument
+
+
+class AllowlistCharacterClassTests(unittest.TestCase):
+    def all_patterns(self):
+        patterns = []
+        for bucket in HOOK.ALLOWED_BASH_BY_KIND.values():
+            patterns.extend(bucket)
+        patterns.append(HOOK.ALLOWED_WRITE)
+        return patterns
+
+    def test_no_allowlist_pattern_can_match_a_forbidden_character(self) -> None:
+        for pattern in self.all_patterns():
+            parsed = sre_parse.parse(pattern.pattern)
+            for op, argument in _iter_character_nodes(parsed):
+                with self.subTest(pattern=pattern.pattern, op=op):
+                    self.assertIsNot(
+                        op,
+                        sre_parse.ANY,
+                        "a `.` node matches any character, forbidden ones included",
+                    )
+                    self.assertIsNot(
+                        op,
+                        sre_parse.NEGATE,
+                        "a negated class ([^...]) can admit a forbidden character",
+                    )
+                    if op is sre_parse.LITERAL:
+                        self.assertNotIn(chr(argument), FORBIDDEN_CHARACTERS)
+                    elif op is sre_parse.RANGE:
+                        low, high = argument
+                        for character in FORBIDDEN_CHARACTERS:
+                            self.assertFalse(
+                                low <= ord(character) <= high,
+                                f"range {low}-{high} admits {character!r}",
+                            )
 
 
 if __name__ == "__main__":
