@@ -67,7 +67,7 @@ release pipeline and were not taken either.
 ## Local to this plugin
 
 Every other skill under `plugins/pstack/skills/` is specific to this
-project and was not touched by the port: `azure-devops`, `codebase-memory`,
-`create-artifact`, `decisions`, `handoff`, `llm-wiki`, `notion-cli`,
-`podman-sandbox`, `principle-code-quality`, `principle-decomposition`,
-`principle-naming`, `principle-output-to-user`, `skill-quality`.
+project and was not touched by the port: `azure-devops`, `beads`,
+`codebase-memory`, `handoff`, `llm-wiki`, `notion-cli`, `podman`,
+`principle-code-quality`, `principle-decomposition`, `principle-naming`,
+`principle-output-to-user`, `proton-pass-cli`, `skill-quality`.
