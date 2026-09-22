@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """Generate every plugin manifest and both marketplace files from one list.
 
-The repository ships eleven plugins. Each needs a `plugin.json`, a
+The repository ships twelve plugins. Each needs a `plugin.json`, a
 `.claude-plugin/plugin.json`, and a `.codex-plugin/plugin.json`, and each
 must appear in `.claude-plugin/marketplace.json`, in
 `.agents/plugins/marketplace.json`, and in the plugin table in `README.md`.
-That is 33 manifests, 22 marketplace entries, and 11 table rows whose names,
+That is 36 manifests, 24 marketplace entries, and 12 table rows whose names,
 versions, and descriptions have to agree.
 
 Edit PLUGINS below and rerun this script. Never hand-edit a generated
@@ -253,6 +253,22 @@ PLUGINS: list[dict[str, object]] = [
             "What breaks if I change this symbol?",
         ],
     },
+    {
+        "name": "steer",
+        "hooks": True,
+        "description": (
+            "Harness hooks that steer agent behaviour, independent of any skill."
+        ),
+        "short": "Harness hooks independent of skills.",
+        "long": (
+            "Installs harness hooks that steer agent behaviour without being "
+            "coupled to a skill."
+        ),
+        "keywords": ["harness", "hooks"],
+        "prompts": [
+            "Install the steer harness hooks.",
+        ],
+    },
 ]
 
 
@@ -340,7 +356,7 @@ def plugin_table() -> str:
 def readme_with_plugin_table(root: Path) -> str:
     """The README as it should read, with only its plugin table restamped.
 
-    Eleven names and descriptions copied into the README by hand is a list
+    Twelve names and descriptions copied into the README by hand is a list
     nothing re-asserts, and it drifts the first time a description here
     changes. The prose around the markers stays whatever a person wrote.
     """

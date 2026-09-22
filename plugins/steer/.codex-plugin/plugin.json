@@ -1,0 +1,33 @@
+{
+  "name": "steer",
+  "version": "1.0.0",
+  "description": "Harness hooks that steer agent behaviour, independent of any skill.",
+  "author": {
+    "name": "Uraxii",
+    "url": "https://github.com/Uraxii"
+  },
+  "homepage": "https://github.com/Uraxii/dotai",
+  "repository": "https://github.com/Uraxii/dotai",
+  "keywords": [
+    "codex",
+    "skills",
+    "harness",
+    "hooks"
+  ],
+  "skills": "./skills/",
+  "hooks": "./hooks/codex-hooks.json",
+  "interface": {
+    "displayName": "steer",
+    "shortDescription": "Harness hooks independent of skills.",
+    "longDescription": "Installs harness hooks that steer agent behaviour without being coupled to a skill.",
+    "developerName": "Uraxii",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Skills",
+      "Hooks"
+    ],
+    "defaultPrompt": [
+      "Install the steer harness hooks."
+    ]
+  }
+}
