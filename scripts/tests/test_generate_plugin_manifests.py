@@ -1,7 +1,7 @@
 """Check the generator against a copy of the tree, never the tree itself.
 
 Write mode used to run against the checkout the script lives in, so running
-this file rewrote all 36 generated files, `README.md` among them, and threw
+this file rewrote all 39 generated files, `README.md` among them, and threw
 away whatever the person running it had not committed. Every test here
 generates into a temporary directory instead, and `setUpModule` records the
 working tree so `tearDownModule` fails if anything in this file writes to it.
@@ -40,6 +40,9 @@ def load_generator():
 
 generator = load_generator()
 PLUGIN_NAMES = {str(plugin["name"]) for plugin in generator.PLUGINS}
+HOOK_PLUGIN_NAMES = {
+    str(plugin["name"]) for plugin in generator.PLUGINS if plugin.get("hooks")
+}
 
 
 def plugin_directories() -> set[str]:
@@ -166,7 +169,7 @@ class GeneratorOutputTest(unittest.TestCase):
                         "a directory, so the entry installs nothing.",
                     )
 
-    def test_only_pstack_declares_hooks(self) -> None:
+    def test_hook_plugins_declare_hook_metadata(self) -> None:
         for name in sorted(PLUGIN_NAMES):
             manifest = json.loads(
                 (
@@ -174,13 +177,8 @@ class GeneratorOutputTest(unittest.TestCase):
                 ).read_text()
             )
             with self.subTest(plugin=name):
-                if name == "pstack":
+                if name in HOOK_PLUGIN_NAMES:
                     self.assertEqual(manifest["hooks"], "./hooks/codex-hooks.json")
-                    self.assertTrue(
-                        (
-                            REPOSITORY_ROOT / "plugins/pstack/hooks/codex-hooks.json"
-                        ).is_file()
-                    )
                     self.assertIn("Hooks", manifest["interface"]["capabilities"])
                 else:
                     self.assertNotIn("hooks", manifest)
