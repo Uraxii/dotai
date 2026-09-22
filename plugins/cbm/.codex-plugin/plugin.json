@@ -1,6 +1,6 @@
 {
   "name": "cbm",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Query the codebase-memory code graph from a shell: callers, dependencies, impact, dead code, and ADRs.",
   "author": {
     "name": "Uraxii",

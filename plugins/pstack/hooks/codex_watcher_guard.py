@@ -25,7 +25,6 @@ NAME = r"(?!\.\.?(?![A-Za-z0-9._-]))[A-Za-z0-9._-]+"
 SLUG = r"[a-z0-9][a-z0-9.-]*"
 PATH_SEGMENT = r"(?!\.\.?(?![A-Za-z0-9._@+-]))[A-Za-z0-9._@+-]+"
 PATH = rf"/(?:{PATH_SEGMENT})(?:/{PATH_SEGMENT})*"
-FORBIDDEN_COMMAND_CHARS = re.compile(r"[\n\r;&|$`>]")
 
 # The commit-ish `git worktree add` starts the new worktree from: a plain
 # branch name (`develop`), a branch with a namespace (`agent/pr2-split`), or
@@ -105,7 +104,7 @@ def safe_tool_name(payload: Mapping[str, object]) -> str:
 
 
 def allowed_bash(command: object, kind: str) -> bool:
-    if not isinstance(command, str) or FORBIDDEN_COMMAND_CHARS.search(command):
+    if not isinstance(command, str):
         return False
     normalized = re.sub(r" +", " ", command.strip())
     return any(pattern.fullmatch(normalized) for pattern in ALLOWED_BASH_BY_KIND[kind])
