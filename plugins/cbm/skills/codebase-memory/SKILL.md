@@ -9,7 +9,7 @@ One tool per process. JSON in, JSON out on stdout, one `level=info msg=mem.init`
 
 ```bash
 codebase-memory-mcp cli <tool> '<json>' 2>/dev/null
-scripts/cbm <tool> ['<json>']   # same, init line dropped, jq-pretty, json defaults to {}
+scripts/cbm <tool> ['<json>']   # same, init line dropped, pretty-printed, json defaults to {}
 alias cbm=<skilldir>/scripts/cbm   # skilldir = directory holding this SKILL.md; examples below assume this
 ```
 
@@ -19,7 +19,7 @@ Every tool but `list_projects` and `index_repository` requires `project`. The na
 `/var/home/nicole/Projects/lodestar` -> `var-home-nicole-Projects-lodestar`. Confirm with:
 
 ```bash
-cbm list_projects | jq -r '.projects[] | "\(.name)\t\(.root_path)"'
+cbm list_projects   # each entry pairs a name with its root_path
 ```
 
 Not listed -> index first: `cbm index_repository '{"repo_path":"/abs/path","mode":"fast"}'` (`full` adds similarity edges, slower). Re-index only when `detect_changes` shows changed files.
@@ -68,4 +68,4 @@ Cypher for anything else: `cbm query_graph '{"project":"P","query":"MATCH (f:Fun
 - Snippet line numbers not matching the file = stale index. `detect_changes` can still say 0 changed (seen on lodestar). Re-run `index_repository` on that repo.
 - `delete_project`, `index_repository`, `manage_adr update`, `ingest_traces` write. Everything else is read-only.
 
-Full arg table for all 14 tools: `references/tools.md`. Regenerate `references/tools.json` after a binary upgrade with `bash scripts/dump-schemas.sh`.
+Full arg table for all 14 tools: `references/tools.md`. Regenerate `references/tools.json` after a binary upgrade with `python3 scripts/dump_schemas.py`.
