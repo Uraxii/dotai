@@ -277,6 +277,82 @@ class Opus5ReduceOutputTests(unittest.TestCase):
 
     # -- logging and real invocation ---------------------------------------
 
+    def test_the_log_rolls_over_instead_of_growing_without_bound(self) -> None:
+        # Drive the real _log() call path (through main(), not a helper)
+        # past the rollover threshold repeatedly and confirm the file
+        # never grows past it, and that early lines are actually gone
+        # afterward -- proof of a rollover, not just a lucky small write.
+        environment = {**self.environment, "CLEAN_RECAP_LOG_MAX_BYTES": "500"}
+        with mock.patch.dict(os.environ, environment, clear=True):
+            for _ in range(80):
+                self.decide({})
+
+        contents = self.log_path.read_text(encoding="utf-8")
+        self.assertLessEqual(self.log_path.stat().st_size, 500 + 300)
+        lines = contents.splitlines()
+        self.assertLess(len(lines), 80, "expected old lines to be dropped")
+        self.assertTrue(
+            all(
+                "no readable transcript_path" in line or "rolled over" in line
+                for line in lines
+            )
+        )
+        self.assertTrue(
+            any("rolled over" in line for line in lines),
+            "expected at least one rollover marker line",
+        )
+
+    def test_malformed_max_bytes_falls_back_to_the_default_instead_of_crashing(
+        self,
+    ) -> None:
+        # The real-world bug: CLEAN_RECAP_LOG_MAX_BYTES=1MB used to raise
+        # ValueError outside any guard, so the hook never printed its
+        # block decision and a recap was silently skipped every turn.
+        environment = {**self.environment, "CLEAN_RECAP_LOG_MAX_BYTES": "1MB"}
+        result = subprocess.run(
+            [str(HOOK_PATH)],
+            input=json.dumps(
+                {"transcript_path": self.transcript("work", WORKING_TURN)}
+            ),
+            capture_output=True,
+            text=True,
+            env=environment,
+        )
+
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertEqual(
+            {"decision": "block", "reason": HOOK.RECAP_INSTRUCTION},
+            json.loads(result.stdout),
+        )
+        self.assertIn("BLOCK", self.log_path.read_text(encoding="utf-8"))
+
+    def test_malformed_model_pattern_falls_back_to_the_default_instead_of_silently_skipping(
+        self,
+    ) -> None:
+        # The same defect one env var over, quieter than the max-bytes one:
+        # an invalid CLEAN_RECAP_MODEL_PATTERN used to raise inside
+        # re.search with no guard, so the hook exited 0 with empty stdout
+        # and no log line at all, and a recap was skipped every turn.
+        environment = {**self.environment, "CLEAN_RECAP_MODEL_PATTERN": "opus-5("}
+        result = subprocess.run(
+            [str(HOOK_PATH)],
+            input=json.dumps(
+                {"transcript_path": self.transcript("work", WORKING_TURN)}
+            ),
+            capture_output=True,
+            text=True,
+            env=environment,
+        )
+
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertEqual(
+            {"decision": "block", "reason": HOOK.RECAP_INSTRUCTION},
+            json.loads(result.stdout),
+        )
+        log_contents = self.log_path.read_text(encoding="utf-8")
+        self.assertIn("rejected", log_contents)
+        self.assertIn("BLOCK", log_contents)
+
     def test_every_decision_is_logged_to_the_configured_path(self) -> None:
         self.decide({"transcript_path": self.transcript("work", WORKING_TURN)})
         self.decide({})

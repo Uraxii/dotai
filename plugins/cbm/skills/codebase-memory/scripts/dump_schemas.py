@@ -9,6 +9,7 @@ Python standard library only, forever. No pip dependency.
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -88,8 +89,21 @@ def tool_count(responses: list[dict]) -> str:
 
 
 def main(argv: list[str]) -> int:
-    """Rewrite tools.json and report its path and tool count."""
-    with OUTPUT_PATH.open("w", encoding="utf-8") as stream:
+    """Rewrite tools.json and report its path and tool count.
+
+    Writes to a sibling temp file first and only replaces OUTPUT_PATH once
+    the binary has exited successfully and its reply parsed clean. A failed
+    run (binary missing, timed out, non-JSON reply, or non-zero exit) must
+    leave whatever OUTPUT_PATH already held untouched, per
+    principle-make-operations-idempotent. A broken run is not a license to
+    blank out the last good schema dump.
+
+    The temp file's name includes this process's pid so two concurrent
+    runs never share one: without that, the winner's cleanup could unlink
+    the loser's still-open temp file out from under it.
+    """
+    tmp_path = OUTPUT_PATH.parent / f"{OUTPUT_PATH.name}.{os.getpid()}.tmp"
+    try:
         try:
             done = run_handshake()
         except FileNotFoundError:
@@ -105,13 +119,17 @@ def main(argv: list[str]) -> int:
             print(f"{BINARY} sent a line that is not JSON: {error}",
                   file=sys.stderr)
             return PARSE_ERROR_EXIT
-        for message in responses:
-            stream.write(json.dumps(message, ensure_ascii=False,
-                                    separators=COMPACT) + "\n")
-    if done.returncode != 0:
-        return done.returncode
-    print(f"wrote {OUTPUT_PATH}: {tool_count(responses)} tools")
-    return 0
+        if done.returncode != 0:
+            return done.returncode
+        with tmp_path.open("w", encoding="utf-8") as stream:
+            for message in responses:
+                stream.write(json.dumps(message, ensure_ascii=False,
+                                        separators=COMPACT) + "\n")
+        tmp_path.replace(OUTPUT_PATH)
+        print(f"wrote {OUTPUT_PATH}: {tool_count(responses)} tools")
+        return 0
+    finally:
+        tmp_path.unlink(missing_ok=True)
 
 
 if __name__ == "__main__":
