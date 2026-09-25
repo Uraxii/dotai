@@ -2,14 +2,8 @@
 # Block full-file reads on large files, redirect to /bulk-reader skill
 # Self-contained: all routing logic lives here, no CLAUDE.md needed
 #
-# PreToolUse output contract: pass-through prints nothing and exits 0, so
-# Claude Code's normal permission flow decides (see hooks docs). A block
-# emits hookSpecificOutput.permissionDecision=deny in the current schema.
-# The legacy top-level {"decision":"allow"} this hook used to print on
-# every pass-through is rejected by current Claude Code (only approve|block
-# are legal there), which broke nearly every Read. Never emit
-# permissionDecision:"allow" here either — that would bypass the user's own
-# permission prompt for the tool call instead of deferring to it.
+# Modified from spotify/portal-ai-plugins; see ../upstream-source.md
+# Never emit permissionDecision allow: it skips the user's permission prompt.
 
 MIN_LINES="${SHUNT_MIN_LINES:-350}"
 case "$MIN_LINES" in ''|*[!0-9]*) MIN_LINES=350 ;; esac

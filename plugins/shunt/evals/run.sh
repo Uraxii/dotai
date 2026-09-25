@@ -81,10 +81,7 @@ run_eval() {
   else
     result=$(echo "$input" | bash "$hook" 2>/dev/null)
   fi
-  # Current PreToolUse schema: empty stdout + exit 0 means allow (defers to
-  # the normal permission flow), hookSpecificOutput.permissionDecision=deny
-  # means block. The hook never emits "allow" itself, that would bypass the
-  # user's own permission prompt instead of deferring to it.
+  # Empty stdout is allow; hookSpecificOutput.permissionDecision=deny is block.
   if [ -z "$result" ]; then
     actual="allow"
   else

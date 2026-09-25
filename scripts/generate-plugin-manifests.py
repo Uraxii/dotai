@@ -304,6 +304,7 @@ PLUGINS: list[dict[str, object]] = [
         "name": "shunt",
         "version": "0.2.1",
         "hooks": ["claude"],
+        "skills": False,
         "description": (
             "Spotify's shunt, vendored and patched to the current PreToolUse "
             "hook output schema: shunts large reads and boilerplate "

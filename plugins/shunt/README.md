@@ -2,7 +2,7 @@
 
 A Claude Code plugin that shunts I/O-heavy work to AiKA modes, saving 82-94% of tokens on large file reads and boilerplate generation.
 
-Vendored from Spotify's [`portal-ai-plugins`](https://github.com/spotify/portal-ai-plugins/tree/main/plugins/shunt) at revision `e14bdb1`, Apache-2.0 (see [LICENSE.md](LICENSE.md)). Patched fork: `hooks/check-file-size` and `hooks/check-bash-read` printed a legacy top-level `{"decision": "allow"}` that current Claude Code rejects (upstream [issue #10](https://github.com/spotify/portal-ai-plugins/issues/10)); both now pass through with empty stdout and `exit 0`, and block with the current `hookSpecificOutput.permissionDecision` schema. Full detail in [upstream-source.md](upstream-source.md).
+Vendored from Spotify's [`portal-ai-plugins`](https://github.com/spotify/portal-ai-plugins/tree/e14bdb1dc894e0a2ef150fa811db5308ae2ddb37/plugins/shunt) at revision `e14bdb1dc894e0a2ef150fa811db5308ae2ddb37`, Apache-2.0 (see [LICENSE.md](LICENSE.md)). Patched fork: `hooks/check-file-size` and `hooks/check-bash-read` printed a legacy top-level `{"decision": "allow"}` that current Claude Code rejects (upstream [issue #10](https://github.com/spotify/portal-ai-plugins/issues/10)); both now pass through with empty stdout and `exit 0`, and block with the current `hookSpecificOutput.permissionDecision` schema. Full detail in [upstream-source.md](upstream-source.md).
 
 ## How it works
 
@@ -19,9 +19,10 @@ Delegation goes through the Portal CLI actions registry — one `aika:invoke-cha
 ## Prerequisites
 
 - [`jq`](https://jqlang.org) — `brew install jq`
-- The **portal** plugin from this marketplace, which provides the Portal CLI that shunt delegates through:
+- The **portal** plugin from Spotify's [`portal-ai-plugins`](https://github.com/spotify/portal-ai-plugins) marketplace (not this dotai marketplace), which provides the Portal CLI that shunt delegates through:
 
 ```bash
+claude plugin marketplace add spotify/portal-ai-plugins
 claude plugin install portal@portal
 ```
 

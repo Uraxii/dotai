@@ -10,21 +10,17 @@
   "repository": "https://github.com/Uraxii/dotai",
   "keywords": [
     "codex",
-    "skills",
     "token-optimization",
     "delegation",
     "aika"
   ],
-  "skills": "./skills/",
   "interface": {
     "displayName": "shunt",
     "shortDescription": "Delegate large reads and boilerplate to AiKA, token-cheap.",
     "longDescription": "A vendored, patched fork of Spotify's shunt plugin from portal-ai-plugins. Hooks block Claude from reading large files directly and redirect to the bulk-reader skill; a code-writer skill delegates boilerplate generation the same way. Both route through the Portal CLI's AiKA modes. See plugins/shunt/upstream-source.md for the source revision and what this fork changed.",
     "developerName": "Uraxii",
     "category": "Developer Tools",
-    "capabilities": [
-      "Skills"
-    ],
+    "capabilities": [],
     "defaultPrompt": [
       "Use the bulk-reader skill to summarize this large file.",
       "Delegate this boilerplate to the code-writer skill."

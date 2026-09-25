@@ -2,8 +2,8 @@
 
 Vendored from Spotify's `portal-ai-plugins` marketplace.
 
-- Source: https://github.com/spotify/portal-ai-plugins/tree/main/plugins/shunt
-- Revision: `e14bdb1` (shunt's last touch on that repo; repo main is `3c24ca3`)
+- Source: https://github.com/spotify/portal-ai-plugins/tree/e14bdb1dc894e0a2ef150fa811db5308ae2ddb37/plugins/shunt
+- Revision: `e14bdb1dc894e0a2ef150fa811db5308ae2ddb37` (shunt's last touch on that repo; repo main is `3c24ca3`)
 - License: Apache-2.0, retained in [LICENSE.md](LICENSE.md).
 - Upstream issue: https://github.com/spotify/portal-ai-plugins/issues/10
 
