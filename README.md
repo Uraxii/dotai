@@ -26,6 +26,7 @@ needs `pstack` installed.
 | `cbm` | Query the codebase-memory code graph from a shell: callers, dependencies, impact, dead code, and ADRs. |
 | `caveman` | Answer in a compressed register that drops filler and keeps every technical fact. |
 | `steer` | Harness hooks that steer agent behaviour, independent of any skill. |
+| `shunt` | Spotify's shunt, vendored and patched to the current PreToolUse hook output schema: shunts large reads and boilerplate generation to AiKA modes to save tokens. |
 
 <!-- dotai:plugins:end -->
 
