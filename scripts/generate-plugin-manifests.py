@@ -301,6 +301,32 @@ PLUGINS: list[dict[str, object]] = [
             "Install the steer harness hooks.",
         ],
     },
+    {
+        "name": "shunt",
+        "version": "0.2.1",
+        "hooks": ["claude"],
+        "skills": False,
+        "description": (
+            "Spotify's shunt, vendored and patched to the current PreToolUse "
+            "hook output schema: shunts large reads and boilerplate "
+            "generation to AiKA modes to save tokens."
+        ),
+        "short": "Delegate large reads and boilerplate to AiKA, token-cheap.",
+        "long": (
+            "A vendored, patched fork of Spotify's shunt plugin from "
+            "portal-ai-plugins. Hooks block Claude from reading large files "
+            "directly and redirect to the bulk-reader skill; a code-writer "
+            "skill delegates boilerplate generation the same way. Both "
+            "route through the Portal CLI's AiKA modes. See "
+            "plugins/shunt/upstream-source.md for the source revision and "
+            "what this fork changed."
+        ),
+        "keywords": ["token-optimization", "delegation", "aika"],
+        "prompts": [
+            "Use the bulk-reader skill to summarize this large file.",
+            "Delegate this boilerplate to the code-writer skill.",
+        ],
+    },
 ]
 
 

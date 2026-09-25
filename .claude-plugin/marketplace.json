@@ -69,6 +69,11 @@
       "name": "steer",
       "source": "./plugins/steer",
       "description": "Harness hooks that steer agent behaviour, independent of any skill."
+    },
+    {
+      "name": "shunt",
+      "source": "./plugins/shunt",
+      "description": "Spotify's shunt, vendored and patched to the current PreToolUse hook output schema: shunts large reads and boilerplate generation to AiKA modes to save tokens."
     }
   ]
 }
