@@ -327,6 +327,27 @@ PLUGINS: list[dict[str, object]] = [
             "Delegate this boilerplate to the code-writer skill.",
         ],
     },
+    {
+        "name": "itch",
+        "description": (
+            "Install, log in to, and push game builds to itch.io with the "
+            "butler CLI."
+        ),
+        "short": "Publish game builds to itch.io with butler.",
+        "long": (
+            "A vendored, corrected copy of the itch-publish skill from "
+            "gamedev-skills/awesome-gamedev-agent-skills. Covers installing "
+            "butler, authenticating without hanging a non-interactive agent, "
+            "pushing builds to channels, versioning, and CI. See "
+            "plugins/itch/skills/itch-publish/upstream-source.md for the "
+            "source revision and what changed."
+        ),
+        "keywords": ["itch-io", "butler", "gamedev", "publishing"],
+        "prompts": [
+            "Push this build to my itch.io page with butler.",
+            "Set up butler to upload to itch.io from CI.",
+        ],
+    },
 ]
 
 

@@ -27,6 +27,7 @@ needs `pstack` installed.
 | `caveman` | Answer in a compressed register that drops filler and keeps every technical fact. |
 | `steer` | Harness hooks that steer agent behaviour, independent of any skill. |
 | `shunt` | Spotify's shunt, vendored and patched to the current PreToolUse hook output schema: shunts large reads and boilerplate generation to AiKA modes to save tokens. |
+| `itch` | Install, log in to, and push game builds to itch.io with the butler CLI. |
 
 <!-- dotai:plugins:end -->
 
