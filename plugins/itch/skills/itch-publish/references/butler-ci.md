@@ -39,7 +39,8 @@ chmod +x butler
 ./butler -V        # prints version; confirms it runs
 ```
 
-Common broth channels: `linux-amd64`, `windows-amd64`, `darwin-amd64`. The `-head` channels
+Common broth channels: `linux-amd64`, `linux-arm64`, `windows-amd64`, `darwin-amd64`,
+`darwin-arm64`, `darwin-universal`. The `-head` channels
 are bleeding-edge; the others are stable. The zip also contains two 7-zip helper libraries —
 harmless, and not required for `butler push`.
 
@@ -81,7 +82,7 @@ install + `butler push` commands in a job script.
 | `--if-changed` | Skip the push if the contents are identical to the latest build (reduces no-op patches). |
 | `--hidden` | Mark the upload hidden — **only** when the push creates a *new* channel; errors on an existing one. |
 | `--ignore '<glob>'` | Exclude matching files; repeatable (`--ignore '*.pdb' --ignore '*.dSYM'`). Two dashes. |
-| `--dry-run` | List every file that would be pushed (+ a summary); uploads nothing. |
+| `--dry-run` | List the local files that would be pushed, after ignores (+ a summary); no diff against the last build, uploads nothing. Use `butler push-preview` for the diff. |
 | `--no-auto-unzip` | Push a single-`.zip` folder as one opaque file instead of unpacking it. |
 | `--dereference` | Follow symlinks and upload copies of their targets (larger builds; use with care). |
 | `--no-fix-permissions` | Turn off the default fix-up of executable bits during the walk. |

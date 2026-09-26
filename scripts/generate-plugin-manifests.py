@@ -337,7 +337,7 @@ PLUGINS: list[dict[str, object]] = [
         "long": (
             "A vendored, corrected copy of the itch-publish skill from "
             "gamedev-skills/awesome-gamedev-agent-skills. Covers installing "
-            "butler, authenticating without hanging a non-interactive agent, "
+            "butler, authenticating with BUTLER_API_KEY or butler login, "
             "pushing builds to channels, versioning, and CI. See "
             "plugins/itch/skills/itch-publish/upstream-source.md for the "
             "source revision and what changed."

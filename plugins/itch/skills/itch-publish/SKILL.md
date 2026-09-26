@@ -17,14 +17,6 @@ uploads go through **butler**, itch.io's command-line tool, with one command you
 forever: `butler push`. butler diffs against the previous build and uploads only what
 changed. Deep CI/CD and flag detail lives in `references/butler-ci.md`.
 
-## When to use
-
-- Use when creating/updating an itch.io project page, installing or logging in to butler,
-  uploading a build with `butler push`, choosing channel names, versioning uploads, or
-  shipping a jam/demo/release build to itch.io.
-- Triggers: `butler push`, `butler login`, channels, `.itch.toml`, "publish on itch",
-  "upload to itch".
-
 **When *not* to use:** publishing on Steam; jam *scope/planning* (this skill is only the
 upload mechanics); building the game itself.
 
@@ -104,14 +96,16 @@ butler push ./build leafy/my-game:windows-beta --hidden
 # Exclude files from the upload without copying the folder (--ignore is repeatable):
 butler push ./build leafy/my-game:windows --ignore '*.pdb' --ignore '*.dSYM'
 
-# Preview exactly what would be sent, without sending it:
+# List the local files a push would send, after ignores. No diff against the last build;
+# use butler push-preview for that:
 butler push ./build leafy/my-game:windows --dry-run
 ```
 
 ## Pitfalls
 
-- **Missing credentials hang an agent.** Any command that needs auth and finds no key starts
-  the interactive browser login and waits forever. Set `BUTLER_API_KEY` or run
+- **Missing credentials.** A command that needs auth and finds no key exits 1 with "Please
+  set BUTLER_API_KEY" when stdin is not a terminal. On Windows, or under a pty, it starts
+  the interactive browser login instead and waits for it. Set `BUTLER_API_KEY` or run
   `butler login` first. `BUTLER_API_KEY` wins over the creds file and over `-i`.
 - **The page must exist first.** butler never creates it; pushing to a missing page fails
   with `invalid target`.
