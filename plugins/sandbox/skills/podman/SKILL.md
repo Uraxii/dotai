@@ -75,6 +75,9 @@ your context for the rest of the session. `shot` exits 1 when `colors` is 2 or f
 
 ## Tear a lab down
 
+Stop a lab (`podman stop lab-NAME`) as soon as its task no longer needs it. Tear it down only
+after its commits are rescued.
+
 ```
 scripts/lab down demo
 ```
