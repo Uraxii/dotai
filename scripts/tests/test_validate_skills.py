@@ -115,6 +115,58 @@ class ValidateSkillsTests(unittest.TestCase):
 
             self.assertEqual(0, result.returncode, result.stderr)
 
+    def test_ignores_links_inside_inline_code_spans(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            skills_dir = Path(directory)
+            skill_dir = skills_dir / "sample"
+            skill_dir.mkdir()
+            (skill_dir / "SKILL.md").write_text(
+                "---\nname: sample\ndescription: A sample skill.\n---\n\n"
+                "Attach media and reference it as `![alt](./file.webp)`, "
+                "same as [real](./nope.md).\n"
+            )
+
+            result = run_validator(skills_dir)
+
+            self.assertNotEqual(0, result.returncode)
+            self.assertNotIn("file.webp", result.stderr)
+            self.assertIn("nope.md", result.stderr)
+
+    def test_catches_a_link_hidden_by_a_code_span_wrapped_across_a_line(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            skills_dir = Path(directory)
+            skill_dir = skills_dir / "sample"
+            skill_dir.mkdir()
+            (skill_dir / "SKILL.md").write_text(
+                "---\nname: sample\ndescription: A sample skill.\n---\n\n"
+                "Run `git log\n"
+                "--oneline` then read [the guide](./references/guide.md) "
+                "and `notes`.\n"
+            )
+
+            result = run_validator(skills_dir)
+
+            self.assertNotEqual(0, result.returncode)
+            self.assertIn("references/guide.md", result.stderr)
+
+    def test_ignores_links_inside_double_backtick_code_spans(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            skills_dir = Path(directory)
+            skill_dir = skills_dir / "sample"
+            skill_dir.mkdir()
+            (skill_dir / "SKILL.md").write_text(
+                "---\nname: sample\ndescription: A sample skill.\n---\n\n"
+                "See ``[a](./dbl.md)`` here, same as [real](./nope.md).\n"
+            )
+
+            result = run_validator(skills_dir)
+
+            self.assertNotEqual(0, result.returncode)
+            self.assertNotIn("dbl.md", result.stderr)
+            self.assertIn("nope.md", result.stderr)
+
     def test_fails_when_frontmatter_name_does_not_match_directory(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             skills_dir = Path(directory)
