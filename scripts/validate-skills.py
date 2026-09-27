@@ -35,7 +35,11 @@ __all__ = ["main", "validate_skills_tree", "validate_skills_trees"]
 
 LINK_RE = re.compile(r"\]\(([^)\n]*)\)")
 FENCE_RE = re.compile(r"```.*?```", re.DOTALL)
-CODE_SPAN_RE = re.compile(r"(?<!`)(`+)(?!`)(?:(?!\n[ \t]*\n).)*?(?<!`)\1(?!`)", re.DOTALL)
+CODE_SPAN_RE = re.compile(
+    r"(?<!`)(`+)(?!`)(?:(?!\n[ \t]*(?:\n|[-*+][ \t]|\d+[.)][ \t]|#{1,6}[ \t]"
+    r"|\|[^\n]*\|[ \t]*(?:\n|\Z))).)*?(?<!`)\1(?!`)",
+    re.DOTALL,
+)
 FRONTMATTER_RE = re.compile(r"^---\n(.*?)\n---", re.DOTALL)
 
 # Skills are cited as **name** or `name`, never as markdown links.
@@ -78,8 +82,11 @@ def strip_fenced_code(text: str) -> str:
 
 def strip_code_spans(text: str) -> str:
     # Blank with spaces rather than delete: deleting a span would join
-    # `[a]`x`(./b.md)` into a link, and the span can carry newlines a
-    # wrapped span crossed, so only non-newline characters are replaced.
+    # `[a]`x`(./b.md)` into a link. Newlines stay so a destination can't
+    # join across a wrapped span, e.g. `[x](./a `b\nc` d)` reporting `./a`.
+    # A span also stops at a line that starts a list item or heading, or
+    # at a pipe-delimited table row, so a stray backtick can't swallow a
+    # link in the next one.
     return CODE_SPAN_RE.sub(lambda m: re.sub(r"[^\n]", " ", m.group(0)), text)
 
 
