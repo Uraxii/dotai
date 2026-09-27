@@ -85,8 +85,8 @@ def run_capture(argv: list[str]) -> tuple[int, str]:
 
 
 def absolute_path(path: Path) -> Path:
-    """`path`, made absolute against the current directory."""
-    return path if path.is_absolute() else Path.cwd() / path
+    """`path`, made absolute against the current directory and normalized."""
+    return Path(os.path.abspath(path))
 
 
 def is_git_worktree(path: Path) -> bool:

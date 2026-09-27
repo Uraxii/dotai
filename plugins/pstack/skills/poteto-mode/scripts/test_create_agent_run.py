@@ -281,6 +281,26 @@ class WorktreeReuseTest(unittest.TestCase):
         self.assertFalse((self.run_dir / "worktree").exists())
 
 
+class RelativeWorktreeTest(unittest.TestCase):
+    """A relative `--worktree` is recorded as a normalized absolute path."""
+
+    def test_dot_dot_is_resolved_in_the_worktree_field(self) -> None:
+        with tempfile.TemporaryDirectory() as root_text:
+            root = Path(root_text)
+            repo = build_repository(root)
+            linked = root / "linked"
+            git(repo, "worktree", "add", "--quiet", "-b", "relative",
+               str(linked), "main")
+            done = run_script(
+                ["--slug", "relative-check", "--kind", "reviewer",
+                 "--worktree", "../linked"],
+                cwd=repo, stdin="Review the branch.\n",
+                agent_runs_dir=str(root / "runs"))
+            self.assertEqual(done.returncode, 0, done.stderr)
+            text = (Path(done.stdout.strip()) / "brief.md").read_text()
+            self.assertIn(f"\nworktree: {linked.resolve()}\n", text)
+
+
 class DetachedWorktreeReuseTest(unittest.TestCase):
     """A reused worktree with no checked-out branch reads as detached."""
 
