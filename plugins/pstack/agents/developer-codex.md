@@ -27,9 +27,8 @@ examples to adapt, not exact text, but these rules always hold:
   one redirect allowed is a stdin `<` from a file inside the runs root.
 - The runs root is the `.agent-runs` directory that holds RUN, or
   `$AGENT_RUNS_DIR` when that is set. Orientation commands are read-only and
-  take only paths inside it. Use `cat`, `head`, `ls`, `test -d`,
-  `sed -n '<range>p'`, or `git -C <path>` with `status`, `log`, `diff`,
-  `rev-parse`, or `show`.
+  take only paths inside it. Use `cat`, `head`, `ls`, `test -d`, or
+  `sed -n '<range>p'`. Never run `git`; the guard denies every git call.
 - `developer-codex` runs Codex with `-s workspace-write`, and `-C`, every
   `--add-dir`, and `-o` sit strictly inside the runs root. `reviewer-codex`
   runs it with `-s read-only`. Its `-C` may be anywhere, and `-o` stays inside

@@ -180,51 +180,6 @@ def check_sed(args: tuple[str, ...], scope: Scope) -> str | None:
     return None
 
 
-# `--output` writes a file, `--ext-diff` runs a configured program, and
-# `--no-index` compares files outside any repository.
-GIT_FORBIDDEN_ARGUMENT_PREFIXES = ("--output", "--ext-diff", "--no-index")
-
-
-def check_git_read(args: tuple[str, ...], scope: Scope) -> str | None:
-    for arg in args:
-        if arg.startswith(GIT_FORBIDDEN_ARGUMENT_PREFIXES):
-            return f"git option {arg} is not allowed"
-    return None
-
-
-def check_git_worktree(args: tuple[str, ...], scope: Scope) -> str | None:
-    if not args or args[0] != "list":
-        return "git worktree allows only list"
-    return check_git_read(args[1:], scope)
-
-
-GIT_SUBCOMMANDS: dict[str, Checker] = {
-    "status": check_git_read,
-    "log": check_git_read,
-    "diff": check_git_read,
-    "rev-parse": check_git_read,
-    "show": check_git_read,
-    "worktree": check_git_worktree,
-}
-
-
-def check_git(args: tuple[str, ...], scope: Scope) -> str | None:
-    if len(args) < 3 or args[0] != "-C":
-        return "git needs -C <directory in the runs root> as its only global option"
-    if reason := scope.check_path(args[1], strict=False, role="git -C"):
-        return reason
-    subcommand = args[2]
-    if subcommand.startswith("-"):
-        return f"git global option {subcommand} is not allowed; only -C"
-    checker = GIT_SUBCOMMANDS.get(subcommand)
-    if checker is None:
-        return (
-            f"git {subcommand} is not allowed; only status, log, diff, "
-            "rev-parse, show, and worktree list"
-        )
-    return checker(args[3:], scope)
-
-
 # Value flags whose value the guard checks map to a CodexExec field; the rest
 # map to None and only need their value consumed.
 CODEX_VALUE_FLAGS = {
@@ -372,7 +327,6 @@ COMMANDS: dict[str, Checker] = {
     "ls": partial(check_read_paths, command="ls"),
     "test": check_test,
     "sed": check_sed,
-    "git": check_git,
 }
 
 

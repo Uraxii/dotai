@@ -502,66 +502,52 @@ class ReadCommandTests(GuardTestCase):
 
 
 class GitTests(GuardTestCase):
-    def test_read_only_git_inside_the_runs_root_is_allowed(self) -> None:
-        for sub in (
-            "status",
-            "status --short",
-            "log --oneline -5",
-            "diff --stat",
-            "diff --stat 1234567..HEAD",
-            "rev-parse HEAD",
-            "show --stat HEAD",
-            "worktree list",
-        ):
-            with self.subTest(sub=sub):
-                self.assert_allowed(DEVELOPER, f"git -C {WORKTREE} {sub}")
+    def test_read_only_git_inside_the_runs_root_is_denied(self) -> None:
+        for agent_type in WATCHERS:
+            for sub in (
+                "status",
+                "status --short",
+                "log --oneline -5",
+                "diff --stat",
+                "diff --stat 1234567..HEAD",
+                "rev-parse HEAD",
+                "show --stat HEAD",
+                "worktree list",
+            ):
+                with self.subTest(agent_type=agent_type, sub=sub):
+                    self.assert_bash_denied(
+                        agent_type,
+                        f"git -C {WORKTREE} {sub}",
+                        "git is not an allowed command",
+                    )
 
-    def test_git_outside_the_root_or_with_other_global_options_is_denied(self) -> None:
-        self.assert_all_denied(
-            DEVELOPER,
-            {
-                f"git -C {MAIN_CHECKOUT} status": f"git -C /repo is {OUTSIDE}",
-                "git status": "git needs -C",
-                f"git -c core.pager=id -C {WORKTREE} log": "git needs -C",
-                f"git -C {WORKTREE} -c core.pager=id log": "git global option -c is not allowed",
-                f"git -C {WORKTREE} --config-env=a=b log": "git global option --config-env",
-                f"git -C {WORKTREE} --git-dir=/repo/.git log": "git global option --git-dir",
-                f"git -C {WORKTREE} --work-tree=/repo status": "git global option --work-tree",
-                f"git -C {WORKTREE} --exec-path=/tmp log": "git global option --exec-path",
-            },
-        )
-
-    def test_git_arguments_that_write_or_run_programs_are_denied(self) -> None:
-        self.assert_all_denied(
-            DEVELOPER,
-            {
-                f"git -C {WORKTREE} log --output=/tmp/x": "git option --output=/tmp/x",
-                f"git -C {WORKTREE} diff --output /tmp/x": "git option --output",
-                f"git -C {WORKTREE} diff --ext-diff": "git option --ext-diff",
-                f"git -C {WORKTREE} diff --no-index /etc/passwd /dev/null": "git option --no-index",
-            },
-        )
-
-    def test_git_mutations_are_denied(self) -> None:
-        for sub in (
-            "commit -am x",
-            "checkout main",
-            "reset --hard",
-            "push",
-            "add .",
-            "worktree add /tmp/x",
-            "worktree remove x",
-            "branch -D x",
-            "config a b",
-        ):
-            with self.subTest(sub=sub):
-                word = sub.split()[0]
-                reason = (
-                    "git worktree allows only list"
-                    if word == "worktree"
-                    else f"git {word} is not allowed"
+    def test_git_in_a_repo_planted_under_the_runs_root_is_denied(self) -> None:
+        # A workspace-write run can plant a repo whose config names
+        # core.fsmonitor, diff.external, or a textconv driver; any git call
+        # the watcher makes there would run that program unsandboxed.
+        for agent_type in WATCHERS:
+            with self.subTest(agent_type=agent_type):
+                self.assert_bash_denied(
+                    agent_type, f"git -C {RUN}/x status", "git is not an allowed command"
                 )
-                self.assert_bash_denied(DEVELOPER, f"git -C {WORKTREE} {sub}", reason)
+
+    def test_git_mutations_and_global_options_are_denied(self) -> None:
+        self.assert_all_denied(
+            DEVELOPER,
+            {
+                f"git -C {WORKTREE} {sub}": "git is not an allowed command"
+                for sub in (
+                    "commit -am x",
+                    "reset --hard",
+                    "push",
+                    "worktree add /tmp/x",
+                    "config a b",
+                    "-c core.pager=id log",
+                    "diff --ext-diff",
+                )
+            }
+            | {"git status": "git is not an allowed command"},
+        )
 
 
 class ShellSafetyTests(GuardTestCase):
@@ -646,11 +632,11 @@ class LegacyShapeTests(GuardTestCase):
             self.assert_all_denied(
                 agent_type,
                 {
-                    f"git -C {MAIN_CHECKOUT} rev-parse HEAD": f"git -C /repo is {OUTSIDE}",
+                    f"git -C {MAIN_CHECKOUT} rev-parse HEAD": "git is not an allowed command",
                     f"git -C {MAIN_CHECKOUT} worktree add {LEGACY_WORKTREE} "
-                    "-b agent/sample-run develop": f"git -C /repo is {OUTSIDE}",
+                    "-b agent/sample-run develop": "git is not an allowed command",
                     f"git -C {WORKTREE} worktree add {RUN}/wt "
-                    "-b agent/sample-run develop": "git worktree allows only list",
+                    "-b agent/sample-run develop": "git is not an allowed command",
                 },
             )
 
