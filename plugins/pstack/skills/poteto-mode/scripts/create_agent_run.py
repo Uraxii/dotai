@@ -182,9 +182,9 @@ def create_run_dir(runs_root: Path, slug: str) -> tuple[str, Path]:
         return run_id, run_dir
 
 
-def add_worktree(run_dir: Path, run_id: str, base: str) -> Path:
+def add_worktree(checkout: Path, run_dir: Path, run_id: str,
+                 base: str) -> Path:
     """Create `<run_dir>/worktree` on branch `agent/<run id>` at `base`."""
-    checkout = main_checkout()
     worktree = run_dir / "worktree"
     status, output = run_capture([
         "git", "-C", str(checkout), "worktree", "add", str(worktree),
@@ -193,6 +193,20 @@ def add_worktree(run_dir: Path, run_id: str, base: str) -> Path:
     if status != 0:
         raise CreationFailure(f"git worktree add failed: {oneline(output)}")
     return worktree
+
+
+def discard_worktree(checkout: Path, run_dir: Path, run_id: str) -> None:
+    """Undo `add_worktree`, best-effort.
+
+    `shutil.rmtree` alone deletes the directory but leaves git's own
+    worktree-admin entry and the branch it created behind, so both are
+    asked for explicitly first. Either git call is allowed to fail; the
+    caller's `rmtree` cleans up the directory regardless.
+    """
+    run_capture(["git", "-C", str(checkout), "worktree", "remove",
+                "--force", str(run_dir / "worktree")])
+    run_capture(["git", "-C", str(checkout), "branch", "-D",
+                f"agent/{run_id}"])
 
 
 def branch_of(worktree: Path) -> str:
@@ -270,9 +284,12 @@ def create_run(request: Request) -> Path:
 
     `RUN` is created exclusively before anything else this call adds, so a
     failure past that point removes exactly what this invocation created:
-    the worktree it added, then `RUN` itself.
+    the worktree it added (its git-level bookkeeping first, then whatever
+    `rmtree` leaves for `RUN` itself to clean up).
     """
     run_dir: Path | None = None
+    checkout: Path | None = None
+    run_id: str | None = None
     added_worktree = False
     try:
         runs_root = resolve_runs_root()
@@ -281,7 +298,8 @@ def create_run(request: Request) -> Path:
         run_id, run_dir = create_run_dir(runs_root, request.slug)
         (run_dir / "corrections").mkdir()
         if request.base is not None:
-            worktree = add_worktree(run_dir, run_id, request.base)
+            checkout = main_checkout()
+            worktree = add_worktree(checkout, run_dir, run_id, request.base)
             added_worktree = True
         else:
             assert request.worktree is not None
@@ -298,7 +316,8 @@ def create_run(request: Request) -> Path:
     except (CreationFailure, OSError) as error:
         if run_dir is not None:
             if added_worktree:
-                shutil.rmtree(run_dir / "worktree", ignore_errors=True)
+                assert checkout is not None and run_id is not None
+                discard_worktree(checkout, run_dir, run_id)
             shutil.rmtree(run_dir, ignore_errors=True)
         raise CreationFailure(oneline(str(error))) from error
 

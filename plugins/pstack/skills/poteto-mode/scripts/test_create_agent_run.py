@@ -12,6 +12,7 @@ regression in that renderer has something real to fail against.
 
 from __future__ import annotations
 
+import io
 import os
 import re
 import stat
@@ -20,6 +21,9 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
+
+import create_agent_run
 
 SCRIPT = Path(__file__).resolve().parent / "create_agent_run.py"
 POTETO_MODE_SKILL = SCRIPT.parent.parent / "SKILL.md"
@@ -383,6 +387,42 @@ class BadBaseCleanupTest(unittest.TestCase):
                              [".gitignore"])
             worktrees = git(repo, "worktree", "list", "--porcelain")
             self.assertNotIn(str(runs_root), worktrees)
+
+
+class WorktreeAddFailureCleanupTest(unittest.TestCase):
+    """A failure that strikes after `git worktree add` still leaves no trace.
+
+    Calls `main()` in-process so the id can be pinned (`secrets.token_hex`
+    patched to a fixed value) and a later step forced to fail
+    (`head_sha_of` patched to raise), which a subprocess run could not do
+    without its own patching hook.
+    """
+
+    def test_a_failure_after_the_worktree_is_added_discards_it(self) -> None:
+        with tempfile.TemporaryDirectory() as root_text:
+            root = Path(root_text)
+            repo = build_repository(root)
+            runs_root = root / "runs"
+            branch = "agent/cleanup-check-deadbeef"
+            original_cwd = os.getcwd()
+            self.addCleanup(os.chdir, original_cwd)
+            self.addCleanup(os.environ.pop, "AGENT_RUNS_DIR", None)
+            os.chdir(repo)
+            os.environ["AGENT_RUNS_DIR"] = str(runs_root)
+            argv = ["--slug", "cleanup-check", "--kind", "writer",
+                   "--base", "main"]
+            with mock.patch.object(create_agent_run.secrets, "token_hex",
+                                   return_value="deadbeef"), \
+                mock.patch.object(create_agent_run, "head_sha_of",
+                                  side_effect=OSError("boom")), \
+                mock.patch.object(sys, "stdin", io.StringIO("Task.\n")):
+                status = create_agent_run.main(argv)
+            self.assertEqual(status, 1)
+            self.assertEqual(sorted(p.name for p in runs_root.iterdir()),
+                             [".gitignore"])
+            worktrees = git(repo, "worktree", "list", "--porcelain")
+            self.assertNotIn(str(runs_root), worktrees)
+            self.assertEqual(git(repo, "branch", "--list", branch), "")
 
 
 if __name__ == "__main__":
