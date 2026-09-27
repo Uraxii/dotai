@@ -1,19 +1,11 @@
 import importlib.util
 import io
 import json
+import os
 import sys
 import unittest
 from pathlib import Path
 from unittest import mock
-
-# Checked for a route to the regex parse tree that is not private or
-# deprecated: `sre_parse` is a deprecated shim (DeprecationWarning on
-# 3.11+) that forwards to this module; the public `re` API (`re.compile`,
-# `Pattern`/`Match`) exposes no node-level structure at all. `re._parser`
-# is that shim's target: private (leading underscore) but not deprecated,
-# and the only stdlib module that still returns this tree without a
-# warning. There is no supported alternative, so use it directly.
-import re._parser as regex_parser
 
 
 HOOK_PATH = Path(__file__).resolve().parents[1] / "codex_watcher_guard.py"
@@ -21,29 +13,77 @@ REPOSITORY_ROOT = HOOK_PATH.parents[1]
 SPEC = importlib.util.spec_from_file_location("codex_watcher_guard", HOOK_PATH)
 HOOK = importlib.util.module_from_spec(SPEC)
 assert SPEC.loader is not None
+# dataclasses look their module up in sys.modules while building the class.
+sys.modules[SPEC.name] = HOOK
 SPEC.loader.exec_module(HOOK)
 
 
-WATCHERS = ("pstack:developer-codex", "reviewer-codex")
-REPO = "/repo"
-OTHER_REPO = "/other-repo"
-RUN = f"{REPO}/.nikki-agents/codex-runs/sample-run"
-WORKTREE = f"{REPO}/.nikki-agents/worktrees/sample-run"
+DEVELOPER = "pstack:developer-codex"
+REVIEWER = "reviewer-codex"
+WATCHERS = (DEVELOPER, REVIEWER)
+MAIN_CHECKOUT = "/repo"
+ROOT = f"{MAIN_CHECKOUT}/.agent-runs"
+RUN = f"{ROOT}/sample-run-0a1b2c3d"
+EARLIER_RUN = f"{ROOT}/earlier-run-9f8e7d6c"
+WORKTREE = f"{RUN}/worktree"
+OUTSIDE = "outside the runs root"
+# The command shapes watchers ran before run directories existed.
+LEGACY_RUN = f"{MAIN_CHECKOUT}/codex-runs/sample-run"
+LEGACY_WORKTREE = f"{MAIN_CHECKOUT}/worktrees/sample-run"
 
 
-def writer_exec(directory: str) -> str:
-    """The developer watcher's `codex-agent exec` step, run from `directory`."""
-    return (
-        "codex-agent exec -m gpt-5.6-terra -s workspace-write "
-        f"-c agents.enabled=false -C {directory} "
-        f"-o {RUN}/report.md - < {RUN}/prompt.txt"
-    )
+def reviewer_exec(**overrides: str) -> str:
+    flags = {
+        "-m": "gpt-5.6-terra",
+        "-s": "read-only",
+        "-c": "agents.enabled=false",
+        "-C": MAIN_CHECKOUT,
+        "-o": f"{RUN}/report.md",
+    }
+    return exec_command(flags, overrides)
 
 
-def payload(agent_type: str | None, tool_name: str, **tool_input: object) -> dict:
+def writer_exec(**overrides: str) -> str:
+    flags = {
+        "-m": "gpt-5.6-terra",
+        "-s": "workspace-write",
+        "-c": "agents.enabled=false",
+        "-C": WORKTREE,
+        "--add-dir": RUN,
+        "-o": f"{RUN}/report.md",
+    }
+    return exec_command(flags, overrides)
+
+
+def exec_command(flags: dict[str, str], overrides: dict[str, str]) -> str:
+    """A `codex-agent exec` command; an override of None drops that flag.
+
+    Override keys use underscores for dashes: `add_dir` is `--add-dir`,
+    `stdin` is the `<` file, `codex` is the command word.
+    """
+    options = dict(flags)
+    stdin = overrides.pop("stdin", f"{RUN}/brief.md")
+    codex = overrides.pop("codex", "codex-agent")
+    for key, value in overrides.items():
+        flag = "--add-dir" if key == "add_dir" else f"-{key}"
+        options[flag] = value
+    words = [codex, "exec"]
+    for flag, value in options.items():
+        if value is not None:
+            words += [flag, value]
+    words.append("-")
+    command = " ".join(words)
+    return command if stdin is None else f"{command} < {stdin}"
+
+
+def payload(
+    agent_type: str | None, tool_name: str, cwd: str | None = None, **tool_input: object
+) -> dict:
     event = {"tool_name": tool_name, "tool_input": tool_input}
     if agent_type is not None:
         event["agent_type"] = agent_type
+    if cwd is not None:
+        event["cwd"] = cwd
     return event
 
 
@@ -61,437 +101,617 @@ class PoisonedStr(str):
         raise RuntimeError("agent_type exploded")
 
 
-class CodexWatcherGuardTests(unittest.TestCase):
-    def assert_allowed(self, agent_type: str, command: str) -> None:
-        self.assertEqual("", HOOK.guard(payload(agent_type, "Bash", command=command)))
+class GuardTestCase(unittest.TestCase):
+    def setUp(self) -> None:
+        self.enterContext(mock.patch.dict(os.environ))
+        os.environ.pop("AGENT_RUNS_DIR", None)
 
-    def assert_denied(self, event: dict, tool_name: str) -> None:
-        output = HOOK.guard(event)
-        parsed = json.loads(output)
-        decision = parsed["hookSpecificOutput"]
+    def assert_allowed(
+        self, agent_type: str, command: str, cwd: str | None = None
+    ) -> None:
+        self.assertEqual(
+            "", HOOK.guard(payload(agent_type, "Bash", cwd=cwd, command=command))
+        )
+
+    def assert_denied(self, event: dict, reason: str) -> None:
+        decision = json.loads(HOOK.guard(event))["hookSpecificOutput"]
         self.assertEqual("PreToolUse", decision["hookEventName"])
         self.assertEqual("deny", decision["permissionDecision"])
-        self.assertEqual(
-            "codex watcher guard: "
-            f"{tool_name} call not in the delegate-to-codex allowlist; "
-            "copy the playbook command exactly or send the fallback reply",
+        self.assertTrue(
+            decision["permissionDecisionReason"].startswith("codex watcher guard: "),
             decision["permissionDecisionReason"],
         )
+        self.assertIn(reason, decision["permissionDecisionReason"])
 
-    # -- playbook commands stay allowed, per watcher kind --------------
-
-    def test_reviewer_playbook_commands_are_allowed(self) -> None:
-        commands = (
-            "codex-agent --version",
-            "codex-agent login status",
-            f"git -C {REPO} rev-parse HEAD",
-            f"codex-agent exec -m gpt-5.6-terra -s read-only -c agents.enabled=false "
-            f"-C {REPO} -o {RUN}/report.md - < {RUN}/prompt.txt",
+    def assert_bash_denied(
+        self, agent_type: str, command: str, reason: str, cwd: str | None = None
+    ) -> None:
+        self.assert_denied(
+            payload(agent_type, "Bash", cwd=cwd, command=command), reason
         )
-        for command in commands:
+
+    def assert_all_denied(
+        self, agent_type: str, cases: dict[str, str], cwd: str | None = None
+    ) -> None:
+        """`cases` maps each command to the reason fragment its denial must name."""
+        for command, reason in cases.items():
             with self.subTest(command=command):
-                self.assert_allowed("reviewer-codex", command)
+                self.assert_bash_denied(agent_type, command, reason, cwd=cwd)
 
-    def test_developer_playbook_commands_are_allowed(self) -> None:
-        commands = (
-            "codex-agent --version",
-            "codex-agent login status",
-            f"git -C {WORKTREE} rev-parse HEAD",
-            f"git -C {REPO} worktree add {WORKTREE} -b agent/sample-run develop",
-            f"codex-agent exec -m gpt-5.6-terra -s workspace-write -c agents.enabled=false "
-            f"-C {WORKTREE} -o {RUN}/report.md - < {RUN}/prompt.txt",
-        )
-        for command in commands:
-            with self.subTest(command=command):
-                self.assert_allowed("pstack:developer-codex", command)
 
-    def test_developer_c_may_be_any_worktree_under_the_repo(self) -> None:
-        # A writer given an existing worktree path outside .nikki-agents,
-        # e.g. one Claude itself placed under .claude/worktrees/<x>.
-        command = (
-            f"codex-agent exec -m gpt-5.6-terra -s workspace-write -c agents.enabled=false "
-            f"-C {REPO}/.claude/worktrees/sample-run -o {RUN}/report.md - < "
-            f"{RUN}/prompt.txt"
-        )
-        self.assert_allowed("pstack:developer-codex", command)
+class CodexExecTests(GuardTestCase):
+    def test_canonical_exec_commands_are_allowed(self) -> None:
+        self.assert_allowed(REVIEWER, reviewer_exec())
+        self.assert_allowed(DEVELOPER, writer_exec())
 
-    def test_bare_codex_command_is_allowed_for_both_watchers(self) -> None:
-        # `codex-agent` is a machine-local wrapper that isolates CODEX_HOME;
-        # it exists on no machine by default. The watcher body falls back to
-        # the bare `codex` binary when the wrapper is missing, so both
-        # command words must reach the same allowlisted commands.
-        reviewer_exec = (
-            f"codex exec -m gpt-5.6-terra -s read-only -c agents.enabled=false "
-            f"-C {REPO} -o {RUN}/report.md - < {RUN}/prompt.txt"
-        )
-        developer_exec = (
-            f"codex exec -m gpt-5.6-terra -s workspace-write -c agents.enabled=false "
-            f"-C {WORKTREE} -o {RUN}/report.md - < {RUN}/prompt.txt"
-        )
+    def test_version_and_login_status_are_allowed_for_both_watchers(self) -> None:
         for agent_type in WATCHERS:
-            with self.subTest(agent_type=agent_type):
-                self.assert_allowed(agent_type, "codex --version")
-                self.assert_allowed(agent_type, "codex login status")
-        self.assert_allowed("reviewer-codex", reviewer_exec)
-        self.assert_allowed("pstack:developer-codex", developer_exec)
+            for command in (
+                "codex --version",
+                "codex-agent --version",
+                "codex -V",
+                "codex login status",
+                "codex-agent login status",
+            ):
+                with self.subTest(agent_type=agent_type, command=command):
+                    self.assert_allowed(agent_type, command)
 
-    def test_bare_codex_exec_still_enforces_repo_containment(self) -> None:
-        # The `codex` word must be subject to the same repo/name coupling as
-        # `codex-agent`, not a looser check that happens to share a prefix.
-        other_run = f"{OTHER_REPO}/.nikki-agents/codex-runs/sample-run"
-        command = (
-            f"codex exec -m gpt-5.6-terra -s read-only -c agents.enabled=false "
-            f"-C {REPO} -o {other_run}/report.md - < {other_run}/prompt.txt"
-        )
-        self.assert_denied(
-            payload("reviewer-codex", "Bash", command=command), "Bash"
-        )
-
-    def test_existing_worktree_must_sit_inside_the_repo(self) -> None:
-        # `worktree: <existing absolute path>` in the CODEX RUN header. `-C`
-        # is the directory a workspace-write Codex session may write to, so
-        # the guard keeps it inside the repo that receives the report. A
-        # sibling worktree beside the repo looks legitimate and is still
-        # outside that boundary.
-        self.assert_allowed("pstack:developer-codex", writer_exec(f"{REPO}/wt/sample-run"))
-        self.assert_denied(
-            payload(
-                "pstack:developer-codex",
-                "Bash",
-                command=writer_exec(f"{REPO}-worktrees/sample-run"),
+    def test_exec_variants_that_keep_the_invariants_are_allowed(self) -> None:
+        variants = (
+            writer_exec(codex="codex"),
+            writer_exec(m=None),
+            writer_exec(c=None),
+            (
+                f"codex-agent exec --add-dir {RUN} -o {RUN}/report.md -C {WORKTREE} "
+                f"-s workspace-write - < {RUN}/brief.md"
             ),
-            "Bash",
+            (
+                f"codex exec --sandbox=workspace-write --cd={WORKTREE} "
+                f"--add-dir={RUN} --output-last-message={RUN}/report.md "
+                f"--model gpt-5.6-terra - < {RUN}/brief.md"
+            ),
+            (
+                f"codex exec --sandbox workspace-write --cd {WORKTREE} "
+                "--skip-git-repo-check --json --ephemeral --color never "
+                f"--config agents.enabled=false - < {RUN}/brief.md"
+            ),
+            (
+                f"codex exec -s workspace-write -C {WORKTREE} --add-dir {RUN} "
+                f"--add-dir {EARLIER_RUN} 'Read the brief and follow it.'"
+            ),
+            (
+                f"codex exec -s workspace-write -C {EARLIER_RUN}/worktree "
+                f"--add-dir {RUN} - < {RUN}/brief.md"
+            ),
+            f"codex exec -s workspace-write -C {RUN} - < {RUN}/brief.md",
         )
+        for command in variants:
+            with self.subTest(command=command):
+                self.assert_allowed(DEVELOPER, command)
 
-    def test_dot_segment_worktree_is_denied(self) -> None:
-        # `<repo>/.` names the repo root itself, so "repo plus at least one
-        # segment" does not by itself keep a workspace-write sandbox out of
-        # the main checkout. A `.` segment is rejected wherever a `..`
-        # segment is, and a real worktree name still passes.
-        self.assert_allowed("pstack:developer-codex", writer_exec(f"{REPO}/wt/sample-run"))
-        for directory in (f"{REPO}/.", f"{REPO}/./.", f"{REPO}/wt/."):
+    def test_reviewer_c_may_be_anywhere_and_add_dir_inside_is_allowed(self) -> None:
+        for directory in (MAIN_CHECKOUT, WORKTREE, "/elsewhere/checkout"):
             with self.subTest(directory=directory):
-                self.assert_denied(
-                    payload(
-                        "pstack:developer-codex", "Bash", command=writer_exec(directory)
-                    ),
-                    "Bash",
+                self.assert_allowed(REVIEWER, reviewer_exec(C=directory))
+        self.assert_allowed(REVIEWER, reviewer_exec(C=None))
+        self.assert_allowed(REVIEWER, reviewer_exec(add_dir=RUN))
+        self.assert_allowed(REVIEWER, f"codex exec --sandbox=read-only {RUN}/brief.md")
+
+    def test_sandbox_must_match_the_watcher_kind(self) -> None:
+        self.assert_all_denied(
+            REVIEWER,
+            {
+                reviewer_exec(
+                    s="workspace-write"
+                ): "reviewer codex exec needs -s read-only",
+                reviewer_exec(s="danger-full-access"): "needs -s read-only",
+                reviewer_exec(s=None): "needs -s read-only",
+                writer_exec(): "needs -s read-only",
+                reviewer_exec().replace(
+                    " exec ", " exec -s read-only "
+                ): "needs -s read-only",
+            },
+        )
+        self.assert_all_denied(
+            DEVELOPER,
+            {
+                writer_exec(
+                    s="read-only"
+                ): "developer codex exec needs -s workspace-write",
+                writer_exec(s="danger-full-access"): "needs -s workspace-write",
+                writer_exec(s=None): "needs -s workspace-write",
+            },
+        )
+
+    def test_flags_that_escape_the_sandbox_or_approvals_are_denied(self) -> None:
+        for flag in (
+            "--full-auto",
+            "--dangerously-bypass-approvals-and-sandbox",
+            "--dangerously-bypass-hook-trust",
+            "--oss",
+            "--worktree",
+            "--approve-for-me",
+            "--ignore-rules",
+            "-p",
+            "--profile",
+            "--enable",
+            "--disable",
+            "--",
+            "-s=read-only",
+        ):
+            with self.subTest(flag=flag):
+                self.assert_bash_denied(
+                    DEVELOPER,
+                    writer_exec().replace(" exec ", f" exec {flag} "),
+                    f"codex exec flag {flag} is not allowed",
                 )
 
-    def test_playbook_prompt_write_is_allowed_for_both_watchers(self) -> None:
-        for agent_type in WATCHERS:
+    def test_profile_with_a_value_names_the_profile_flag(self) -> None:
+        self.assert_bash_denied(
+            REVIEWER,
+            reviewer_exec().replace(" exec ", " exec -p safe "),
+            "flag -p is not allowed",
+        )
+
+    def test_config_other_than_agents_enabled_is_denied(self) -> None:
+        for setting in (
+            "sandbox_mode=danger-full-access",
+            "approval_policy=never",
+            "sandbox_workspace_write.network_access=true",
+        ):
+            with self.subTest(setting=setting):
+                self.assert_bash_denied(
+                    DEVELOPER,
+                    writer_exec().replace(" exec ", f" exec -c {setting} "),
+                    "only -c agents.enabled",
+                )
+
+    def test_agents_enabled_must_be_false(self) -> None:
+        for agent_type, command in (
+            (REVIEWER, reviewer_exec()),
+            (DEVELOPER, writer_exec()),
+        ):
             with self.subTest(agent_type=agent_type):
-                event = payload(agent_type, "Write", file_path=f"{RUN}/prompt.txt")
-                self.assertEqual("", HOOK.guard(event))
+                self.assert_bash_denied(
+                    agent_type,
+                    command.replace("agents.enabled=false", "agents.enabled=true"),
+                    "-c agents.enabled=true is not allowed; only -c agents.enabled=false",
+                )
 
-    # -- per-kind sandbox binding ----------------------------------------
-
-    def test_reviewer_workspace_write_is_denied(self) -> None:
-        command = (
-            f"codex-agent exec -m gpt-5.6-terra -s workspace-write -c agents.enabled=false "
-            f"-C {REPO} -o {RUN}/report.md - < {RUN}/prompt.txt"
-        )
-        self.assert_denied(
-            payload("reviewer-codex", "Bash", command=command), "Bash"
-        )
-
-    def test_reviewer_worktree_add_is_denied(self) -> None:
-        command = f"git -C {REPO} worktree add {WORKTREE} -b agent/sample-run develop"
-        self.assert_denied(
-            payload("reviewer-codex", "Bash", command=command), "Bash"
+    def test_exec_subcommands_and_extra_prompts_are_denied(self) -> None:
+        self.assert_all_denied(
+            DEVELOPER,
+            {
+                "codex exec resume -s workspace-write -C "
+                f"{WORKTREE}": "codex exec resume is not allowed",
+                f"codex exec -s workspace-write -C {WORKTREE} review": "codex exec review",
+                f"codex exec -s workspace-write -C {WORKTREE} fork": "codex exec fork",
+                f"codex exec -s workspace-write -C {WORKTREE} one two": "at most one prompt",
+            },
         )
 
-    # -- worktree add's trailing base commit-ish ---------------------------
-
-    def test_worktree_add_without_a_base_is_denied(self) -> None:
-        # The pre-fix form: no start point, so `git worktree add` branches
-        # from the watcher's own checkout instead of the requested base.
-        command = f"git -C {REPO} worktree add {WORKTREE} -b agent/sample-run"
-        self.assert_denied(
-            payload("pstack:developer-codex", "Bash", command=command), "Bash"
+    def test_value_flags_need_a_value_that_is_not_a_flag(self) -> None:
+        self.assert_all_denied(
+            DEVELOPER,
+            {
+                f"codex exec -s workspace-write -C {WORKTREE} -m": "-m needs a value",
+                f"codex exec -s workspace-write -C {WORKTREE} -m "
+                "--dangerously-bypass-approvals-and-sandbox": "does not start with -",
+                f"codex exec -s workspace-write --cd= -C {WORKTREE}": "--cd needs a value",
+            },
         )
 
-    def test_worktree_add_base_may_be_a_branch_sha_or_namespaced_branch(self) -> None:
-        for base in ("develop", "agent/pr2-split", "1a2b3c4"):
-            with self.subTest(base=base):
-                command = f"git -C {REPO} worktree add {WORKTREE} -b agent/sample-run {base}"
-                self.assert_allowed("pstack:developer-codex", command)
-
-    def test_worktree_add_base_starting_with_a_dash_is_denied(self) -> None:
-        # A base of `--foo` would be read as a git option, not a commit-ish,
-        # at the end of the command line.
-        command = f"git -C {REPO} worktree add {WORKTREE} -b agent/sample-run --foo"
-        self.assert_denied(
-            payload("pstack:developer-codex", "Bash", command=command), "Bash"
+    def test_developer_c_must_be_strictly_inside_the_runs_root(self) -> None:
+        self.assert_all_denied(
+            DEVELOPER,
+            {
+                writer_exec(C=MAIN_CHECKOUT): f"developer -C /repo is {OUTSIDE}",
+                writer_exec(C="/root/.ssh"): OUTSIDE,
+                writer_exec(
+                    C=ROOT
+                ): "developer -C /repo/.agent-runs is the runs root itself",
+                writer_exec(C=f"{ROOT}/"): "is the runs root itself",
+                writer_exec(C=None): "developer codex exec needs -C",
+                writer_exec().replace(
+                    " exec ", f" exec -C {WORKTREE} "
+                ): "gives -C more than once",
+            },
         )
 
-    def test_worktree_add_base_with_a_space_is_denied(self) -> None:
-        command = f"git -C {REPO} worktree add {WORKTREE} -b agent/sample-run bad base"
-        self.assert_denied(
-            payload("pstack:developer-codex", "Bash", command=command), "Bash"
+    def test_write_targets_must_be_strictly_inside_the_runs_root(self) -> None:
+        self.assert_all_denied(
+            DEVELOPER,
+            {
+                writer_exec(add_dir=MAIN_CHECKOUT): f"--add-dir /repo is {OUTSIDE}",
+                writer_exec(
+                    add_dir=ROOT
+                ): "--add-dir /repo/.agent-runs is the runs root itself",
+                writer_exec(o="/tmp/report.md"): f"-o /tmp/report.md is {OUTSIDE}",
+                writer_exec(
+                    stdin="/etc/passwd"
+                ): f"stdin file /etc/passwd is {OUTSIDE}",
+                writer_exec(
+                    stdin=ROOT
+                ): "stdin file /repo/.agent-runs is the runs root itself",
+            },
+        )
+        self.assert_all_denied(
+            REVIEWER,
+            {
+                reviewer_exec(add_dir="/repo/src"): f"--add-dir /repo/src is {OUTSIDE}",
+                reviewer_exec(
+                    o=f"{MAIN_CHECKOUT}/report.md"
+                ): f"-o /repo/report.md is {OUTSIDE}",
+                reviewer_exec(
+                    stdin=f"{MAIN_CHECKOUT}/brief.md"
+                ): f"stdin file /repo/brief.md is {OUTSIDE}",
+            },
         )
 
-    # -- repo/name coupling between -C, -o, and stdin ---------------------
-
-    def test_o_repo_differs_from_c_repo_is_denied_for_reviewer(self) -> None:
-        other_run = f"{OTHER_REPO}/.nikki-agents/codex-runs/sample-run"
-        command = (
-            f"codex-agent exec -m gpt-5.6-terra -s read-only -c agents.enabled=false "
-            f"-C {REPO} -o {other_run}/report.md - < {other_run}/prompt.txt"
-        )
-        self.assert_denied(
-            payload("reviewer-codex", "Bash", command=command), "Bash"
-        )
-
-    def test_o_repo_differs_from_c_repo_is_denied_for_developer(self) -> None:
-        other_run = f"{OTHER_REPO}/.nikki-agents/codex-runs/sample-run"
-        command = (
-            f"codex-agent exec -m gpt-5.6-terra -s workspace-write -c agents.enabled=false "
-            f"-C {WORKTREE} -o {other_run}/report.md - < {other_run}/prompt.txt"
-        )
-        self.assert_denied(
-            payload("pstack:developer-codex", "Bash", command=command), "Bash"
+    def test_dot_dot_cannot_escape_the_runs_root(self) -> None:
+        self.assert_all_denied(
+            DEVELOPER,
+            {
+                writer_exec(C=f"{ROOT}/../src"): f"developer -C /repo/src is {OUTSIDE}",
+                writer_exec(add_dir=f"{RUN}/../.."): f"--add-dir /repo is {OUTSIDE}",
+                writer_exec(o=f"{RUN}/../../../etc/x"): f"-o /etc/x is {OUTSIDE}",
+                writer_exec(
+                    stdin=f"{ROOT}/../brief.md"
+                ): f"stdin file /repo/brief.md is {OUTSIDE}",
+                writer_exec(C=f"{RUN}/.."): "is the runs root itself",
+            },
         )
 
-    def test_real_bad_reviewer_command_from_the_field_is_denied(self) -> None:
-        # A real reviewer run wrote prompt.txt and passed -o under
-        # .../add-version-flag/ while -C (the repo) was a different repo
-        # entirely. The old guard let this through because each path slot
-        # matched any absolute path on its own.
-        repo = "/repo/.nikki-agents/pantry-shelf/galley-b61cb9/repo"
-        run = "/repo/.nikki-agents/codex-runs/add-version-flag"
-        command = (
-            "codex-agent exec -m gpt-5.6-sol -s read-only -c agents.enabled=false "
-            f"-C {repo} -o {run}/report.md - < {run}/prompt.txt"
-        )
-        self.assert_denied(
-            payload("reviewer-codex", "Bash", command=command), "Bash"
+    def test_dotted_names_that_are_not_dot_segments_are_allowed(self) -> None:
+        root = f"{MAIN_CHECKOUT}/.hidden/...three/a.b/.agent-runs"
+        run = f"{root}/sample-run-0a1b2c3d"
+        self.assert_allowed(
+            DEVELOPER,
+            writer_exec(
+                C=f"{run}/worktree",
+                add_dir=run,
+                o=f"{run}/report.md",
+                stdin=f"{run}/brief.md",
+            ),
         )
 
-    def test_o_and_stdin_name_mismatch_is_denied(self) -> None:
-        command = (
-            f"codex-agent exec -m gpt-5.6-terra -s read-only -c agents.enabled=false "
-            f"-C {REPO} -o {RUN}/report.md - < {REPO}/.nikki-agents/codex-runs/"
-            f"other-run/prompt.txt"
+    def test_relative_paths_resolve_against_the_payload_cwd(self) -> None:
+        relative = "codex exec -s workspace-write -C worktree --add-dir . -o report.md - < brief.md"
+        self.assert_allowed(DEVELOPER, relative, cwd=RUN)
+        self.assert_bash_denied(
+            DEVELOPER,
+            relative,
+            f"stdin file /repo/brief.md is {OUTSIDE}",
+            cwd=MAIN_CHECKOUT,
         )
-        self.assert_denied(
-            payload("reviewer-codex", "Bash", command=command), "Bash"
-        )
-
-    def test_o_and_stdin_repo_mismatch_is_denied(self) -> None:
-        command = (
-            f"codex-agent exec -m gpt-5.6-terra -s read-only -c agents.enabled=false "
-            f"-C {REPO} -o {RUN}/report.md - < {OTHER_REPO}/.nikki-agents/"
-            f"codex-runs/sample-run/prompt.txt"
-        )
-        self.assert_denied(
-            payload("reviewer-codex", "Bash", command=command), "Bash"
+        self.assert_allowed(REVIEWER, "cat brief.md progress.md", cwd=RUN)
+        self.assert_bash_denied(
+            REVIEWER, "cat ../../README.md", f"/repo/README.md is {OUTSIDE}", cwd=RUN
         )
 
-    def test_developer_c_equal_to_bare_repo_is_denied(self) -> None:
-        command = (
-            f"codex-agent exec -m gpt-5.6-terra -s workspace-write -c agents.enabled=false "
-            f"-C {REPO} -o {RUN}/report.md - < {RUN}/prompt.txt"
+    def test_relative_write_target_must_hold_from_both_cwd_and_c(self) -> None:
+        # From the cwd, ../../x stays in the runs root; from -C it does not.
+        command = f"codex exec -s workspace-write -C {RUN} --add-dir ../../x - < {RUN}/brief.md"
+        self.assert_allowed(
+            DEVELOPER, command.replace("../../x", "../x"), cwd=f"{RUN}/worktree/sub"
         )
-        self.assert_denied(
-            payload("pstack:developer-codex", "Bash", command=command), "Bash"
-        )
-
-    def test_developer_c_under_unrelated_path_is_denied(self) -> None:
-        command = (
-            "codex-agent exec -m gpt-5.6-terra -s workspace-write -c agents.enabled=false "
-            f"-C /root/.ssh -o {RUN}/report.md - < {RUN}/prompt.txt"
-        )
-        self.assert_denied(
-            payload("pstack:developer-codex", "Bash", command=command), "Bash"
+        self.assert_bash_denied(
+            DEVELOPER,
+            command,
+            f"--add-dir /repo/x is {OUTSIDE}",
+            cwd=f"{RUN}/worktree/sub",
         )
 
-    # -- traversal, injection, and other malformed commands ---------------
 
-    def test_injections_and_unlisted_commands_are_denied(self) -> None:
+class RunsRootTests(GuardTestCase):
+    def test_agent_runs_dir_is_the_only_root_when_set(self) -> None:
+        run = "/srv/runs/sample-run-0a1b2c3d"
+        command = writer_exec(
+            C=f"{run}/worktree",
+            add_dir=run,
+            o=f"{run}/report.md",
+            stdin=f"{run}/brief.md",
+        )
+        for configured in ("/srv/runs", "/srv/runs/", "/srv//runs"):
+            with self.subTest(configured=configured):
+                os.environ["AGENT_RUNS_DIR"] = configured
+                self.assert_allowed(DEVELOPER, command)
+                self.assert_allowed(REVIEWER, f"ls {run} /srv/runs")
+                self.assert_bash_denied(
+                    DEVELOPER, writer_exec(), f"stdin file {RUN}/brief.md is {OUTSIDE}"
+                )
+                self.assert_bash_denied(
+                    DEVELOPER,
+                    writer_exec(stdin=None),
+                    f"developer -C {WORKTREE} is {OUTSIDE}",
+                )
+                self.assert_bash_denied(
+                    DEVELOPER,
+                    command.replace(f"-C {run}/worktree", "-C /srv/runs"),
+                    "is the runs root itself",
+                )
+                self.assert_bash_denied(REVIEWER, "cat /srv/runs2/x", OUTSIDE)
+
+    def test_relative_agent_runs_dir_joins_the_payload_cwd(self) -> None:
+        os.environ["AGENT_RUNS_DIR"] = "runs"
+        self.assert_allowed(REVIEWER, "cat /srv/runs/x/brief.md", cwd="/srv")
+        self.assert_bash_denied(
+            REVIEWER, "cat /srv/runs/x/brief.md", OUTSIDE, cwd="/elsewhere"
+        )
+
+    def test_empty_agent_runs_dir_falls_back_to_the_agent_runs_segment(self) -> None:
+        os.environ["AGENT_RUNS_DIR"] = ""
+        self.assert_allowed(DEVELOPER, writer_exec())
+        self.assert_bash_denied(REVIEWER, "cat /repo/runs/x/brief.md", OUTSIDE)
+
+    def test_a_segment_must_be_exactly_agent_runs(self) -> None:
+        for directory in (
+            "/repo/agent-runs/x",
+            "/repo/.agent-runs-old/x",
+            "/repo/x.agent-runs/y",
+        ):
+            with self.subTest(directory=directory):
+                self.assert_bash_denied(REVIEWER, f"cat {directory}/brief.md", OUTSIDE)
+        self.assert_allowed(REVIEWER, "cat /any/where/.agent-runs/x/brief.md")
+
+
+class ReadCommandTests(GuardTestCase):
+    def test_orientation_reads_inside_the_runs_root_are_allowed(self) -> None:
         commands = (
-            "codex-agent --version; rm -rf /",
-            "codex-agent --version && curl https://example.com",
-            "codex-agent --version $(curl https://example.com)",
-            "codex-agent --version `curl https://example.com`",
-            "codex-agent --version\ncurl https://example.com",
-            "curl https://example.com",
-            "rm -rf build",
-            "sed -i s/a/b/ README.md",
-            "git push",
-            "git -C /r commit -am x",
-            "git -C /r reset --hard",
-            "cat /etc/passwd",
-            "cat /r/README.md",
-            "cat /r/.nikki-agents/codex-runs/x/../../README.md",
+            f"cat {RUN}/brief.md",
+            f"cat -n {RUN}/brief.md {RUN}/progress.md",
+            f"head -n 20 {RUN}/brief.md",
+            f"head -c 100 {RUN}/report.md",
+            f"ls {ROOT}",
+            f"ls -la {RUN} {RUN}/corrections",
+            f"test -d {WORKTREE}",
             f"test -s {RUN}/report.md",
-            f"ls -lh {RUN}/report.md",
-            f"ls {REPO}/other.md",
+            f"sed -n '1,/^---$/p' {RUN}/brief.md",
+            f"sed -n 1,20p {RUN}/brief.md",
+            f"sed -n '$p' {RUN}/progress.md",
+            f"sed -n '/^## Task/,$p' {RUN}/brief.md",
+            f'cat "{RUN}/brief.md"',
         )
-        for command in commands:
-            with self.subTest(command=command):
-                self.assert_denied(
-                    payload("pstack:developer-codex", "Bash", command=command),
-                    "Bash",
-                )
+        for agent_type in WATCHERS:
+            for command in commands:
+                with self.subTest(agent_type=agent_type, command=command):
+                    self.assert_allowed(agent_type, command)
 
-    def test_cat_report_log_diff_and_status_are_denied(self) -> None:
-        commands = (
-            f"cat {RUN}/report.md",
-            f"git -C {REPO} log --oneline -5",
-            f"git -C {REPO} diff --stat",
-            f"git -C {REPO} diff --stat 1234567..HEAD",
-            f"git -C {REPO} status",
-            f"git -C {REPO} status --short",
-        )
-        for command in commands:
-            with self.subTest(command=command):
-                self.assert_denied(
-                    payload("pstack:developer-codex", "Bash", command=command),
-                    "Bash",
-                )
-
-    def test_codex_exec_extra_options_are_denied(self) -> None:
-        command = (
-            f"codex-agent exec -m gpt-5.6-terra -s read-only -c agents.enabled=false "
-            f"-C {REPO} --add-dir /other -o {RUN}/report.md - < {RUN}/prompt.txt"
-        )
-        self.assert_denied(
-            payload("reviewer-codex", "Bash", command=command), "Bash"
+    def test_reads_outside_the_runs_root_are_denied(self) -> None:
+        self.assert_all_denied(
+            REVIEWER,
+            {
+                "cat /etc/passwd": f"cat path /etc/passwd is {OUTSIDE}",
+                f"cat {RUN}/brief.md /repo/README.md": f"/repo/README.md is {OUTSIDE}",
+                "head -n 5 /repo/README.md": f"head path /repo/README.md is {OUTSIDE}",
+                "ls /repo": f"ls path /repo is {OUTSIDE}",
+                "ls -la": "ls needs at least one path",
+                "cat -- -n": f"cat path /-n is {OUTSIDE}",
+                "test -d /repo": f"test path /repo is {OUTSIDE}",
+                f"test {RUN}": "test takes one unary operator and one path",
+                f"test -d {RUN} {RUN}": "test takes one unary operator",
+                "sed -n 1p /etc/passwd": f"sed path /etc/passwd is {OUTSIDE}",
+            },
+            cwd="/",
         )
 
-    def test_codex_exec_without_agents_disabled_flag_is_denied(self) -> None:
-        command = (
-            f"codex-agent exec -m gpt-5.6-terra -s read-only -C {REPO} "
-            f"-o {RUN}/report.md - < {RUN}/prompt.txt"
-        )
-        self.assert_denied(
-            payload("reviewer-codex", "Bash", command=command), "Bash"
-        )
-
-    def test_codex_exec_agents_disabled_flag_in_wrong_position_or_value_is_denied(
-        self,
-    ) -> None:
-        commands = (
-            f"codex-agent exec -m gpt-5.6-terra -s read-only -C {REPO} "
-            f"-c agents.enabled=false -o {RUN}/report.md - < {RUN}/prompt.txt",
-            f"codex-agent exec -m gpt-5.6-terra -s read-only -c agents.enabled=true "
-            f"-C {REPO} -o {RUN}/report.md - < {RUN}/prompt.txt",
-        )
-        for command in commands:
-            with self.subTest(command=command):
-                self.assert_denied(
-                    payload("reviewer-codex", "Bash", command=command), "Bash"
-                )
-
-    def test_codex_exec_with_a_second_dash_c_flag_is_denied(self) -> None:
-        command = (
-            f"codex-agent exec -m gpt-5.6-terra -s read-only -c agents.enabled=false "
-            f"-c model_reasoning_effort=high -C {REPO} -o {RUN}/report.md - < "
-            f"{RUN}/prompt.txt"
-        )
-        self.assert_denied(
-            payload("reviewer-codex", "Bash", command=command), "Bash"
+    def test_sed_scripts_other_than_a_print_are_denied(self) -> None:
+        reason = "sed allows only -n with one print script"
+        self.assert_all_denied(
+            REVIEWER,
+            {
+                f"sed -n '1e id' {RUN}/brief.md": reason,
+                f"sed -n '1w /tmp/x' {RUN}/brief.md": reason,
+                f"sed -n '1r /etc/passwd' {RUN}/brief.md": reason,
+                f"sed -n '1,$p;w /tmp/x' {RUN}/brief.md": reason,
+                f"sed -n 1p {RUN}/brief.md -i": "sed option -i is not allowed",
+                f"sed -i -n 1p {RUN}/brief.md": reason,
+                f"sed -n -e 1p {RUN}/brief.md": reason,
+                f"sed 1p {RUN}/brief.md": reason,
+                "sed -n '1,/^---$/p'": reason,
+            },
         )
 
-    def test_ls_report_file_is_denied(self) -> None:
-        self.assert_denied(
-            payload(
-                "pstack:developer-codex", "Bash", command=f"ls {RUN}/report.md"
-            ),
-            "Bash",
-        )
 
-    def test_codex_exec_slug_must_start_with_a_letter_or_digit(self) -> None:
-        command = (
-            "codex-agent exec -m --dangerously-bypass-approvals-and-sandbox "
-            f"-s read-only -C {REPO} -o {RUN}/report.md - < {RUN}/prompt.txt"
-        )
-        self.assert_denied(
-            payload("reviewer-codex", "Bash", command=command), "Bash"
-        )
+class GitTests(GuardTestCase):
+    def test_read_only_git_inside_the_runs_root_is_denied(self) -> None:
+        for agent_type in WATCHERS:
+            for sub in (
+                "status",
+                "status --short",
+                "log --oneline -5",
+                "diff --stat",
+                "diff --stat 1234567..HEAD",
+                "rev-parse HEAD",
+                "show --stat HEAD",
+                "worktree list",
+            ):
+                with self.subTest(agent_type=agent_type, sub=sub):
+                    self.assert_bash_denied(
+                        agent_type,
+                        f"git -C {WORKTREE} {sub}",
+                        "git is not an allowed command",
+                    )
 
-    def test_bash_path_traversal_is_denied(self) -> None:
-        command = (
-            f"codex-agent exec -m gpt-5.6-terra -s read-only -c agents.enabled=false "
-            f"-C {REPO} -o {REPO}/.nikki-agents/codex-runs/../report.md - < "
-            f"{RUN}/prompt.txt"
-        )
-        self.assert_denied(
-            payload("reviewer-codex", "Bash", command=command), "Bash"
-        )
-        self.assert_denied(
-            payload(
-                "pstack:developer-codex",
-                "Bash",
-                command=f"git -C {REPO}/.. rev-parse HEAD",
-            ),
-            "Bash",
-        )
-
-    def test_worktree_add_name_traversal_is_denied(self) -> None:
-        # `..` sits before " -b", not before "/" or end of string: the name
-        # boundary check must not rely on those two terminators alone.
-        command = f"git -C {REPO} worktree add {REPO}/.nikki-agents/worktrees/.. -b agent/.. develop"
-        self.assert_denied(
-            payload("pstack:developer-codex", "Bash", command=command), "Bash"
-        )
-
-    def test_write_path_traversal_is_denied(self) -> None:
-        self.assert_denied(
-            payload(
-                "pstack:reviewer-codex",
-                "Write",
-                file_path=f"{REPO}/.nikki-agents/codex-runs/x/../../README.md",
-            ),
-            "Write",
-        )
-
-    def test_background_bash_calls_are_denied_even_when_the_command_is_allowed(
-        self,
-    ) -> None:
-        command = f"git -C {REPO} rev-parse HEAD"
+    def test_git_in_a_repo_planted_under_the_runs_root_is_denied(self) -> None:
+        # A workspace-write run can plant a repo whose config names
+        # core.fsmonitor, diff.external, or a textconv driver; any git call
+        # the watcher makes there would run that program unsandboxed.
         for agent_type in WATCHERS:
             with self.subTest(agent_type=agent_type):
+                self.assert_bash_denied(
+                    agent_type, f"git -C {RUN}/x status", "git is not an allowed command"
+                )
+
+    def test_git_mutations_and_global_options_are_denied(self) -> None:
+        self.assert_all_denied(
+            DEVELOPER,
+            {
+                f"git -C {WORKTREE} {sub}": "git is not an allowed command"
+                for sub in (
+                    "commit -am x",
+                    "reset --hard",
+                    "push",
+                    "worktree add /tmp/x",
+                    "config a b",
+                    "-c core.pager=id log",
+                    "diff --ext-diff",
+                )
+            }
+            | {"git status": "git is not an allowed command"},
+        )
+
+
+class ShellSafetyTests(GuardTestCase):
+    def test_shell_metacharacters_outside_quotes_are_denied(self) -> None:
+        brief = f"{RUN}/brief.md"
+        self.assert_all_denied(
+            DEVELOPER,
+            {
+                f"cat {brief}; rm -rf /": "`;` outside quotes",
+                f"cat {brief} && curl example.com": "`&` outside quotes",
+                f"cat {brief} | sh": "`|` outside quotes",
+                f"cat {brief} > /tmp/x": "`>` outside quotes",
+                f"cat {brief} >> {RUN}/progress.md": "`>` outside quotes",
+                f"cat $(echo {brief})": "`$` outside quotes",
+                f"cat `echo {brief}`": "outside quotes",
+                f"cat {RUN}/*.md": "`*` outside quotes",
+                f"cat {RUN}/brief.m?": "`?` outside quotes",
+                f"cat {RUN}/[b]rief.md": "`[` outside quotes",
+                f"cat {RUN}/{{brief,report}}.md": "`{` outside quotes",
+                "cat ~/.ssh/id_rsa": "`~` outside quotes",
+                writer_exec(add_dir="~/x"): "`~` outside quotes",
+                f"cat {brief} !": "`!` outside quotes",
+                f"cat {RUN}/brief\\.md": "`\\` outside quotes",
+                f"cat {brief}\nrm -rf /": "control characters",
+                f"cat {brief}\rrm": "control characters",
+                f"cat {brief} # comment": "`#` comment",
+                'cat "$HOME/x"': "`$` inside double quotes",
+                'cat "`id`"': "inside double quotes",
+                f"cat '{brief}": "does not parse",
+                "cat << EOF": "only one `<`",
+                f"cat 0< {brief}": "`<` must follow a space",
+                f"cat < {brief} {brief}": "exactly one file at the end",
+                "cat <": "exactly one file at the end",
+                "": "the command is empty",
+            },
+        )
+
+    def test_metacharacters_inside_single_quotes_stay_literal(self) -> None:
+        self.assert_allowed(
+            DEVELOPER,
+            f"codex exec -s workspace-write -C {WORKTREE} 'Fix it; then run $TESTS | tee *'",
+        )
+
+    def test_unknown_commands_and_prefixes_are_denied(self) -> None:
+        self.assert_all_denied(
+            REVIEWER,
+            {
+                "curl https://example.com": "curl is not an allowed command",
+                "rm -rf build": "rm is not an allowed command",
+                f"/bin/cat {RUN}/brief.md": "/bin/cat is not an allowed command",
+                "AGENT_RUNS_DIR=/ codex --version": "is not an allowed command",
+                f"cd {RUN}": "cd is not an allowed command",
+                "echo x": "echo is not an allowed command",
+                "codex": "codex allows only exec, --version, and login status",
+                "codex login": "codex login allows only status",
+                "codex --version extra": "takes no arguments",
+                "codex review": "codex allows only exec",
+            },
+        )
+
+
+class LegacyShapeTests(GuardTestCase):
+    def test_legacy_codex_runs_exec_shapes_are_denied(self) -> None:
+        reviewer = (
+            "codex-agent exec -m gpt-5.6-terra -s read-only -c agents.enabled=false "
+            f"-C {MAIN_CHECKOUT} -o {LEGACY_RUN}/report.md - < {LEGACY_RUN}/prompt.txt"
+        )
+        writer = (
+            "codex-agent exec -m gpt-5.6-terra -s workspace-write "
+            f"-c agents.enabled=false -C {LEGACY_WORKTREE} "
+            f"-o {LEGACY_RUN}/report.md - < {LEGACY_RUN}/prompt.txt"
+        )
+        self.assert_bash_denied(
+            REVIEWER, reviewer, f"stdin file {LEGACY_RUN}/prompt.txt is {OUTSIDE}"
+        )
+        self.assert_bash_denied(
+            DEVELOPER, writer, f"stdin file {LEGACY_RUN}/prompt.txt is {OUTSIDE}"
+        )
+
+    def test_legacy_git_commands_are_denied_for_both_watchers(self) -> None:
+        for agent_type in WATCHERS:
+            self.assert_all_denied(
+                agent_type,
+                {
+                    f"git -C {MAIN_CHECKOUT} rev-parse HEAD": "git is not an allowed command",
+                    f"git -C {MAIN_CHECKOUT} worktree add {LEGACY_WORKTREE} "
+                    "-b agent/sample-run develop": "git is not an allowed command",
+                    f"git -C {WORKTREE} worktree add {RUN}/wt "
+                    "-b agent/sample-run develop": "git is not an allowed command",
+                },
+            )
+
+
+class ToolShapeTests(GuardTestCase):
+    def test_background_bash_is_denied_even_when_the_command_is_allowed(self) -> None:
+        for agent_type, command in (
+            (REVIEWER, reviewer_exec()),
+            (DEVELOPER, writer_exec()),
+        ):
+            with self.subTest(agent_type=agent_type):
+                self.assert_allowed(agent_type, command)
                 event = payload(agent_type, "Bash", command=command)
                 event["tool_input"]["run_in_background"] = True
-                self.assert_denied(event, "Bash")
+                self.assert_denied(event, "Bash must not run in the background")
 
-    def test_invalid_writes_and_tools_are_denied(self) -> None:
-        self.assert_denied(
-            payload("pstack:reviewer-codex", "Write", file_path="/r/README.md"),
-            "Write",
-        )
-        for tool_name in ("Edit", "WebFetch"):
+    def test_every_write_by_a_watcher_is_denied(self) -> None:
+        for agent_type in (*WATCHERS, "pstack:reviewer-codex", "developer-codex"):
+            for file_path in (
+                f"{RUN}/progress.md",
+                f"{RUN}/report.md",
+                f"{WORKTREE}/x.py",
+                f"{LEGACY_RUN}/prompt.txt",
+            ):
+                with self.subTest(agent_type=agent_type, file_path=file_path):
+                    self.assert_denied(
+                        payload(agent_type, "Write", file_path=file_path, content="x"),
+                        "Write is not allowed for a Codex watcher",
+                    )
+
+    def test_other_tools_are_denied(self) -> None:
+        for tool_name in ("Edit", "Read", "WebFetch"):
             with self.subTest(tool_name=tool_name):
                 self.assert_denied(
-                    payload("pstack:reviewer-codex", tool_name), tool_name
+                    payload(REVIEWER, tool_name, file_path=f"{RUN}/brief.md"),
+                    f"{tool_name} is not allowed for a Codex watcher",
                 )
 
     def test_non_watchers_and_missing_agent_type_bypass_the_guard(self) -> None:
-        bad_command = "curl https://example.com"
-        self.assertEqual(
-            "",
-            HOOK.guard(payload("pstack:developer", "Bash", command=bad_command)),
-        )
-        self.assertEqual("", HOOK.guard(payload(None, "Bash", command=bad_command)))
+        for agent_type in ("pstack:developer", "codex", None):
+            with self.subTest(agent_type=agent_type):
+                self.assertEqual(
+                    "",
+                    HOOK.guard(payload(agent_type, "Bash", command="curl example.com")),
+                )
+                self.assertEqual(
+                    "", HOOK.guard(payload(agent_type, "Write", file_path="/r/x.md"))
+                )
 
     def test_incomplete_watcher_payload_is_denied(self) -> None:
-        self.assert_denied(
-            {"agent_type": "pstack:developer-codex"},
-            "unknown",
-        )
+        self.assert_denied({"agent_type": DEVELOPER}, "no tool name or input")
 
-    # -- fail closed -------------------------------------------------------
+    def test_non_string_command_is_denied(self) -> None:
+        self.assert_bash_denied(DEVELOPER, ["codex", "--version"], "not a string")
 
     def test_exception_for_a_watcher_payload_denies_instead_of_crashing(self) -> None:
-        event = payload("pstack:developer-codex", "Bash")
+        event = payload(DEVELOPER, "Bash")
         event["tool_input"] = ExplodingMapping()
-        self.assert_denied(event, "Bash")
+        self.assert_denied(event, "could not be checked")
 
     def test_exception_for_a_non_watcher_payload_reraises(self) -> None:
         event = {
-            "agent_type": PoisonedStr("pstack:developer-codex"),
+            "agent_type": PoisonedStr(DEVELOPER),
             "tool_name": "Bash",
             "tool_input": {"command": "codex --version"},
         }
@@ -509,6 +729,8 @@ class CodexWatcherGuardTests(unittest.TestCase):
         self.assertIn("codex watcher guard", fake_stderr.getvalue())
 
     def test_manifest_wires_guard_without_removing_session_start(self) -> None:
+        # Write stays in the matcher so a watcher's Write reaches the guard
+        # and is denied instead of skipping it.
         config = json.loads((REPOSITORY_ROOT / "hooks" / "hooks.json").read_text())
         hooks = config["hooks"]
 
@@ -526,95 +748,6 @@ class CodexWatcherGuardTests(unittest.TestCase):
             },
             hooks["PreToolUse"][0],
         )
-
-
-# -- structural guarantee behind the deleted runtime check -----------------
-#
-# The runtime check that rejected a forbidden shell character was deleted as
-# provably dead: every allowlist pattern is built from explicit character
-# classes, so no surviving pattern could ever match one. That is a fact about
-# today's patterns, not an invariant. Nothing else stops a future edit from
-# loosening PATH_SEGMENT or BASE_SEGMENT to admit `$` or a backtick. This
-# walks every pattern's parse tree instead of trusting the source text, so a
-# loosened class fails a test rather than reopening the hole silently.
-
-FORBIDDEN_CHARACTERS = "\n\r;&|$`>"
-
-# Every op these patterns actually use today, verified by walking the real
-# parse trees rather than guessing: LITERAL and RANGE build the character
-# classes; IN wraps them; MAX_REPEAT covers `+`, `*`, and `?`; SUBPATTERN
-# is a capturing or non-capturing group; ASSERT_NOT is the `(?!...)`
-# traversal guard; GROUPREF is the `(?P=name)` backreference that couples
-# -C/-o/stdin to the same repo and run name. An allowlist, not a denylist:
-# an op nobody anticipated (CATEGORY from `\S`/`\s`, ANY from `.`, NEGATE
-# from `[^...]`, or anything else) fails the test instead of passing it
-# silently, so loosening a class to use one requires touching this list.
-ALLOWED_PARSE_TREE_OPS = frozenset(
-    {
-        regex_parser.LITERAL,
-        regex_parser.RANGE,
-        regex_parser.IN,
-        regex_parser.MAX_REPEAT,
-        regex_parser.SUBPATTERN,
-        regex_parser.ASSERT_NOT,
-        regex_parser.GROUPREF,
-    }
-)
-
-
-def _iter_nodes(parsed):
-    """Yield every node reachable from `parsed`, including composite ones.
-
-    Descends into branches, repeats, subpatterns, lookaheads, and character
-    classes: every construct in these patterns that can hold a nested node
-    or a character acceptor. A composite node is yielded itself and then
-    recursed into, so both the container and its contents are checked.
-    """
-    for op, argument in parsed:
-        yield op, argument
-        if op is regex_parser.BRANCH:
-            for branch in argument[1]:
-                yield from _iter_nodes(branch)
-        elif op in (regex_parser.MAX_REPEAT, regex_parser.MIN_REPEAT):
-            yield from _iter_nodes(argument[2])
-        elif op is regex_parser.SUBPATTERN:
-            yield from _iter_nodes(argument[3])
-        elif op in (regex_parser.ASSERT, regex_parser.ASSERT_NOT):
-            yield from _iter_nodes(argument[1])
-        elif op is regex_parser.IN:
-            yield from argument
-
-
-class AllowlistCharacterClassTests(unittest.TestCase):
-    def all_patterns(self):
-        patterns = []
-        for bucket in HOOK.ALLOWED_BASH_BY_KIND.values():
-            patterns.extend(bucket)
-        patterns.append(HOOK.ALLOWED_WRITE)
-        return patterns
-
-    def test_no_allowlist_pattern_can_match_a_forbidden_character(self) -> None:
-        for pattern in self.all_patterns():
-            parsed = regex_parser.parse(pattern.pattern)
-            for op, argument in _iter_nodes(parsed):
-                with self.subTest(pattern=pattern.pattern, op=op):
-                    self.assertIn(
-                        op,
-                        ALLOWED_PARSE_TREE_OPS,
-                        f"unexpected parse-tree op {op} in {pattern.pattern!r}; "
-                        "extend ALLOWED_PARSE_TREE_OPS deliberately if this "
-                        "op is legitimate, after checking what characters it "
-                        "can admit",
-                    )
-                    if op is regex_parser.LITERAL:
-                        self.assertNotIn(chr(argument), FORBIDDEN_CHARACTERS)
-                    elif op is regex_parser.RANGE:
-                        low, high = argument
-                        for character in FORBIDDEN_CHARACTERS:
-                            self.assertFalse(
-                                low <= ord(character) <= high,
-                                f"range {low}-{high} admits {character!r}",
-                            )
 
 
 if __name__ == "__main__":
