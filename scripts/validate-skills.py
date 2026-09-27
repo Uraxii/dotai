@@ -35,6 +35,7 @@ __all__ = ["main", "validate_skills_tree", "validate_skills_trees"]
 
 LINK_RE = re.compile(r"\]\(([^)\n]*)\)")
 FENCE_RE = re.compile(r"```.*?```", re.DOTALL)
+CODE_SPAN_RE = re.compile(r"(?<!`)(`+)(?!`)(?:(?!\n[ \t]*\n).)*?(?<!`)\1(?!`)", re.DOTALL)
 FRONTMATTER_RE = re.compile(r"^---\n(.*?)\n---", re.DOTALL)
 
 # Skills are cited as **name** or `name`, never as markdown links.
@@ -75,9 +76,16 @@ def strip_fenced_code(text: str) -> str:
     return FENCE_RE.sub(lambda m: "\n" * m.group(0).count("\n"), text)
 
 
+def strip_code_spans(text: str) -> str:
+    # Blank with spaces rather than delete: deleting a span would join
+    # `[a]`x`(./b.md)` into a link, and the span can carry newlines a
+    # wrapped span crossed, so only non-newline characters are replaced.
+    return CODE_SPAN_RE.sub(lambda m: re.sub(r"[^\n]", " ", m.group(0)), text)
+
+
 def link_targets(text: str) -> list[str]:
     targets = []
-    for match in LINK_RE.finditer(strip_fenced_code(text)):
+    for match in LINK_RE.finditer(strip_code_spans(strip_fenced_code(text))):
         raw = match.group(1).strip()
         if raw.startswith("<"):
             end = raw.find(">")
