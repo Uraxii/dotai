@@ -202,7 +202,7 @@ CODEX_VALUE_FLAGS = {
 CODEX_BARE_FLAGS = frozenset({"--skip-git-repo-check", "--json", "--ephemeral"})
 CODEX_EXEC_SUBCOMMANDS = frozenset({"resume", "fork", "review", "help"})
 # Any other config key can override the sandbox or the approval policy.
-CODEX_CONFIG_KEY = "agents.enabled"
+CODEX_CONFIG_SETTING = "agents.enabled=false"
 
 
 @dataclass(frozen=True)
@@ -261,9 +261,12 @@ def check_codex_exec(args: tuple[str, ...], scope: Scope) -> str | None:
     if parsed.unknown:
         return f"codex exec flag {parsed.unknown[0]} is not allowed"
     for setting in parsed.config:
-        key = setting.partition("=")[0].strip()
-        if key != CODEX_CONFIG_KEY:
-            return f"codex exec -c {key} is not allowed; only -c {CODEX_CONFIG_KEY}"
+        key, _, value = setting.partition("=")
+        if f"{key.strip()}={value.strip()}" != CODEX_CONFIG_SETTING:
+            return (
+                f"codex exec -c {setting} is not allowed; "
+                f"only -c {CODEX_CONFIG_SETTING}"
+            )
     for positional in parsed.positionals:
         if positional in CODEX_EXEC_SUBCOMMANDS:
             return f"codex exec {positional} is not allowed; start a new exec run"

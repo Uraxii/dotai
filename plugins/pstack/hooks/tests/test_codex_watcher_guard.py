@@ -266,6 +266,18 @@ class CodexExecTests(GuardTestCase):
                     "only -c agents.enabled",
                 )
 
+    def test_agents_enabled_must_be_false(self) -> None:
+        for agent_type, command in (
+            (REVIEWER, reviewer_exec()),
+            (DEVELOPER, writer_exec()),
+        ):
+            with self.subTest(agent_type=agent_type):
+                self.assert_bash_denied(
+                    agent_type,
+                    command.replace("agents.enabled=false", "agents.enabled=true"),
+                    "-c agents.enabled=true is not allowed; only -c agents.enabled=false",
+                )
+
     def test_exec_subcommands_and_extra_prompts_are_denied(self) -> None:
         self.assert_all_denied(
             DEVELOPER,
