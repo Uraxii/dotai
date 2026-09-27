@@ -167,6 +167,62 @@ class ValidateSkillsTests(unittest.TestCase):
             self.assertNotIn("dbl.md", result.stderr)
             self.assertIn("nope.md", result.stderr)
 
+    def test_catches_a_link_hidden_by_a_code_span_that_crosses_a_list_item(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            skills_dir = Path(directory)
+            skill_dir = skills_dir / "sample"
+            skill_dir.mkdir()
+            (skill_dir / "SKILL.md").write_text(
+                "---\nname: sample\ndescription: A sample skill.\n---\n\n"
+                "- Run `git status to check.\n"
+                "- Read [the guide](./references/li.md) and run `make`.\n"
+            )
+
+            result = run_validator(skills_dir)
+
+            self.assertNotEqual(0, result.returncode)
+            self.assertIn("references/li.md", result.stderr)
+
+    def test_catches_a_link_hidden_by_a_code_span_that_crosses_a_table_row(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            skills_dir = Path(directory)
+            skill_dir = skills_dir / "sample"
+            skill_dir.mkdir()
+            (skill_dir / "SKILL.md").write_text(
+                "---\nname: sample\ndescription: A sample skill.\n---\n\n"
+                "| Char | Meaning |\n"
+                "| --- | --- |\n"
+                "| ` | backtick |\n"
+                "| [docs](./references/tb.md) | see `x` |\n"
+            )
+
+            result = run_validator(skills_dir)
+
+            self.assertNotEqual(0, result.returncode)
+            self.assertIn("references/tb.md", result.stderr)
+
+    def test_does_not_mistake_a_wrapped_span_continuation_for_a_table_row(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            skills_dir = Path(directory)
+            skill_dir = skills_dir / "sample"
+            skill_dir.mkdir()
+            (skill_dir / "SKILL.md").write_text(
+                "---\nname: sample\ndescription: A sample skill.\n---\n\n"
+                "Run `cat log\n"
+                "| grep err` then read [x](./p.md) and run `y`.\n"
+            )
+
+            result = run_validator(skills_dir)
+
+            self.assertNotEqual(0, result.returncode)
+            self.assertIn("p.md", result.stderr)
+
     def test_fails_when_frontmatter_name_does_not_match_directory(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             skills_dir = Path(directory)
