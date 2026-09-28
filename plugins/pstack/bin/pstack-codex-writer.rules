@@ -1,10 +1,12 @@
 prefix_rule(
-    pattern = ["git", ["add", "commit"]],
+    pattern = ["git", ["add", "commit", "status", "diff", "log", "show", "rev-parse"]],
     decision = "allow",
-    justification = "A Codex writer commits its own work, and the sandbox keeps .git read-only.",
+    justification = "A Codex writer inspects and commits its own work, and the sandbox keeps .git read-only.",
     match = [
         "git add src/a.gd",
         "git commit -m probe",
+        "git rev-parse HEAD",
+        "git status --short",
     ],
     not_match = [
         "git push origin main",

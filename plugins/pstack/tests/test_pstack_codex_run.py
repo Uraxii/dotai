@@ -325,6 +325,8 @@ def test_missing_codex_falls_back(box, tmp_path) -> None:
 RULE_CASES = {
     "git add src/a.gd": "allow",
     "git commit -m probe": "allow",
+    "git rev-parse HEAD": "allow",
+    "git status --short": "allow",
     "git push origin main": None,
     "git -C /tmp/x commit -m x": None,
     "git -c core.hooksPath=/tmp commit -m x": None,
@@ -334,7 +336,7 @@ RULE_CASES = {
 
 @pytest.mark.skipif(shutil.which("codex") is None, reason="codex not on PATH")
 @pytest.mark.parametrize("command, decision", RULE_CASES.items())
-def test_rules_allow_only_plain_git_add_and_commit(command, decision) -> None:
+def test_rules_allow_only_plain_git_commit_commands(command, decision) -> None:
     result = subprocess.run(
         ["codex", "execpolicy", "check", "--rules", str(RULES_FILE), "--",
          *command.split()],
