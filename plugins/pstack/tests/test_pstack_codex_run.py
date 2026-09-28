@@ -259,8 +259,8 @@ def test_writer_worktree_without_git_is_refused(box) -> None:
 @pytest.mark.parametrize(
     "write_brief, reason_part",
     [
-        (None, "brief.md cannot be read"),
-        (b"---\nkind: writer\xff\n---\n", "brief.md cannot be read"),
+        (None, "brief.md is missing or unreadable"),
+        (b"---\nkind: writer\xff\n---\n", "brief.md cannot be read as UTF-8"),
         ("no frontmatter here\n", "no frontmatter"),
         ("---\nkind: writer\n", "no frontmatter"),
         ("---\nworktree: /x\n---\n", "is not writer or reviewer"),

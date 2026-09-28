@@ -163,8 +163,10 @@ def prepare(
     """Validate RUN and its brief against the disk, then plan the launch."""
     run, root = check_run(raw_run, environ.get("AGENT_RUNS_DIR"))
     try:
-        brief = (run / "brief.md").read_text()
-    except (OSError, UnicodeDecodeError):
+        brief = (run / "brief.md").read_text(encoding="utf-8")
+    except OSError:
+        raise RunRefused(f"{run}/brief.md is missing or unreadable") from None
+    except UnicodeDecodeError:
         raise RunRefused(f"{run}/brief.md cannot be read as UTF-8 text") from None
     home = environ.get("PSTACK_CODEX_HOME") or DEFAULT_CODEX_HOME
     codex_home = Path(os.path.expanduser(home))
