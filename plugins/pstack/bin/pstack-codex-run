@@ -38,6 +38,7 @@ class RunRefused(Exception):
 class Kind:
     sandbox_flags: tuple[str, ...]
     worktree_in_runs_root: bool
+    rooted_at_run: bool
     exec_flags: tuple[str, ...]
     commit_rules: bool
 
@@ -46,12 +47,14 @@ KINDS: Mapping[str, Kind] = {
     "writer": Kind(
         sandbox_flags=("-s", "workspace-write"),
         worktree_in_runs_root=True,
+        rooted_at_run=False,
         exec_flags=(),
         commit_rules=True,
     ),
     "reviewer": Kind(
         sandbox_flags=("-s", "workspace-write", "--ignore-rules"),
         worktree_in_runs_root=False,
+        rooted_at_run=True,
         exec_flags=(
             "-c", "sandbox_workspace_write.exclude_slash_tmp=true",
             "-c", "sandbox_workspace_write.exclude_tmpdir_env_var=true",
@@ -140,12 +143,6 @@ def plan_launch(
         raise RunRefused(
             f"the writer worktree {worktree} is not inside the runs root {root}"
         )
-    if not kind.worktree_in_runs_root and Path(worktree).resolve().is_relative_to(
-        run.resolve()
-    ):
-        raise RunRefused(
-            f"the reviewer worktree {worktree} is inside the writable run directory {run}"
-        )
     model = fields.get("model")
     argv = (
         "codex",
@@ -155,8 +152,8 @@ def plan_launch(
         *NO_HELPER_AGENTS,
         *kind.exec_flags,
         "-C",
-        worktree if kind.worktree_in_runs_root else str(run),
-        *(("--add-dir", str(run)) if kind.worktree_in_runs_root else ()),
+        str(run) if kind.rooted_at_run else worktree,
+        *(() if kind.rooted_at_run else ("--add-dir", str(run))),
         "-",
     )
     rules = None
@@ -169,7 +166,7 @@ def plan_launch(
 def prepare(
     raw_run: str, environ: Mapping[str, str], script_dir: Path
 ) -> Launch:
-    """Validate RUN and its brief against the disk, then plan the launch."""
+    """Plan the launch and validate RUN and its brief against the disk."""
     run, root = check_run(raw_run, environ.get("AGENT_RUNS_DIR"))
     try:
         brief = (run / "brief.md").read_text(encoding="utf-8")
@@ -182,7 +179,11 @@ def prepare(
     fields = parse_frontmatter(brief)
     launch = plan_launch(fields, run, root, codex_home, script_dir)
     worktree = launch.worktree
-    if launch.kind.worktree_in_runs_root:
+    if launch.kind.rooted_at_run and worktree.resolve().is_relative_to(run.resolve()):
+        raise RunRefused(
+            f"the reviewer worktree {worktree} is inside the writable run directory {run}"
+        )
+    if not launch.kind.rooted_at_run:
         if not (worktree / ".git").exists():
             raise RunRefused(f"the writer worktree {worktree} has no .git")
     elif not worktree.is_dir():

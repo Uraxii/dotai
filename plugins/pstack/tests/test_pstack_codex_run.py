@@ -149,12 +149,32 @@ def test_agent_report_survives_codex_exit(box, tmp_path, kind) -> None:
 
 
 @pytest.mark.parametrize("relative_worktree", [".", "worktree"])
-def test_reviewer_worktree_in_run_is_refused(box, relative_worktree) -> None:
+@pytest.mark.parametrize("via_symlink", [False, True])
+def test_reviewer_worktree_in_run_is_refused(
+    box, tmp_path, relative_worktree, via_symlink
+) -> None:
     reviewed = box.run / relative_worktree
+    if via_symlink:
+        link = tmp_path / "reviewed"
+        link.symlink_to(reviewed, target_is_directory=True)
+        reviewed = link
     box.brief("kind: reviewer", f"worktree: {reviewed}")
 
     assert_refused(box.cli(str(box.run)), "is inside the writable run directory")
     assert box.calls() == []
+
+
+def test_reviewer_worktree_with_run_name_prefix_is_accepted(box) -> None:
+    reviewed = box.run.with_name(f"{box.run.name}-sibling")
+    reviewed.mkdir()
+    box.brief("kind: reviewer", f"worktree: {reviewed}")
+
+    result = box.cli(str(box.run))
+
+    assert result.returncode == 0
+    assert [call["argv"][:1] for call in box.calls()] == [
+        ["--version"], ["login"], ["exec"]
+    ]
 
 
 def assert_bundled_rules_installed(box) -> None:
