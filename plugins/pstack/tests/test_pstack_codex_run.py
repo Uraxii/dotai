@@ -115,7 +115,7 @@ def test_writer_runs_preflight_then_exec_with_the_exact_argv(box) -> None:
     expected = [
         "exec", "-m", "gpt-5.6-terra", "-s", "workspace-write",
         "-c", "agents.enabled=false", "-C", str(box.worktree),
-        "--add-dir", str(box.run), "-o", f"{box.run}/report.md", "-",
+        "--add-dir", str(box.run), "-",
     ]
     calls = box.calls()
     assert [call["argv"] for call in calls] == [
@@ -193,7 +193,7 @@ def test_writer_replaces_old_rules(box, tmp_path, stale_kind) -> None:
     assert stale.read_text() == "# stale\n"
 
 
-def test_reviewer_runs_read_only_without_rules(box, tmp_path) -> None:
+def test_reviewer_runs_in_writable_run_directory_without_rules(box, tmp_path) -> None:
     reviewed = tmp_path / "anywhere"
     reviewed.mkdir()
     box.brief("kind: reviewer", f"worktree: {reviewed}")
@@ -202,9 +202,11 @@ def test_reviewer_runs_read_only_without_rules(box, tmp_path) -> None:
 
     assert result.returncode == 0
     assert box.calls()[2]["argv"] == [
-        "exec", "-s", "read-only", "--ignore-rules",
-        "-c", "agents.enabled=false", "-C", str(reviewed),
-        "-o", f"{box.run}/report.md", "-",
+        "exec", "-s", "workspace-write", "--ignore-rules",
+        "-c", "agents.enabled=false",
+        "-c", "sandbox_workspace_write.exclude_slash_tmp=true",
+        "-c", "sandbox_workspace_write.exclude_tmpdir_env_var=true",
+        "--skip-git-repo-check", "-C", str(box.run), "-",
     ]
     assert not box.codex_home.exists()
 
