@@ -246,6 +246,31 @@ def brief_text(request: Request, run_id: str, run_dir: Path, worktree: Path,
     if request.model is not None:
         frontmatter.append(f"model: {request.model}")
     frontmatter.append("---")
+    steps = [
+        "If you have not loaded the poteto-mode skill yet, read the "
+        "Non-negotiables and Principles sections of "
+        f"`{poteto_mode_skill}`, then only the skills and playbook steps "
+        "this brief names. Search with `rg -n` and read narrow line "
+        "ranges, not whole files.",
+        f"Read every file in `{run_dir}/corrections/` in name order. A "
+        "correction overrides this brief and every correction before it.",
+        f"Read `{run_dir}/progress.md` if it exists. Earlier agents on "
+        "this run logged their finished steps there. Continue from it and "
+        "do not redo those steps.",
+        f"Work only in `{worktree}`.",
+        "After each step, append one line to "
+        f"`{run_dir}/progress.md` that says what you finished. Skip this "
+        "under a read-only sandbox.",
+    ]
+    if request.kind == "writer":
+        steps.append(
+            "Commit your work yourself. Run `git add` and `git commit` as "
+            "their own commands, or chained only with other git commands; "
+            "never in the same command as file edits or non-git tools.")
+    steps.append(
+        "End with your report. Write it to "
+        f"`{run_dir}/report.md` unless your sandbox is read-only, and "
+        "send the same text as your final message.")
     body = [
         "",
         f"# Agent run {run_id}",
@@ -253,23 +278,7 @@ def brief_text(request: Request, run_id: str, run_dir: Path, worktree: Path,
         "This brief is read-only. Later instructions arrive as files in "
         "`corrections/`.",
         "",
-        "1. If you have not loaded the poteto-mode skill yet, read the "
-        "Non-negotiables and Principles sections of "
-        f"`{poteto_mode_skill}`, then only the skills and playbook steps "
-        "this brief names. Search with `rg -n` and read narrow line "
-        "ranges, not whole files.",
-        f"2. Read every file in `{run_dir}/corrections/` in name order. A "
-        "correction overrides this brief and every correction before it.",
-        f"3. Read `{run_dir}/progress.md` if it exists. Earlier agents on "
-        "this run logged their finished steps there. Continue from it and "
-        "do not redo those steps.",
-        f"4. Work only in `{worktree}`.",
-        "5. After each step, append one line to "
-        f"`{run_dir}/progress.md` that says what you finished. Skip this "
-        "under a read-only sandbox.",
-        "6. End with your report. Write it to "
-        f"`{run_dir}/report.md` unless your sandbox is read-only, and "
-        "send the same text as your final message.",
+        *(f"{number}. {step}" for number, step in enumerate(steps, 1)),
         "",
         "## Task",
         "",

@@ -3,9 +3,9 @@
 A plain `pgrep -af "codex exec"` has two failure modes: it can self-match an
 ancestor process whose own command line happens to carry that text, and it
 false-positives on any unrelated process carrying the same substring. The
-playbook keys the check to the worktree instead, since `-C <worktree>`
-survives verbatim into the live process's argv once `codex-agent` execs the
-codex binary. These tests run the playbook's own pattern against real
+playbook keys the check to the worktree instead, since `pstack-codex-run`
+passes `-C <worktree>` verbatim in the live `codex exec` process's argv.
+These tests run the playbook's own pattern against real
 processes, not just against the pattern text.
 """
 
@@ -45,15 +45,6 @@ def run_collision_check(worktree: Path, tmp_path: Path) -> subprocess.CompletedP
     script = tmp_path / "check.sh"
     script.write_text(f"#!/bin/sh\n{command}\n")
     return subprocess.run(["bash", str(script)], capture_output=True, text=True)
-
-
-def test_pattern_and_codex_agent_exec_do_not_contain_each_other() -> None:
-    # Keying the check on codex-agent's own exec'd argv only works because
-    # "codex exec" and "codex-agent exec" are different strings: neither
-    # one is a substring of the other, so the check can never match
-    # codex-agent's own invocation instead of the codex binary it execs.
-    assert "codex exec" not in "codex-agent exec"
-    assert "codex-agent exec" not in "codex exec"
 
 
 def test_collision_check_finds_nothing_when_no_run_holds_the_worktree(tmp_path) -> None:
