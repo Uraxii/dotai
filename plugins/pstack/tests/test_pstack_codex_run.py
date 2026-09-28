@@ -60,7 +60,7 @@ class Sandbox:
         )
 
     @property
-    def rules_link(self) -> Path:
+    def installed_rules(self) -> Path:
         return self.codex_home / "rules" / "pstack-codex-writer.rules"
 
     def brief(self, *lines: str, body: str = "Do the task.\n") -> str:
@@ -124,28 +124,40 @@ def test_writer_runs_preflight_then_exec_with_the_exact_argv(box) -> None:
     ]
 
 
-def test_writer_links_the_bundled_rules_into_codex_home(box) -> None:
+def assert_bundled_rules_installed(box) -> None:
+    rules = box.installed_rules
+    assert not rules.is_symlink()
+    assert rules.is_file()
+    assert rules.read_bytes() == RULES_FILE.read_bytes()
+    assert [p.name for p in rules.parent.iterdir()] == [rules.name]
+
+
+def test_writer_copies_the_bundled_rules_into_codex_home(box) -> None:
     box.writer_brief()
 
     box.cli(str(box.run))
 
-    assert box.rules_link.is_symlink()
-    assert Path(os.readlink(box.rules_link)) == RULES_FILE
+    assert_bundled_rules_installed(box)
 
 
-def test_writer_repoints_a_rules_link_that_points_elsewhere(box, tmp_path) -> None:
+# The atomic os.replace is not race-tested on purpose: a race test would be
+# flaky. It matters because parallel writers share one CODEX_HOME, and none of
+# them may see the rules file missing or half-written.
+@pytest.mark.parametrize("stale_kind", ["symlink", "stale-file"])
+def test_writer_replaces_old_rules(box, tmp_path, stale_kind) -> None:
     box.writer_brief()
-    box.rules_link.parent.mkdir(parents=True)
+    box.installed_rules.parent.mkdir(parents=True)
     stale = tmp_path / "stale.rules"
-    stale.write_text("")
-    box.rules_link.symlink_to(stale)
+    stale.write_text("# stale\n")
+    if stale_kind == "symlink":
+        box.installed_rules.symlink_to(stale)
+    else:
+        box.installed_rules.write_text("# stale\n")
 
     box.cli(str(box.run))
 
-    assert Path(os.readlink(box.rules_link)) == RULES_FILE
-    assert sorted(p.name for p in box.rules_link.parent.iterdir()) == [
-        "pstack-codex-writer.rules"
-    ]
+    assert_bundled_rules_installed(box)
+    assert stale.read_text() == "# stale\n"
 
 
 def test_reviewer_runs_read_only_without_rules(box, tmp_path) -> None:
