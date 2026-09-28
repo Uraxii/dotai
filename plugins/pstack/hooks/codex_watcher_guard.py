@@ -28,16 +28,23 @@ def watcher_kind(payload: Mapping[str, object]) -> str | None:
     return name if name in WATCHER_NAMES else None
 
 
-def deny(reason: str) -> str:
+def decide(permission: str, reason: str) -> str:
     return json.dumps(
         {
             "hookSpecificOutput": {
                 "hookEventName": "PreToolUse",
-                "permissionDecision": "deny",
+                "permissionDecision": permission,
                 "permissionDecisionReason": f"codex watcher guard: {reason}",
             }
         }
     )
+
+
+def deny(reason: str) -> str:
+    return decide("deny", reason)
+
+
+ALLOW = decide("allow", "pstack-codex-run on one run directory")
 
 
 def check_watcher_call(payload: Mapping[str, object]) -> str | None:
@@ -60,7 +67,11 @@ def check_watcher_call(payload: Mapping[str, object]) -> str | None:
 
 
 def guard(payload: Mapping[str, object]) -> str:
-    """Return a PreToolUse denial JSON line, or an empty string to allow.
+    """Return a PreToolUse allow or deny JSON line for a watcher's call.
+
+    A watcher's one allowed command gets an explicit allow, so a background
+    watcher never waits on a permission prompt. A payload from any other
+    agent gets an empty string and goes through the normal permission flow.
 
     Fails closed: an exception raised while judging a watcher's payload
     denies the call instead of letting it through unguarded. A payload that
@@ -70,7 +81,7 @@ def guard(payload: Mapping[str, object]) -> str:
         if watcher_kind(payload) is None:
             return ""
         reason = check_watcher_call(payload)
-        return "" if reason is None else deny(reason)
+        return ALLOW if reason is None else deny(reason)
     except Exception:
         try:
             still_a_watcher = watcher_kind(payload) is not None

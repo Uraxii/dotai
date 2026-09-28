@@ -62,7 +62,17 @@ class GuardTests(unittest.TestCase):
             for run in (RUN, "/tmp/x/.agent-runs/a.b@c+d-e_f", f"{RUN}/"):
                 with self.subTest(agent=agent, run=run):
                     self.assertEqual(
-                        "", HOOK.guard(bash(agent, f"pstack-codex-run {run}"))
+                        {
+                            "hookSpecificOutput": {
+                                "hookEventName": "PreToolUse",
+                                "permissionDecision": "allow",
+                                "permissionDecisionReason": (
+                                    "codex watcher guard: pstack-codex-run "
+                                    "on one run directory"
+                                ),
+                            }
+                        },
+                        json.loads(HOOK.guard(bash(agent, f"pstack-codex-run {run}"))),
                     )
 
     def test_every_other_command_shape_is_denied(self) -> None:
