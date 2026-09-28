@@ -176,6 +176,13 @@ def test_reviewer_runs_read_only_without_rules(box, tmp_path) -> None:
     assert not box.codex_home.exists()
 
 
+def test_reviewer_worktree_that_does_not_exist_is_refused(box, tmp_path) -> None:
+    box.brief("kind: reviewer", f"worktree: {tmp_path / 'missing'}")
+
+    assert_refused(box.cli(str(box.run)), "does not exist")
+    assert box.calls() == []
+
+
 def test_no_model_means_no_model_flag(box) -> None:
     box.writer_brief()
 
@@ -253,16 +260,20 @@ def test_writer_worktree_without_git_is_refused(box) -> None:
     "write_brief, reason_part",
     [
         (None, "brief.md cannot be read"),
+        (b"---\nkind: writer\xff\n---\n", "brief.md cannot be read"),
         ("no frontmatter here\n", "no frontmatter"),
         ("---\nkind: writer\n", "no frontmatter"),
         ("---\nworktree: /x\n---\n", "is not writer or reviewer"),
         ("---\nkind: writer\n---\n", "no absolute worktree"),
     ],
-    ids=["missing", "no-fence", "unclosed", "no-kind", "no-worktree"],
+    ids=["missing", "not-utf8", "no-fence", "unclosed", "no-kind", "no-worktree"],
 )
 def test_bad_brief_is_refused(box, write_brief, reason_part) -> None:
-    if write_brief is not None:
-        (box.run / "brief.md").write_text(write_brief)
+    brief = box.run / "brief.md"
+    if isinstance(write_brief, bytes):
+        brief.write_bytes(write_brief)
+    elif write_brief is not None:
+        brief.write_text(write_brief)
 
     assert_refused(box.cli(str(box.run)), reason_part)
     assert box.calls() == []
