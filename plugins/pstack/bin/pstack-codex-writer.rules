@@ -1,0 +1,15 @@
+prefix_rule(
+    pattern = ["git", ["add", "commit"]],
+    decision = "allow",
+    justification = "A Codex writer commits its own work, and the sandbox keeps .git read-only.",
+    match = [
+        "git add src/a.gd",
+        "git commit -m probe",
+    ],
+    not_match = [
+        "git push origin main",
+        "git -C /tmp/x commit -m x",
+        "git -c core.hooksPath=/tmp commit -m x",
+        "git reset --hard",
+    ],
+)

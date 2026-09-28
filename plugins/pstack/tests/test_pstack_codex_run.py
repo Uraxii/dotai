@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -297,3 +298,24 @@ def test_missing_codex_falls_back(box, tmp_path) -> None:
     assert lines["exit code"] == "(none)"
     assert lines["reason"] == "codex is not on PATH"
 
+
+RULE_CASES = {
+    "git add src/a.gd": "allow",
+    "git commit -m probe": "allow",
+    "git push origin main": None,
+    "git -C /tmp/x commit -m x": None,
+    "git -c core.hooksPath=/tmp commit -m x": None,
+    "git reset --hard": None,
+}
+
+
+@pytest.mark.skipif(shutil.which("codex") is None, reason="codex not on PATH")
+@pytest.mark.parametrize("command, decision", RULE_CASES.items())
+def test_rules_allow_only_plain_git_add_and_commit(command, decision) -> None:
+    result = subprocess.run(
+        ["codex", "execpolicy", "check", "--rules", str(RULES_FILE), "--",
+         *command.split()],
+        capture_output=True, text=True, check=True,
+    )
+
+    assert json.loads(result.stdout).get("decision") == decision
