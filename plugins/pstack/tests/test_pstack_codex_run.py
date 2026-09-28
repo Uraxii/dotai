@@ -17,6 +17,7 @@ CLI = PLUGIN_ROOT / "bin/pstack-codex-run"
 RULES_FILE = PLUGIN_ROOT / "bin/pstack-codex-writer.rules"
 FAKE_CODEX = """#!/usr/bin/env python3
 import json, os, sys
+from pathlib import Path
 args = sys.argv[1:]
 record = {
     "argv": args,
@@ -27,6 +28,12 @@ with open(os.environ["FAKE_CODEX_RECORD"], "a") as out:
     out.write(json.dumps(record) + "\\n")
 print("codex noise on stdout")
 print("codex noise on stderr", file=sys.stderr)
+if args[0] == "exec":
+    root_flag = "--add-dir" if "--add-dir" in args else "-C"
+    run = Path(args[args.index(root_flag) + 1])
+    (run / "report.md").write_text("FULL REPORT: completed work and verification\\n")
+    if "-o" in args:
+        Path(args[args.index("-o") + 1]).write_text("Short last message\\n")
 failing = os.environ.get("FAKE_CODEX_FAIL")
 sys.exit(1 if failing and " ".join(args).startswith(failing) else 0)
 """
@@ -122,6 +129,32 @@ def test_writer_runs_preflight_then_exec_with_the_exact_argv(box) -> None:
         "command: codex " + " ".join(expected),
         "exit code: 0",
     ]
+
+
+@pytest.mark.parametrize("kind", ["writer", "reviewer"])
+def test_agent_report_survives_codex_exit(box, tmp_path, kind) -> None:
+    if kind == "writer":
+        box.writer_brief()
+    else:
+        reviewed = tmp_path / "reviewed"
+        reviewed.mkdir()
+        box.brief("kind: reviewer", f"worktree: {reviewed}")
+
+    result = box.cli(str(box.run))
+
+    assert result.returncode == 0
+    assert (box.run / "report.md").read_text() == (
+        "FULL REPORT: completed work and verification\n"
+    )
+
+
+@pytest.mark.parametrize("relative_worktree", [".", "worktree"])
+def test_reviewer_worktree_in_run_is_refused(box, relative_worktree) -> None:
+    reviewed = box.run / relative_worktree
+    box.brief("kind: reviewer", f"worktree: {reviewed}")
+
+    assert_refused(box.cli(str(box.run)), "is inside the writable run directory")
+    assert box.calls() == []
 
 
 def assert_bundled_rules_installed(box) -> None:
