@@ -103,9 +103,24 @@ def expected_brief(*, kind: str, worktree: Path, branch: str, base: str,
         "5. After each step, append one line to "
         f"`{run_dir}/progress.md` that says what you finished. Skip this "
         "under a read-only sandbox.",
-        "6. End with your report. Write it to "
-        f"`{run_dir}/report.md` unless your sandbox is read-only, and "
-        "send the same text as your final message.",
+    ]
+    if kind == "writer":
+        lines += [
+            "6. Commit your work yourself. Run `git add` and `git commit` "
+            "as their own commands, or chained only with other git "
+            "commands; never in the same command as file edits or non-git "
+            "tools.",
+            "7. End with your report. Write it to "
+            f"`{run_dir}/report.md` unless your sandbox is read-only, and "
+            "send the same text as your final message.",
+        ]
+    else:
+        lines += [
+            "6. End with your report. Write it to "
+            f"`{run_dir}/report.md` unless your sandbox is read-only, and "
+            "send the same text as your final message.",
+        ]
+    lines += [
         "",
         "## Task",
         "",
@@ -341,9 +356,10 @@ class BriefContentExactTest(unittest.TestCase):
     def tearDownClass(cls) -> None:
         cls.temporary.cleanup()
 
-    def run_for_brief(self, model: str | None) -> tuple[Path, str]:
+    def run_for_brief(self, model: str | None,
+                      kind: str = "reviewer") -> tuple[Path, str]:
         """Create one run and return its directory and `brief.md` text."""
-        arguments = ["--slug", "exact-brief", "--kind", "reviewer",
+        arguments = ["--slug", "exact-brief", "--kind", kind,
                     "--worktree", str(self.repo)]
         if model is not None:
             arguments += ["--model", model]
@@ -366,6 +382,14 @@ class BriefContentExactTest(unittest.TestCase):
         expected = expected_brief(
             kind="reviewer", worktree=self.repo, branch="main",
             base=self.head, model="claude-opus-4-6", run_id=run_dir.name,
+            run_dir=run_dir, task=self.task_expected)
+        self.assertEqual(text, expected)
+
+    def test_a_writer_brief_adds_the_commit_step(self) -> None:
+        run_dir, text = self.run_for_brief(None, kind="writer")
+        expected = expected_brief(
+            kind="writer", worktree=self.repo, branch="main",
+            base=self.head, model=None, run_id=run_dir.name,
             run_dir=run_dir, task=self.task_expected)
         self.assertEqual(text, expected)
 
