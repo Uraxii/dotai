@@ -4,6 +4,7 @@ description: "Default for one review gate on Claude Code: the named watcher for 
 color: gray
 tools: Bash, Write
 model: sonnet
+background: true
 ---
 
 ### Codex watcher
@@ -35,7 +36,7 @@ RUN is the run directory your prompt names. No run directory in the prompt: repl
    ```
 
    Include `-m <model>` only when brief.md named one.
-7. Run COMMAND with Bash, `timeout: 600000`, one call, nothing chained after it. A run that outlives this timeout moves to the background instead of dying; wait for its own completion notification and read the real exit code from that. A slow run alone is never a reason to report a failure.
+7. Run COMMAND with Bash, `timeout: 600000`, one call, nothing chained after it. A run that outlives this timeout moves to the background instead of dying. When the Bash result says it moved to the background, reply exactly `fallback: pending` and `command: <COMMAND exactly as run>`, one per line, and end your turn. You are woken when it exits; then reply as step 8 or 9 says, with the real exit code from that notification. A slow run alone is never a reason to report a failure.
 8. Exit code 0: reply exactly
 
    ```

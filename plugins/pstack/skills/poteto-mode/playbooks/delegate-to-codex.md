@@ -23,7 +23,7 @@ A writer commits its own work. Codex's `workspace-write` sandbox keeps every `.g
    ```
 
    Runs live under the main checkout, not inside a harness worktree, so `isolation: "worktree"` only adds a checkout nobody uses. Pin the watcher's own model from the `codex watchers` row (its frontmatter already carries `model: sonnet`).
-4. Read the reply by key: `fallback`, `command`, `exit code`, then `reason` on a fallback. Ignore any other line. The watcher sends Codex's own output to `<RUN>/codex-exec.log`, so those lines are all you get from it. `exit code` is a number or `(none)`. A `codex exec` that outlives its Bash timeout moves to the background instead of dying, so the watcher waits for that command's own completion notification and reports the real exit code from it; a slow run alone is never a reason for `fallback: claude`.
+4. Read the reply by key: `fallback`, `command`, `exit code`, then `reason` on a fallback. Ignore any other line. The watcher sends Codex's own output to `<RUN>/codex-exec.log`, so those lines are all you get from it. `exit code` is a number or `(none)`. `fallback: pending` means Codex outlived the watcher's Bash timeout and is still running in the background. Wait for the watcher's next notification, which carries the final lines, and never fall back on `pending`.
 5. `fallback: none`: open `<RUN>/report.md` and `<RUN>/decisions.tsv` yourself, then run `git log` and `git diff <base>..HEAD` in the brief's `worktree`, with `base` from the brief's frontmatter. A commit the report claims counts only when git shows it. No report file at that path despite `fallback: none` means the run failed anyway; treat it as step 6.
 6. `fallback: claude` means Codex did not run. Handle it in this order.
 
