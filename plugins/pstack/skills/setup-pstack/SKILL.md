@@ -143,12 +143,12 @@ The Codex sheet is the same file with Codex slugs and no `codex watchers` row
 (the watchers run on Claude Code, which is what spawns them):
 
 ```markdown
-feature, refactoring: gpt-6-sol, gpt-5.6-terra, gpt-5.6-sol
-judgment and prose: gpt-6-sol, gpt-5.6-sol, gpt-5.6-terra
-arena runners: gpt-6-sol, gpt-5.6-sol, gpt-5.6-terra
-arena cross-judge pool: gpt-6-sol, gpt-5.6-sol, gpt-5.6-terra
-interrogate reviewers: gpt-6-sol, gpt-5.6-sol, gpt-5.6-terra
-swarm workers: gpt-6-sol, gpt-5.6-terra
+feature, refactoring: gpt-6.1-sol, gpt-6-sol, gpt-5.6-terra, gpt-5.6-sol
+judgment and prose: gpt-6.1-sol, gpt-6-sol, gpt-5.6-sol, gpt-5.6-terra
+arena runners: gpt-6.1-sol, gpt-6-sol, gpt-5.6-sol, gpt-5.6-terra
+arena cross-judge pool: gpt-6.1-sol, gpt-6-sol, gpt-5.6-sol, gpt-5.6-terra
+interrogate reviewers: gpt-6.1-sol, gpt-6-sol, gpt-5.6-sol, gpt-5.6-terra
+swarm workers: gpt-6.1-sol, gpt-6-sol, gpt-5.6-terra
 ```
 
 ### 6. Wire it in
