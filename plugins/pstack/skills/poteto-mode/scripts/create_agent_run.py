@@ -229,12 +229,13 @@ def head_sha_of(worktree: Path) -> str:
 
 
 def brief_text(request: Request, run_id: str, run_dir: Path, worktree: Path,
-               branch: str, base: str, poteto_mode_skill: Path) -> str:
+               branch: str, base: str, poteto_mode_skill: Path,
+               log_decision_script: Path) -> str:
     """Render `brief.md` exactly, per the agent-runs contract.
 
     Pure: every fact it needs (the run id, the resolved worktree, its branch
-    and base SHA, and where the poteto-mode skill lives) is passed in, so
-    this never touches git or the filesystem.
+    and base SHA, and where the poteto-mode skill and the decision-logging
+    script live) is passed in, so this never touches git or the filesystem.
     """
     frontmatter = [
         "---",
@@ -262,10 +263,15 @@ def brief_text(request: Request, run_id: str, run_dir: Path, worktree: Path,
         f"`{run_dir}/progress.md` that says what you finished.",
     ]
     if request.kind == "writer":
-        steps.append(
-            "Commit your work yourself. Run `git add` and `git commit` as "
-            "their own commands, or chained only with other git commands; "
-            "never in the same command as file edits or non-git tools.")
+        steps.append("Commit your work yourself with git.")
+    steps.append(
+        f"Log each decision in `{run_dir}/decisions.tsv` in the "
+        "show-me-your-work format with "
+        f"`{log_decision_script}`. That means one tab-separated row per "
+        "decision with the columns `ts phase decision why evidence "
+        "result`, append-only. Log forks you chose, units finished with "
+        "their check result, pivots and reverts, and blockers. Skip "
+        "trivial actions.")
     steps.append(
         "End with your report. Write it to "
         f"`{run_dir}/report.md`.")
@@ -314,8 +320,11 @@ def create_run(request: Request) -> Path:
         branch = branch_of(worktree)
         base_sha = head_sha_of(worktree)
         poteto_mode_skill = Path(__file__).resolve().parents[1] / "SKILL.md"
+        log_decision_script = (
+            Path(__file__).resolve().parents[3]
+            / "skills/show-me-your-work/scripts/log_decision.py")
         text = brief_text(request, run_id, run_dir, worktree, branch,
-                          base_sha, poteto_mode_skill)
+                          base_sha, poteto_mode_skill, log_decision_script)
         brief_path = run_dir / "brief.md"
         brief_path.write_text(text)
         brief_path.chmod(BRIEF_MODE)
