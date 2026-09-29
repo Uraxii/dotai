@@ -274,7 +274,7 @@ def brief_text(request: Request, run_id: str, run_dir: Path, worktree: Path,
         "trivial actions.")
     steps.append(
         "End with your report. Write it to "
-        f"`{run_dir}/report.md`.")
+        f"`{run_dir}/agent-report.md`.")
     body = [
         "",
         f"# Agent run {run_id}",

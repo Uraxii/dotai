@@ -114,7 +114,7 @@ def expected_brief(*, kind: str, worktree: Path, branch: str, base: str,
         "result`, append-only. Log forks you chose, units finished with "
         "their check result, pivots and reverts, and blockers. Skip "
         "trivial actions.")
-    report_step = f"End with your report. Write it to `{run_dir}/report.md`."
+    report_step = f"End with your report. Write it to `{run_dir}/agent-report.md`."
     if kind == "writer":
         lines += [
             "6. Commit your work yourself with git.",
