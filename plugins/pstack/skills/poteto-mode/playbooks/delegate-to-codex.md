@@ -2,7 +2,7 @@
 
 **In plain words:** hand one coding or review job to Codex, a different AI tool, instead of doing it here. A small watcher agent runs one Codex session and tells you how it ended; you read the result yourself and check it against git.
 
-**You own the run.** Claude Code only; skip this playbook on any other harness. The watcher agents (`developer-codex`, `reviewer-codex`) hold only Bash and Write. Each reads `<RUN>/brief.md`'s frontmatter for `kind`, `worktree`, `base`, and `model`, runs one `codex exec`, and prints the reply lines below. They never read the rest of the brief, never open the report, and never do any part of the task themselves. This page is the owner's half.
+**You own the run.** Claude Code only; skip this playbook on any other harness. The watcher agents (`developer-codex`, `reviewer-codex`) hold only Bash, Write, and SendMessage. Each reads `<RUN>/brief.md`'s frontmatter for `kind`, `worktree`, `base`, and `model`, runs one `codex exec`, and prints the reply lines below. They never read the rest of the brief, never open the report, and never do any part of the task themselves. This page is the owner's half.
 
 Run plain `codex`. Agent runs share the user's own `~/.codex`: login, config, plugins, and `codex resume` history, all with the interactive session. A missing login ends the run with `fallback: claude` and a `reason` that names `codex login`.
 
@@ -15,7 +15,7 @@ A writer commits its own work. Codex's `workspace-write` sandbox keeps every `.g
    - A writer continuing an earlier writer run: `--kind writer --worktree <earlier RUN>/worktree`.
    - A reviewer: `--kind reviewer --worktree <tree to review>`.
 
-   `--model` is optional, and without it Codex uses its default model. To pin one, take it from the plugin's `models.json`, two directories up from the `poteto-mode` skill's own directory and `plugins/pstack/models.json` in the repo (see that skill's Models section): the first `codex` entry of the `feature, refactoring` row for a writer, of `judgment and prose` for a reviewer. The script prints RUN, the run directory.
+   Always pass `--model`, because without it Codex falls back to the user's `~/.codex` default. Take it from the plugin's `models.json`, two directories up from the `poteto-mode` skill's own directory and `plugins/pstack/models.json` in the repo (see that skill's Models section): the first `codex` entry of the `feature, refactoring` row for a writer, of `judgment and prose` for a reviewer. The script prints RUN, the run directory.
 3. Spawn the watcher without `isolation`, always, with exactly this prompt:
 
    ```
@@ -23,7 +23,7 @@ A writer commits its own work. Codex's `workspace-write` sandbox keeps every `.g
    ```
 
    Runs live under the main checkout, not inside a harness worktree, so `isolation: "worktree"` only adds a checkout nobody uses. Pin the watcher's own model from the `codex watchers` row (its frontmatter already carries `model: sonnet`).
-4. Read the reply by key: `fallback`, `command`, `exit code`, then `reason` on a fallback. Ignore any other line. The watcher sends Codex's own output to `<RUN>/codex-exec.log`, so those lines are all you get from it. `exit code` is a number or `(none)`. `fallback: pending` means Codex outlived the watcher's Bash timeout and is still running in the background. Wait for the watcher's next notification, which carries the final lines, and never fall back on `pending`.
+4. Read the reply by key: `fallback`, `command`, `exit code`, then `reason` on a fallback. Ignore any other line. The watcher sends Codex's own output to `<RUN>/codex-exec.log`, so those lines are all you get from it. `exit code` is a number or `(none)`. `fallback: pending` arrives as a message, not as the watcher's reply, and means Codex outlived the watcher's Bash timeout and is still running in the background. Wait for the watcher's reply, which carries the final lines, and never fall back on `pending`.
 5. `fallback: none`: open `<RUN>/agent-report.md` and `<RUN>/decisions.tsv` yourself, then run `git log` and `git diff <base>..HEAD` in the brief's `worktree`, with `base` from the brief's frontmatter. A commit the report claims counts only when git shows it. No report file at that path despite `fallback: none` means the run failed anyway; treat it as step 6.
 6. `fallback: claude` means Codex did not run. Handle it in this order.
 

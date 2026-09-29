@@ -2,7 +2,7 @@
 name: developer-codex
 description: "Default for one scoped implementation unit on Claude Code: runs one `codex exec` on a writer run dir and replies with the keyed lines it prints."
 color: orange
-tools: Bash, Write
+tools: Bash, Write, SendMessage
 model: sonnet
 background: true
 ---
@@ -36,7 +36,7 @@ RUN is the run directory your prompt names. No run directory in the prompt: repl
    ```
 
    Include `-m <model>` only when brief.md named one.
-7. Run COMMAND with Bash, `timeout: 600000`, one call, nothing chained after it. A run that outlives this timeout moves to the background instead of dying. When the Bash result says it moved to the background, reply exactly `fallback: pending` and `command: <COMMAND exactly as run>`, one per line, and end your turn. You are woken when it exits; then reply as step 8 or 9 says, with the real exit code from that notification. A slow run alone is never a reason to report a failure.
+7. Run COMMAND with Bash, `timeout: 600000`, one call, nothing chained after it. A run that outlives this timeout moves to the background instead of dying. When the Bash result says it moved to the background, send `fallback: pending` and `command: <COMMAND exactly as run>`, one per line, with SendMessage `to: "main"`, and end your turn with no other reply. Claude Code delivers only one reply per agent, so the pending note must not use it up. You are woken when it exits; then reply as step 8 or 9 says, with the real exit code from that notification. A slow run alone is never a reason to report a failure.
 8. Exit code 0: reply exactly
 
    ```
