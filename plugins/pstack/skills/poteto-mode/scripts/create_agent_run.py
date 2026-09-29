@@ -259,8 +259,7 @@ def brief_text(request: Request, run_id: str, run_dir: Path, worktree: Path,
         "do not redo those steps.",
         f"Work only in `{worktree}`.",
         "After each step, append one line to "
-        f"`{run_dir}/progress.md` that says what you finished. Skip this "
-        "under a read-only sandbox.",
+        f"`{run_dir}/progress.md` that says what you finished.",
     ]
     if request.kind == "writer":
         steps.append(
@@ -269,8 +268,7 @@ def brief_text(request: Request, run_id: str, run_dir: Path, worktree: Path,
             "never in the same command as file edits or non-git tools.")
     steps.append(
         "End with your report. Write it to "
-        f"`{run_dir}/report.md` unless your sandbox is read-only, and "
-        "send the same text as your final message.")
+        f"`{run_dir}/report.md`.")
     body = [
         "",
         f"# Agent run {run_id}",

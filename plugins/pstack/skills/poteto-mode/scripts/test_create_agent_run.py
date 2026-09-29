@@ -101,8 +101,7 @@ def expected_brief(*, kind: str, worktree: Path, branch: str, base: str,
         "do not redo those steps.",
         f"4. Work only in `{worktree}`.",
         "5. After each step, append one line to "
-        f"`{run_dir}/progress.md` that says what you finished. Skip this "
-        "under a read-only sandbox.",
+        f"`{run_dir}/progress.md` that says what you finished.",
     ]
     if kind == "writer":
         lines += [
@@ -111,14 +110,12 @@ def expected_brief(*, kind: str, worktree: Path, branch: str, base: str,
             "commands; never in the same command as file edits or non-git "
             "tools.",
             "7. End with your report. Write it to "
-            f"`{run_dir}/report.md` unless your sandbox is read-only, and "
-            "send the same text as your final message.",
+            f"`{run_dir}/report.md`.",
         ]
     else:
         lines += [
             "6. End with your report. Write it to "
-            f"`{run_dir}/report.md` unless your sandbox is read-only, and "
-            "send the same text as your final message.",
+            f"`{run_dir}/report.md`.",
         ]
     lines += [
         "",

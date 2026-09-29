@@ -17,6 +17,7 @@ CLI = PLUGIN_ROOT / "bin/pstack-codex-run"
 RULES_FILE = PLUGIN_ROOT / "bin/pstack-codex-writer.rules"
 FAKE_CODEX = """#!/usr/bin/env python3
 import json, os, sys
+from pathlib import Path
 args = sys.argv[1:]
 record = {
     "argv": args,
@@ -27,6 +28,12 @@ with open(os.environ["FAKE_CODEX_RECORD"], "a") as out:
     out.write(json.dumps(record) + "\\n")
 print("codex noise on stdout")
 print("codex noise on stderr", file=sys.stderr)
+if args[0] == "exec":
+    root_flag = "--add-dir" if "--add-dir" in args else "-C"
+    run = Path(args[args.index(root_flag) + 1])
+    (run / "report.md").write_text("FULL REPORT: completed work and verification\\n")
+    if "-o" in args:
+        Path(args[args.index("-o") + 1]).write_text("Short last message\\n")
 failing = os.environ.get("FAKE_CODEX_FAIL")
 sys.exit(1 if failing and " ".join(args).startswith(failing) else 0)
 """
@@ -108,7 +115,7 @@ def test_writer_runs_preflight_then_exec_with_the_exact_argv(box) -> None:
     expected = [
         "exec", "-m", "gpt-5.6-terra", "-s", "workspace-write",
         "-c", "agents.enabled=false", "-C", str(box.worktree),
-        "--add-dir", str(box.run), "-o", f"{box.run}/report.md", "-",
+        "--add-dir", str(box.run), "-",
     ]
     calls = box.calls()
     assert [call["argv"] for call in calls] == [
@@ -121,6 +128,52 @@ def test_writer_runs_preflight_then_exec_with_the_exact_argv(box) -> None:
         "fallback: none",
         "command: codex " + " ".join(expected),
         "exit code: 0",
+    ]
+
+
+@pytest.mark.parametrize("kind", ["writer", "reviewer"])
+def test_agent_report_survives_codex_exit(box, tmp_path, kind) -> None:
+    if kind == "writer":
+        box.writer_brief()
+    else:
+        reviewed = tmp_path / "reviewed"
+        reviewed.mkdir()
+        box.brief("kind: reviewer", f"worktree: {reviewed}")
+
+    result = box.cli(str(box.run))
+
+    assert result.returncode == 0
+    assert (box.run / "report.md").read_text() == (
+        "FULL REPORT: completed work and verification\n"
+    )
+
+
+@pytest.mark.parametrize("relative_worktree", [".", "worktree"])
+@pytest.mark.parametrize("via_symlink", [False, True])
+def test_reviewer_worktree_in_run_is_refused(
+    box, tmp_path, relative_worktree, via_symlink
+) -> None:
+    reviewed = box.run / relative_worktree
+    if via_symlink:
+        link = tmp_path / "reviewed"
+        link.symlink_to(reviewed, target_is_directory=True)
+        reviewed = link
+    box.brief("kind: reviewer", f"worktree: {reviewed}")
+
+    assert_refused(box.cli(str(box.run)), "is inside the writable run directory")
+    assert box.calls() == []
+
+
+def test_reviewer_worktree_with_run_name_prefix_is_accepted(box) -> None:
+    reviewed = box.run.with_name(f"{box.run.name}-sibling")
+    reviewed.mkdir()
+    box.brief("kind: reviewer", f"worktree: {reviewed}")
+
+    result = box.cli(str(box.run))
+
+    assert result.returncode == 0
+    assert [call["argv"][:1] for call in box.calls()] == [
+        ["--version"], ["login"], ["exec"]
     ]
 
 
@@ -160,7 +213,7 @@ def test_writer_replaces_old_rules(box, tmp_path, stale_kind) -> None:
     assert stale.read_text() == "# stale\n"
 
 
-def test_reviewer_runs_read_only_without_rules(box, tmp_path) -> None:
+def test_reviewer_runs_in_writable_run_directory_without_rules(box, tmp_path) -> None:
     reviewed = tmp_path / "anywhere"
     reviewed.mkdir()
     box.brief("kind: reviewer", f"worktree: {reviewed}")
@@ -169,9 +222,11 @@ def test_reviewer_runs_read_only_without_rules(box, tmp_path) -> None:
 
     assert result.returncode == 0
     assert box.calls()[2]["argv"] == [
-        "exec", "-s", "read-only", "--ignore-rules",
-        "-c", "agents.enabled=false", "-C", str(reviewed),
-        "-o", f"{box.run}/report.md", "-",
+        "exec", "-s", "workspace-write", "--ignore-rules",
+        "-c", "agents.enabled=false",
+        "-c", "sandbox_workspace_write.exclude_slash_tmp=true",
+        "-c", "sandbox_workspace_write.exclude_tmpdir_env_var=true",
+        "--skip-git-repo-check", "-C", str(box.run), "-",
     ]
     assert not box.codex_home.exists()
 
