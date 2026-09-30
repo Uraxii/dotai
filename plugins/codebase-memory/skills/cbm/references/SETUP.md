@@ -27,13 +27,15 @@ entries, hooks, and instructions into every detected agent's settings. The
 script installs to `~/.local/bin` by default; add `--dir=<path>` for another
 location.
 
-Even with `--skip-config`, the script writes two more files. Tell the user
+Even with `--skip-config`, the install writes two more files. Tell the user
 about both:
 
 - It copies `install.sh` beside the binary.
-- It appends an `export PATH=...` line, marked
+- The script runs the new binary's own `install` command, and that command
+  can append an `export PATH=...` line, marked
   `# Added by codebase-memory-mcp install`, to the shell rc file
-  (`~/.zshrc` or `~/.bashrc`) when the install directory is not on `PATH`.
+  (`~/.zshrc` or `~/.bashrc`). The shell script itself only prints a PATH
+  hint, so reading `install.sh` alone will not show this write.
 
 `codebase-memory-mcp update` does not download anything. It prints the path
 of the `install.sh` beside the binary, which exists only after an install
