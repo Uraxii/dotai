@@ -1,5 +1,5 @@
 ---
-name: codebase-memory
+name: cbm
 description: "Answer code questions from the codebase-memory graph instead of grepping and reading files one by one. Use before grep, rg, find, or opening several files to understand code: \"where is X\", \"who calls X\", \"what breaks if I change X\", how modules fit together, data flow, dead code, or a symbol's source. Indexes the repo first when it isn't indexed yet."
 ---
 
