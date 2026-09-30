@@ -1,6 +1,6 @@
 {
   "name": "codebase-memory",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Keep codebase-memory indexed at session start, then query its code graph from a shell.",
   "author": {
     "name": "Uraxii",

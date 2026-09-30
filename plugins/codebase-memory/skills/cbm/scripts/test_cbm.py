@@ -18,6 +18,12 @@ BINARY = "codebase-memory-mcp"
 INIT_LOG = "level=info msg=mem.init store=/tmp/x"
 OTHER_LOG = "level=warn msg=index.stale"
 ANSWER = {"b": 1, "a": [1, 2], "u": "café ✓", "n": None, "e": {}, "l": []}
+TREE_ANSWER = (
+    "total: 1\n"
+    "results: 1  (rows: name label lines in out)\n"
+    "proj.src.ability (src/ability.gd):\n"
+    "  pool_covers Function 122-124 2 1\n"
+    "has_more: false\n")
 PROGRESS_LOG = "level=info msg=index.progress files=1200"
 RELEASE_AFTER_SEC = 10.0
 
@@ -118,14 +124,17 @@ class CbmTest(unittest.TestCase):
         self.assertEqual(result.returncode, 4)
         self.assertEqual(result.stdout, "")
 
-    def test_fails_on_an_answer_that_is_not_json(self) -> None:
-        self.write_stub("print('not json at all')\n")
+    def test_passes_a_text_answer_through_unchanged(self) -> None:
+        for status in (0, 2):
+            with self.subTest(status=status):
+                self.write_stub(f"sys.stdout.write({TREE_ANSWER!r})\n"
+                                f"raise SystemExit({status})\n")
 
-        result = self.run_cbm("some_tool")
+                result = self.run_cbm("search_graph")
 
-        self.assertEqual(result.returncode, 5)
-        self.assertEqual(result.stdout, "")
-        self.assertIn("did not answer JSON", result.stderr)
+                self.assertEqual(result.returncode, status)
+                self.assertEqual(result.stdout, TREE_ANSWER)
+                self.assertEqual(result.stderr, OTHER_LOG + "\n")
 
     def test_relays_stderr_while_the_binary_is_still_running(self) -> None:
         gate = self.root / "gate"

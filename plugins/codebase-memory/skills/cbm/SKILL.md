@@ -5,11 +5,11 @@ description: "Answer code questions from the codebase-memory graph instead of gr
 
 # codebase-memory CLI
 
-One tool per process. JSON in, JSON out on stdout, one `level=info msg=mem.init` line on stderr.
+One tool per process. JSON arguments in. Stdout is a compact text tree for most tools, JSON for a few (`list_projects`, `get_code_snippet`); add `"format":"json"` to the arguments to get JSON. One `level=info msg=mem.init` line on stderr.
 
 ```bash
 codebase-memory-mcp cli <tool> '<json>' 2>/dev/null
-scripts/cbm <tool> ['<json>']   # same, init line dropped, pretty-printed, json defaults to {}
+scripts/cbm <tool> ['<json>']   # same, init line dropped, JSON pretty-printed, text passed through, json defaults to {}
 alias cbm=<skilldir>/scripts/cbm   # skilldir = directory holding this SKILL.md; examples below assume this
 ```
 
@@ -56,6 +56,7 @@ Cypher for anything else: `cbm query_graph '{"project":"P","query":"MATCH (f:Fun
 
 ## Gotchas
 
+- `search_graph`, `search_code`, `trace_path`, `query_graph`, and `get_architecture` answer in a text tree by default, not JSON. Add `"format":"json"` to the arguments when a script needs to parse the answer.
 - `search_code` wants `pattern` (else "pattern is required"); `search_graph` wants `query` or `name_pattern` and silently returns every node if given `pattern`.
 - README examples omit `project` and name `trace_call_path`. Real tool is `trace_path`, and `project` is required.
 - `manage_adr` modes are `get|update|sections`; unknown modes fall through to `get`.
