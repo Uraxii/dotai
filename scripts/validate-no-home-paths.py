@@ -13,7 +13,7 @@ unless `<seg>` is a placeholder (`<user>`, `{user}`, `${USER}`, `$USER`,
 per-user home roots and are never flagged.
 
 One run scans every file `git ls-files` tracks, not a per-plugin loop: the
-three leaks landed in different trees (a skill in `plugins/cbm` and two hook
+three leaks landed in different trees (a skill in `plugins/codebase-memory` and two hook
 tests in `plugins/pstack`), and a loop bounded to one tree is blind to the
 next one.
 """

@@ -243,7 +243,7 @@ PLUGINS: list[dict[str, object]] = [
         ],
     },
     {
-        "name": "cbm",
+        "name": "codebase-memory",
         "version": "1.1.0",
         "hooks": ["claude", "codex"],
         "description": (
