@@ -29,20 +29,20 @@ RUN is the run directory your prompt names. No run directory in the prompt: repl
    codex exec [-m <model>] -s workspace-write -c agents.enabled=false -C <worktree> --add-dir <RUN> --add-dir <COMMON>/objects --add-dir <COMMON>/refs --add-dir <COMMON>/logs --add-dir <GITDIR> - < <RUN>/brief.md > <RUN>/codex-exec.log 2>&1
    ```
 
-   `kind: reviewer`:
+   `kind: reviewer` without `mode`:
 
    ```
    codex exec [-m <model>] -s workspace-write --ignore-rules -c agents.enabled=false -c sandbox_workspace_write.exclude_slash_tmp=true -c sandbox_workspace_write.exclude_tmpdir_env_var=true --skip-git-repo-check -C <RUN> - < <RUN>/brief.md > <RUN>/codex-exec.log 2>&1
    ```
 
-   `kind: reviewer` with `mode: diff-review`, Codex's built-in reviewer. It cannot take the brief, so brief.md is not sent, and the review text becomes the report:
+   `kind: reviewer` with `mode: diff-review`, Codex's built-in reviewer. It cannot take the brief, so brief.md is not sent. The review text goes to `codex-review.partial` and moves to `agent-report.md` only when Codex exits 0, so a run that fails or is still going never leaves an `agent-report.md`:
 
    ```
-   codex -C <worktree> [-m <model>] -s read-only -c agents.enabled=false review --base <base> > <RUN>/agent-report.md 2> <RUN>/codex-exec.log
+   codex -C <worktree> [-m <model>] -s read-only -c agents.enabled=false review --base <base> > <RUN>/codex-review.partial 2> <RUN>/codex-exec.log && mv <RUN>/codex-review.partial <RUN>/agent-report.md
    ```
 
    Include `-m <model>` only when brief.md named one.
-7. Run COMMAND with Bash, `timeout: 600000`, one call, nothing chained after it. A run that outlives this timeout moves to the background instead of dying. When the Bash result says it moved to the background, send `fallback: pending` and `command: <COMMAND exactly as run>`, one per line, with SendMessage `to: "main"`, and end your turn with no other reply. Claude Code delivers only one reply per agent, so the pending note must not use it up. You are woken when it exits; then reply as step 8 or 9 says, with the real exit code from that notification. A slow run alone is never a reason to report a failure.
+7. Run COMMAND with Bash, `timeout: 600000`, one call, with nothing chained after it. The `&& mv` in the diff-review COMMAND is part of COMMAND, not something you add. The exit code is Codex's on failure and 0 on success. A run that outlives this timeout moves to the background instead of dying. When the Bash result says it moved to the background, send `fallback: pending` and `command: <COMMAND exactly as run>`, one per line, with SendMessage `to: "main"`, and end your turn with no other reply. Claude Code delivers only one reply per agent, so the pending note must not use it up. You are woken when it exits; then reply as step 8 or 9 says, with the real exit code from that notification. A slow run alone is never a reason to report a failure.
 8. Exit code 0: reply exactly
 
    ```
