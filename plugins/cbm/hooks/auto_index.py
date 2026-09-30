@@ -1,16 +1,13 @@
 #!/usr/bin/env python3
 """Start one detached fast index for the current main checkout."""
 
+import fcntl
 import json
 import os
 import shutil
 import subprocess
 import sys
-import time
 from pathlib import Path
-
-
-LOCK_STALE_SECONDS = 300
 
 
 def project_name(repository_root: Path) -> str:
@@ -47,22 +44,16 @@ def repository_root(cwd: str) -> Path | None:
     return Path(result.stdout.strip()).parent.resolve()
 
 
-def acquire_lock(cache_root: Path, name: str) -> Path | None:
+def acquire_lock(cache_root: Path, name: str) -> int | None:
     cache_root.mkdir(parents=True, exist_ok=True)
     lock_path = cache_root / f"{name}.index.lock"
+    descriptor = os.open(lock_path, os.O_CREAT | os.O_WRONLY, 0o600)
     try:
-        if time.time() - lock_path.stat().st_mtime > LOCK_STALE_SECONDS:
-            lock_path.unlink()
-    except FileNotFoundError:
-        pass
-
-    try:
-        descriptor = os.open(lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
-    except FileExistsError:
+        fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError:
+        os.close(descriptor)
         return None
-    with os.fdopen(descriptor, "w") as lock_file:
-        lock_file.write(f"{os.getpid()} {time.time()}\n")
-    return lock_path
+    return descriptor
 
 
 def event_cwd() -> str:
@@ -82,8 +73,8 @@ def run(cwd: str, environment: dict[str, str]) -> bool:
 
     cache_root = cache_directory(environment)
     name = project_name(root)
-    lock_path = acquire_lock(cache_root, name)
-    if lock_path is None:
+    descriptor = acquire_lock(cache_root, name)
+    if descriptor is None:
         return False
 
     try:
@@ -99,10 +90,12 @@ def run(cwd: str, environment: dict[str, str]) -> bool:
             stderr=subprocess.DEVNULL,
             start_new_session=True,
             env=environment,
+            pass_fds=(descriptor,),
         )
     except OSError:
-        lock_path.unlink(missing_ok=True)
         return False
+    finally:
+        os.close(descriptor)
     return True
 
 

@@ -57,7 +57,7 @@ class AutoIndexTests(unittest.TestCase):
                 HOOK.project_name(resolved),
             )
 
-    def test_lock_prevents_second_spawn(self) -> None:
+    def test_lock_follows_indexer_lifetime(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory) / "repository"
             cache = Path(directory) / "cache"
@@ -67,7 +67,11 @@ class AutoIndexTests(unittest.TestCase):
             bin_directory.mkdir()
             subprocess.run(["git", "init", "-q", str(root)], check=True)
             binary = bin_directory / "codebase-memory-mcp"
-            binary.write_text("#!/bin/sh\nprintf 'spawned\\n' >> \"$SPAWN_MARKER\"\n")
+            binary.write_text(
+                "#!/bin/sh\n"
+                "printf 'spawned\\n' >> \"$SPAWN_MARKER\"\n"
+                "exec /bin/sleep 2\n"
+            )
             binary.chmod(0o755)
             environment = {
                 "PATH": str(bin_directory),
@@ -85,6 +89,18 @@ class AutoIndexTests(unittest.TestCase):
 
             self.assertTrue(marker.exists())
             self.assertEqual(["spawned"], marker.read_text().splitlines())
+
+            time.sleep(2.1)
+
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", ResourceWarning)
+                self.assertTrue(HOOK.run(str(root), environment))
+            deadline = time.monotonic() + 1
+            while len(marker.read_text().splitlines()) < 2 and time.monotonic() < deadline:
+                time.sleep(0.01)
+
+            self.assertEqual(["spawned", "spawned"], marker.read_text().splitlines())
+            time.sleep(2.1)
 
 
 if __name__ == "__main__":
