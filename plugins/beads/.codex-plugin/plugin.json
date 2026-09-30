@@ -1,6 +1,6 @@
 {
-  "name": "bd",
-  "version": "1.0.0",
+  "name": "beads",
+  "version": "2.0.0",
   "description": "Track, create, claim, and close repo issues with the bd (beads) tool, including dependency links.",
   "author": {
     "name": "Uraxii",
@@ -16,7 +16,7 @@
   ],
   "skills": "./skills/",
   "interface": {
-    "displayName": "bd",
+    "displayName": "beads",
     "shortDescription": "Issue tracking with bd (beads).",
     "longDescription": "Runs the bd command line issue tracker against a repository: list what is ready to pick up, create and claim and close issues, and record which issue blocks which. Use it to answer what to work on next from the repository's own issue graph.",
     "developerName": "Uraxii",

@@ -51,8 +51,8 @@
       "description": "Review and author SKILL.md files, finding and repairing the smells that stop a skill triggering."
     },
     {
-      "name": "bd",
-      "source": "./plugins/bd",
+      "name": "beads",
+      "source": "./plugins/beads",
       "description": "Track, create, claim, and close repo issues with the bd (beads) tool, including dependency links."
     },
     {

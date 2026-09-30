@@ -42,7 +42,7 @@ HOOK_WIRING_PATHS = {
 PLUGINS: list[dict[str, object]] = [
     {
         "name": "pstack",
-        "version": "1.6.0",
+        "version": "1.7.0",
         "hooks": ["claude", "codex", "copilot"],
         "description": (
             "Skills and thin named agents: poteto-mode, principles, "
@@ -223,7 +223,8 @@ PLUGINS: list[dict[str, object]] = [
         ],
     },
     {
-        "name": "bd",
+        "name": "beads",
+        "version": "2.0.0",
         "description": (
             "Track, create, claim, and close repo issues with the bd (beads) "
             "tool, including dependency links."
