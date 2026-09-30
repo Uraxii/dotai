@@ -5,12 +5,19 @@
                         (--base COMMIT-ISH | --worktree PATH)
                         [--model MODEL] < task.md
 
+    create_agent_run.py --slug SLUG --kind reviewer --mode diff-review
+                        --worktree PATH --base COMMIT-ISH < task.md
+
 A run directory (`RUN`) holds a spawner-written `brief.md`, an empty
 `corrections/` directory the spawner appends to later, and, for a fresh
 writer, a new worktree on branch `agent/<run id>`. `--worktree` reuses an
 existing checkout instead of creating one. The task body is read from stdin;
 `RUN` is the only thing printed on stdout, so a caller can capture it
 directly.
+
+`--mode diff-review` marks a reviewer run for Codex's built-in `codex review`.
+It takes both flags: `--worktree` is the tree to review and `--base` is the
+commit-ish to diff against, recorded in `brief.md` as the resolved SHA.
 
 Python standard library only, forever. Git stays an external command; this
 script only shapes the paths and the brief text around it.
@@ -37,6 +44,7 @@ __all__ = [
 ]
 
 KINDS = ("writer", "reviewer")
+DIFF_REVIEW = "diff-review"
 SLUG_PATTERN = re.compile(r"[a-z0-9]+(-[a-z0-9]+)*")
 AGENT_RUNS_DIR_VAR = "AGENT_RUNS_DIR"
 RUNS_SUBDIR = ".agent-runs"
@@ -52,7 +60,8 @@ class Request:
     """One validated invocation, immutable once argument parsing is done.
 
     `worktree` is already made absolute and, when given, already confirmed
-    to be a real git work tree. `task` is the stdin body with trailing
+    to be a real git work tree. With `mode` set, `base` is already the SHA
+    of the commit to diff against. `task` is the stdin body with trailing
     whitespace stripped and confirmed non-empty.
     """
 
@@ -61,6 +70,7 @@ class Request:
     base: str | None
     worktree: Path | None
     model: str | None
+    mode: str | None
     task: str
 
 
@@ -107,18 +117,21 @@ def slug_type(value: str) -> str:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    """The CLI surface: two required flags, one exclusive pair, one optional."""
+    """The CLI surface: two required flags, a base or worktree, two optional."""
     parser = argparse.ArgumentParser(
         description="Create a per-task agent run directory.")
     parser.add_argument("--slug", required=True, type=slug_type,
                         help="kebab-case topic; becomes the run id prefix")
     parser.add_argument("--kind", required=True, choices=KINDS)
-    origin = parser.add_mutually_exclusive_group(required=True)
-    origin.add_argument("--base", metavar="COMMIT-ISH",
-                        help="writer only: create a fresh worktree here")
-    origin.add_argument("--worktree", metavar="PATH", type=Path,
+    parser.add_argument("--base", metavar="COMMIT-ISH",
+                        help="writer only: create a fresh worktree here; "
+                        "with --mode diff-review: the commit to diff against")
+    parser.add_argument("--worktree", metavar="PATH", type=Path,
                         help="reuse an existing checkout or worktree")
     parser.add_argument("--model", help="recorded in brief.md when given")
+    parser.add_argument("--mode", choices=(DIFF_REVIEW,),
+                        help="reviewer only: run Codex's built-in diff "
+                        "reviewer, `codex review --base`")
     return parser
 
 
@@ -130,20 +143,37 @@ def parse_request(argv: list[str], stdin_text: str,
     exits 2, matching every other argparse failure.
     """
     args = parser.parse_args(argv)
-    if args.base is not None and args.kind != "writer":
+    if args.mode is not None and args.kind != "reviewer":
+        parser.error(f"--mode {args.mode} requires --kind reviewer")
+    if args.mode is not None:
+        if args.base is None or args.worktree is None:
+            parser.error(f"--mode {args.mode} requires both --worktree "
+                         "and --base")
+    elif (args.base is None) == (args.worktree is None):
+        parser.error("exactly one of --base or --worktree is required")
+    elif args.base is not None and args.kind != "writer":
         parser.error("--base requires --kind writer")
     worktree = None
+    base = args.base
     if args.worktree is not None:
         worktree = absolute_path(args.worktree)
         if not is_git_worktree(worktree):
             parser.error(
                 f"--worktree {worktree} does not exist or is not a git "
                 "work tree")
+        if args.mode is not None:
+            status, output = run_capture(
+                ["git", "-C", str(worktree), "rev-parse", "--verify",
+                 "--quiet", f"{base}^{{commit}}"])
+            if status != 0:
+                parser.error(f"--base {base} is not a commit in {worktree}")
+            base = output
     task = stdin_text.rstrip()
     if not task:
         parser.error("the task body on stdin must not be empty")
-    return Request(slug=args.slug, kind=args.kind, base=args.base,
-                   worktree=worktree, model=args.model, task=task)
+    return Request(slug=args.slug, kind=args.kind, base=base,
+                   worktree=worktree, model=args.model, mode=args.mode,
+                   task=task)
 
 
 def main_checkout() -> Path:
@@ -246,6 +276,8 @@ def brief_text(request: Request, run_id: str, run_dir: Path, worktree: Path,
     ]
     if request.model is not None:
         frontmatter.append(f"model: {request.model}")
+    if request.mode is not None:
+        frontmatter.append(f"mode: {request.mode}")
     frontmatter.append("---")
     steps = [
         "If you have not loaded the poteto-mode skill yet, read the "
@@ -310,7 +342,8 @@ def create_run(request: Request) -> Path:
         ensure_gitignore(runs_root)
         run_id, run_dir = create_run_dir(runs_root, request.slug)
         (run_dir / "corrections").mkdir()
-        if request.base is not None:
+        if request.worktree is None:
+            assert request.base is not None
             checkout = main_checkout()
             worktree = add_worktree(checkout, run_dir, run_id, request.base)
             added_worktree = True
@@ -318,7 +351,7 @@ def create_run(request: Request) -> Path:
             assert request.worktree is not None
             worktree = request.worktree
         branch = branch_of(worktree)
-        base_sha = head_sha_of(worktree)
+        base_sha = request.base if request.mode else head_sha_of(worktree)
         poteto_mode_skill = Path(__file__).resolve().parents[1] / "SKILL.md"
         log_decision_script = (
             Path(__file__).resolve().parents[3]

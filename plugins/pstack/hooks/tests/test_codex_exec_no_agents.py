@@ -64,6 +64,16 @@ class RewriteCommandTests(unittest.TestCase):
             "codex -c agents.enabled=false exec B",
         )
 
+    def test_codex_review_gets_the_flag(self) -> None:
+        self.assertEqual(
+            HOOK.rewrite_command("codex -s read-only review --base develop"),
+            "codex -c agents.enabled=false -s read-only review --base develop",
+        )
+
+    def test_codex_review_with_the_flag_is_unchanged(self) -> None:
+        command = "codex -c agents.enabled=false review --base develop"
+        self.assertEqual(HOOK.rewrite_command(command), command)
+
     def test_codex_without_exec_is_unchanged(self) -> None:
         for command in ("codex --version", "codex login status"):
             with self.subTest(command=command):

@@ -73,7 +73,7 @@ def run_script(arguments: list[str], *, cwd: Path, stdin: str,
 
 def expected_brief(*, kind: str, worktree: Path, branch: str, base: str,
                    model: str | None, run_id: str, run_dir: Path,
-                   task: str) -> str:
+                   task: str, mode: str | None = None) -> str:
     """The contract's `brief.md` text, built independently of the script."""
     lines = [
         "---",
@@ -84,6 +84,8 @@ def expected_brief(*, kind: str, worktree: Path, branch: str, base: str,
     ]
     if model is not None:
         lines.append(f"model: {model}")
+    if mode is not None:
+        lines.append(f"mode: {mode}")
     lines.append("---")
     lines += [
         "",
@@ -400,6 +402,74 @@ class BriefContentExactTest(unittest.TestCase):
         self.assertEqual(text, expected)
 
 
+class DiffReviewModeTest(unittest.TestCase):
+    """`--mode diff-review` records the diff base and the mode."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.temporary = tempfile.TemporaryDirectory()
+        root = Path(cls.temporary.name)
+        cls.repo = build_repository(root)
+        cls.main_sha = git(cls.repo, "rev-parse", "HEAD")
+        cls.linked = root / "linked"
+        git(cls.repo, "worktree", "add", "--quiet", "-b", "in-review",
+           str(cls.linked), "main")
+        (cls.linked / "extra.txt").write_text("more\n")
+        git(cls.linked, "add", "extra.txt")
+        git(cls.linked, "commit", "--quiet", "-m", "extra")
+        cls.runs_root = root / "runs"
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        cls.temporary.cleanup()
+
+    def create(self, *extra: str) -> subprocess.CompletedProcess[str]:
+        return run_script(
+            ["--slug", "diff-check", "--kind", "reviewer", "--mode",
+             "diff-review", *extra],
+            cwd=self.repo, stdin="Review the branch.\n",
+            agent_runs_dir=str(self.runs_root))
+
+    def test_the_brief_records_the_mode_and_the_resolved_base(self) -> None:
+        done = self.create("--worktree", str(self.linked), "--base", "main")
+        self.assertEqual(done.returncode, 0, done.stderr)
+        run_dir = Path(done.stdout.strip())
+        expected = expected_brief(
+            kind="reviewer", worktree=self.linked, branch="in-review",
+            base=self.main_sha, model=None, run_id=run_dir.name,
+            run_dir=run_dir, task="Review the branch.", mode="diff-review")
+        self.assertEqual((run_dir / "brief.md").read_text(), expected)
+
+    def test_no_new_worktree_is_created(self) -> None:
+        done = self.create("--worktree", str(self.linked), "--base", "main")
+        self.assertFalse((Path(done.stdout.strip()) / "worktree").exists())
+
+    def test_a_missing_base_is_a_usage_error(self) -> None:
+        done = self.create("--worktree", str(self.linked))
+        self.assertEqual(done.returncode, 2)
+        self.assertIn("requires both --worktree and --base", done.stderr)
+
+    def test_a_missing_worktree_is_a_usage_error(self) -> None:
+        done = self.create("--base", "main")
+        self.assertEqual(done.returncode, 2)
+        self.assertIn("requires both --worktree and --base", done.stderr)
+
+    def test_a_base_that_is_not_a_commit_is_a_usage_error(self) -> None:
+        done = self.create("--worktree", str(self.linked),
+                           "--base", "no-such-ref")
+        self.assertEqual(done.returncode, 2)
+        self.assertIn("is not a commit", done.stderr)
+
+    def test_a_writer_with_the_mode_is_a_usage_error(self) -> None:
+        done = run_script(
+            ["--slug", "diff-check", "--kind", "writer", "--mode",
+             "diff-review", "--worktree", str(self.linked), "--base",
+             "main"], cwd=self.repo, stdin="Task.\n")
+        self.assertEqual(done.returncode, 2)
+        self.assertIn("--mode diff-review requires --kind reviewer",
+                      done.stderr)
+
+
 class UsageErrorTest(unittest.TestCase):
     """Argument combinations the contract calls out as usage errors."""
 
@@ -410,6 +480,14 @@ class UsageErrorTest(unittest.TestCase):
                  "--base", "main"], cwd=Path(cwd), stdin="Task.\n")
         self.assertEqual(done.returncode, 2)
         self.assertIn("--base requires --kind writer", done.stderr)
+
+    def test_base_and_worktree_without_the_mode_is_a_usage_error(self) -> None:
+        with tempfile.TemporaryDirectory() as cwd:
+            done = run_script(
+                ["--slug", "bad-combo", "--kind", "writer", "--base",
+                 "main", "--worktree", "."], cwd=Path(cwd), stdin="Task.\n")
+        self.assertEqual(done.returncode, 2)
+        self.assertIn("exactly one of --base or --worktree", done.stderr)
 
     def test_an_empty_stdin_body_is_a_usage_error(self) -> None:
         with tempfile.TemporaryDirectory() as cwd:
