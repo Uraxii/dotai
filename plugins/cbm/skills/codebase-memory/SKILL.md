@@ -1,6 +1,6 @@
 ---
 name: codebase-memory
-description: Query the codebase-memory code-intelligence graph from a shell via `codebase-memory-mcp cli`, no MCP server needed. Use for structural code questions on an indexed repo - who calls what, dependency and data-flow tracing, impact of a change, architecture overview and module clusters, dead code (zero-caller functions), reading a symbol's source by qualified name, ADR read/write, Cypher over the code graph. Also use when an agent or shell script lacks the MCP tools but the binary is on PATH.
+description: "Answer code questions from the codebase-memory graph instead of grepping and reading files one by one. Use before grep, rg, find, or opening several files to understand code: \"where is X\", \"who calls X\", \"what breaks if I change X\", how modules fit together, data flow, dead code, or a symbol's source. Indexes the repo first when it isn't indexed yet."
 ---
 
 # codebase-memory CLI
