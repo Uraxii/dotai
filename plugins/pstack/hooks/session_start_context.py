@@ -3,10 +3,12 @@
 
 Claude Code runs this on SessionStart (matcher startup|clear|compact); its
 plain stdout is added to context automatically, no envelope needed. Codex
-runs it separately on SessionStart and on PostCompact, and expects one JSON
-line shaped like `{"hookSpecificOutput": {"hookEventName": ...,
-"additionalContext": ...}}`. Copilot CLI runs it on its own `sessionStart`
-hook and expects `{"additionalContext": ...}` on stdout (docs.github.com,
+runs it on SessionStart only, and expects one JSON line shaped like
+`{"hookSpecificOutput": {"hookEventName": ..., "additionalContext": ...}}`.
+That entry has no matcher, so it fires on every source: startup, resume,
+clear, and compact. PostCompact is not wired because Codex's PostCompact
+output schema rejects `hookSpecificOutput`. Copilot CLI runs it on its own
+`sessionStart` hook and expects `{"additionalContext": ...}` on stdout (docs.github.com,
 Copilot CLI hooks reference, "Hook event input payloads" / `sessionStart`;
 SDK doc `docs/hooks/session-lifecycle.md` shows the same field for the
 programmatic form; fetched 2026-09-14). opencode has no event that fires
@@ -83,7 +85,7 @@ def parse_args(arguments: list[str] | None = None) -> argparse.Namespace:
         choices=("claude", "codex", "copilot", "opencode", "hermes"),
         required=True,
     )
-    parser.add_argument("--event", choices=("SessionStart", "PostCompact"))
+    parser.add_argument("--event", choices=("SessionStart",))
     return parser.parse_args(arguments)
 
 
