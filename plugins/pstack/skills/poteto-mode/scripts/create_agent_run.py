@@ -5,8 +5,8 @@
                         (--base COMMIT-ISH | --worktree PATH)
                         [--model MODEL] < task.md
 
-    create_agent_run.py --slug SLUG --kind reviewer --mode diff-review
-                        --worktree PATH --base COMMIT-ISH < task.md
+    create_agent_run.py --slug SLUG --kind reviewer --worktree PATH
+                        --diff-review COMMIT-ISH < task.md
 
 A run directory (`RUN`) holds a spawner-written `brief.md`, an empty
 `corrections/` directory the spawner appends to later, and, for a fresh
@@ -15,9 +15,10 @@ existing checkout instead of creating one. The task body is read from stdin;
 `RUN` is the only thing printed on stdout, so a caller can capture it
 directly.
 
-`--mode diff-review` marks a reviewer run for Codex's built-in `codex review`.
-It takes both flags: `--worktree` is the tree to review and `--base` is the
-commit-ish to diff against, recorded in `brief.md` as the resolved SHA.
+`--diff-review COMMIT-ISH` marks a reviewer run for Codex's built-in
+`codex review`. It needs `--worktree`, the tree to review. The commit-ish to
+diff against is recorded in `brief.md` as the resolved SHA, next to
+`mode: diff-review`.
 
 Python standard library only, forever. Git stays an external command; this
 script only shapes the paths and the brief text around it.
@@ -117,21 +118,21 @@ def slug_type(value: str) -> str:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    """The CLI surface: two required flags, a base or worktree, two optional."""
+    """The CLI surface: two required flags, one exclusive pair, two optional."""
     parser = argparse.ArgumentParser(
         description="Create a per-task agent run directory.")
     parser.add_argument("--slug", required=True, type=slug_type,
                         help="kebab-case topic; becomes the run id prefix")
     parser.add_argument("--kind", required=True, choices=KINDS)
-    parser.add_argument("--base", metavar="COMMIT-ISH",
-                        help="writer only: create a fresh worktree here; "
-                        "with --mode diff-review: the commit to diff against")
-    parser.add_argument("--worktree", metavar="PATH", type=Path,
+    origin = parser.add_mutually_exclusive_group(required=True)
+    origin.add_argument("--base", metavar="COMMIT-ISH",
+                        help="writer only: create a fresh worktree here")
+    origin.add_argument("--worktree", metavar="PATH", type=Path,
                         help="reuse an existing checkout or worktree")
     parser.add_argument("--model", help="recorded in brief.md when given")
-    parser.add_argument("--mode", choices=(DIFF_REVIEW,),
-                        help="reviewer only: run Codex's built-in diff "
-                        "reviewer, `codex review --base`")
+    parser.add_argument("--diff-review", metavar="COMMIT-ISH",
+                        help="reviewer only, with --worktree: run Codex's "
+                        "built-in diff reviewer against this commit")
     return parser
 
 
@@ -143,36 +144,35 @@ def parse_request(argv: list[str], stdin_text: str,
     exits 2, matching every other argparse failure.
     """
     args = parser.parse_args(argv)
-    if args.mode is not None and args.kind != "reviewer":
-        parser.error(f"--mode {args.mode} requires --kind reviewer")
-    if args.mode is not None:
-        if args.base is None or args.worktree is None:
-            parser.error(f"--mode {args.mode} requires both --worktree "
-                         "and --base")
-    elif (args.base is None) == (args.worktree is None):
-        parser.error("exactly one of --base or --worktree is required")
-    elif args.base is not None and args.kind != "writer":
+    if args.diff_review is not None:
+        if args.kind != "reviewer":
+            parser.error("--diff-review requires --kind reviewer")
+        if args.worktree is None:
+            parser.error("--diff-review requires --worktree, not --base")
+    if args.base is not None and args.kind != "writer":
         parser.error("--base requires --kind writer")
     worktree = None
     base = args.base
+    mode = None
     if args.worktree is not None:
         worktree = absolute_path(args.worktree)
         if not is_git_worktree(worktree):
             parser.error(
                 f"--worktree {worktree} does not exist or is not a git "
                 "work tree")
-        if args.mode is not None:
+        if args.diff_review is not None:
             status, output = run_capture(
                 ["git", "-C", str(worktree), "rev-parse", "--verify",
-                 "--quiet", f"{base}^{{commit}}"])
+                 "--quiet", f"{args.diff_review}^{{commit}}"])
             if status != 0:
-                parser.error(f"--base {base} is not a commit in {worktree}")
-            base = output
+                parser.error(f"--diff-review {args.diff_review} is not a "
+                             f"commit in {worktree}")
+            base, mode = output, DIFF_REVIEW
     task = stdin_text.rstrip()
     if not task:
         parser.error("the task body on stdin must not be empty")
     return Request(slug=args.slug, kind=args.kind, base=base,
-                   worktree=worktree, model=args.model, mode=args.mode,
+                   worktree=worktree, model=args.model, mode=mode,
                    task=task)
 
 

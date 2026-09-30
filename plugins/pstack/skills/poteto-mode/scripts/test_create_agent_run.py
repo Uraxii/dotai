@@ -403,7 +403,7 @@ class BriefContentExactTest(unittest.TestCase):
 
 
 class DiffReviewModeTest(unittest.TestCase):
-    """`--mode diff-review` records the diff base and the mode."""
+    """`--diff-review BASE` records the diff base and the mode."""
 
     @classmethod
     def setUpClass(cls) -> None:
@@ -425,13 +425,13 @@ class DiffReviewModeTest(unittest.TestCase):
 
     def create(self, *extra: str) -> subprocess.CompletedProcess[str]:
         return run_script(
-            ["--slug", "diff-check", "--kind", "reviewer", "--mode",
-             "diff-review", *extra],
+            ["--slug", "diff-check", "--kind", "reviewer", *extra],
             cwd=self.repo, stdin="Review the branch.\n",
             agent_runs_dir=str(self.runs_root))
 
     def test_the_brief_records_the_mode_and_the_resolved_base(self) -> None:
-        done = self.create("--worktree", str(self.linked), "--base", "main")
+        done = self.create("--worktree", str(self.linked),
+                          "--diff-review", "main")
         self.assertEqual(done.returncode, 0, done.stderr)
         run_dir = Path(done.stdout.strip())
         expected = expected_brief(
@@ -441,33 +441,35 @@ class DiffReviewModeTest(unittest.TestCase):
         self.assertEqual((run_dir / "brief.md").read_text(), expected)
 
     def test_no_new_worktree_is_created(self) -> None:
-        done = self.create("--worktree", str(self.linked), "--base", "main")
+        done = self.create("--worktree", str(self.linked),
+                          "--diff-review", "main")
         self.assertFalse((Path(done.stdout.strip()) / "worktree").exists())
 
-    def test_a_missing_base_is_a_usage_error(self) -> None:
-        done = self.create("--worktree", str(self.linked))
+    def test_the_flag_with_base_is_a_usage_error(self) -> None:
+        done = self.create("--diff-review", "main", "--base", "main")
         self.assertEqual(done.returncode, 2)
-        self.assertIn("requires both --worktree and --base", done.stderr)
+        self.assertIn("--diff-review requires --worktree, not --base",
+                      done.stderr)
 
-    def test_a_missing_worktree_is_a_usage_error(self) -> None:
-        done = self.create("--base", "main")
+    def test_the_flag_without_an_origin_is_a_usage_error(self) -> None:
+        done = self.create("--diff-review", "main")
         self.assertEqual(done.returncode, 2)
-        self.assertIn("requires both --worktree and --base", done.stderr)
+        self.assertIn("one of the arguments --base --worktree is required",
+                      done.stderr)
 
     def test_a_base_that_is_not_a_commit_is_a_usage_error(self) -> None:
         done = self.create("--worktree", str(self.linked),
-                           "--base", "no-such-ref")
+                           "--diff-review", "no-such-ref")
         self.assertEqual(done.returncode, 2)
         self.assertIn("is not a commit", done.stderr)
 
-    def test_a_writer_with_the_mode_is_a_usage_error(self) -> None:
+    def test_a_writer_with_the_flag_is_a_usage_error(self) -> None:
         done = run_script(
-            ["--slug", "diff-check", "--kind", "writer", "--mode",
-             "diff-review", "--worktree", str(self.linked), "--base",
-             "main"], cwd=self.repo, stdin="Task.\n")
+            ["--slug", "diff-check", "--kind", "writer", "--diff-review",
+             "main", "--worktree", str(self.linked)],
+            cwd=self.repo, stdin="Task.\n")
         self.assertEqual(done.returncode, 2)
-        self.assertIn("--mode diff-review requires --kind reviewer",
-                      done.stderr)
+        self.assertIn("--diff-review requires --kind reviewer", done.stderr)
 
 
 class UsageErrorTest(unittest.TestCase):
@@ -481,13 +483,23 @@ class UsageErrorTest(unittest.TestCase):
         self.assertEqual(done.returncode, 2)
         self.assertIn("--base requires --kind writer", done.stderr)
 
-    def test_base_and_worktree_without_the_mode_is_a_usage_error(self) -> None:
+    def usage_error(self, *arguments: str) -> str:
         with tempfile.TemporaryDirectory() as cwd:
             done = run_script(
-                ["--slug", "bad-combo", "--kind", "writer", "--base",
-                 "main", "--worktree", "."], cwd=Path(cwd), stdin="Task.\n")
+                ["--slug", "bad-combo", "--kind", "writer", *arguments],
+                cwd=Path(cwd), stdin="Task.\n")
         self.assertEqual(done.returncode, 2)
-        self.assertIn("exactly one of --base or --worktree", done.stderr)
+        return done.stderr.splitlines()[-1]
+
+    def test_without_the_flag_the_origin_errors_are_unchanged(self) -> None:
+        self.assertEqual(
+            self.usage_error(),
+            "create_agent_run.py: error: one of the arguments --base "
+            "--worktree is required")
+        self.assertEqual(
+            self.usage_error("--base", "main", "--worktree", "."),
+            "create_agent_run.py: error: argument --worktree: not allowed "
+            "with argument --base")
 
     def test_an_empty_stdin_body_is_a_usage_error(self) -> None:
         with tempfile.TemporaryDirectory() as cwd:
