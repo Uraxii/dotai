@@ -15,9 +15,14 @@ from pathlib import Path
 
 CBM = Path(__file__).resolve().parent / "cbm"
 BINARY = "codebase-memory-mcp"
-INIT_LOG = "level=info msg=mem.init store=/tmp/x"
 OTHER_LOG = "level=warn msg=index.stale"
 ANSWER = {"b": 1, "a": [1, 2], "u": "café ✓", "n": None, "e": {}, "l": []}
+TREE_ANSWER = (
+    "total: 1\n"
+    "results: 1  (rows: name label lines in out)\n"
+    "proj.src.ability (src/ability.gd):\n"
+    "  pool_covers Function 122-124 2 1\n"
+    "has_more: false\n")
 PROGRESS_LOG = "level=info msg=index.progress files=1200"
 RELEASE_AFTER_SEC = 10.0
 
@@ -44,8 +49,8 @@ class CbmTest(unittest.TestCase):
             f"#!{sys.executable}\n"
             "import json, os, sys\n"
             "from pathlib import Path\n"
-            "Path(os.environ['CBM_TEST_SEEN']).write_text(json.dumps(sys.argv[1:]))\n"
-            f"print({INIT_LOG!r}, file=sys.stderr)\n"
+            "Path(os.environ['CBM_TEST_SEEN']).write_text("
+            "json.dumps({'argv': sys.argv[1:], 'stdin': sys.stdin.read()}))\n"
             f"print({OTHER_LOG!r}, file=sys.stderr)\n"
             + textwrap.dedent(body).lstrip()
         )
@@ -60,10 +65,11 @@ class CbmTest(unittest.TestCase):
             capture_output=True,
             check=False,
             env=self.env,
+            stdin=subprocess.DEVNULL,
             text=True,
         )
 
-    def argv_seen(self) -> list[str]:
+    def call_seen(self) -> dict:
         return json.loads(self.seen.read_text(encoding="utf-8"))
 
     def test_pretty_prints_the_answer(self) -> None:
@@ -76,20 +82,21 @@ class CbmTest(unittest.TestCase):
                          json.dumps(ANSWER, ensure_ascii=False, indent=2)
                          + "\n")
 
-    def test_drops_only_the_init_log_line(self) -> None:
+    def test_passes_stderr_through_unchanged(self) -> None:
         self.write_answering_stub()
 
         result = self.run_cbm("some_tool")
 
         self.assertEqual(result.stderr, OTHER_LOG + "\n")
 
-    def test_passes_the_tool_and_arguments_through(self) -> None:
+    def test_sends_the_arguments_on_stdin_to_a_quiet_cli(self) -> None:
         self.write_answering_stub()
 
         self.run_cbm("who_calls", '{"symbol":"main"}')
 
-        self.assertEqual(self.argv_seen(),
-                         ["cli", "who_calls", '{"symbol":"main"}'])
+        self.assertEqual(self.call_seen(),
+                         {"argv": ["cli", "--quiet", "who_calls"],
+                          "stdin": '{"symbol":"main"}'})
 
     def test_defaults_the_arguments_to_an_empty_object(self) -> None:
         for given in ([], [""]):
@@ -98,8 +105,9 @@ class CbmTest(unittest.TestCase):
 
                 self.run_cbm("list_projects", *given)
 
-                self.assertEqual(self.argv_seen(),
-                                 ["cli", "list_projects", "{}"])
+                self.assertEqual(self.call_seen(),
+                                 {"argv": ["cli", "--quiet", "list_projects"],
+                                  "stdin": "{}"})
 
     def test_exits_with_the_binarys_status_not_the_printers(self) -> None:
         self.write_stub('print(\'{"error":"no such project"}\')\n'
@@ -118,14 +126,17 @@ class CbmTest(unittest.TestCase):
         self.assertEqual(result.returncode, 4)
         self.assertEqual(result.stdout, "")
 
-    def test_fails_on_an_answer_that_is_not_json(self) -> None:
-        self.write_stub("print('not json at all')\n")
+    def test_passes_a_text_answer_through_unchanged(self) -> None:
+        for status in (0, 2):
+            with self.subTest(status=status):
+                self.write_stub(f"sys.stdout.write({TREE_ANSWER!r})\n"
+                                f"raise SystemExit({status})\n")
 
-        result = self.run_cbm("some_tool")
+                result = self.run_cbm("search_graph")
 
-        self.assertEqual(result.returncode, 5)
-        self.assertEqual(result.stdout, "")
-        self.assertIn("did not answer JSON", result.stderr)
+                self.assertEqual(result.returncode, status)
+                self.assertEqual(result.stdout, TREE_ANSWER)
+                self.assertEqual(result.stderr, OTHER_LOG + "\n")
 
     def test_relays_stderr_while_the_binary_is_still_running(self) -> None:
         gate = self.root / "gate"
@@ -146,8 +157,8 @@ class CbmTest(unittest.TestCase):
         self.addCleanup(watchdog.cancel)
         process = subprocess.Popen(
             [sys.executable, str(CBM), "index_repository"],
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
-            env=self.env)
+            stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE, text=True, env=self.env)
         self.addCleanup(process.wait)
 
         relayed = [process.stderr.readline(), process.stderr.readline()]
