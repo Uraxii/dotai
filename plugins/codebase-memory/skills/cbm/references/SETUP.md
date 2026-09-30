@@ -22,14 +22,22 @@ one. Always pass `--skip-config`:
 curl -fsSL https://raw.githubusercontent.com/DeusData/codebase-memory-mcp/main/install.sh | bash -s -- --skip-config
 ```
 
-`--skip-config` installs the binary only. Without it, the script writes MCP
+`--skip-config` skips agent configuration. Without it, the script writes MCP
 entries, hooks, and instructions into every detected agent's settings. The
 script installs to `~/.local/bin` by default; add `--dir=<path>` for another
 location.
 
-`codebase-memory-mcp update` does not update anything. It prints the path of
-an `install.sh` beside the binary, and that file may not exist. Use the
-command above.
+Even with `--skip-config`, the script writes two more files. Tell the user
+about both:
+
+- It copies `install.sh` beside the binary.
+- It appends an `export PATH=...` line, marked
+  `# Added by codebase-memory-mcp install`, to the shell rc file
+  (`~/.zshrc` or `~/.bashrc`) when the install directory is not on `PATH`.
+
+`codebase-memory-mcp update` does not download anything. It prints the path
+of the `install.sh` beside the binary, which exists only after an install
+through the script. Use the command above.
 
 Installed through npm? Update with `npm install -g codebase-memory-mcp@latest`.
 
@@ -44,11 +52,12 @@ index. The CLI works without it.
    `gh release view -R DeusData/codebase-memory-mcp`. A minor version
    (0.10 to 0.11) can change the index format, which forces one full reindex,
    and can change the CLI output format.
-3. Run the wrapper tests. If they fail, the CLI contract changed and
-   `scripts/cbm` needs an update before agents rely on it:
+3. Run the wrapper tests from the skill directory, the one holding
+   SKILL.md. If they fail, the CLI contract changed and `scripts/cbm` needs
+   an update before agents rely on it:
 
    ```bash
-   python3 -m unittest discover -s <skilldir>/scripts -p 'test_*.py'
+   python3 -m unittest discover -s scripts -p 'test_*.py'
    ```
 
 4. Index the repo per the "Project name" section of SKILL.md.

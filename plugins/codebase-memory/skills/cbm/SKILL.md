@@ -5,21 +5,21 @@ description: "Answer code questions from the codebase-memory graph instead of gr
 
 # codebase-memory CLI
 
-One tool per process. JSON arguments in. Stdout is a compact text tree for most tools, JSON for a few (`list_projects`, `get_code_snippet`); add `"format":"json"` to the arguments to get JSON. One `level=info msg=mem.init` line on stderr.
+One tool per process. JSON arguments in on stdin. Read tools answer on stdout in a compact text tree; add `"format":"json"` to the arguments to get JSON. `index_repository` and `delete_project` answer in JSON. Errors go to stderr with exit 1.
 
 ```bash
-codebase-memory-mcp cli <tool> '<json>' 2>/dev/null
-scripts/cbm <tool> ['<json>']   # same, init line dropped, JSON pretty-printed, text passed through, json defaults to {}
+echo '<json>' | codebase-memory-mcp cli --quiet <tool>
+scripts/cbm <tool> ['<json>']   # same, JSON pretty-printed, text passed through, json defaults to {}
 alias cbm=<skilldir>/scripts/cbm   # skilldir = directory holding this SKILL.md; examples below assume this
 ```
 
 ## Project name
 
-Every tool but `list_projects` and `index_repository` requires `project`. The name is the repo root path with `/` turned into `-` and the leading slash dropped:
+Every tool but `list_projects`, `index_repository`, and `compare_graphs` requires `project`. The name is the repo root path with `/` turned into `-` and the leading slash dropped:
 `/workspace/Projects/myapp` -> `workspace-Projects-myapp`. Confirm with:
 
 ```bash
-cbm list_projects   # each entry pairs a name with its root_path
+cbm list_projects   # each row pairs a name with its root_path
 ```
 
 Not listed -> index first: `cbm index_repository '{"repo_path":"/abs/path","mode":"fast"}'` (`full` adds similarity edges, slower). Re-index only when `detect_changes` shows changed files.
@@ -39,7 +39,10 @@ cbm trace_path '{"project":"P","function_name":"init_db","direction":"inbound","
 # 4. Read source by qualified_name (from step 2)
 cbm get_code_snippet '{"project":"P","qualified_name":"P.app.storage.init_db"}'
 
-# 5. Graph-ranked grep. Arg is `pattern`, NOT `query`
+# 4b. Declarations in one file, in source order (file_path relative to the repo root)
+cbm get_file_outline '{"project":"P","file_path":"app/storage.py"}'
+
+# 5. Graph-ranked grep. Arg is `pattern`, NOT `query`. Literal match unless you add "regex":true
 cbm search_code '{"project":"P","pattern":"TODO","limit":3}'
 
 # 6. Dead code: functions nobody calls, entry points excluded
@@ -48,7 +51,8 @@ cbm search_graph '{"project":"P","label":"Function","max_degree":0,"exclude_entr
 # 7. Impact of uncommitted / recent changes (since: git ref or date)
 cbm detect_changes '{"project":"P"}'
 
-# 8. ADR: mode get|update|sections. update takes markdown `content` with ## PURPOSE/STACK/ARCHITECTURE/PATTERNS/TRADEOFFS/PHILOSOPHY
+# 8. ADR: mode outline (default)|get|sections|update|set_sections. update replaces the whole doc from markdown `content`
+#    (## PURPOSE/STACK/ARCHITECTURE/PATTERNS/TRADEOFFS/PHILOSOPHY); set_sections takes `section_updates` {heading: body}
 cbm manage_adr '{"project":"P","mode":"get"}'
 ```
 
@@ -56,17 +60,16 @@ Cypher for anything else: `cbm query_graph '{"project":"P","query":"MATCH (f:Fun
 
 ## Gotchas
 
-- `search_graph`, `search_code`, `trace_path`, `query_graph`, and `get_architecture` answer in a text tree by default, not JSON. Add `"format":"json"` to the arguments when a script needs to parse the answer.
+- Read tools answer in a text tree by default, not JSON. Add `"format":"json"` to the arguments when a script needs to parse the answer.
 - `search_code` wants `pattern` (else "pattern is required"); `search_graph` wants `query` or `name_pattern` and silently returns every node if given `pattern`.
-- README examples omit `project` and name `trace_call_path`. Real tool is `trace_path`, and `project` is required.
-- `manage_adr` modes are `get|update|sections`; unknown modes fall through to `get`.
+- `manage_adr` rejects an unknown mode ("invalid mode", exit 1). With no mode it outlines headings; pass `"mode":"get"` for the text.
 - Cypher subset: `NOT f.is_test` fails ("unexpected operator"). Write `f.is_test = false`.
-- Cold start ~0.1s per call; on a 60k-node DB the heavy tools (get_architecture, search_code, get_graph_schema) take 0.7-1.3s.
+- Each call takes ~7s, even `list_projects`: the CLI starts a temporary daemon every time. `codebase-memory-mcp daemon start` keeps one warm and cuts that to ~2.5s, but it is a permanent background process that also serves a web UI on a local port. Ask the user before starting it; `codebase-memory-mcp daemon stop` retires it.
 - `get_architecture.languages` omits GDScript (a Godot repo reports Bash/YAML). The .gd symbols are indexed; trust `node_labels`.
 - Repos containing nested git worktrees get those indexed too (qualified names under `worktrees.*`). Filter with `file_pattern`, a glob anchored at the repo root: `"file_pattern":"src/**"` excludes them, `"*.gd"` does not.
 - Never run `codebase-memory-mcp install` to "fix" things: it rebuilds every index and writes hooks into user settings.
-- If a call fails with `command not found`, or the binary warns that a call form is deprecated, follow `references/SETUP.md` to install or update to the latest release, then rerun `codebase-memory-mcp --version` before retrying.
+- If a call fails with `command not found`, or the wrapper tests fail, follow `references/SETUP.md` to install or update to the latest release, then rerun `codebase-memory-mcp --version` before retrying.
 - Snippet line numbers not matching the file = stale index. `detect_changes` can still say 0 changed (observed on an indexed repo). Re-run `index_repository` on that repo.
-- `delete_project`, `index_repository`, `manage_adr update`, `ingest_traces` write. Everything else is read-only.
+- `delete_project`, `index_repository`, and `manage_adr` `update`/`set_sections` write. Everything else is read-only; `ingest_traces` only validates and counts.
 
-Full arg table for all 14 tools: `references/tools.md`. Regenerate `references/tools.json` after a binary upgrade with `python3 scripts/dump_schemas.py`.
+Full arg table for all 17 tools: `references/tools.md`. Regenerate `references/tools.json` after a binary upgrade with `python3 scripts/dump_schemas.py`.

@@ -244,7 +244,7 @@ PLUGINS: list[dict[str, object]] = [
     },
     {
         "name": "codebase-memory",
-        "version": "1.1.0",
+        "version": "1.2.0",
         "hooks": ["claude", "codex"],
         "description": (
             "Keep codebase-memory indexed at session start, then query its "

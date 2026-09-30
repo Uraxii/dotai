@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
-"""cbm <tool> ['<json>'] -> codebase-memory-mcp cli, init line dropped.
+"""cbm <tool> ['<json>'] -> codebase-memory-mcp cli --quiet <tool>, JSON on stdin.
 
-The arguments default to `{}`. The exit status is the binary's own, so a
-caller can branch on it. JSON stdout is pretty-printed; anything else, such
-as the compact text tree most tools answer in by default, passes
-through unchanged.
+The arguments default to `{}` and go on stdin, the form the binary supports;
+passing them as an argv word is deprecated upstream. `--quiet` keeps stderr to
+errors, which pass straight through. The exit status is the binary's own, so
+a caller can branch on it. JSON stdout is pretty-printed; anything else, such
+as the compact text tree most tools answer in by default, passes through
+unchanged.
 
 Python standard library only, forever. No pip dependency.
 """
@@ -14,64 +16,33 @@ from __future__ import annotations
 import json
 import subprocess
 import sys
-import tempfile
-from typing import TextIO
 
-__all__ = ["is_init_log", "run_streaming_stderr", "main"]
+__all__ = ["main"]
 
 BINARY = "codebase-memory-mcp"
-SUBCOMMAND = "cli"
+COMMAND = ("cli", "--quiet")
 NO_ARGUMENTS = "{}"
-INIT_LOG_MARK = "msg=mem.init"
 INDENT = 2
 NOT_FOUND_EXIT = 127
-
-
-def is_init_log(line: str) -> bool:
-    """Whether `line` is the startup log line, the only one dropped."""
-    return INIT_LOG_MARK in line
-
-
-def run_streaming_stderr(argv: list[str], sink: TextIO) -> int:
-    """Run `argv` into `sink`, relaying its stderr live minus the init log.
-
-    index_repository logs progress for minutes on a large repo, and a silent
-    terminal for that long reads as a hang, so each line is written out as it
-    arrives rather than after the exit. stdout goes to a file instead of a
-    second pipe so this loop cannot deadlock on an answer larger than a pipe
-    buffer, and is printed after the exit.
-    """
-    process = subprocess.Popen(argv, stdout=sink, stderr=subprocess.PIPE,
-                               text=True)
-    for line in process.stderr:
-        if not is_init_log(line):
-            sys.stderr.write(line)
-            sys.stderr.flush()
-    return process.wait()
 
 
 def main(argv: list[str]) -> int:
     """Run one tool, print its answer, and return the binary's status."""
     tool = argv[0] if argv else ""
     arguments = argv[1] if len(argv) > 1 and argv[1] else NO_ARGUMENTS
-    with tempfile.TemporaryFile("w+") as sink:
-        try:
-            status = run_streaming_stderr(
-                [BINARY, SUBCOMMAND, tool, arguments], sink)
-        except FileNotFoundError:
-            print(f"{BINARY} is not on PATH", file=sys.stderr)
-            return NOT_FOUND_EXIT
-        sink.seek(0)
-        stdout = sink.read()
-    if not stdout.strip():
-        return status
     try:
-        answer = json.loads(stdout)
+        done = subprocess.run([BINARY, *COMMAND, tool], input=arguments,
+                              stdout=subprocess.PIPE, text=True, check=False)
+    except FileNotFoundError:
+        print(f"{BINARY} is not on PATH", file=sys.stderr)
+        return NOT_FOUND_EXIT
+    try:
+        answer = json.loads(done.stdout)
     except json.JSONDecodeError:
-        sys.stdout.write(stdout)
-        return status
+        sys.stdout.write(done.stdout)
+        return done.returncode
     print(json.dumps(answer, ensure_ascii=False, indent=INDENT))
-    return status
+    return done.returncode
 
 
 if __name__ == "__main__":
