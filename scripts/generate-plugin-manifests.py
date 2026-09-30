@@ -42,7 +42,7 @@ HOOK_WIRING_PATHS = {
 PLUGINS: list[dict[str, object]] = [
     {
         "name": "pstack",
-        "version": "1.6.0",
+        "version": "1.8.0",
         "hooks": ["claude", "codex", "copilot"],
         "description": (
             "Skills and thin named agents: poteto-mode, principles, "
@@ -223,7 +223,8 @@ PLUGINS: list[dict[str, object]] = [
         ],
     },
     {
-        "name": "bd",
+        "name": "beads",
+        "version": "2.0.0",
         "description": (
             "Track, create, claim, and close repo issues with the bd (beads) "
             "tool, including dependency links."
@@ -243,16 +244,19 @@ PLUGINS: list[dict[str, object]] = [
     },
     {
         "name": "cbm",
-        "version": "1.0.1",
+        "version": "1.1.0",
+        "hooks": ["claude", "codex"],
         "description": (
-            "Query the codebase-memory code graph from a shell: callers, "
-            "dependencies, impact, dead code, and ADRs."
+            "Keep codebase-memory indexed at session start, then query its "
+            "code graph from a shell."
         ),
         "short": "Shell queries over the codebase-memory code graph.",
         "long": (
-            "Runs codebase-memory-mcp cli against an indexed repository with "
-            "no MCP server involved, so a shell script or an agent without "
-            "the MCP tools can still ask structural questions: who calls a "
+            "Starts a detached fast index for the current Git main checkout "
+            "at Claude Code and Codex session start. Runs codebase-memory-mcp "
+            "cli against that indexed repository with no MCP server involved, "
+            "so a shell script or an agent without the MCP tools can still "
+            "ask structural questions: who calls a "
             "function, how a change propagates, which modules cluster "
             "together, which functions have no callers, and what a symbol's "
             "source says."

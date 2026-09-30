@@ -1,5 +1,5 @@
 ---
-name: beads
+name: bd
 description: Track, create, claim, and close issues in a repo with bd (beads). Use for "what can I pick up", dependency links between issues, or any bd command.
 ---
 
