@@ -56,8 +56,8 @@
       "description": "Track, create, claim, and close repo issues with the bd (beads) tool, including dependency links."
     },
     {
-      "name": "cbm",
-      "source": "./plugins/cbm",
+      "name": "codebase-memory",
+      "source": "./plugins/codebase-memory",
       "description": "Keep codebase-memory indexed at session start, then query its code graph from a shell."
     },
     {

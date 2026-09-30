@@ -145,12 +145,12 @@
       "category": "Productivity"
     },
     {
-      "name": "cbm",
+      "name": "codebase-memory",
       "source": {
         "source": "url",
         "url": "https://github.com/Uraxii/dotai.git",
         "ref": "main",
-        "path": "plugins/cbm"
+        "path": "plugins/codebase-memory"
       },
       "policy": {
         "installation": "AVAILABLE",
