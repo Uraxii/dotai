@@ -58,7 +58,7 @@
     {
       "name": "cbm",
       "source": "./plugins/cbm",
-      "description": "Query the codebase-memory code graph from a shell: callers, dependencies, impact, dead code, and ADRs."
+      "description": "Keep codebase-memory indexed at session start, then query its code graph from a shell."
     },
     {
       "name": "caveman",
