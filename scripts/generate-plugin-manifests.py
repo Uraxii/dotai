@@ -332,6 +332,25 @@ PLUGINS: list[dict[str, object]] = [
             "Delegate this boilerplate to the code-writer skill.",
         ],
     },
+    {
+        "name": "personal-instructions",
+        "hooks": ["claude", "codex", "copilot"],
+        "skills": False,
+        "description": (
+            "Inject a hand-edited instructions.md at session start and, where "
+            "the harness has a subagent-start hook, subagent start."
+        ),
+        "short": "Your personal rules in every session.",
+        "long": (
+            "Reads the plugin's instructions.md at session start and subagent "
+            "start and adds it to context in Claude Code, Codex, and Copilot "
+            "CLI. Edit that one file to change your rules in all three."
+        ),
+        "keywords": ["harness", "hooks", "instructions"],
+        "prompts": [
+            "Install my personal instructions into every session.",
+        ],
+    },
 ]
 
 
