@@ -1,0 +1,9 @@
+{
+  "name": "itch",
+  "version": "1.0.0",
+  "description": "Install, log in to, and push game builds to itch.io with the butler CLI.",
+  "author": {
+    "name": "Uraxii",
+    "url": "https://github.com/Uraxii"
+  }
+}
