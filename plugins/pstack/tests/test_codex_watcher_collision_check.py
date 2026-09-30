@@ -3,8 +3,8 @@
 A plain `pgrep -af "codex exec"` has two failure modes: it can self-match an
 ancestor process whose own command line happens to carry that text, and it
 false-positives on any unrelated process carrying the same substring. The
-playbook keys the check to the worktree instead, since `pstack-codex-run`
-passes `-C <worktree>` verbatim in the live `codex exec` process's argv.
+playbook keys the check to the worktree instead, since the watcher passes
+`-C <worktree>` verbatim in the live `codex exec` process's argv.
 These tests run the playbook's own pattern against real
 processes, not just against the pattern text.
 """
