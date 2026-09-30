@@ -27,6 +27,9 @@ import create_agent_run
 
 SCRIPT = Path(__file__).resolve().parent / "create_agent_run.py"
 POTETO_MODE_SKILL = SCRIPT.parent.parent / "SKILL.md"
+LOG_DECISION_SCRIPT = (
+    SCRIPT.parent.parent.parent
+    / "show-me-your-work/scripts/log_decision.py")
 RUN_ID_PATTERN = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*-[0-9a-f]{8}$")
 GIT_IDENTITY = {
     "GIT_AUTHOR_NAME": "agent-runs-tests",
@@ -103,19 +106,25 @@ def expected_brief(*, kind: str, worktree: Path, branch: str, base: str,
         "5. After each step, append one line to "
         f"`{run_dir}/progress.md` that says what you finished.",
     ]
+    decisions_step = (
+        f"Log each decision in `{run_dir}/decisions.tsv` in the "
+        "show-me-your-work format with "
+        f"`{LOG_DECISION_SCRIPT}`. That means one tab-separated row per "
+        "decision with the columns `ts phase decision why evidence "
+        "result`, append-only. Log forks you chose, units finished with "
+        "their check result, pivots and reverts, and blockers. Skip "
+        "trivial actions.")
+    report_step = f"End with your report. Write it to `{run_dir}/agent-report.md`."
     if kind == "writer":
         lines += [
-            "6. Commit your work yourself. Run `git add` and `git commit` "
-            "as their own commands, or chained only with other git "
-            "commands; never in the same command as file edits or non-git "
-            "tools.",
-            "7. End with your report. Write it to "
-            f"`{run_dir}/report.md`.",
+            "6. Commit your work yourself with git.",
+            f"7. {decisions_step}",
+            f"8. {report_step}",
         ]
     else:
         lines += [
-            "6. End with your report. Write it to "
-            f"`{run_dir}/report.md`.",
+            f"6. {decisions_step}",
+            f"7. {report_step}",
         ]
     lines += [
         "",

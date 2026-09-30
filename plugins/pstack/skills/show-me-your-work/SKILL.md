@@ -40,7 +40,7 @@ Log decision points and checkpoints, not every action: a fork chosen, a unit com
 
 ## Where it lives
 
-By default the log is a working artifact, not committed. Keep it at `decisions.tsv` in the work dir, or `.audit/<task-slug>.tsv` when several efforts run at once, and leave it out of git.
+By default the log is a working artifact, not committed. Keep it at `decisions.tsv` in the work dir, or `.audit/<task-slug>.tsv` when several efforts run at once, and leave it out of git. Inside an agent run the log is `<RUN>/decisions.tsv` (see poteto-mode's Agent runs section).
 
 Commit it only when the work is ambitious enough that a reviewer needs the trail to trust the result.
 
