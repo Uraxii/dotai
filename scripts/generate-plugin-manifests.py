@@ -223,7 +223,8 @@ PLUGINS: list[dict[str, object]] = [
         ],
     },
     {
-        "name": "bd",
+        "name": "beads",
+        "version": "2.0.0",
         "description": (
             "Track, create, claim, and close repo issues with the bd (beads) "
             "tool, including dependency links."

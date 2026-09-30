@@ -284,11 +284,11 @@ class GeneratorRerunTest(unittest.TestCase):
         self.assertIn("plugins/pstack/hooks/codex-hooks.json", result.stdout)
 
     def test_check_fails_after_a_hand_edit(self) -> None:
-        edited = self.root / "plugins" / "bd" / "plugin.json"
-        edited.write_text(edited.read_text().replace('"bd"', '"bd-by-hand"'))
+        edited = self.root / "plugins" / "beads" / "plugin.json"
+        edited.write_text(edited.read_text().replace('"beads"', '"beads-by-hand"'))
         result = run_generator(self.root, "--check")
         self.assertNotEqual(result.returncode, 0)
-        self.assertIn("plugins/bd/plugin.json", result.stdout)
+        self.assertIn("plugins/beads/plugin.json", result.stdout)
 
 
 if __name__ == "__main__":
