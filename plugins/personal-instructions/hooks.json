@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "hooks": {
+    "sessionStart": [
+      {
+        "type": "command",
+        "bash": "python3 \"$PLUGIN_ROOT/hooks/inject_instructions.py\" --harness copilot --event SessionStart",
+        "timeoutSec": 5
+      }
+    ],
+    "subagentStart": [
+      {
+        "type": "command",
+        "bash": "python3 \"$PLUGIN_ROOT/hooks/inject_instructions.py\" --harness copilot --event SubagentStart",
+        "timeoutSec": 5
+      }
+    ]
+  }
+}
