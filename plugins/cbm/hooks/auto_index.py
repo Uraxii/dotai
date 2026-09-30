@@ -1,0 +1,115 @@
+#!/usr/bin/env python3
+"""Start one detached fast index for the current main checkout."""
+
+import json
+import os
+import shutil
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+
+LOCK_STALE_SECONDS = 300
+
+
+def project_name(repository_root: Path) -> str:
+    return repository_root.as_posix().lstrip("/").replace("/", "-")
+
+
+def cache_directory(environment: dict[str, str]) -> Path:
+    return Path(
+        environment.get(
+            "CBM_CACHE_DIR", str(Path.home() / ".cache/codebase-memory-mcp")
+        )
+    )
+
+
+def repository_root(cwd: str) -> Path | None:
+    command = [
+        "git",
+        "-C",
+        cwd,
+        "rev-parse",
+        "--path-format=absolute",
+        "--git-common-dir",
+    ]
+    result = subprocess.run(
+        command,
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        text=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        return None
+    return Path(result.stdout.strip()).parent.resolve()
+
+
+def acquire_lock(cache_root: Path, name: str) -> Path | None:
+    cache_root.mkdir(parents=True, exist_ok=True)
+    lock_path = cache_root / f"{name}.index.lock"
+    try:
+        if time.time() - lock_path.stat().st_mtime > LOCK_STALE_SECONDS:
+            lock_path.unlink()
+    except FileNotFoundError:
+        pass
+
+    try:
+        descriptor = os.open(lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+    except FileExistsError:
+        return None
+    with os.fdopen(descriptor, "w") as lock_file:
+        lock_file.write(f"{os.getpid()} {time.time()}\n")
+    return lock_path
+
+
+def event_cwd() -> str:
+    try:
+        event = json.load(sys.stdin)
+    except (json.JSONDecodeError, OSError):
+        event = {}
+    cwd = event.get("cwd") if isinstance(event, dict) else None
+    return cwd if isinstance(cwd, str) and cwd else os.getcwd()
+
+
+def run(cwd: str, environment: dict[str, str]) -> bool:
+    root = repository_root(cwd)
+    binary = shutil.which("codebase-memory-mcp", path=environment.get("PATH"))
+    if root is None or binary is None:
+        return False
+
+    cache_root = cache_directory(environment)
+    name = project_name(root)
+    lock_path = acquire_lock(cache_root, name)
+    if lock_path is None:
+        return False
+
+    try:
+        subprocess.Popen(
+            [
+                binary,
+                "cli",
+                "index_repository",
+                json.dumps({"repo_path": str(root), "mode": "fast"}),
+            ],
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            start_new_session=True,
+            env=environment,
+        )
+    except OSError:
+        lock_path.unlink(missing_ok=True)
+        return False
+    return True
+
+
+def main() -> int:
+    run(event_cwd(), dict(os.environ))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
