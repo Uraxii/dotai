@@ -138,7 +138,7 @@ machine cannot install Copilot CLI, opencode, or Hermes).
 | Harness | Event | Fires | Injects into | Source |
 |---|---|---|---|---|
 | Claude Code | `SessionStart` (`startup\|clear\|compact`) | Once, at each named point | Context, automatically | Claude Code hooks docs |
-| Codex | `SessionStart`, `PostCompact` | Once each | Context, via `hookSpecificOutput.additionalContext` | Codex hooks docs |
+| Codex | `SessionStart` (no matcher, so it also fires on `compact` and `clear`) | Once, at each source | Context, via `hookSpecificOutput.additionalContext` | Codex hooks docs |
 | Copilot CLI | `sessionStart` | Once per job, new session only (not on resume) | Context, via `additionalContext` | docs.github.com Copilot CLI hooks reference, "Hook events" and "Hook event input payloads" / `sessionStart`; changelog 1.0.11 and 1.0.22; fetched 2026-09-14 |
 | opencode | none that fires once at session start and can inject; `experimental.chat.system.transform` runs before every LLM request instead | Every request | System prompt array | `anomalyco/opencode@228e9095`, `packages/plugin/src/index.ts:291-296`, `packages/opencode/src/plugin/index.ts:259`; cloned 2026-09-14 |
 | Hermes | `pre_llm_call`, gated on `extra.is_first_turn` | Once per session (script-side gate; the event itself fires every turn) | That turn's user message, via `{"context": ...}` | `NousResearch/hermes-agent@498abb6`, `website/docs/user-guide/features/hooks.md:458,677-696`, `agent/turn_context.py:663-690`; cloned 2026-09-14 |
