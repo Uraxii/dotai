@@ -346,7 +346,8 @@ PLUGINS: list[dict[str, object]] = [
             "CLI. Edit that one file to change your rules in all three. "
             "Rules only the main agent should get go in "
             "main-agent-instructions.md, which is injected at session start "
-            "and never into subagents."
+            "only. Fresh subagents do not get it; forked subagents inherit "
+            "it from the parent's history."
         ),
         "keywords": ["harness", "hooks", "instructions"],
         "prompts": [

@@ -2,8 +2,10 @@
 """Inject one of the plugin's instruction files into a session.
 
 --file picks the file. instructions.md is wired to session start and subagent
-start. main-agent-instructions.md is wired to session start only, so
-subagents never get it.
+start. main-agent-instructions.md is wired to session start only, so fresh
+subagents do not get it. Forked subagents (Claude Code forks, Codex
+fork_context or multi_agent_v2 forks) inherit it from the parent's history,
+and no hook can prevent that.
 
 Root session hook text does not reach subagents, so each harness wires both a
 session-start and a subagent-start hook to this script. Subagents are covered

@@ -173,5 +173,11 @@ class InjectInstructionsTests(unittest.TestCase):
 
                         self.assertEqual(expected_injections, injections)
 
+    def test_claude_session_start_entries_share_one_matcher(self) -> None:
+        config = json.loads((REAL_PLUGIN_ROOT / "hooks/claude-hooks.json").read_text())
+        matchers = {entry["matcher"] for entry in config["hooks"]["SessionStart"]}
+        self.assertEqual(1, len(matchers), matchers)
+
+
 if __name__ == "__main__":
     unittest.main()
