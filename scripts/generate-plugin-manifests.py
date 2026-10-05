@@ -23,7 +23,6 @@ from pathlib import Path
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 REPOSITORY_URL = "https://github.com/Uraxii/dotai"
 AUTHOR = {"name": "Uraxii", "url": "https://github.com/Uraxii"}
-PLUGIN_SCHEMA = "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json"
 MARKETPLACE_DESCRIPTION = (
     "Skills and thin named agents for software development work."
 )
@@ -34,7 +33,7 @@ FIRST_RELEASE = "1.0.0"
 PLUGIN_TABLE_START = "<!-- dotai:plugins:start -->"
 PLUGIN_TABLE_END = "<!-- dotai:plugins:end -->"
 HOOK_WIRING_PATHS = {
-    "claude": Path("hooks/hooks.json"),
+    "claude": Path("hooks/claude-hooks.json"),
     "codex": Path("hooks/codex-hooks.json"),
     "copilot": Path("hooks.json"),
 }
@@ -344,7 +343,11 @@ PLUGINS: list[dict[str, object]] = [
         "long": (
             "Reads the plugin's instructions.md at session start and subagent "
             "start and adds it to context in Claude Code, Codex, and Copilot "
-            "CLI. Edit that one file to change your rules in all three."
+            "CLI. Edit that one file to change your rules in all three. "
+            "Rules only the main agent should get go in "
+            "main-agent-instructions.md, which is injected at session start "
+            "only. Fresh subagents do not get it; forked subagents inherit "
+            "it from the parent's history."
         ),
         "keywords": ["harness", "hooks", "instructions"],
         "prompts": [
@@ -365,6 +368,13 @@ def core_manifest(plugin: dict[str, object]) -> dict[str, object]:
         "description": plugin["description"],
         "author": AUTHOR,
     }
+
+
+def claude_manifest(plugin: dict[str, object]) -> dict[str, object]:
+    manifest = core_manifest(plugin)
+    if "claude" in plugin.get("hooks", []):
+        manifest["hooks"] = "./hooks/claude-hooks.json"
+    return manifest
 
 
 def codex_manifest(plugin: dict[str, object]) -> dict[str, object]:
@@ -470,11 +480,9 @@ def wanted_files(root: Path) -> dict[Path, str]:
     }
     for plugin in PLUGINS:
         plugin_root = Path("plugins") / str(plugin["name"])
-        files[plugin_root / "plugin.json"] = render(
-            {"$schema": PLUGIN_SCHEMA, **core_manifest(plugin)}
-        )
+        files[plugin_root / "plugin.json"] = render(core_manifest(plugin))
         files[plugin_root / ".claude-plugin/plugin.json"] = render(
-            core_manifest(plugin)
+            claude_manifest(plugin)
         )
         files[plugin_root / ".codex-plugin/plugin.json"] = render(
             codex_manifest(plugin)

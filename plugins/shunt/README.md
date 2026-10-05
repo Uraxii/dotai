@@ -67,7 +67,7 @@ shunt/
 ├── .claude-plugin/
 │   └── plugin.json          # Plugin manifest (name, description, version)
 ├── hooks/
-│   ├── hooks.json           # Hook registration (PreToolUse matchers)
+│   ├── claude-hooks.json    # Claude Code hook registration (PreToolUse matchers)
 │   ├── check-file-size      # Blocks Read on files > 350 lines
 │   └── check-bash-read      # Blocks cat/head/tail on large files
 ├── scripts/

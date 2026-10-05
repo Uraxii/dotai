@@ -1,0 +1,1 @@
+- Explain technical information in ASD-STE100 Simplified Technical English (STE).

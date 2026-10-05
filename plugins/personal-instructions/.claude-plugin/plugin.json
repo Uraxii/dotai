@@ -5,5 +5,6 @@
   "author": {
     "name": "Uraxii",
     "url": "https://github.com/Uraxii"
-  }
+  },
+  "hooks": "./hooks/claude-hooks.json"
 }

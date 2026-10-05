@@ -16,7 +16,7 @@ SPEC.loader.exec_module(HOOK)
 class HandoffTokenFlagTests(unittest.TestCase):
     def test_plugin_manifests_install_the_hook(self) -> None:
         claude = json.loads(
-            (REPOSITORY_ROOT / "hooks" / "hooks.json").read_text()
+            (REPOSITORY_ROOT / "hooks" / "claude-hooks.json").read_text()
         )
         codex_manifest = json.loads(
             (REPOSITORY_ROOT / ".codex-plugin" / "plugin.json").read_text()

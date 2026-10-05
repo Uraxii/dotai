@@ -32,7 +32,7 @@ class SessionStartContextTests(unittest.TestCase):
         )
 
     def test_claude_manifest_wires_session_start(self) -> None:
-        config = json.loads((REPOSITORY_ROOT / "hooks" / "hooks.json").read_text())
+        config = json.loads((REPOSITORY_ROOT / "hooks" / "claude-hooks.json").read_text())
 
         session_start = config["hooks"]["SessionStart"][0]
         self.assertEqual("startup|clear|compact", session_start["matcher"])
