@@ -8,7 +8,7 @@
       "expected_output": "Claude should be blocked by the hook (602 lines), then invoke bulk-read script",
       "files": ["evals/fixtures/websocket-handler.ts"],
       "expectations": [
-        "Claude ran ${CLAUDE_PLUGIN_ROOT}/scripts/bulk-read with --question and --paths",
+        "Claude ran shunt's scripts/bulk-read with --question and --paths",
         "Claude did NOT read the full file directly",
         "Claude provided a summary based on the bulk-read output"
       ]
@@ -19,7 +19,7 @@
       "expected_output": "Claude should invoke code-write script with --spec, --reference, and --target",
       "files": ["evals/fixtures/user-service.ts", "evals/fixtures/order-service.test.ts"],
       "expectations": [
-        "Claude ran ${CLAUDE_PLUGIN_ROOT}/scripts/code-write with --spec and --reference",
+        "Claude ran shunt's scripts/code-write with --spec and --reference",
         "Output was written to a target file via --target",
         "Claude reviewed the generated output before accepting it"
       ]
