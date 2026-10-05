@@ -10,6 +10,16 @@
             "timeout": 5
           }
         ]
+      },
+      {
+        "matcher": "startup|clear|compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/inject_instructions.py\" --harness claude --event SessionStart --file main-agent-instructions.md",
+            "timeout": 5
+          }
+        ]
       }
     ],
     "SubagentStart": [

@@ -9,6 +9,15 @@
             "timeout": 5
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${PLUGIN_ROOT}/hooks/inject_instructions.py\" --harness codex --event SessionStart --file main-agent-instructions.md",
+            "timeout": 5
+          }
+        ]
       }
     ],
     "SubagentStart": [
