@@ -23,7 +23,6 @@ from pathlib import Path
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 REPOSITORY_URL = "https://github.com/Uraxii/dotai"
 AUTHOR = {"name": "Uraxii", "url": "https://github.com/Uraxii"}
-PLUGIN_SCHEMA = "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json"
 MARKETPLACE_DESCRIPTION = (
     "Skills and thin named agents for software development work."
 )
@@ -470,9 +469,7 @@ def wanted_files(root: Path) -> dict[Path, str]:
     }
     for plugin in PLUGINS:
         plugin_root = Path("plugins") / str(plugin["name"])
-        files[plugin_root / "plugin.json"] = render(
-            {"$schema": PLUGIN_SCHEMA, **core_manifest(plugin)}
-        )
+        files[plugin_root / "plugin.json"] = render(core_manifest(plugin))
         files[plugin_root / ".claude-plugin/plugin.json"] = render(
             core_manifest(plugin)
         )

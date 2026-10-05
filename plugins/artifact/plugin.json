@@ -1,5 +1,4 @@
 {
-  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "artifact",
   "version": "1.0.0",
   "description": "Explain a code change as a self-contained interactive HTML page.",

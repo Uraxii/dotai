@@ -181,6 +181,21 @@ class GeneratorOutputTest(unittest.TestCase):
                     self.assertEqual(manifest["name"], name)
                     self.assertTrue(manifest["version"])
 
+    def test_root_manifest_has_no_schema(self) -> None:
+        for name in sorted(PLUGIN_NAMES):
+            manifest = json.loads(
+                (self.root / "plugins" / name / "plugin.json").read_text()
+            )
+            with self.subTest(plugin=name):
+                self.assertNotIn(
+                    "$schema",
+                    manifest,
+                    "An agent-plugins.org $schema makes Codex 0.159 load the "
+                    "root plugin.json as an Agent Plugins manifest instead of "
+                    ".codex-plugin/plugin.json, and that format drops every "
+                    "hook without a warning.",
+                )
+
     def test_both_marketplaces_list_every_plugin(self) -> None:
         for relative in (
             ".claude-plugin/marketplace.json",

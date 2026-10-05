@@ -1,5 +1,4 @@
 {
-  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "notion",
   "version": "1.0.0",
   "description": "Reach Notion from the command line, and publish a code-change explainer as a Notion page.",
