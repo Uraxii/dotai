@@ -7,7 +7,6 @@
 - Notes for the current task go in the project's `.nikki-agents/` and are not rules.
 
 ## Talking to user
-- Concise.
 - If the 'done' state for a task is unclear or ambiguous, prompt the user to define it.
   This helps ensure the agent and user are aligned on what should be produced.
 - When a step doesn't need my input, keep going. Put status notes in the same message as your next action.
