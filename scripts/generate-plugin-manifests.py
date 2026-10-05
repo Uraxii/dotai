@@ -33,7 +33,7 @@ FIRST_RELEASE = "1.0.0"
 PLUGIN_TABLE_START = "<!-- dotai:plugins:start -->"
 PLUGIN_TABLE_END = "<!-- dotai:plugins:end -->"
 HOOK_WIRING_PATHS = {
-    "claude": Path("hooks/hooks.json"),
+    "claude": Path("hooks/claude-hooks.json"),
     "codex": Path("hooks/codex-hooks.json"),
     "copilot": Path("hooks.json"),
 }
@@ -366,6 +366,13 @@ def core_manifest(plugin: dict[str, object]) -> dict[str, object]:
     }
 
 
+def claude_manifest(plugin: dict[str, object]) -> dict[str, object]:
+    manifest = core_manifest(plugin)
+    if "claude" in plugin.get("hooks", []):
+        manifest["hooks"] = "./hooks/claude-hooks.json"
+    return manifest
+
+
 def codex_manifest(plugin: dict[str, object]) -> dict[str, object]:
     hook_harnesses = plugin.get("hooks", [])
     ships_skills = bool(plugin.get("skills", True))
@@ -471,7 +478,7 @@ def wanted_files(root: Path) -> dict[Path, str]:
         plugin_root = Path("plugins") / str(plugin["name"])
         files[plugin_root / "plugin.json"] = render(core_manifest(plugin))
         files[plugin_root / ".claude-plugin/plugin.json"] = render(
-            core_manifest(plugin)
+            claude_manifest(plugin)
         )
         files[plugin_root / ".codex-plugin/plugin.json"] = render(
             codex_manifest(plugin)

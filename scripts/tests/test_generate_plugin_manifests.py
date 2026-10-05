@@ -29,7 +29,7 @@ MANIFEST_NAMES = (
     ".codex-plugin/plugin.json",
 )
 HOOK_WIRING_PATHS = {
-    "claude": Path("hooks/hooks.json"),
+    "claude": Path("hooks/claude-hooks.json"),
     "codex": Path("hooks/codex-hooks.json"),
     "copilot": Path("hooks.json"),
 }
@@ -167,6 +167,20 @@ class GeneratorInventoryTest(unittest.TestCase):
                     )
 
 
+    def test_no_plugin_ships_the_shared_default_hook_file(self) -> None:
+        shared_default = sorted(
+            REPOSITORY_ROOT.glob("plugins/*/hooks/hooks.json")
+        )
+        self.assertEqual(
+            shared_default,
+            [],
+            "hooks/hooks.json is the default hook file for Claude Code, and "
+            "Codex and Copilot fall back to it too when their manifest names "
+            "no hooks file. A Claude-only hook there also runs in Codex and "
+            "Copilot. Name each harness's hook file in its manifest instead.",
+        )
+
+
 class GeneratorOutputTest(unittest.TestCase):
     def setUp(self) -> None:
         self.root = generation_root(self)
@@ -219,13 +233,35 @@ class GeneratorOutputTest(unittest.TestCase):
                     self.root / "plugins" / name / ".codex-plugin" / "plugin.json"
                 ).read_text()
             )
+            loaded_by_codex = manifest.get("hooks", "./hooks/hooks.json")
+            ships_codex_hooks = (
+                REPOSITORY_ROOT / "plugins" / name / loaded_by_codex
+            ).is_file()
             with self.subTest(plugin=name):
                 if "codex" in PLUGIN_HOOK_HARNESSES[name]:
                     self.assertEqual(manifest["hooks"], "./hooks/codex-hooks.json")
                     self.assertIn("Hooks", manifest["interface"]["capabilities"])
                 else:
-                    self.assertNotIn("hooks", manifest)
                     self.assertNotIn("Hooks", manifest["interface"]["capabilities"])
+                self.assertEqual(
+                    ships_codex_hooks,
+                    "codex" in PLUGIN_HOOK_HARNESSES[name],
+                    f"Codex loads {loaded_by_codex} for {name}, falling back "
+                    "to hooks/hooks.json when the manifest names no hooks.",
+                )
+
+    def test_claude_hook_metadata_matches_declared_harnesses(self) -> None:
+        for name in sorted(PLUGIN_NAMES):
+            manifest = json.loads(
+                (
+                    self.root / "plugins" / name / ".claude-plugin" / "plugin.json"
+                ).read_text()
+            )
+            with self.subTest(plugin=name):
+                if "claude" in PLUGIN_HOOK_HARNESSES[name]:
+                    self.assertEqual(manifest["hooks"], "./hooks/claude-hooks.json")
+                else:
+                    self.assertNotIn("hooks", manifest)
 
     def test_codex_skills_metadata_matches_plugin_entry(self) -> None:
         for plugin in generator.PLUGINS:
@@ -278,10 +314,10 @@ class GeneratorRerunTest(unittest.TestCase):
 
     def test_check_fails_when_declared_hook_wiring_is_missing(self) -> None:
         self.assertEqual(run_generator(self.root, "--check").returncode, 0)
-        (self.root / "plugins" / "steer" / "hooks" / "hooks.json").unlink()
+        (self.root / "plugins" / "steer" / "hooks" / "claude-hooks.json").unlink()
         result = run_generator(self.root, "--check")
         self.assertNotEqual(result.returncode, 0)
-        self.assertIn("plugins/steer/hooks/hooks.json", result.stdout)
+        self.assertIn("plugins/steer/hooks/claude-hooks.json", result.stdout)
 
     def test_check_fails_when_hook_wiring_is_undeclared(self) -> None:
         pstack = next(

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """opus_5_reduce_output — Stop hook asking for a plain-English recap of the turn.
 
-Wired in the plugin's `hooks/hooks.json` under `Stop`.
+Wired in the plugin's `hooks/claude-hooks.json` under `Stop`.
 `CLEAN_RECAP_*` and `clean-recap.log` retain their original names deliberately.
 
 Env vars, all optional:

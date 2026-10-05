@@ -121,7 +121,7 @@ class Opus5ReduceOutputTests(unittest.TestCase):
         self,
     ) -> None:
         config = json.loads(
-            (PLUGIN_ROOT / "hooks" / "hooks.json").read_text()
+            (PLUGIN_ROOT / "hooks" / "claude-hooks.json").read_text()
         )
 
         stop_entries = config["hooks"]["Stop"]

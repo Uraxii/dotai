@@ -103,7 +103,7 @@ class InjectInstructionsTests(unittest.TestCase):
 
     def test_every_wired_command_injects_the_file_from_another_cwd(self) -> None:
         wiring = {
-            "hooks/hooks.json": ("command", ["SessionStart", "SubagentStart"]),
+            "hooks/claude-hooks.json": ("command", ["SessionStart", "SubagentStart"]),
             "hooks/codex-hooks.json": ("command", ["SessionStart", "SubagentStart"]),
             "hooks.json": ("bash", ["sessionStart", "subagentStart"]),
         }
