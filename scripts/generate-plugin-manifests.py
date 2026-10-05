@@ -343,7 +343,10 @@ PLUGINS: list[dict[str, object]] = [
         "long": (
             "Reads the plugin's instructions.md at session start and subagent "
             "start and adds it to context in Claude Code, Codex, and Copilot "
-            "CLI. Edit that one file to change your rules in all three."
+            "CLI. Edit that one file to change your rules in all three. "
+            "Rules only the main agent should get go in "
+            "main-agent-instructions.md, which is injected at session start "
+            "and never into subagents."
         ),
         "keywords": ["harness", "hooks", "instructions"],
         "prompts": [
