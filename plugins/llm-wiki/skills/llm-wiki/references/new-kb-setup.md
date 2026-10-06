@@ -81,16 +81,23 @@ passing it:
 ## Keeping the kb outside the repo root
 
 Some projects put every agent scratch directory in one place. The
-upward search looks for a directory named `.kb`, so a kb kept anywhere
-else needs a symlink at the repo root:
+upward search looks only for a directory named `.kb`, so a kb kept
+anywhere else is found only through `--kb`. Pass it on every call, which
+is what to do when the user's or project's instructions name the
+location:
 
 ```
 mkdir -p .agent-scratch
 llmwiki --kb .agent-scratch/.kb init
+```
+
+To let bare verbs find it too, add a symlink at the repo root:
+
+```
 ln -s .agent-scratch/.kb .kb
 ```
 
-Skip the symlink and every verb run from the repo root falls through to
-the global store. The only warning is the one line on stderr that each
+With neither, every verb run from the repo root falls through to the
+global store. The only warning is the one line on stderr that each
 verb prints when it resolves past a repository this way. There is no
-`init --path`; those three commands are the whole feature.
+`init --path`.
