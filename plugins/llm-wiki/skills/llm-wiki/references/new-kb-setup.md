@@ -4,6 +4,9 @@
 llmwiki init                 # creates ./.kb
 ```
 
+If the user's or project's instructions name another location, see
+"Keeping the kb outside the repo root" below and use `--kb`.
+
 `init` leaves a kb that runs but does not yet think. Three things must
 follow before the first `ingest`, or the pages you get back will be
 poor and the lint will reject some of them outright.
@@ -81,16 +84,26 @@ passing it:
 ## Keeping the kb outside the repo root
 
 Some projects put every agent scratch directory in one place. The
-upward search looks for a directory named `.kb`, so a kb kept anywhere
-else needs a symlink at the repo root:
+upward search looks only for a directory named `.kb`, so a kb kept
+anywhere else is found only through `--kb`. Pass it on every call, which
+is what to do when the user's or project's instructions name the
+location. Anchor the path on the repo root: a relative `--kb` resolves
+against the working directory, so from a subdirectory it makes a stray
+kb.
 
 ```
-mkdir -p .agent-scratch
-llmwiki --kb .agent-scratch/.kb init
+root=$(git rev-parse --show-toplevel)
+mkdir -p "$root/.agent-scratch"
+llmwiki --kb "$root/.agent-scratch/.kb" init
+```
+
+To let bare verbs find it too, add a symlink at the repo root:
+
+```
 ln -s .agent-scratch/.kb .kb
 ```
 
-Skip the symlink and every verb run from the repo root falls through to
-the global store. The only warning is the one line on stderr that each
+With neither, every verb run from the repo root falls through to the
+global store. The only warning is the one line on stderr that each
 verb prints when it resolves past a repository this way. There is no
-`init --path`; those three commands are the whole feature.
+`init --path`.

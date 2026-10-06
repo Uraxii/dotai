@@ -7,7 +7,7 @@ disable-model-invocation: true
 
 Write a handoff document summarizing the objective plus the next-session focus.
 
-Write handoffs into `.handoffs/` at the project root.
+Write handoffs into the directory the user's or project's instructions name for handoffs. If they name none, use `.handoffs/` at the project root.
 
 When this handoff is one link in a sequence, capture the whole workstream: overarching goal, full task list with done / current / remaining status, and every decision, convention, or constraint agreed up front that binds all tasks. That is carry-forward context and it must survive the entire chain.
 
