@@ -45,18 +45,26 @@ command line: an installed copy on `PATH` does not track a checkout, and
 the path is the half of that line that tells them apart.
 
 **Which one to reach for.** Knowledge about one project lives in that
-project's `.kb`, at the repo root, one per project, the way `.beads/`
-does. Knowledge that is not tied to a repo goes to the global store.
-If you are in a repo, the knowledge belongs to it, and there is no
-`.kb` yet, create it once from the repo root:
+project's kb, one per project, the way `.beads/` does. Knowledge that
+is not tied to a repo goes to the global store.
+
+When the user's or project's instructions name where the kb lives,
+pass `--kb "$(git rev-parse --show-toplevel)/<that path>"` on every
+`llmwiki` call, `init` included. Anchor it on the repo root: a relative
+`--kb` resolves against the working directory, so from a subdirectory
+it makes a stray kb that `where` does not flag. Otherwise the kb is `.kb` at the repo root. If you are in a repo, the
+knowledge belongs to it, and there is no kb yet, create it once from
+the repo root:
 
 ```
-llmwiki init
+llmwiki init                     # no location named: creates ./.kb
+llmwiki --kb "$(git rev-parse --show-toplevel)/<named path>" init
+                                 # the instructions name a location
 ```
 
-`init` writes `.kb/.gitignore` containing `*`, so the whole kb stays out
-of the project's history. A kb is local working knowledge that grows on
-its own clock, not project source.
+`init` writes a `.gitignore` containing `*` into the kb, so the whole
+kb stays out of the project's history. A kb is local working knowledge
+that grows on its own clock, not project source.
 
 A fresh kb runs but does not think until `SUMMARIZE.md`, an identifier
 vocabulary, and a provider are in place. Do that once, before the first

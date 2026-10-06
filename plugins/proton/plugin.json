@@ -1,5 +1,4 @@
 {
-  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "proton",
   "version": "1.0.0",
   "description": "Read and store secrets in Proton Pass through pass-cli, so none lands in a repo or a shell history.",

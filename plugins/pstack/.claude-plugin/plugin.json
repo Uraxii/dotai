@@ -1,9 +1,10 @@
 {
   "name": "pstack",
-  "version": "1.9.0",
+  "version": "1.9.1",
   "description": "Skills and thin named agents: poteto-mode, principles, playbooks, tools.",
   "author": {
     "name": "Uraxii",
     "url": "https://github.com/Uraxii"
-  }
+  },
+  "hooks": "./hooks/claude-hooks.json"
 }

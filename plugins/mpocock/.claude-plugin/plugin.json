@@ -1,9 +1,10 @@
 {
   "name": "mpocock",
-  "version": "1.2.0",
+  "version": "1.2.2",
   "description": "Compact a conversation into a handoff document another agent can pick the work up from.",
   "author": {
     "name": "Uraxii",
     "url": "https://github.com/Uraxii"
-  }
+  },
+  "hooks": "./hooks/claude-hooks.json"
 }

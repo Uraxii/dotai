@@ -1,0 +1,31 @@
+{
+  "name": "personal-instructions",
+  "version": "1.0.0",
+  "description": "Inject a hand-edited instructions.md at session start and, where the harness has a subagent-start hook, subagent start.",
+  "author": {
+    "name": "Uraxii",
+    "url": "https://github.com/Uraxii"
+  },
+  "homepage": "https://github.com/Uraxii/dotai",
+  "repository": "https://github.com/Uraxii/dotai",
+  "keywords": [
+    "codex",
+    "harness",
+    "hooks",
+    "instructions"
+  ],
+  "hooks": "./hooks/codex-hooks.json",
+  "interface": {
+    "displayName": "personal-instructions",
+    "shortDescription": "Your personal rules in every session.",
+    "longDescription": "Reads the plugin's instructions.md at session start and subagent start and adds it to context in Claude Code, Codex, and Copilot CLI. Edit that one file to change your rules in all three. Rules only the main agent should get go in main-agent-instructions.md, which is injected at session start only. Fresh subagents do not get it; forked subagents inherit it from the parent's history.",
+    "developerName": "Uraxii",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Hooks"
+    ],
+    "defaultPrompt": [
+      "Install my personal instructions into every session."
+    ]
+  }
+}
