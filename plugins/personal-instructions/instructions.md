@@ -25,7 +25,7 @@
 - Changes to the primary branch are a release, so they only arrive by merging `develop`.
 
 ## Knowledge and decisions
-- Research goes in the project kb via `/llm-wiki`, so later sessions can find it.
+- Research goes in the project kb via `/llm-wiki:llm-wiki`, so later sessions can find it.
 - Decisions go in `/pstack:show-me-your-work` logs in scratch. Append only. To change a decision, add a new entry that overrides it.
 
 ## Code Indexing and Search
