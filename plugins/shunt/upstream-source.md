@@ -32,7 +32,13 @@ Both hooks now follow the current `PreToolUse` hook output schema:
 fixtures (`evals/hook-evals.json`, `evals/bash-hook-evals.json`) are
 untouched, since `expected_decision` names the outcome, not the wire shape.
 
-Everything else (the bulk-reader/code-writer skills, the AiKA transport,
+The bulk-reader and code-writer skills named their scripts as
+`${CLAUDE_PLUGIN_ROOT}/scripts/...`. Copilot does not set that variable in
+the agent's shell, so the command exited 127 there. Both skills now name
+the script relative to the skill's base directory, which Claude Code and
+Copilot both print when they load a skill.
+
+Everything else (the rest of the skill text, the AiKA transport,
 the offset/limit bypass, the `head -n 5` parser gap) is unchanged from
 upstream and out of scope for this patch. Upstream issues #18, #20, #21 are
 not addressed here.

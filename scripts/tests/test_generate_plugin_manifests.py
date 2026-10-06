@@ -180,6 +180,23 @@ class GeneratorInventoryTest(unittest.TestCase):
             "Copilot. Name each harness's hook file in its manifest instead.",
         )
 
+    def test_copilot_hook_commands_anchor_on_plugin_root(self) -> None:
+        commands = [
+            (wiring, hook["bash"])
+            for wiring in sorted(REPOSITORY_ROOT.glob("plugins/*/hooks.json"))
+            for entries in json.loads(wiring.read_text())["hooks"].values()
+            for hook in entries
+        ]
+        self.assertNotEqual(commands, [])
+        for wiring, command in commands:
+            with self.subTest(wiring=str(wiring.relative_to(REPOSITORY_ROOT))):
+                self.assertIn(
+                    '"$PLUGIN_ROOT/',
+                    command,
+                    "A cwd-relative script path works only while Copilot "
+                    "runs plugin hooks from the plugin root.",
+                )
+
 
 class GeneratorOutputTest(unittest.TestCase):
     def setUp(self) -> None:

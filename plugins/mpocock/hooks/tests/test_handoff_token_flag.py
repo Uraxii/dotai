@@ -34,7 +34,7 @@ class HandoffTokenFlagTests(unittest.TestCase):
 
         stop_hooks = copilot["hooks"]["agentStop"]
         stop_command = stop_hooks[0]["bash"]
-        self.assertIn("handoff-token-flag.py --mode stop", stop_command)
+        self.assertIn('handoff-token-flag.py" --mode stop', stop_command)
 
     def test_reads_claude_usage(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
