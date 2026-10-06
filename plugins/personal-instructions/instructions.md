@@ -17,7 +17,7 @@
 - No machine-specific info in committed or public files.
 - Each project gets its own dir under `~/Projects`. Create it if missing.
 - Track work with `/beads:bd` skill. Tick each item when it’s done, and add anything new you find.
-- Keep `.beads` in the project's `.nikki-agents/`; keep `.handoffs` and `.kb` at the repository root, where their tools expect them.
+- Keep `.beads`, `.handoffs`, and `.kb` projects' `.nikki-agents/`, never at the repo root.
 - `BEADS_DIR` =`<project>/.nikki-agents/.beads` in `env` block of project `.claude/settings.local.json` so `/beads:bd` finds it.
 
 ## Git
