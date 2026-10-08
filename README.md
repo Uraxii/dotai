@@ -22,7 +22,6 @@ needs `pstack` installed.
 | `sandbox` | Give an agent a throwaway podman container with its own clone of the repo, ports, and a virtual display. |
 | `mpocock` | Compact a conversation into a handoff document another agent can pick the work up from. |
 | `skills` | Review and author SKILL.md files, finding and repairing the smells that stop a skill triggering. |
-| `beads` | Track, create, claim, and close repo issues with the bd (beads) tool, including dependency links. |
 | `codebase-memory` | Keep codebase-memory indexed at session start, then query its code graph from a shell. |
 | `caveman` | Answer in a compressed register that drops filler and keeps every technical fact. |
 | `steer` | Harness hooks that steer agent behaviour, independent of any skill. |
