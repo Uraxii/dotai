@@ -44,7 +44,23 @@ bd records claims and history under `BEADS_ACTOR`. The beads `prepare-commit-msg
    bd update <id> --assignee ""
    ```
 
-6. Otherwise, close the bead with `bd close <id> --reason "<what changed, proof, SHA>"`. The final message repeats the reason.
+6. Otherwise, close the bead with a reason that says what changed, the proof, and the SHA. The final message repeats the reason. Write the reason to a file, per Text with quotes or several lines.
+
+   ```sh
+   bd close <id> --reason-file <file>
+   ```
+
+## Text with quotes or several lines
+
+The shell runs backticks and `$(...)` inside double quotes, and a quote in the text ends the string early. Put multi-line text, or text that holds a quote, a backtick, or `$(...)`, in a file and pass the file. Write the file with the Write tool or a quoted heredoc (`<<'EOF'`).
+
+| Text | Command |
+| --- | --- |
+| Close reason | `bd close <id> --reason-file <file>` |
+| Comment | `bd comment <id> --file <file>` |
+| Description | `bd update <id> --body-file <file>` |
+
+Use `-` in place of `<file>` to read the text from stdin. `bd comment` takes `--stdin` for the same purpose. Short text with no quote, backtick, or `$` can stay inline.
 
 ## Reviewer records the verdict
 
