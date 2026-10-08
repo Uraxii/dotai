@@ -30,6 +30,9 @@ def final_verdict(message: str) -> tuple[str, str] | None:
 
 
 def main(argv: list[str]) -> int:
+    if len(argv) != 2:
+        print("usage: final_verdict.py <last-message.md> <sha>", file=sys.stderr)
+        return 2
     path, sha = argv
     with open(path, encoding="utf-8") as handle:
         found = final_verdict(handle.read())

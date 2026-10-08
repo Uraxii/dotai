@@ -45,6 +45,26 @@ FLAG_MARKER = "agents.enabled=false"
 CODEX_INVOCATION = re.compile(r"(?:\A|[;&|`\n(])\s*codex\b")
 SEGMENT_END = re.compile(r"[;&|`\n)]")
 EXEC_WORD = re.compile(r"\bexec\b")
+TOKEN = re.compile(r"\S+")
+VALUE_OPTIONS = frozenset({
+    "-C", "--cd", "-c", "--config", "-m", "--model", "-p", "--profile",
+    "-i", "--image", "-s", "--sandbox", "--add-dir", "--color",
+    "--output-schema", "-o", "--output-last-message", "--enable", "--disable",
+})
+
+
+def exec_end(segment: str) -> int | None:
+    """Offset just past `exec` when it is the subcommand, else None."""
+    skip_value = False
+    for token in TOKEN.finditer(segment):
+        word = token.group()
+        if skip_value:
+            skip_value = False
+        elif word.startswith("-"):
+            skip_value = word in VALUE_OPTIONS
+        else:
+            return token.end() if word == "exec" else None
+    return None
 
 
 def rewrite_command(command: str) -> str:
@@ -52,8 +72,9 @@ def rewrite_command(command: str) -> str:
 
     Each `codex ...` invocation, up to the next shell separator or the end
     of the string, is one segment. A segment that contains `exec` as its
-    own word gets `-c agents.enabled=false` right after that `exec`, unless
-    the segment already carries the flag. `codex login status` or
+    own word gets `-c agents.enabled=false` right after `exec` when `exec`
+    is the subcommand, else right after `codex`, unless the segment already
+    carries the flag. `codex login status` or
     `codex --version`, with no `exec` in their own segment, are untouched.
 
     The flag goes after `exec`, not after `codex`, so the rewritten argv
@@ -71,10 +92,11 @@ def rewrite_command(command: str) -> str:
         segment = command[codex_end:segment_end]
         exec_word = EXEC_WORD.search(segment)
         if exec_word and FLAG_MARKER not in segment:
-            exec_end = codex_end + exec_word.end()
-            pieces.append(command[cursor:exec_end])
+            subcommand_end = exec_end(segment)
+            insert_at = codex_end + (subcommand_end or 0)
+            pieces.append(command[cursor:insert_at])
             pieces.append(f" {FLAG}")
-            cursor = exec_end
+            cursor = insert_at
     pieces.append(command[cursor:])
     return "".join(pieces)
 
