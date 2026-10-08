@@ -61,6 +61,20 @@ class RewriteCommandTests(unittest.TestCase):
             "codex exec -c agents.enabled=false resume --last",
         )
 
+    def test_exec_inside_an_option_value_is_not_the_subcommand(self) -> None:
+        self.assertEqual(
+            HOOK.rewrite_command("codex -C /w/exec-tools exec go"),
+            "codex -C /w/exec-tools exec -c agents.enabled=false go",
+        )
+
+    def test_exec_in_quoted_text_after_another_subcommand_goes_after_codex(
+        self,
+    ) -> None:
+        self.assertEqual(
+            HOOK.rewrite_command('codex resume --last "now exec the tests"'),
+            'codex -c agents.enabled=false resume --last "now exec the tests"',
+        )
+
     def test_a_command_that_already_has_the_flag_is_unchanged(self) -> None:
         command = "codex exec -c agents.enabled=false 'do the thing'"
         self.assertEqual(HOOK.rewrite_command(command), command)

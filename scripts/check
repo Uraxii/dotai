@@ -26,13 +26,13 @@ fi
 
 # CI sets CHECK_REQUIRE_ALL so a missing tool fails instead of skipping.
 optional() {
-  local tool=$1; shift
+  local tool=$1 name=$2; shift
   if command -v "$tool" >/dev/null; then
     run "$@"
   elif [ -n "${CHECK_REQUIRE_ALL:-}" ]; then
-    echo "FAILED stage: $2: $tool is not on PATH" >&2; exit 1
+    echo "FAILED stage: $name: $tool is not on PATH" >&2; exit 1
   else
-    echo "SKIP $2: $tool is not on PATH"
+    echo "SKIP $name: $tool is not on PATH"
   fi
 }
 
