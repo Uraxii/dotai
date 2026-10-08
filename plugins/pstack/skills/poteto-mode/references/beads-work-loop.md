@@ -2,8 +2,6 @@
 
 A bead holds the state of one delegated unit, from creation to close. This reference names who writes what to the bead and when. It matches bd 1.3.1. `bd help <command>` is the authority on flags.
 
-This loop takes effect when the "Agent runs" section of `SKILL.md` moves delegation from run dirs to beads. Until then, delegate through run dirs as that section describes.
-
 ## Coordinator creates the bead and spawns the worker
 
 1. Create the bead with its done-when and its epic.
@@ -47,7 +45,9 @@ Set `BEADS_ACTOR` to the reviewer's actor name, and set `BD_ACTOR` too if the re
 
 To replace a dead worker, spawn a fresh worker with the same prompt. It runs under the same actor name, and `bd update <id> --claim` succeeds for the actor that already holds the bead, so the bead needs no reclaim.
 
-If a different actor takes over the bead, first run `bd reclaim --id <id>`. It sets that bead back to open with no assignee, but only if its lease expired more than a grace window ago. The grace window is 10 minutes, twice the lease, and `--older-than <duration>` changes it. A bead with a live lease stays as it is. Without `--id`, `bd reclaim` reverts every stale lease in the store, including the beads of workers that are alive but have not sent a heartbeat.
+If a different actor takes over the bead, first run `bd reclaim --id <id>`. It sets that bead back to open with no assignee, but only if its lease expired more than a grace window ago. The grace window is 10 minutes, twice the lease, and `--older-than <duration>` changes it. A bead with a live lease stays as it is.
+
+Run `bd reclaim` only with `--id`. Without it, the command reverts every stale lease in the store, including the beads of workers that are alive but have not sent a heartbeat.
 
 To correct a live worker, send the correction with `SendMessage`. Otherwise, change the bead with `bd update <id> --description "<text>"` or `--acceptance "<text>"` and respawn. `bd edit` opens an editor and blocks, so do not use it.
 
@@ -57,7 +57,7 @@ Notes are facts with evidence: what happened, where, and the proof. Never write 
 
 ## Proof that claims and closes survive concurrency
 
-The loop depends on two bd behaviors. When several actors claim one bead at once, exactly one wins. When several processes close different beads at once, every close lands. bd 1.1 in embedded mode lost 7 of 8 concurrent closes (beads issue #4767).
+The loop depends on two bd behaviors. When several actors claim one bead at once, exactly one wins. When several processes close different beads at once, every close lands.
 
 [`scripts/check_bd_concurrency.py`](../scripts/check_bd_concurrency.py) races both on a throwaway store in a temp dir, 10 rounds each, and exits 1 on the first failure. It needs bd on PATH, so CI does not run it. Rerun it after a bd upgrade.
 

@@ -6,7 +6,6 @@ The beads work loop relies on two bd behaviors under concurrency:
 - When several actors run `bd update <id> --claim` on one bead at once,
   exactly one wins and the rest exit non-zero.
 - When several processes close different beads at once, every close lands.
-  bd 1.1 in embedded mode lost 7 of 8 such closes (beads issue #4767).
 
 Each run builds a throwaway store in a temp dir with its own BEADS_DIR and
 races the commands for several rounds, because one lucky round proves little.
