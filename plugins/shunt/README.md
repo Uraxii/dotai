@@ -85,9 +85,9 @@ shunt/
 │   └── code-writer/
 │       └── SKILL.md         # When/how to call code-write
 └── evals/
-    ├── run.sh                # Runs hook + transport evals (57 tests)
-    ├── hook-evals.json       # Read and view hook test cases (21)
-    ├── bash-hook-evals.json  # Bash hook test cases (19)
+    ├── run.sh                # Runs hook + transport evals (65 tests)
+    ├── hook-evals.json       # Read and view hook test cases (25)
+    ├── bash-hook-evals.json  # Bash hook test cases (23)
     ├── transport-evals.sh    # scripts/lib/aika.sh against a stubbed CLI (17)
     ├── evals.json            # End-to-end skill test cases (3)
     ├── benchmarks.json       # Token savings scenarios (4)

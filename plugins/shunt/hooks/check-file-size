@@ -9,6 +9,7 @@ MIN_LINES="${SHUNT_MIN_LINES:-350}"
 case "$MIN_LINES" in ''|*[!0-9]*) MIN_LINES=350 ;; esac
 
 input=$(cat)
+cwd=$(echo "$input" | jq -r '.cwd // empty')
 
 harness=claude
 if [ "${1:-}" = "--harness" ]; then
@@ -31,6 +32,11 @@ fi
 if [ -n "$offset" ] || [ -n "$limit" ]; then
   exit 0
 fi
+
+[ -n "$cwd" ] && case "$file_path" in
+  /*) ;;
+  *) file_path="$cwd/$file_path" ;;
+esac
 
 # Allow if file doesn't exist or path is empty
 if [ -z "$file_path" ] || [ ! -f "$file_path" ]; then
