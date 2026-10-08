@@ -31,7 +31,8 @@ Both hooks now follow the current `PreToolUse` hook output schema:
 as `block`. The hook accepts `--harness claude|codex|copilot`: Claude and
 Codex use Claude-shaped input and `hookSpecificOutput`; Copilot decodes its
 camelCase `toolArgs`, including a JSON string, and uses a flat deny object.
-Copilot `view_range` is treated as a targeted read. The eval fixtures cover
+Copilot `view_range`, including `[1, -1]`, is treated like Claude `offset` or
+`limit`, so it shares the existing offset/limit bypass. The eval fixtures cover
 the envelope shapes as well as routing decisions.
 
 The bulk-reader and code-writer skills named their scripts as

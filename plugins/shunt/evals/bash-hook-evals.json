@@ -181,6 +181,15 @@
       "fixture": { "lines": 800 },
       "expected_decision": "block",
       "reason": "Copilot resolves a relative Bash read path from the session cwd"
+    },
+    {
+      "id": 23,
+      "name": "unknown-harness-pass-through",
+      "harness": "bogus",
+      "input": { "tool_input": { "command": "cat {{FIXTURES}}/unknown-harness.txt" } },
+      "fixture": { "lines": 800 },
+      "expected_decision": "allow",
+      "reason": "An unknown harness passes through without blocking"
     }
   ]
 }

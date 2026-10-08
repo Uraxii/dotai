@@ -86,9 +86,17 @@ run_eval() {
     while IFS='=' read -r key val; do
       env_cmd="$env_cmd $key=$val"
     done < <(echo "$env_json" | jq -r 'to_entries[] | "\(.key)=\(.value)"')
-    result=$(cd "$SCRIPT_DIR" && echo "$input" | env $env_cmd bash "$hook" --harness "$harness" 2>/dev/null)
+    if [ -n "$harness" ]; then
+      result=$(cd "$SCRIPT_DIR" && echo "$input" | env $env_cmd bash "$hook" --harness "$harness" 2>/dev/null)
+    else
+      result=$(cd "$SCRIPT_DIR" && echo "$input" | env $env_cmd bash "$hook" 2>/dev/null)
+    fi
   else
-    result=$(cd "$SCRIPT_DIR" && echo "$input" | bash "$hook" --harness "$harness" 2>/dev/null)
+    if [ -n "$harness" ]; then
+      result=$(cd "$SCRIPT_DIR" && echo "$input" | bash "$hook" --harness "$harness" 2>/dev/null)
+    else
+      result=$(cd "$SCRIPT_DIR" && echo "$input" | bash "$hook" 2>/dev/null)
+    fi
   fi
   # Empty stdout is allow; a harness-specific deny envelope is block.
   if [ -z "$result" ]; then
@@ -128,7 +136,7 @@ run_suite() {
     expected=$(jq -r ".evals[$i].expected_decision" "$evals_file")
     reason=$(jq -r ".evals[$i].reason" "$evals_file")
     input=$(jq -c ".evals[$i].input" "$evals_file" | sed "s|{{FIXTURES}}|$FIXTURES|g")
-    harness=$(jq -r ".evals[$i].harness // \"claude\"" "$evals_file")
+    harness=$(jq -r ".evals[$i].harness // empty" "$evals_file")
 
     local env_json
     env_json=$(jq -r ".evals[$i].env // empty" "$evals_file")
