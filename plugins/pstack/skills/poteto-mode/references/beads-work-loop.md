@@ -30,12 +30,18 @@ Each shell call starts fresh. Set both actor variables on every call that runs a
 export BEADS_ACTOR=<actor> BD_ACTOR=<actor>
 ```
 
-bd records claims and history under `BEADS_ACTOR`. The beads `prepare-commit-msg` hook reads only `BD_ACTOR` and appends `Executed-By: <actor>` to the commit message. A commit made without `BD_ACTOR` gets no trailer.
+bd records claims and history under `BEADS_ACTOR`. The beads `prepare-commit-msg` hook reads only `BD_ACTOR`. It appends `Executed-By: <actor>` after a blank line, which splits the trailer block, unless the message already has an `Executed-By:` trailer. Every commit therefore writes both trailers with `git commit --trailer`, so they form one block and the hook skips.
 
 1. Claim the bead with `bd update <id> --claim`. If another actor holds it, the claim exits 1 and changes nothing. Stop and report the holder.
 2. Read the scope with `bd show <id>`.
 3. A claim carries a lease that expires 5 minutes after the claim or the last heartbeat. During long work, run `bd heartbeat <id>` more often than that. A heartbeat writes no Dolt commit.
-4. End each commit subject with `(<id>)` and put the why in the commit body. `git log --grep '(<id>)'` lists the bead's commits.
+4. End each commit subject with `(<id>)` and put the why in the commit body. `git log --grep '(<id>)'` lists the bead's commits. Commit with this form, which fails when `BD_ACTOR` is unset, and put no trailer in the `-m` text:
+
+   ```sh
+   git commit -m "<subject> (<id>)" -m "<why>" --trailer "Co-Authored-By: <attribution>" --trailer "Executed-By: ${BD_ACTOR:?}"
+   ```
+
+   `git interpret-trailers --parse` on the resulting message lists both trailers.
 5. If your spawn prompt ends with `Stop at stage=built.`, leave the bead open. After your last push, run these commands, then end with a final message that names the branch and the SHA. Clearing the assignee hands the bead back to the coordinator, which closes it after the PR lands.
 
    ```sh
