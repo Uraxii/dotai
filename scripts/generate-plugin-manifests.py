@@ -41,7 +41,7 @@ HOOK_WIRING_PATHS = {
 PLUGINS: list[dict[str, object]] = [
     {
         "name": "pstack",
-        "version": "2.0.0",
+        "version": "2.0.1",
         "hooks": ["claude", "codex", "copilot"],
         "description": (
             "Skills and thin named agents: poteto-mode, principles, "
@@ -159,7 +159,7 @@ PLUGINS: list[dict[str, object]] = [
     },
     {
         "name": "sandbox",
-        "version": "1.0.1",
+        "version": "1.0.2",
         "description": (
             "Give an agent a throwaway podman container with its own clone "
             "of the repo, ports, and a virtual display."
@@ -223,7 +223,7 @@ PLUGINS: list[dict[str, object]] = [
     },
     {
         "name": "codebase-memory",
-        "version": "1.2.0",
+        "version": "1.2.1",
         "hooks": ["claude", "codex"],
         "description": (
             "Keep codebase-memory indexed at session start, then query its "
