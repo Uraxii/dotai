@@ -96,15 +96,18 @@ def test_linked_worktree_grants_skip_hooks_and_config(
         assert not any(forbidden.is_relative_to(grant) for grant in grants)
 
 
-def test_worktree_config_inside_a_grant_is_refused(
+def test_worktree_config_layout_is_granted(
     repo: dict[str, Path],
 ) -> None:
     git("config", "extensions.worktreeConfig", "true", cwd=repo["main"])
 
     result = run_grants(repo["worktree"])
 
-    assert result.returncode != 0
-    assert "config.worktree" in result.stderr
+    assert result.returncode == 0, result.stderr
+    grants = granted_paths(result.stdout)
+    shared = repo["main"] / ".git"
+    for protected in (shared / "config", shared / "hooks"):
+        assert not any(protected.is_relative_to(grant) for grant in grants)
 
 
 def test_every_watcher_git_command_disables_hooks() -> None:
