@@ -22,6 +22,18 @@ jobs:
       - name: Install pytest
         run: pip install pytest
 
+      # The bd-backed pytest modules skip when bd is not on PATH, so without
+      # this step they report green having run nothing.
+      - name: Install bd
+        run: scripts/install-bd.sh "$RUNNER_TEMP/bin" && echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+
+      - uses: oven-sh/setup-bun@v2.2.0
+        with:
+          bun-version: 1.4.2
+
+      - name: Install the poteto-mode script dependencies
+        run: bun install --frozen-lockfile --cwd plugins/pstack/skills/poteto-mode/scripts
+
       - name: Check models.json only names models it can back
         run: python3 scripts/validate-models.py
 
@@ -38,6 +50,18 @@ jobs:
       # only remembers deletions through the tree it came from.
       - name: Validate skill links and frontmatter
         run: python3 scripts/validate-skills.py plugins/*/skills
+
+      # Fails when bd is missing, and pytest below reads the same PATH, so a
+      # green run here means the bd-backed modules ran rather than skipped.
+      - name: Race concurrent bd claims and closes
+        run: python3 plugins/pstack/skills/poteto-mode/scripts/check_bd_concurrency.py --rounds 2
+        timeout-minutes: 3
+
+      # One path, because plugins/shunt/evals/fixtures holds a jest file that
+      # is eval input, not a test. test_ci_workflow.py fails when a *.test.ts
+      # lands outside it.
+      - name: Run bun tests
+        run: bun test plugins/pstack/skills/poteto-mode/scripts
 
       # No paths. Naming them is how eighty tests went uncollected when the
       # skills moved out of plugins/pstack. test_ci_workflow.py keeps it that
