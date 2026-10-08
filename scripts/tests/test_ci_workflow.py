@@ -205,7 +205,7 @@ class CiWorkflowTests(unittest.TestCase):
         self.assertIn("--frozen-lockfile", command_starting_with("bun install"))
 
     def test_bun_runs_every_bun_test_file(self) -> None:
-        roots = command_starting_with("bun test").split("bun test")[1].split()
+        roots = command_starting_with("bun test").split("bun test")[1].strip(" '").split()
         self.assertTrue(roots, "bun test from the root also runs fixtures")
         for path in bun_test_files():
             with self.subTest(path=path.as_posix()):
