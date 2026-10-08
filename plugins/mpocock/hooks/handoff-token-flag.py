@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
-"""Flag context pressure before a harness compacts the session.
+"""Flag Claude and Codex context pressure before either harness compacts.
 
-Claude and Codex run this on UserPromptSubmit in context mode. Copilot runs it
-on agentStop in stop mode because its command UserPromptSubmit hooks cannot
-inject context.
+Copilot is not wired because its hook API has no documented token count.
 
 This file is the only copy. Every harness reaches it through a plugin manifest
 in this repository, so a per-machine copy under a user's home directory is a
@@ -20,9 +18,8 @@ measures it externally from the transcript and injects a instruction to
 offer a handoff at the next natural stopping point.
 
 Hook protocol:
-- stdin: a Claude-compatible snake_case or Copilot camelCase JSON envelope.
-- stdout in context mode: text injected into the current turn.
-- stdout in stop mode: a JSON block decision that requests one continuation.
+- stdin: a Claude or Codex transcript JSON envelope.
+- stdout: text injected into the current turn.
 - exit code: always 0. Any error/missing data -> exit 0, print nothing.
   Never crash the session.
 
@@ -75,13 +72,7 @@ def _last_usage_tokens(transcript_path: Path) -> int | None:
                 if usage:
                     last_tokens = usage.get("input_tokens", 0)
 
-    if last_tokens is not None:
-        return last_tokens
-
-    # Copilot exposes a transcript path but does not document token usage in
-    # that file. Its UTF-8 byte count divided by four is a conservative signal
-    # that still comes from outside the model.
-    return transcript_path.stat().st_size // 4
+    return last_tokens
 
 
 def _state_file(session_id: str, state_directory: Path | None = None) -> Path:
@@ -119,7 +110,6 @@ def _build_message(tokens: int) -> str:
 def _response_for_crossing(
     tokens: int,
     session_id: str,
-    mode: str,
     state_directory: Path | None = None,
 ) -> str:
     if tokens < THRESHOLD:
@@ -132,20 +122,17 @@ def _response_for_crossing(
 
     state_file.parent.mkdir(parents=True, exist_ok=True)
     state_file.write_text(str(band))
-    message = _build_message(tokens)
-    if mode == "stop":
-        return json.dumps({"decision": "block", "reason": message})
-    return message
+    return _build_message(tokens)
 
 
 def parse_args(arguments: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--mode", choices=("context", "stop"), default="context")
+    parser.add_argument("--mode", choices=("context",), default="context")
     return parser.parse_args(arguments)
 
 
 def main(arguments: list[str] | None = None) -> int:
-    options = parse_args(arguments)
+    parse_args(arguments)
     payload = json.loads(sys.stdin.read())
     transcript_path_value = payload.get("transcript_path") or payload.get(
         "transcriptPath"
@@ -155,16 +142,11 @@ def main(arguments: list[str] | None = None) -> int:
         payload.get("session_id") or payload.get("sessionId") or "unknown"
     )
 
-    if options.mode == "stop" and (
-        payload.get("stop_hook_active") or payload.get("stopHookActive")
-    ):
-        return 0
-
     tokens = _last_usage_tokens(transcript_path)
     if tokens is None:
         return 0
 
-    response = _response_for_crossing(tokens, session_id, options.mode)
+    response = _response_for_crossing(tokens, session_id)
     if response:
         print(response)
     return 0
