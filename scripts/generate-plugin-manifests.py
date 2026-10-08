@@ -222,26 +222,6 @@ PLUGINS: list[dict[str, object]] = [
         ],
     },
     {
-        "name": "beads",
-        "version": "2.0.0",
-        "description": (
-            "Track, create, claim, and close repo issues with the bd (beads) "
-            "tool, including dependency links."
-        ),
-        "short": "Issue tracking with bd (beads).",
-        "long": (
-            "Runs the bd command line issue tracker against a repository: "
-            "list what is ready to pick up, create and claim and close "
-            "issues, and record which issue blocks which. Use it to answer "
-            "what to work on next from the repository's own issue graph."
-        ),
-        "keywords": ["issue-tracking", "beads"],
-        "prompts": [
-            "What can I pick up next?",
-            "Create a bd issue for this and block it on the current one.",
-        ],
-    },
-    {
         "name": "codebase-memory",
         "version": "1.2.0",
         "hooks": ["claude", "codex"],
