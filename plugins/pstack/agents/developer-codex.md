@@ -41,7 +41,7 @@ Every reply is keyed lines, one per line. `fallback` takes one of three values:
    Done when:
    <acceptance_criteria>
 
-   Commit your work with git. End each commit subject with " (<id>)" and put the why in the commit body. BD_ACTOR is set in your environment, and the repository's beads hook reads it to add the Executed-By trailer, so do not write that trailer yourself. Leave the working tree clean. Do not run bd, because the bead store is outside your sandbox. End with a last message of at most five lines that says what changed and the proof: each command you ran to check the work, and its result.
+   Commit your work with git. End each commit subject with " (<id>)" and put the why in the commit body. BD_ACTOR is set in your environment. Commit with `git commit -m "<subject> (<id>)" -m "<why>" --trailer "Executed-By: ${BD_ACTOR:?}"` and put no trailer in the -m text, so the trailers form one block. Leave the working tree clean. Do not run bd, because the bead store is outside your sandbox. End with a last message of at most five lines that says what changed and the proof: each command you ran to check the work, and its result.
    ```
 
 6. Run COMMAND with Bash, `timeout: 600000`, one call, with nothing chained after it. Its exit code is Codex's:
