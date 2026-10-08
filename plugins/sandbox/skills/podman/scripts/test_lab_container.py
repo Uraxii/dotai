@@ -168,10 +168,6 @@ class HostileBranchTest(unittest.TestCase):
         for element in self.podman.elements():
             self.assertNotIn(element, SHELL_WORDS)
 
-    def test_the_injection_never_ran(self) -> None:
-        lab_container.sync_clone(self.lab, REPO, HOSTILE_BRANCH_REF, HEAD)
-        self.assertFalse(Path("/tmp/lab-injection-proof").exists())
-
 
 class NameTest(unittest.TestCase):
     """The lab's name is the only identity; the rest is derived from it."""
@@ -303,6 +299,12 @@ class SyncedCommitTest(unittest.TestCase):
                 "GIT_AUTHOR_EMAIL": "test@example.com",
                 "GIT_COMMITTER_NAME": "Test",
                 "GIT_COMMITTER_EMAIL": "test@example.com",
+                # Two bundle fetches leave enough packs for git to start a
+                # detached repack that is still writing .git/objects when
+                # TemporaryDirectory.cleanup removes the directory.
+                "GIT_CONFIG_COUNT": "1",
+                "GIT_CONFIG_KEY_0": "maintenance.auto",
+                "GIT_CONFIG_VALUE_0": "false",
             },
         )
         identity.start()
@@ -360,6 +362,18 @@ class SyncedCommitTest(unittest.TestCase):
             else:
                 self.assertEqual(argv[:2], ["podman", "cp"], line)
         return saved
+
+    def test_a_hostile_branch_name_reaches_git_as_inert_data(self) -> None:
+        proof = self.parent / "injection-proof"
+        touch = f"touch${{IFS}}{proof}"
+        branch = f"x';{touch};'$({touch})`{touch}`"
+
+        self.sync(f"refs/heads/{branch}", self.git("rev-parse", "HEAD"))
+
+        self.assertFalse(proof.exists())
+        self.assertEqual(
+            self.git("branch", "--show-current", cwd=self.clone), branch
+        )
 
     def test_recipe_in_skill_matches_the_refusal(self) -> None:
         self.sync_main()

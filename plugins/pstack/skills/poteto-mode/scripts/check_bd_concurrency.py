@@ -13,8 +13,7 @@ It exits 1 on the first failed check.
 
     check_bd_concurrency.py [--rounds N]
 
-Python standard library only. `bd` must be on PATH. Not run in CI, which has
-no bd.
+Python standard library only. `bd` must be on PATH.
 """
 
 from __future__ import annotations

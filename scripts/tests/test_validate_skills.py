@@ -86,6 +86,20 @@ class ValidateSkillsTests(unittest.TestCase):
             self.assertIn("nope.md", result.stderr)
             self.assertIn("missing", result.stderr)
 
+    def test_ignores_markdown_in_installed_packages(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            skills_dir = Path(directory)
+            skill_dir = write_skill(skills_dir, "sample")
+            package = skill_dir / "scripts" / "node_modules" / "commander"
+            package.mkdir(parents=True)
+            (package / "Readme.md").write_text(
+                "See [docs](./docs/terminology.md).\n"
+            )
+
+            result = run_validator(skills_dir)
+
+            self.assertEqual(0, result.returncode, result.stderr)
+
     def test_fails_when_a_link_escapes_the_skills_tree(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             skills_dir = Path(directory)

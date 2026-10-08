@@ -50,6 +50,13 @@ breaks that rule.
 | `plugins/pstack/hooks/` | Hook scripts tied to pstack skills and playbooks. `session_start_context.py` reminds the agent to load `poteto-mode` at session start; plugin installation wires it for Claude Code, Codex, and Copilot CLI. `codex_exec_no_agents.py` adds `-c agents.enabled=false` to any Bash call that runs `codex exec` without it, so Codex never hands a delegated task to its own helper agents. `opencode-reminder-plugin.ts` (in the same directory) wires the session-start reminder into opencode. Wiring it into Hermes by hand is not covered by any skill here. See [Session-start reminder](#session-start-reminder) below for what each harness can and cannot do. Add `.nikki-agents/` to the exclude config of your editor, LSP, and any semantic index: `.git/info/exclude` covers git, ripgrep, and fd, but an indexer that keeps its own ignore list walks the worktrees and ends up crawling six figures of files in a repo with a few hundred tracked ones. |
 | `plugins/steer/hooks/` | `opus_5_reduce_output.py` is a Claude Code `Stop` hook that asks for a plain-English recap at the end of a turn on Opus 5 or Fable 5 that changed something. A turn that mutated nothing has nothing to recap, so it ends silently. Spawning a subagent counts as a mutation, because a delegate's own edits never reach this transcript. Plugin installation wires it, and no other harness gets it. |
 
+## Run the checks
+
+```
+scripts/check                          # everything CI runs
+scripts/check path/to/test_file.py     # pytest only, for the fast inner loop
+```
+
 ## Install
 
 Every plugin installs the same way. Replace `<plugin>` with a name from the

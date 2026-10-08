@@ -109,10 +109,19 @@ def path_is_inside(root: Path, path: Path) -> bool:
         return False
 
 
+def markdown_files(root: Path) -> list[Path]:
+    """Markdown under `root`, minus installed packages and their own docs."""
+    return sorted(
+        path
+        for path in root.rglob("*.md")
+        if "node_modules" not in path.relative_to(root).parts
+    )
+
+
 def link_problems(skills_dir: Path) -> list[str]:
     root = skills_dir.resolve()
     problems = []
-    for path in sorted(root.rglob("*.md")):
+    for path in markdown_files(root):
         for target in link_targets(path.read_text()):
             if not target or target.startswith("#"):
                 continue
@@ -216,10 +225,10 @@ def referenced_skills(
 
 
 def documents_naming_skills(skills_dir: Path) -> list[Path]:
-    documents = list(skills_dir.rglob("*.md"))
+    documents = markdown_files(skills_dir)
     agents_dir = skills_dir.parent / "agents"
     if agents_dir.is_dir():
-        documents.extend(agents_dir.rglob("*.md"))
+        documents.extend(markdown_files(agents_dir))
     return sorted(documents)
 
 
