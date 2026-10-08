@@ -1,11 +1,11 @@
 ---
 name: figure-it-out
-description: "Design an auditable playbook when no narrower one fits: a large migration, an ambitious multi-part change, or work a human reviews after stepping away. Scales rigor to the task, runs a hypothesis loop, and logs decisions via show-me-your-work. Use for /figure-it-out, 'figure it out', a large migration, or when no narrower playbook applies."
+description: "Design an auditable playbook when no narrower one fits: a large migration, an ambitious multi-part change, or work a human reviews after stepping away. Scales rigor to the task and runs a hypothesis loop. Use for /figure-it-out, 'figure it out', a large migration, or when no narrower playbook applies."
 ---
 
 # Figure it out
 
-When the task matches no playbook, design one. The deliverable before any code is the workflow itself: a sequence of phases that scales rigor to the task, runs the scientific method, and leaves a decision trail a human can audit after stepping away. Bias toward more rigor. The cost of building the wrong thing dwarfs the cost of being careful.
+When the task matches no playbook, design one. The deliverable before any code is the workflow itself: a sequence of phases that scales rigor to the task, runs the scientific method, and leaves commits, a PR body, and beads a human can audit after stepping away. Bias toward more rigor. The cost of building the wrong thing dwarfs the cost of being careful.
 
 ## Start
 
@@ -30,7 +30,7 @@ Decompose into atomic, independently-landable units. Sequence riskiest-unknown-f
 - Decide what fans out. Parallelize only across seams, and give each worker its own worktree or branch (the **principle-separate-before-serializing-shared-state** principle skill). Don't over-fan.
 - Write the designed phase list down. That list is what the human reviews.
 
-Then execute the design. Add its steps to the todolist as concrete items, after the Phase C entry and before Phase D. Run each under the Phase C loop discipline, and weave the Phase D log through them, a row as each step lands, rather than saving the whole trail for the end.
+Then execute the design. Add its steps to the todolist as concrete items, after the Phase C entry and before Phase D. Run each under the Phase C loop discipline, and record the Phase D facts as each step lands, rather than saving them for the end.
 
 ## Phase C: Run the loop
 
@@ -43,10 +43,10 @@ Apply the **principle-sequence-verifiable-units** principle skill, verifying eac
 
 ## Phase D: Keep the audit trail
 
-Log the run via the **show-me-your-work** skill, one canonical TSV with a row per decision and per unit, evidence as links. figure-it-out's work is usually ambitious enough to commit the trail so the reviewer can read it in the PR; commit it when confidence has to be shown. Prefer evidence produced by committed scripts. The trail plus the diff is what lets the human come back and trust the work.
+Put the why of each change in its commit body and the PR body. Record per-unit facts, with evidence as links, in bead notes and the close reason, and each program decision as a `-t decision` bead under the epic, per poteto-mode's `references/beads-work-loop.md`. Prefer evidence produced by committed scripts. The commits, PR body, and beads, plus the diff, are what let the human come back and trust the work.
 
 ## Phase E: Verify and hand back
 
 Check the whole against the Phase A predicate on the real product, not just the harness. Encode any recurring correction as a gate, a lint rule, a check, or a script (the **principle-encode-lessons-in-structure** principle skill).
 
-**Reply:** the playbook you designed, the rigor level and why, the decision-trail path, what's verified against the predicate, and what's still open.
+**Reply:** the playbook you designed, the rigor level and why, the epic bead id, what's verified against the predicate, and what's still open.

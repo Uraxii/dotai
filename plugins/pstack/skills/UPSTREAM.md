@@ -20,10 +20,12 @@ show-me-your-work, swarm, tdd, teach, technical-writing, unslop, why.
 
 Each was replaced wholesale (directory deleted, then copied from source) using
 `.nikki-agents/adopt_pstack_claude.py`. `poteto-mode` was ported in a separate
-commit; see that commit's message for what the swap changes. The bro and teach
-skills were later removed from this plugin, so those two names no longer
-resolve to a skill here. Both names stay plain here, never in bold or
-backticks, on purpose. `scripts/validate-skills.py` reads an emphasised name
+commit; see that commit's message for what the swap changes. The bro, teach,
+and show-me-your-work skills were later removed from this plugin, so those
+three names no longer resolve to a skill here. The last of the three went
+because the why of a change now lives in commit and PR bodies, and per-unit
+facts in beads. All three names stay plain here, never in bold or backticks,
+on purpose. `scripts/validate-skills.py` reads an emphasised name
 as a citation of a live skill and fails the build.
 
 ## Imported later, same revision
