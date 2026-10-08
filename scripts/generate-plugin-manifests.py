@@ -314,6 +314,7 @@ PLUGINS: list[dict[str, object]] = [
     },
     {
         "name": "personal-instructions",
+        "version": "1.0.1",
         "hooks": ["claude", "codex", "copilot"],
         "skills": False,
         "description": (
