@@ -176,6 +176,32 @@
       "fixture": { "lines": 1200 },
       "expected_decision": "block",
       "reason": "Copilot string-encoded toolArgs is decoded before checking"
+    },
+    {
+      "id": 22,
+      "name": "claude-relative-path-with-cwd",
+      "input": { "cwd": "{{FIXTURES}}", "tool_input": { "file_path": "relative-cwd-claude.txt" } },
+      "fixture": { "lines": 1200 },
+      "expected_decision": "block",
+      "reason": "Claude resolves a relative read path from the session cwd"
+    },
+    {
+      "id": 23,
+      "name": "codex-relative-path-with-cwd",
+      "harness": "codex",
+      "input": { "cwd": "{{FIXTURES}}", "tool_input": { "file_path": "relative-cwd-codex.txt" } },
+      "fixture": { "lines": 1200 },
+      "expected_decision": "block",
+      "reason": "Codex resolves a relative read path from the session cwd"
+    },
+    {
+      "id": 24,
+      "name": "copilot-relative-path-with-cwd",
+      "harness": "copilot",
+      "input": { "cwd": "{{FIXTURES}}", "toolName": "view", "toolArgs": { "path": "relative-cwd-copilot.txt" } },
+      "fixture": { "lines": 1200 },
+      "expected_decision": "block",
+      "reason": "Copilot resolves a relative read path from the session cwd"
     }
   ]
 }

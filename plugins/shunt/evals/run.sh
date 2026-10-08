@@ -64,6 +64,12 @@ setup_fixtures() {
     # reduce to the command name itself. Generating that would drop a junk file
     # in the working directory; the fixtures those evals rely on are created by
     # their siblings anyway.
+    local input_cwd
+    input_cwd=$(jq -r '.evals['"$i"'].input.cwd // empty' "$evals_file" | sed "s|{{FIXTURES}}|$FIXTURES|")
+    case "$input_path" in
+      /*) ;;
+      *)  [ -n "$input_cwd" ] && input_path="$input_cwd/$input_path" ;;
+    esac
     case "$input_path" in
       "$FIXTURES"/*) generate_fixture "$input_path" "$lines" ;;
     esac
@@ -80,9 +86,9 @@ run_eval() {
     while IFS='=' read -r key val; do
       env_cmd="$env_cmd $key=$val"
     done < <(echo "$env_json" | jq -r 'to_entries[] | "\(.key)=\(.value)"')
-    result=$(echo "$input" | env $env_cmd bash "$hook" --harness "$harness" 2>/dev/null)
+    result=$(cd "$SCRIPT_DIR" && echo "$input" | env $env_cmd bash "$hook" --harness "$harness" 2>/dev/null)
   else
-    result=$(echo "$input" | bash "$hook" --harness "$harness" 2>/dev/null)
+    result=$(cd "$SCRIPT_DIR" && echo "$input" | bash "$hook" --harness "$harness" 2>/dev/null)
   fi
   # Empty stdout is allow; a harness-specific deny envelope is block.
   if [ -z "$result" ]; then

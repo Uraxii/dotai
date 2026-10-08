@@ -42,5 +42,5 @@ Copilot both print when they load a skill.
 
 Everything else (the rest of the skill text, the AiKA transport,
 the offset/limit bypass, the `head -n 5` parser gap) is unchanged from
-upstream and out of scope for this patch. Upstream issues #18, #20, #21 are
-not addressed here.
+upstream and out of scope for this patch. Upstream issues #18 and #20 are not
+addressed here. The hook-cwd part of upstream #21 is handled.
