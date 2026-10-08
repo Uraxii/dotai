@@ -41,7 +41,7 @@ HOOK_WIRING_PATHS = {
 PLUGINS: list[dict[str, object]] = [
     {
         "name": "pstack",
-        "version": "1.9.1",
+        "version": "2.0.0",
         "hooks": ["claude", "codex", "copilot"],
         "description": (
             "Skills and thin named agents: poteto-mode, principles, "
@@ -219,26 +219,6 @@ PLUGINS: list[dict[str, object]] = [
         "prompts": [
             "Review this SKILL.md and tell me why it never triggers.",
             "Write a new skill for this workflow.",
-        ],
-    },
-    {
-        "name": "beads",
-        "version": "2.0.0",
-        "description": (
-            "Track, create, claim, and close repo issues with the bd (beads) "
-            "tool, including dependency links."
-        ),
-        "short": "Issue tracking with bd (beads).",
-        "long": (
-            "Runs the bd command line issue tracker against a repository: "
-            "list what is ready to pick up, create and claim and close "
-            "issues, and record which issue blocks which. Use it to answer "
-            "what to work on next from the repository's own issue graph."
-        ),
-        "keywords": ["issue-tracking", "beads"],
-        "prompts": [
-            "What can I pick up next?",
-            "Create a bd issue for this and block it on the current one.",
         ],
     },
     {

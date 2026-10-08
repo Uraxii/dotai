@@ -51,11 +51,6 @@
       "description": "Review and author SKILL.md files, finding and repairing the smells that stop a skill triggering."
     },
     {
-      "name": "beads",
-      "source": "./plugins/beads",
-      "description": "Track, create, claim, and close repo issues with the bd (beads) tool, including dependency links."
-    },
-    {
       "name": "codebase-memory",
       "source": "./plugins/codebase-memory",
       "description": "Keep codebase-memory indexed at session start, then query its code graph from a shell."

@@ -34,4 +34,4 @@ When verifying delegated work, inspect the actual output artifact (git diff, fil
 
 The strongest proof is a deterministic script that re-runs the same comparison, not a one-time eyeball. Write the script, run it, and keep its output as an artifact a reviewer can re-run instead of trusting your word.
 
-Keep the artifact visible for the human. Commit it only for large or complex work where the trail has to be auditable later, like a big port or migration (the **show-me-your-work** skill).
+Keep the artifact visible for the human. For large or complex work, like a big port or migration, commit the script with the change and name the command that reruns it in the commit body.

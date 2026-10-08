@@ -26,7 +26,6 @@
 
 ## Knowledge and decisions
 - Research goes in the project kb via `/llm-wiki:llm-wiki`, so later sessions can find it.
-- Decisions go in `/pstack:show-me-your-work` logs in scratch. Append only. To change a decision, add a new entry that overrides it.
 
 ## Code Indexing and Search
 - Start session hook builds a `codebase-memory` index.

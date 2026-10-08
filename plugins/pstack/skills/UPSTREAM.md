@@ -20,10 +20,10 @@ show-me-your-work, swarm, tdd, teach, technical-writing, unslop, why.
 
 Each was replaced wholesale (directory deleted, then copied from source) using
 `.nikki-agents/adopt_pstack_claude.py`. `poteto-mode` was ported in a separate
-commit; see that commit's message for what the swap changes. The bro and teach
-skills were later removed from this plugin, so those two names no longer
-resolve to a skill here. Both names stay plain here, never in bold or
-backticks, on purpose. `scripts/validate-skills.py` reads an emphasised name
+commit; see that commit's message for what the swap changes. The bro, teach,
+and show-me-your-work skills were later removed from this plugin, so those
+three names no longer resolve to a skill here. All three names stay plain
+here, never in bold or backticks, on purpose. `scripts/validate-skills.py` reads an emphasised name
 as a citation of a live skill and fails the build.
 
 ## Imported later, same revision
@@ -75,6 +75,26 @@ those skills and not to this tree.
 That name no longer resolves to a skill here, so it stays in plain prose.
 `scripts/validate-skills.py` reads a bolded or backticked name as a citation
 of a live skill and fails the build.
+
+## Delegation, orchestration, and pause/resume run on beads
+
+This tree diverges from upstream here. Delegation, orchestration, and
+pause/resume run on beads (bd 1.3.1 with the official `gastownhall/beads`
+plugin). The upstream run-dir and store mechanisms are removed:
+
+- A delegated task is a bead. Its scope and acceptance criteria are the bead's
+  description and acceptance, and its result is the bead's close reason.
+- `create_agent_run.py` and the run directories are deleted. The Codex watchers
+  `developer-codex` and `reviewer-codex` take a bead ID.
+- The show-me-your-work skill and its decision log are deleted.
+- `scripts/orch/` is deleted. The orchestrate playbook keeps its state in
+  beads.
+- `resume.mjs` is deleted. Pause and resume read and write beads.
+- The official beads plugin replaces `plugins/beads`.
+
+The changes landed in pull requests #125 through #131. A skill ported from the
+revision above and later changed by those pull requests no longer matches
+upstream. Re-syncing one of them from upstream restores the run-dir text.
 
 ## Local to this plugin
 
