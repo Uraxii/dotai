@@ -28,7 +28,7 @@ Every reply is keyed lines, one per line. `fallback` takes one of three values:
    - GITDIR: `git -C <worktree> rev-parse --path-format=absolute --git-dir`
    - BEFORE: `git -C <worktree> rev-parse HEAD`
    - TMP: `mktemp -d`
-5. Run `bd show <id> --json`. If it exits non-zero, reply `fallback: stop`, `command: bd show <id> --json`, `exit code: <its exit code>`, `reason: <the error bd printed>`, and stop. Otherwise write `<TMP>/prompt.md` with the text below. Fill in `title`, `description`, and `acceptance_criteria` from the JSON, and write `(none)` for a missing field.
+5. Run `bd show <id> --json`. If it exits non-zero, reply `fallback: stop`, `command: bd show <id> --json`, `exit code: <its exit code>`, `reason: <the error bd printed>`, and stop. Otherwise write `<TMP>/prompt.md` with the Write tool, using the text below. Fill in `title`, `description`, and `acceptance_criteria` from the JSON, and write `(none)` for a missing field.
 
    ```text
    Do the task in bead <id>. Work only in <worktree>.
@@ -47,15 +47,15 @@ Every reply is keyed lines, one per line. `fallback` takes one of three values:
 6. Run COMMAND with Bash, `timeout: 600000`, one call, with nothing chained after it. Its exit code is Codex's:
 
    ```
-   export BEADS_ACTOR=<actor> BD_ACTOR=<actor>; (while sleep 120; do bd heartbeat <id> >/dev/null 2>&1; done) & HB=$!; codex exec -m <MODEL> -s workspace-write -c agents.enabled=false -C <worktree> --add-dir <COMMON>/objects --add-dir <COMMON>/refs --add-dir <COMMON>/logs --add-dir <GITDIR> -o <TMP>/last-message.md - < <TMP>/prompt.md > <TMP>/codex-exec.log 2>&1; RC=$?; kill $HB; exit $RC
+   export BEADS_ACTOR=<actor> BD_ACTOR=<actor>; (while sleep 120; do kill -0 $$ 2>/dev/null || exit; bd heartbeat <id> >/dev/null 2>&1; done) & HB=$!; codex exec -m <MODEL> -s workspace-write -c agents.enabled=false -C <worktree> --add-dir <COMMON>/objects --add-dir <COMMON>/refs --add-dir <COMMON>/logs --add-dir <GITDIR> -o <TMP>/last-message.md - < <TMP>/prompt.md > <TMP>/codex-exec.log 2>&1; RC=$?; kill $HB; exit $RC
    ```
 
-   The background loop runs `bd heartbeat <id>` every 2 minutes, so the claim's 5-minute lease stays live while Codex works, and `kill $HB` stops it when Codex exits. The `--add-dir` paths let Codex commit. They open the object store, the refs, and the logs, never the whole `.git`, so `config` and `hooks` stay read-only. `-c agents.enabled=false` stops Codex from handing the task to a helper agent. A plugin hook adds that flag to any `codex exec` that lacks it, but write it in COMMAND yourself.
+   The background loop runs `bd heartbeat <id>` every 2 minutes, so the claim's 5-minute lease stays live while Codex works, and `kill $HB` stops it when Codex exits. The loop also exits on its own if this shell dies. The `--add-dir` paths let Codex commit. They open the object store, the refs, and the logs, never the whole `.git`, so `config` and `hooks` stay read-only. `-c agents.enabled=false` stops Codex from handing the task to a helper agent. A plugin hook adds that flag to any `codex exec` that lacks it, but write it in COMMAND yourself.
 
    A run that outlives the timeout moves to the background. When the Bash result says so, send `fallback: pending` and `command: <COMMAND exactly as run>`, one per line, with SendMessage `to: "main"`, and end your turn with no other reply. Claude Code delivers only one reply per agent, so the pending note must not use it. You are woken when Codex exits. Then continue at step 7 with the real exit code. A slow run is never a reason to report a failure.
 7. If Codex exited non-zero, reply `fallback: claude`, `command: <COMMAND exactly as run>`, `exit code: <its exit code>`, `reason: codex exec exited <its exit code>; see <TMP>/codex-exec.log`, and stop.
 8. Run `git -C <worktree> log --format='%H %s' <BEFORE>..HEAD` and `git -C <worktree> status --porcelain`. SHA is the newest commit whose subject ends with `(<id>)`. If no subject ends that way, or the status output is not empty, reply `fallback: claude`, `command: <COMMAND exactly as run>`, `exit code: 0`, `reason: codex exited 0 but made no commit ending (<id>)` or `reason: codex exited 0 but left uncommitted changes`, and stop.
-9. Read `<TMP>/last-message.md`. Write REASON as one line: what changed and the proof, taken from that message, then `commit <SHA>`. Run `bd close <id> --reason "<REASON>"`. If it exits non-zero, reply `fallback: stop`, `command: bd close <id> --reason "<REASON>"`, `exit code: <its exit code>`, `reason: <the error bd printed>`, and stop.
+9. Run `{ cat <TMP>/last-message.md; printf '\ncommit %s\n' <SHA>; } > <TMP>/close-reason.md`, then `bd close <id> --reason-file <TMP>/close-reason.md`. Never put Codex's message or bead text inside a command, because the shell runs backticks and `$(...)` in it. Pass that text through a file. If `bd close` exits non-zero, reply `fallback: stop`, `command: bd close <id> --reason-file <TMP>/close-reason.md`, `exit code: <its exit code>`, `reason: <the error bd printed>`, and stop.
 10. Reply exactly:
 
     ```
@@ -63,5 +63,4 @@ Every reply is keyed lines, one per line. `fallback` takes one of three values:
     command: <COMMAND exactly as run>
     exit code: 0
     commit: <SHA>
-    closed: <REASON>
     ```

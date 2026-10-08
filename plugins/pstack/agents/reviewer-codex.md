@@ -25,7 +25,7 @@ Every reply is keyed lines, one per line. `fallback` takes one of three values:
 4. Collect these values, one Bash call each. If a call exits non-zero or prints nothing, reply `fallback: claude`, `command: <that command>`, `exit code: <its exit code>`, `reason: could not read <the value's name>`, and stop.
    - MODEL: `jq -r '.roles[] | select(.role == "judgment and prose") | .models.codex[0]' ${CLAUDE_PLUGIN_ROOT}/models.json`
    - TMP: `mktemp -d`
-5. Run `bd show <id> --json`. If it exits non-zero, reply `fallback: stop`, `command: bd show <id> --json`, `exit code: <its exit code>`, `reason: <the error bd printed>`, and stop. Otherwise write `<TMP>/prompt.md` with the text below. Fill in `title`, `description`, and `acceptance_criteria` from the JSON, and write `(none)` for a missing field.
+5. Run `bd show <id> --json`. If it exits non-zero, reply `fallback: stop`, `command: bd show <id> --json`, `exit code: <its exit code>`, `reason: <the error bd printed>`, and stop. Otherwise write `<TMP>/prompt.md` with the Write tool, using the text below. Fill in `title`, `description`, and `acceptance_criteria` from the JSON, and write `(none)` for a missing field.
 
    ```text
    Review the work for bead <id> in <worktree>, at commit <SHA>. Do not edit any file.
@@ -51,13 +51,13 @@ Every reply is keyed lines, one per line. `fallback` takes one of three values:
 
    A run that outlives the timeout moves to the background. When the Bash result says so, send `fallback: pending` and `command: <COMMAND exactly as run>`, one per line, with SendMessage `to: "main"`, and end your turn with no other reply. Claude Code delivers only one reply per agent, so the pending note must not use it. You are woken when Codex exits. Then continue at step 7 with the real exit code. A slow run is never a reason to report a failure.
 7. If Codex exited non-zero, reply `fallback: claude`, `command: <COMMAND exactly as run>`, `exit code: <its exit code>`, `reason: codex exec exited <its exit code>; see <TMP>/codex-exec.log`, and stop.
-8. Read `<TMP>/last-message.md`. VERDICT is the value of its last `verdict:` line and WHY is the value of the `reason:` line after it. If either is missing, reply `fallback: claude`, `command: <COMMAND exactly as run>`, `exit code: 0`, `reason: codex gave no verdict line; see <TMP>/last-message.md`, and stop.
-9. Run `bd comment <id> "verdict <VERDICT> at <SHA>: <WHY>"`. If it exits non-zero, reply `fallback: stop`, `command: bd comment <id> ...`, `exit code: <its exit code>`, `reason: <the error bd printed>`, and stop.
+8. Read `<TMP>/last-message.md`. VERDICT is the value of its last `verdict:` line. If VERDICT is not `pass` or `fail`, or no `reason:` line follows it, reply `fallback: claude`, `command: <COMMAND exactly as run>`, `exit code: 0`, `reason: codex gave no verdict line; see <TMP>/last-message.md`, and stop.
+9. Run `{ printf 'verdict %s at %s: ' <VERDICT> <SHA>; sed -n 's/^reason: //p' <TMP>/last-message.md | tail -n 1; } > <TMP>/verdict.md`, then `bd comment <id> --file <TMP>/verdict.md`. Never put Codex's message or bead text inside a command, because the shell runs backticks and `$(...)` in it. Pass that text through a file. If `bd comment` exits non-zero, reply `fallback: stop`, `command: bd comment <id> --file <TMP>/verdict.md`, `exit code: <its exit code>`, `reason: <the error bd printed>`, and stop.
 10. Reply exactly:
 
     ```
     fallback: none
     command: <COMMAND exactly as run>
     exit code: 0
-    verdict: <VERDICT> at <SHA>: <WHY>
+    verdict: <VERDICT> at <SHA>
     ```
