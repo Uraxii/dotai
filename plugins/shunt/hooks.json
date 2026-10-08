@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "hooks": {
+    "preToolUse": [
+      {
+        "type": "command",
+        "matcher": "view",
+        "bash": "\"$PLUGIN_ROOT/hooks/check-file-size\" --harness copilot",
+        "timeoutSec": 5
+      },
+      {
+        "type": "command",
+        "matcher": "bash",
+        "bash": "\"$PLUGIN_ROOT/hooks/check-bash-read\" --harness copilot",
+        "timeoutSec": 5
+      }
+    ]
+  }
+}
