@@ -76,6 +76,26 @@ That name no longer resolves to a skill here, so it stays in plain prose.
 `scripts/validate-skills.py` reads a bolded or backticked name as a citation
 of a live skill and fails the build.
 
+## Delegation, orchestration, and pause/resume run on beads
+
+This tree diverges from upstream here. Delegation, orchestration, and
+pause/resume run on beads (bd 1.3.1 with the official `gastownhall/beads`
+plugin). The upstream run-dir and store mechanisms are removed:
+
+- A delegated task is a bead. Its scope and acceptance criteria are the bead's
+  description and acceptance, and its result is the bead's close reason.
+- `create_agent_run.py` and the run directories are deleted. The Codex watchers
+  `developer-codex` and `reviewer-codex` take a bead ID.
+- The show-me-your-work skill and its decision log are deleted.
+- `scripts/orch/` is deleted. The orchestrate playbook keeps its state in
+  beads.
+- `resume.mjs` is deleted. Pause and resume read and write beads.
+- The official beads plugin replaces `plugins/beads`.
+
+The changes landed in pull requests #125 through #131. A skill ported from the
+revision above and later changed by those pull requests no longer matches
+upstream. Re-syncing one of them from upstream restores the run-dir text.
+
 ## Local to this plugin
 
 Every skill directory in this tree is local to this project unless a section
