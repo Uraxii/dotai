@@ -178,20 +178,16 @@ A unit is not done until its output is externalized the moment it lands, never b
 - Never resume an agent to check on it; a resume restarts an idle agent. Probe read-only: `bd show <id>` and its lease, `gh`, pushed branches, and the background task list. Transcript mtime is not liveness.
 - Record a silent death on its bead with `bd comment <id> "died: <failure mode>; last evidence <what>; options <what>"`, then recover the bead per [the beads work loop](../references/beads-work-loop.md). Replan on evidence as it arrives; never wait for full quiescence.
 - Retry by mode: cap-hit or oom, respawn with smaller scope; network-drop, retry as-is; tool-error, retry on a different model; unknown, retry once. Two retries, then abandon the unit and replan around it.
-- **Abandon a unit.** Keep the unit and its dependents out of `bd ready` from the first command to the replan. `bd unclaim` reopens a unit, so take the claim instead.
-  1. Read the unit's dependents with `bd dep list <id> --direction up -t blocks`, its upstream units with `bd dep list <id> -t blocks`, and its gates with `bd gate list <id>`.
-  2. Run one chain, with one line for each dependent, upstream unit, and gate.
+- **Abandon a unit.** Keep the unit and its dependents out of `bd ready` from the first write to the replan. `bd unclaim` reopens a unit, so take the claim instead.
+  1. Run `skills/poteto-mode/scripts/abandon_unit.py` under the installed plugin, with `BEADS_ACTOR` set to your actor.
 
      ```sh
-     bd update <id> --assignee <your actor> --if-assignee <worker actor> &&   # a held unit; for an unheld unit, bd update <id> --claim
-     bd gate create --type human --blocks <dependent> --title "replan after <id> abandoned" &&
-     bd dep remove <id> <upstream unit> &&
-     bd gate resolve <gate> --reason "unit abandoned" &&
-     bd set-state <id> stage=abandoned --reason "<why>" &&
-     bd close <id> --reason "abandoned: <why>"
+     abandon_unit.py <id> --reason "<why>"
      ```
 
-  3. Replan each dependent. If it needs a replacement upstream unit, run `bd dep add <dependent> <replacement>` first. Then run `bd dep remove <dependent> <id>`, and last resolve its replan gate with `bd gate resolve <gate> --reason "replanned: <how>"`.
+     The script takes the unit's claim from whoever holds it and defers each open or in-progress dependent. A deferred dependent is out of `bd ready` and refuses every claim. Then the script resolves each open gate on the unit, removes the unit's dependency on each upstream unit, sets `stage=abandoned`, and closes the unit. It reads the store first and writes only what is missing. If it fails, fix the cause and run it again. A run on an abandoned unit prints `nothing to change`.
+  2. For each `paused <dependent>; stop worker <actor>` line, stop that worker's agent and confirm it stopped. Deferring the bead does not stop an agent that is already building.
+  3. Replan each dependent. `bd list --parent <epic> --status deferred` lists the dependents that wait for a replan. If one needs a replacement upstream unit, run `bd dep add <dependent> <replacement>` first. Then run `bd dep remove <dependent> <id>`, and last run `bd undefer <dependent>`, which puts it back in `bd ready`.
 - A zombie that returns hours late reconciles against the current frontier and the bead's verdicts before anything is accepted. Salvage unique findings through a fresh unit, never a blind merge.
 - When continued spawning would produce garbage tree-wide (bad upstream output, broken acceptance, dead infra), create a decision bead `Hold: no spawns until <cause> is fixed` and send it to every sub-coordinator with `SendMessage`. Let in-flight work finish, fix the cause, then close the hold bead with the fix as its reason.
 - Bound your own infra retries the same way you bound a child's. After a few consecutive tool aborts, stop retrying: comment a terminal handoff on the epic (what is done, where it lives, the exact command to resume) and end the run.
