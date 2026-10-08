@@ -56,7 +56,7 @@ The program lives in the beads store that the session's `BEADS_DIR` names, in gi
   | `stage=verified` | Whoever records a passing verdict, per Verification. |
   | `stage=stacked` | The stacker, after the PR enters the stack. |
   | `stage=landed`, status `closed` | The coordinator, after the merge. It runs `bd set-state <id> stage=landed --reason "<merge SHA>"`, then `bd close <id> --reason "landed <merge SHA> PR <number>"`. |
-  | `stage=abandoned`, status `closed` | The coordinator, per Liveness and failure. If a dead worker still holds the claim, it runs `bd unclaim <id> --if-assignee <actor>` first. The close reason says why. |
+  | `stage=abandoned`, status `closed` | The coordinator, per Liveness and failure. `bd close` refuses a blocked unit, so first clear each blocker that `bd blocked --parent <epic>` lists for it: `bd dep remove <id> <upstream unit>`, or `bd gate resolve <gate> --reason "unit abandoned"`. Then run one Bash call, so the unit never shows as ready: `bd set-state <id> stage=abandoned --reason "<why>" && bd unclaim <id> --if-assignee <actor> && bd close <id> --reason "abandoned: <why>"`. Drop the `bd unclaim` when no worker holds the claim. Closing it unblocks its dependents, so replan them in the same drain. |
 
   A new head SHA sets the unit back to `stage=built`.
 

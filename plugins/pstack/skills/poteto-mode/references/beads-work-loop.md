@@ -12,7 +12,7 @@ A bead holds the state of one delegated unit, from creation to close. This refer
 
 2. Record a program decision as a decision bead under the epic, with `bd create "<decision>" -t decision --parent <epic>`. To change a decision, create the new decision bead and run `bd supersede <old> --with <new>`. That command closes the old bead with a pointer to the new one.
 3. Create the worktree with `bd worktree create <path> --branch <branch>`. It branches from the main checkout's HEAD, and it adds a path inside the checkout to `.gitignore`, so give a path outside the checkout. If the command fails or the branch needs another base, use `git worktree add <path> -b <branch> <base>`.
-4. Spawn the worker with this prompt and nothing else.
+4. Spawn the worker with this prompt and nothing else. For an Orchestrate unit, append ` Stop at stage=built.` to it.
 
    ```text
    Claim bead <id> as <actor>. Work in <worktree>.
