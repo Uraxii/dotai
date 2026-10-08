@@ -12,7 +12,7 @@ A bead holds the state of one delegated unit, from creation to close. This refer
 
 2. Record a program decision as a decision bead under the epic, with `bd create "<decision>" -t decision --parent <epic>`. To change a decision, create the new decision bead and run `bd supersede <old> --with <new>`. That command closes the old bead with a pointer to the new one.
 3. Create the worktree with `bd worktree create <path> --branch <branch>`. It branches from the main checkout's HEAD, and it adds a path inside the checkout to `.gitignore`, so give a path outside the checkout. If the command fails or the branch needs another base, use `git worktree add <path> -b <branch> <base>`.
-4. Spawn the worker with this prompt and nothing else.
+4. Spawn the worker with this prompt and nothing else. For an Orchestrate unit, append ` Stop at stage=built.` to it.
 
    ```text
    Claim bead <id> as <actor>. Work in <worktree>.
@@ -36,7 +36,15 @@ bd records claims and history under `BEADS_ACTOR`. The beads `prepare-commit-msg
 2. Read the scope with `bd show <id>`.
 3. A claim carries a lease that expires 5 minutes after the claim or the last heartbeat. During long work, run `bd heartbeat <id>` more often than that. A heartbeat writes no Dolt commit.
 4. End each commit subject with `(<id>)` and put the why in the commit body. `git log --grep '(<id>)'` lists the bead's commits.
-5. Close the bead with `bd close <id> --reason "<what changed, proof, SHA>"`. The final message repeats the reason.
+5. If your spawn prompt ends with `Stop at stage=built.`, leave the bead open. After your last push, run these commands, then end with a final message that names the branch and the SHA. Clearing the assignee hands the bead back to the coordinator, which closes it after the PR lands.
+
+   ```sh
+   bd set-state <id> stage=built --reason "ready at <SHA>"
+   bd comment <id> "ready at <SHA> on <branch>"
+   bd update <id> --assignee ""
+   ```
+
+6. Otherwise, close the bead with `bd close <id> --reason "<what changed, proof, SHA>"`. The final message repeats the reason.
 
 ## Reviewer records the verdict
 

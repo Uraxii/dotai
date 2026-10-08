@@ -16,13 +16,19 @@ A writer commits its own work. Codex's `workspace-write` sandbox keeps every `.g
    Claim bead <id> as developer-<id>. Work in <worktree>.
    ```
 
+   For an Orchestrate unit, append the stop suffix:
+
+   ```
+   Claim bead <id> as developer-<id>. Work in <worktree>. Stop at stage=built.
+   ```
+
    ```
    Review bead <id> at <SHA> in <worktree>.
    ```
 
    Use the actor `developer-<id>` for a Codex writer, so a Claude fallback with the same prompt holds the same claim. Pin the watcher's own model from the `codex watchers` row (its frontmatter already carries `model: sonnet`).
 4. Read the reply by key: `fallback`, `command`, `exit code`, then `commit` from a writer, `verdict` from a reviewer, and `reason` on a fallback. Ignore any other line. `exit code` is a number or `(none)`. `fallback: pending` arrives as a message, not as the watcher's reply. It means Codex outlived the watcher's Bash timeout and still runs in the background. Wait for the watcher's reply, which carries the final lines, and never fall back on `pending`.
-5. `fallback: none`: run `bd show <id>` for the close reason and `bd comments <id>` for the verdict. Then run `git log --grep '(<id>)'` and `git diff <base>..<SHA>` in the worktree. A commit the close reason claims counts only when git shows it.
+5. `fallback: none`: run `bd show <id>` for the close reason and `bd comments <id>` for the verdict. A writer prompt that ends with `Stop at stage=built.` leaves the bead open, and its `ready at <SHA> on <branch>` comment takes the place of the close reason. Then run `git log --grep '(<id>)'` and `git diff <base>..<SHA>` in the worktree. A commit the close reason claims counts only when git shows it.
 6. `fallback: stop`: no agent can start. Fix the cause the `reason` names, such as a malformed prompt or a bead another actor holds, then spawn a fresh watcher.
 7. `fallback: claude` means Codex did not finish. Handle it in this order.
 
