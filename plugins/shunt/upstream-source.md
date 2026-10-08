@@ -27,10 +27,13 @@ Both hooks now follow the current `PreToolUse` hook output schema:
   "permissionDecision": "deny", "permissionDecisionReason": "<message>"}}`,
   built with `jq -cn --arg` so paths and messages are escaped, `exit 0`.
 
-`evals/run.sh` was updated to match: empty stdout is `allow`,
-`hookSpecificOutput.permissionDecision == "deny"` is `block`. The eval
-fixtures (`evals/hook-evals.json`, `evals/bash-hook-evals.json`) are
-untouched, since `expected_decision` names the outcome, not the wire shape.
+`evals/run.sh` treats empty stdout as `allow` and the matching deny envelope
+as `block`. The hook accepts `--harness claude|codex|copilot`: Claude and
+Codex use Claude-shaped input and `hookSpecificOutput`; Copilot decodes its
+camelCase `toolArgs`, including a JSON string, and uses a flat deny object.
+Copilot `view_range`, including `[1, -1]`, is treated like Claude `offset` or
+`limit`, so it shares the existing offset/limit bypass. The eval fixtures cover
+the envelope shapes as well as routing decisions.
 
 The bulk-reader and code-writer skills named their scripts as
 `${CLAUDE_PLUGIN_ROOT}/scripts/...`. Copilot does not set that variable in
@@ -40,5 +43,5 @@ Copilot both print when they load a skill.
 
 Everything else (the rest of the skill text, the AiKA transport,
 the offset/limit bypass, the `head -n 5` parser gap) is unchanged from
-upstream and out of scope for this patch. Upstream issues #18, #20, #21 are
-not addressed here.
+upstream and out of scope for this patch. Upstream issues #18 and #20 are not
+addressed here. The hook-cwd part of upstream #21 is handled.

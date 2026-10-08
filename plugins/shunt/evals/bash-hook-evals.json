@@ -137,6 +137,59 @@
       "fixture": null,
       "expected_decision": "allow",
       "reason": "Parser bug: -n and 5 are separate args, 5 is treated as file path — file '5' won't exist so allow"
+    },
+    {
+      "id": 18,
+      "name": "codex-bash-large-file",
+      "harness": "codex",
+      "input": { "tool_input": { "command": "cat {{FIXTURES}}/codex-large.txt" } },
+      "fixture": { "lines": 800 },
+      "expected_decision": "block",
+      "reason": "Codex uses Claude-shaped input and deny output for Bash"
+    },
+    {
+      "id": 19,
+      "name": "copilot-bash-string-tool-args",
+      "harness": "copilot",
+      "input": { "toolName": "bash", "toolArgs": "{\"command\": \"cat {{FIXTURES}}/copilot-bash.txt\"}" },
+      "fixture": { "lines": 800 },
+      "expected_decision": "block",
+      "reason": "Copilot Bash decodes string-encoded toolArgs and emits a flat deny"
+    },
+    {
+      "id": 20,
+      "name": "claude-relative-path-with-cwd",
+      "input": { "cwd": "{{FIXTURES}}", "tool_input": { "command": "cat relative-cwd-claude.txt" } },
+      "fixture": { "lines": 800 },
+      "expected_decision": "block",
+      "reason": "Claude resolves a relative Bash read path from the session cwd"
+    },
+    {
+      "id": 21,
+      "name": "codex-relative-path-with-cwd",
+      "harness": "codex",
+      "input": { "cwd": "{{FIXTURES}}", "tool_input": { "command": "cat relative-cwd-codex.txt" } },
+      "fixture": { "lines": 800 },
+      "expected_decision": "block",
+      "reason": "Codex resolves a relative Bash read path from the session cwd"
+    },
+    {
+      "id": 22,
+      "name": "copilot-relative-path-with-cwd",
+      "harness": "copilot",
+      "input": { "cwd": "{{FIXTURES}}", "toolName": "bash", "toolArgs": { "command": "cat relative-cwd-copilot.txt" } },
+      "fixture": { "lines": 800 },
+      "expected_decision": "block",
+      "reason": "Copilot resolves a relative Bash read path from the session cwd"
+    },
+    {
+      "id": 23,
+      "name": "unknown-harness-pass-through",
+      "harness": "bogus",
+      "input": { "tool_input": { "command": "cat {{FIXTURES}}/unknown-harness.txt" } },
+      "fixture": { "lines": 800 },
+      "expected_decision": "allow",
+      "reason": "An unknown harness passes through without blocking"
     }
   ]
 }

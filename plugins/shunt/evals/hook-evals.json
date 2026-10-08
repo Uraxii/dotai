@@ -140,6 +140,77 @@
       "env": { "SHUNT_MIN_LINES": "abc" },
       "expected_decision": "block",
       "reason": "Non-numeric SHUNT_MIN_LINES falls back to 350 — 351-line file blocked"
+    },
+    {
+      "id": 18,
+      "name": "copilot-view-large-file",
+      "harness": "copilot",
+      "input": { "toolName": "view", "toolArgs": { "path": "{{FIXTURES}}/copilot-large.txt" } },
+      "fixture": { "lines": 1200 },
+      "expected_decision": "block",
+      "reason": "Copilot view emits its flat deny envelope for a large file"
+    },
+    {
+      "id": 19,
+      "name": "copilot-view-small-file",
+      "harness": "copilot",
+      "input": { "toolName": "view", "toolArgs": { "path": "{{FIXTURES}}/copilot-small.txt" } },
+      "fixture": { "lines": 100 },
+      "expected_decision": "allow",
+      "reason": "Copilot view allows a small file"
+    },
+    {
+      "id": 20,
+      "name": "copilot-view-range",
+      "harness": "copilot",
+      "input": { "toolName": "view", "toolArgs": { "path": "{{FIXTURES}}/copilot-range.txt", "view_range": [1, 20] } },
+      "fixture": { "lines": 1200 },
+      "expected_decision": "allow",
+      "reason": "Copilot view_range is a targeted read"
+    },
+    {
+      "id": 21,
+      "name": "copilot-string-tool-args",
+      "harness": "copilot",
+      "input": { "toolName": "view", "toolArgs": "{\"path\": \"{{FIXTURES}}/copilot-string.txt\"}" },
+      "fixture": { "lines": 1200 },
+      "expected_decision": "block",
+      "reason": "Copilot string-encoded toolArgs is decoded before checking"
+    },
+    {
+      "id": 22,
+      "name": "claude-relative-path-with-cwd",
+      "input": { "cwd": "{{FIXTURES}}", "tool_input": { "file_path": "relative-cwd-claude.txt" } },
+      "fixture": { "lines": 1200 },
+      "expected_decision": "block",
+      "reason": "Claude resolves a relative read path from the session cwd"
+    },
+    {
+      "id": 23,
+      "name": "codex-relative-path-with-cwd",
+      "harness": "codex",
+      "input": { "cwd": "{{FIXTURES}}", "tool_input": { "file_path": "relative-cwd-codex.txt" } },
+      "fixture": { "lines": 1200 },
+      "expected_decision": "block",
+      "reason": "Codex resolves a relative read path from the session cwd"
+    },
+    {
+      "id": 24,
+      "name": "copilot-relative-path-with-cwd",
+      "harness": "copilot",
+      "input": { "cwd": "{{FIXTURES}}", "toolName": "view", "toolArgs": { "path": "relative-cwd-copilot.txt" } },
+      "fixture": { "lines": 1200 },
+      "expected_decision": "block",
+      "reason": "Copilot resolves a relative read path from the session cwd"
+    },
+    {
+      "id": 25,
+      "name": "unknown-harness-pass-through",
+      "harness": "bogus",
+      "input": { "tool_input": { "file_path": "{{FIXTURES}}/unknown-harness.txt" } },
+      "fixture": { "lines": 1200 },
+      "expected_decision": "allow",
+      "reason": "An unknown harness passes through without blocking"
     }
   ]
 }

@@ -9,8 +9,20 @@ MIN_LINES="${SHUNT_MIN_LINES:-350}"
 case "$MIN_LINES" in ''|*[!0-9]*) MIN_LINES=350 ;; esac
 
 input=$(cat)
+cwd=$(echo "$input" | jq -r '.cwd // empty')
 
-command=$(echo "$input" | jq -r '.tool_input.command // empty')
+harness=claude
+if [ "${1:-}" = "--harness" ]; then
+  harness="${2:-}"
+fi
+case "$harness" in claude|codex|copilot) ;; *) exit 0 ;; esac
+
+if [ "$harness" = copilot ]; then
+  tool_args=$(echo "$input" | jq -c '.toolArgs // {} | if type == "string" then fromjson? else . end')
+  command=$(echo "$tool_args" | jq -r '.command // empty')
+else
+  command=$(echo "$input" | jq -r '.tool_input.command // empty')
+fi
 [ -z "$command" ] && exit 0
 
 # Skip piped commands (cat file | grep) — those are targeted reads
@@ -33,11 +45,20 @@ if echo "$command" | grep -qE '^(cat|head|tail|less|more) '; then
 fi
 
 [ -z "$file_path" ] && exit 0
+[ -n "$cwd" ] && case "$file_path" in
+  /*) ;;
+  *) file_path="$cwd/$file_path" ;;
+esac
 [ ! -f "$file_path" ] && exit 0
 
 lines=$(wc -l < "$file_path" 2>/dev/null | tr -d ' ' || echo "0")
 if [ "$lines" -gt "$MIN_LINES" ]; then
-  jq -cn \
-    --arg reason "File is ${lines} lines (threshold: ${MIN_LINES}). Use the /bulk-reader skill to delegate this read to AiKA instead of cat/head/tail." \
-    '{hookSpecificOutput: {hookEventName: "PreToolUse", permissionDecision: "deny", permissionDecisionReason: $reason}}'
+  reason="File is ${lines} lines (threshold: ${MIN_LINES}). Use the /bulk-reader skill to delegate this read to AiKA instead of cat/head/tail."
+  if [ "$harness" = copilot ]; then
+    jq -cn --arg reason "$reason" \
+      '{permissionDecision: "deny", permissionDecisionReason: $reason}'
+  else
+    jq -cn --arg reason "$reason" \
+      '{hookSpecificOutput: {hookEventName: "PreToolUse", permissionDecision: "deny", permissionDecisionReason: $reason}}'
+  fi
 fi

@@ -55,12 +55,21 @@ setup_fixtures() {
     if [ -z "$input_path" ]; then
       input_path=$(jq -r ".evals[$i].input.tool_input.command // empty" "$evals_file" | sed -E 's/^(cat|head|tail|less|more) +(-[^ ]+ +)*//' | sed 's/ .*//' | tr -d '"'"'")
     fi
+    if [ -z "$input_path" ]; then
+      input_path=$(jq -r ".evals[$i].input.toolArgs | if type == \"string\" then fromjson else . end | .path // .command // empty" "$evals_file" | sed -E 's/^(cat|head|tail|less|more) +(-[^ ]+ +)*//' | sed 's/ .*//' | tr -d '"')
+    fi
     input_path=$(echo "$input_path" | sed "s|{{FIXTURES}}|$FIXTURES|")
 
     # Commands the parser is not meant to extract a path from (grep, git, …)
     # reduce to the command name itself. Generating that would drop a junk file
     # in the working directory; the fixtures those evals rely on are created by
     # their siblings anyway.
+    local input_cwd
+    input_cwd=$(jq -r '.evals['"$i"'].input.cwd // empty' "$evals_file" | sed "s|{{FIXTURES}}|$FIXTURES|")
+    case "$input_path" in
+      /*) ;;
+      *)  [ -n "$input_cwd" ] && input_path="$input_cwd/$input_path" ;;
+    esac
     case "$input_path" in
       "$FIXTURES"/*) generate_fixture "$input_path" "$lines" ;;
     esac
@@ -68,7 +77,7 @@ setup_fixtures() {
 }
 
 run_eval() {
-  local hook="$1" name="$2" input="$3" expected="$4" reason="$5" env_json="$6"
+  local hook="$1" name="$2" input="$3" expected="$4" reason="$5" env_json="$6" harness="$7"
   TOTAL=$((TOTAL + 1))
 
   local result actual
@@ -77,15 +86,27 @@ run_eval() {
     while IFS='=' read -r key val; do
       env_cmd="$env_cmd $key=$val"
     done < <(echo "$env_json" | jq -r 'to_entries[] | "\(.key)=\(.value)"')
-    result=$(echo "$input" | env $env_cmd bash "$hook" 2>/dev/null)
+    if [ -n "$harness" ]; then
+      result=$(cd "$SCRIPT_DIR" && echo "$input" | env $env_cmd bash "$hook" --harness "$harness" 2>/dev/null)
+    else
+      result=$(cd "$SCRIPT_DIR" && echo "$input" | env $env_cmd bash "$hook" 2>/dev/null)
+    fi
   else
-    result=$(echo "$input" | bash "$hook" 2>/dev/null)
+    if [ -n "$harness" ]; then
+      result=$(cd "$SCRIPT_DIR" && echo "$input" | bash "$hook" --harness "$harness" 2>/dev/null)
+    else
+      result=$(cd "$SCRIPT_DIR" && echo "$input" | bash "$hook" 2>/dev/null)
+    fi
   fi
-  # Empty stdout is allow; hookSpecificOutput.permissionDecision=deny is block.
+  # Empty stdout is allow; a harness-specific deny envelope is block.
   if [ -z "$result" ]; then
     actual="allow"
   else
-    actual=$(echo "$result" | jq -r 'if .hookSpecificOutput.permissionDecision == "deny" then "block" else "unknown" end')
+    if [ "$harness" = copilot ]; then
+      actual=$(echo "$result" | jq -r 'if .permissionDecision == "deny" and .permissionDecisionReason != null then "block" else "unknown" end')
+    else
+      actual=$(echo "$result" | jq -r 'if .hookSpecificOutput.hookEventName == "PreToolUse" and .hookSpecificOutput.permissionDecision == "deny" then "block" else "unknown" end')
+    fi
   fi
 
   if [ "$actual" = "$expected" ]; then
@@ -110,15 +131,16 @@ run_suite() {
   count=$(jq '.evals | length' "$evals_file")
 
   for ((i = 0; i < count; i++)); do
-    local name expected reason input
+    local name expected reason input harness
     name=$(jq -r ".evals[$i].name" "$evals_file")
     expected=$(jq -r ".evals[$i].expected_decision" "$evals_file")
     reason=$(jq -r ".evals[$i].reason" "$evals_file")
     input=$(jq -c ".evals[$i].input" "$evals_file" | sed "s|{{FIXTURES}}|$FIXTURES|g")
+    harness=$(jq -r ".evals[$i].harness // empty" "$evals_file")
 
     local env_json
     env_json=$(jq -r ".evals[$i].env // empty" "$evals_file")
-    run_eval "$hook" "$name" "$input" "$expected" "$reason" "$env_json"
+    run_eval "$hook" "$name" "$input" "$expected" "$reason" "$env_json" "$harness"
   done
 
   rm -rf "$FIXTURES"

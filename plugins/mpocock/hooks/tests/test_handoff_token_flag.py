@@ -24,17 +24,13 @@ class HandoffTokenFlagTests(unittest.TestCase):
         codex = json.loads(
             (REPOSITORY_ROOT / "hooks" / "codex-hooks.json").read_text()
         )
-        copilot = json.loads((REPOSITORY_ROOT / "hooks.json").read_text())
-
         self.assertEqual("./hooks/codex-hooks.json", codex_manifest["hooks"])
         for config in (claude, codex):
             prompt_hooks = config["hooks"]["UserPromptSubmit"]
             prompt_command = prompt_hooks[0]["hooks"][0]["command"]
             self.assertIn("handoff-token-flag.py --mode context", prompt_command)
 
-        stop_hooks = copilot["hooks"]["agentStop"]
-        stop_command = stop_hooks[0]["bash"]
-        self.assertIn('handoff-token-flag.py" --mode stop', stop_command)
+        self.assertFalse((REPOSITORY_ROOT / "hooks.json").exists())
 
     def test_reads_claude_usage(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -79,23 +75,23 @@ class HandoffTokenFlagTests(unittest.TestCase):
 
             self.assertEqual(210_000, HOOK._last_usage_tokens(transcript))
 
-    def test_falls_back_to_transcript_size_when_usage_is_absent(self) -> None:
+    def test_returns_none_when_usage_is_absent(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             transcript = Path(directory) / "session.jsonl"
             transcript.write_text("x" * 840_000)
 
-            self.assertEqual(210_000, HOOK._last_usage_tokens(transcript))
+            self.assertIsNone(HOOK._last_usage_tokens(transcript))
 
     def test_context_mode_is_the_default_when_no_flag_is_passed(self) -> None:
         """The wiring that predates --mode passes no arguments at all."""
         self.assertEqual("context", HOOK.parse_args([]).mode)
+        self.assertEqual("context", HOOK.parse_args(["--mode", "context"]).mode)
 
     def test_context_mode_stays_quiet_below_the_threshold(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             response = HOOK._response_for_crossing(
                 tokens=HOOK.THRESHOLD - 1,
                 session_id="session-quiet",
-                mode="context",
                 state_directory=Path(directory),
             )
 
@@ -108,7 +104,6 @@ class HandoffTokenFlagTests(unittest.TestCase):
             response = HOOK._response_for_crossing(
                 tokens=210_000,
                 session_id="session-2",
-                mode="context",
                 state_directory=Path(directory),
             )
 
@@ -124,19 +119,16 @@ class HandoffTokenFlagTests(unittest.TestCase):
             first = HOOK._response_for_crossing(
                 tokens=210_000,
                 session_id="session-3",
-                mode="context",
                 state_directory=state_directory,
             )
             same_band = HOOK._response_for_crossing(
                 tokens=240_000,
                 session_id="session-3",
-                mode="context",
                 state_directory=state_directory,
             )
             next_band = HOOK._response_for_crossing(
                 tokens=260_000,
                 session_id="session-3",
-                mode="context",
                 state_directory=state_directory,
             )
 
@@ -150,38 +142,16 @@ class HandoffTokenFlagTests(unittest.TestCase):
             mine = HOOK._response_for_crossing(
                 tokens=210_000,
                 session_id="session-4",
-                mode="context",
                 state_directory=state_directory,
             )
             theirs = HOOK._response_for_crossing(
                 tokens=210_000,
                 session_id="session-5",
-                mode="context",
                 state_directory=state_directory,
             )
 
             self.assertNotEqual("", mine)
             self.assertNotEqual("", theirs)
-
-    def test_stop_mode_forces_one_continuation_per_band(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
-            state_directory = Path(directory) / "state"
-            first = HOOK._response_for_crossing(
-                tokens=210_000,
-                session_id="session-1",
-                mode="stop",
-                state_directory=state_directory,
-            )
-            repeated = HOOK._response_for_crossing(
-                tokens=220_000,
-                session_id="session-1",
-                mode="stop",
-                state_directory=state_directory,
-            )
-
-            self.assertEqual("block", json.loads(first)["decision"])
-            self.assertEqual("", repeated)
-
 
 if __name__ == "__main__":
     unittest.main()
