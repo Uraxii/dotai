@@ -44,13 +44,13 @@ Every reply is keyed lines, one per line. `fallback` takes one of three values:
    Commit your work with git. End each commit subject with " (<id>)" and put the why in the commit body. BD_ACTOR is set in your environment, and the repository's beads hook reads it to add the Executed-By trailer, so do not write that trailer yourself. Leave the working tree clean. Do not run bd, because the bead store is outside your sandbox. End with a last message of at most five lines that says what changed and the proof: each command you ran to check the work, and its result.
    ```
 
-6. Run COMMAND with Bash, `timeout: 600000`, one call, with nothing chained after it:
+6. Run COMMAND with Bash, `timeout: 600000`, one call, with nothing chained after it. Its exit code is Codex's:
 
    ```
-   export BEADS_ACTOR=<actor> BD_ACTOR=<actor>; codex exec -m <MODEL> -s workspace-write -c agents.enabled=false -C <worktree> --add-dir <COMMON>/objects --add-dir <COMMON>/refs --add-dir <COMMON>/logs --add-dir <GITDIR> -o <TMP>/last-message.md - < <TMP>/prompt.md > <TMP>/codex-exec.log 2>&1
+   export BEADS_ACTOR=<actor> BD_ACTOR=<actor>; (while sleep 120; do bd heartbeat <id> >/dev/null 2>&1; done) & HB=$!; codex exec -m <MODEL> -s workspace-write -c agents.enabled=false -C <worktree> --add-dir <COMMON>/objects --add-dir <COMMON>/refs --add-dir <COMMON>/logs --add-dir <GITDIR> -o <TMP>/last-message.md - < <TMP>/prompt.md > <TMP>/codex-exec.log 2>&1; RC=$?; kill $HB; exit $RC
    ```
 
-   The `--add-dir` paths let Codex commit. They open the object store, the refs, and the logs, never the whole `.git`, so `config` and `hooks` stay read-only. `-c agents.enabled=false` stops Codex from handing the task to a helper agent. A plugin hook adds that flag to any `codex exec` that lacks it, but write it in COMMAND yourself.
+   The background loop runs `bd heartbeat <id>` every 2 minutes, so the claim's 5-minute lease stays live while Codex works, and `kill $HB` stops it when Codex exits. The `--add-dir` paths let Codex commit. They open the object store, the refs, and the logs, never the whole `.git`, so `config` and `hooks` stay read-only. `-c agents.enabled=false` stops Codex from handing the task to a helper agent. A plugin hook adds that flag to any `codex exec` that lacks it, but write it in COMMAND yourself.
 
    A run that outlives the timeout moves to the background. When the Bash result says so, send `fallback: pending` and `command: <COMMAND exactly as run>`, one per line, with SendMessage `to: "main"`, and end your turn with no other reply. Claude Code delivers only one reply per agent, so the pending note must not use it. You are woken when Codex exits. Then continue at step 7 with the real exit code. A slow run is never a reason to report a failure.
 7. If Codex exited non-zero, reply `fallback: claude`, `command: <COMMAND exactly as run>`, `exit code: <its exit code>`, `reason: codex exec exited <its exit code>; see <TMP>/codex-exec.log`, and stop.
