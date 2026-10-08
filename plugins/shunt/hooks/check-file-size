@@ -10,9 +10,22 @@ case "$MIN_LINES" in ''|*[!0-9]*) MIN_LINES=350 ;; esac
 
 input=$(cat)
 
-file_path=$(echo "$input" | jq -r '.tool_input.file_path // empty')
-offset=$(echo "$input" | jq -r '.tool_input.offset // empty')
-limit=$(echo "$input" | jq -r '.tool_input.limit // empty')
+harness=claude
+if [ "${1:-}" = "--harness" ]; then
+  harness="${2:-}"
+fi
+case "$harness" in claude|codex|copilot) ;; *) exit 0 ;; esac
+
+if [ "$harness" = copilot ]; then
+  tool_args=$(echo "$input" | jq -c '.toolArgs // {} | if type == "string" then fromjson? else . end')
+  file_path=$(echo "$tool_args" | jq -r '.path // empty')
+  offset=$(echo "$tool_args" | jq -r '.view_range // empty')
+  limit="$offset"
+else
+  file_path=$(echo "$input" | jq -r '.tool_input.file_path // empty')
+  offset=$(echo "$input" | jq -r '.tool_input.offset // empty')
+  limit=$(echo "$input" | jq -r '.tool_input.limit // empty')
+fi
 
 # Allow targeted reads (offset or limit set) — Claude already knows what it needs
 if [ -n "$offset" ] || [ -n "$limit" ]; then
@@ -30,6 +43,11 @@ if [ "$lines" -le "$MIN_LINES" ]; then
   exit 0
 fi
 
-jq -cn \
-  --arg reason "File is ${lines} lines (threshold: ${MIN_LINES}). Use the /bulk-reader skill to delegate this read to AiKA instead of reading it directly. If you need exact content for editing, re-read with an offset/limit for just the section you need." \
-  '{hookSpecificOutput: {hookEventName: "PreToolUse", permissionDecision: "deny", permissionDecisionReason: $reason}}'
+reason="File is ${lines} lines (threshold: ${MIN_LINES}). Use the /bulk-reader skill to delegate this read to AiKA instead of reading it directly. If you need exact content for editing, re-read with an offset/limit for just the section you need."
+if [ "$harness" = copilot ]; then
+  jq -cn --arg reason "$reason" \
+    '{permissionDecision: "deny", permissionDecisionReason: $reason}'
+else
+  jq -cn --arg reason "$reason" \
+    '{hookSpecificOutput: {hookEventName: "PreToolUse", permissionDecision: "deny", permissionDecisionReason: $reason}}'
+fi

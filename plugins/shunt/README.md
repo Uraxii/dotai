@@ -1,14 +1,14 @@
 # shunt
 
-A Claude Code plugin that shunts I/O-heavy work to AiKA modes, saving 82-94% of tokens on large file reads and boilerplate generation.
+A Claude Code, Codex, and Copilot CLI plugin that shunts I/O-heavy work to AiKA modes, saving 82-94% of tokens on large file reads and boilerplate generation.
 
-Vendored from Spotify's [`portal-ai-plugins`](https://github.com/spotify/portal-ai-plugins/tree/e14bdb1dc894e0a2ef150fa811db5308ae2ddb37/plugins/shunt) at revision `e14bdb1dc894e0a2ef150fa811db5308ae2ddb37`, Apache-2.0 (see [LICENSE.md](LICENSE.md)). Patched fork: `hooks/check-file-size` and `hooks/check-bash-read` printed a legacy top-level `{"decision": "allow"}` that current Claude Code rejects (upstream [issue #10](https://github.com/spotify/portal-ai-plugins/issues/10)); both now pass through with empty stdout and `exit 0`, and block with the current `hookSpecificOutput.permissionDecision` schema. Full detail in [upstream-source.md](upstream-source.md).
+Vendored from Spotify's [`portal-ai-plugins`](https://github.com/spotify/portal-ai-plugins/tree/e14bdb1dc894e0a2ef150fa811db5308ae2ddb37/plugins/shunt) at revision `e14bdb1dc894e0a2ef150fa811db5308ae2ddb37`, Apache-2.0 (see [LICENSE.md](LICENSE.md)). Patched fork: `hooks/check-file-size` and `hooks/check-bash-read` printed a legacy top-level `{"decision": "allow"}` that current Claude Code rejects (upstream [issue #10](https://github.com/spotify/portal-ai-plugins/issues/10)); both now pass through with empty stdout and `exit 0`, and block with the harness-specific deny envelope. Full detail in [upstream-source.md](upstream-source.md).
 
 ## How it works
 
 Three layers, from hard gate to soft suggestion:
 
-1. **Hooks** block Claude from reading large files and redirect to the bulk-reader skill
+1. **Hooks** block large direct reads and redirect to the bulk-reader skill
 2. **Scripts** handle the AiKA invocation and output cleanup
 3. **Skills** tell Claude when and how to call the scripts
 
@@ -66,8 +66,12 @@ A mode you create is private and owned by you, and name resolution prefers your 
 shunt/
 ├── .claude-plugin/
 │   └── plugin.json          # Plugin manifest (name, description, version)
+├── .codex-plugin/
+│   └── plugin.json          # Codex plugin manifest
+├── hooks.json               # Copilot CLI hook registration
 ├── hooks/
-│   ├── claude-hooks.json    # Claude Code hook registration (PreToolUse matchers)
+│   ├── claude-hooks.json    # Claude Code hook registration
+│   ├── codex-hooks.json     # Codex hook registration
 │   ├── check-file-size      # Blocks Read on files > 350 lines
 │   └── check-bash-read      # Blocks cat/head/tail on large files
 ├── scripts/
@@ -81,9 +85,9 @@ shunt/
 │   └── code-writer/
 │       └── SKILL.md         # When/how to call code-write
 └── evals/
-    ├── run.sh                # Runs hook + transport evals (51 tests)
-    ├── hook-evals.json       # Read hook test cases (17)
-    ├── bash-hook-evals.json  # Bash hook test cases (17)
+    ├── run.sh                # Runs hook + transport evals (57 tests)
+    ├── hook-evals.json       # Read and view hook test cases (21)
+    ├── bash-hook-evals.json  # Bash hook test cases (19)
     ├── transport-evals.sh    # scripts/lib/aika.sh against a stubbed CLI (17)
     ├── evals.json            # End-to-end skill test cases (3)
     ├── benchmarks.json       # Token savings scenarios (4)
@@ -128,16 +132,16 @@ context.
 
 ## Hooks
 
-### check-file-size (Read hook)
+### check-file-size (Read and view hook)
 
-Fires on every `Read` tool call. Blocks full-file reads on files exceeding `MIN_LINES` (default: 350, configurable via `SHUNT_MIN_LINES` env var). Allows through:
+Fires on Claude Code `Read` and Copilot CLI `view` calls. Blocks full-file reads on files exceeding `MIN_LINES` (default: 350, configurable via `SHUNT_MIN_LINES` env var). Allows through:
 - Targeted reads (offset or limit set)
 - Files under the threshold
 - Nonexistent files (let Read handle the error)
 
 ### check-bash-read (Bash hook)
 
-Fires on every `Bash` tool call. Catches `cat`, `head`, `tail`, `less`, `more` on large files. Allows through:
+Fires on Claude Code and Codex `Bash` calls and Copilot CLI `bash` calls. Catches `cat`, `head`, `tail`, `less`, `more` on large files. Allows through:
 - Piped commands (`cat file | grep`) — targeted reads
 - Redirections (`cat file > out`) — not reading into context
 - Commands with flags that indicate targeted reads

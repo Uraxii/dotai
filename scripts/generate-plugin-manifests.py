@@ -307,8 +307,8 @@ PLUGINS: list[dict[str, object]] = [
     },
     {
         "name": "shunt",
-        "version": "0.2.2",
-        "hooks": ["claude"],
+        "version": "0.2.3",
+        "hooks": ["claude", "codex", "copilot"],
         "skills": False,
         "description": (
             "Spotify's shunt, vendored and patched to the current PreToolUse "
@@ -318,8 +318,9 @@ PLUGINS: list[dict[str, object]] = [
         "short": "Delegate large reads and boilerplate to AiKA, token-cheap.",
         "long": (
             "A vendored, patched fork of Spotify's shunt plugin from "
-            "portal-ai-plugins. Hooks block Claude from reading large files "
-            "directly and redirect to the bulk-reader skill; a code-writer "
+            "portal-ai-plugins. Hooks block full large-file reads on Claude "
+            "Code and Copilot CLI, and large Bash reads on Codex, then "
+            "redirect agents to the bulk-reader skill; a code-writer "
             "skill delegates boilerplate generation the same way. Both "
             "route through the Portal CLI's AiKA modes. See "
             "plugins/shunt/upstream-source.md for the source revision and "

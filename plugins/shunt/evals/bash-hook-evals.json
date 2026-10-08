@@ -137,6 +137,24 @@
       "fixture": null,
       "expected_decision": "allow",
       "reason": "Parser bug: -n and 5 are separate args, 5 is treated as file path — file '5' won't exist so allow"
+    },
+    {
+      "id": 18,
+      "name": "codex-bash-large-file",
+      "harness": "codex",
+      "input": { "tool_input": { "command": "cat {{FIXTURES}}/codex-large.txt" } },
+      "fixture": { "lines": 800 },
+      "expected_decision": "block",
+      "reason": "Codex uses Claude-shaped input and deny output for Bash"
+    },
+    {
+      "id": 19,
+      "name": "copilot-bash-string-tool-args",
+      "harness": "copilot",
+      "input": { "toolName": "bash", "toolArgs": "{\"command\": \"cat {{FIXTURES}}/copilot-bash.txt\"}" },
+      "fixture": { "lines": 800 },
+      "expected_decision": "block",
+      "reason": "Copilot Bash decodes string-encoded toolArgs and emits a flat deny"
     }
   ]
 }
