@@ -19,9 +19,6 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install pytest
-        run: pip install pytest
-
       # The bd-backed pytest modules skip when bd is not on PATH, so without
       # this step they report green having run nothing.
       - name: Install bd
@@ -31,40 +28,8 @@ jobs:
         with:
           bun-version: 1.4.2
 
-      - name: Install the poteto-mode script dependencies
-        run: bun install --frozen-lockfile --cwd plugins/pstack/skills/poteto-mode/scripts
-
-      - name: Check models.json only names models it can back
-        run: python3 scripts/validate-models.py
-
-      - name: Check the generated manifests match the generator
-        run: python3 scripts/generate-plugin-manifests.py --check
-
-      # This is public. A machine account name in a committed path has
-      # leaked here three times, each caught only by a human reviewer.
-      - name: Check for machine-specific home paths
-        run: python3 scripts/validate-no-home-paths.py
-
-      # Every tree in one run. A plugin citing a skill in another plugin only
-      # shows up to a run that can see both, and a tree split out of another
-      # only remembers deletions through the tree it came from.
-      - name: Validate skill links and frontmatter
-        run: python3 scripts/validate-skills.py plugins/*/skills
-
-      # Fails when bd is missing, and pytest below reads the same PATH, so a
-      # green run here means the bd-backed modules ran rather than skipped.
-      - name: Race concurrent bd claims and closes
-        run: python3 plugins/pstack/skills/poteto-mode/scripts/check_bd_concurrency.py --rounds 2
-        timeout-minutes: 3
-
-      # One path, because plugins/shunt/evals/fixtures holds a jest file that
-      # is eval input, not a test. test_ci_workflow.py fails when a *.test.ts
-      # lands outside it.
-      - name: Run bun tests
-        run: bun test plugins/pstack/skills/poteto-mode/scripts
-
-      # No paths. Naming them is how eighty tests went uncollected when the
-      # skills moved out of plugins/pstack. test_ci_workflow.py keeps it that
-      # way.
-      - name: Run pytest
-        run: pytest -q
+      - name: Run the checks
+        run: scripts/check
+        env:
+          CHECK_REQUIRE_ALL: "1"
+          DOTAI_CHECK_VENV: ${{ runner.temp }}/check-venv

@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+# The one entry point for every check. CI calls this too, so they cannot drift.
+#   scripts/check                      all stages
+#   scripts/check path/to/test_x.py    pytest only, with these arguments
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+venv="${DOTAI_CHECK_VENV:-${XDG_CACHE_HOME:-$HOME/.cache}/dotai-check/venv}"
+PYTEST_PIN=8.4.2
+XDIST_PIN=3.8.0
+stamp="$venv/.pins-$PYTEST_PIN-$XDIST_PIN"
+if [ ! -e "$stamp" ]; then
+  python3 -m venv "$venv"
+  "$venv/bin/pip" install -q "pytest==$PYTEST_PIN" "pytest-xdist==$XDIST_PIN"
+  touch "$stamp"
+fi
+export PATH="$venv/bin:$PATH"
+
+stage() { echo "==> $1"; shift; "$@" || { echo "FAILED stage: $STAGE" >&2; exit 1; }; }
+run() { STAGE=$1; stage "$@"; }
+
+if [ $# -gt 0 ]; then
+  run pytest pytest -q -n auto "$@"
+  exit 0
+fi
+
+# CI sets CHECK_REQUIRE_ALL so a missing tool fails instead of skipping.
+optional() {
+  local tool=$1; shift
+  if command -v "$tool" >/dev/null; then
+    run "$@"
+  elif [ -n "${CHECK_REQUIRE_ALL:-}" ]; then
+    echo "FAILED stage: $2: $tool is not on PATH" >&2; exit 1
+  else
+    echo "SKIP $2: $tool is not on PATH"
+  fi
+}
+
+run validate-models python3 scripts/validate-models.py
+run generate-plugin-manifests python3 scripts/generate-plugin-manifests.py --check
+run validate-no-home-paths python3 scripts/validate-no-home-paths.py
+run validate-skills python3 scripts/validate-skills.py plugins/*/skills
+# Fails without bd, and pytest below shares this PATH, so a pass here shows the
+# bd-backed modules saw bd.
+optional bd bd-concurrency python3 plugins/pstack/skills/poteto-mode/scripts/check_bd_concurrency.py --rounds 2
+optional bun bun-tests bash -c 'bun install --frozen-lockfile --cwd plugins/pstack/skills/poteto-mode/scripts && bun test plugins/pstack/skills/poteto-mode/scripts'
+# No paths: naming them is how tests went uncollected before.
+run pytest pytest -q -n auto
