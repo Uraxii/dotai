@@ -16,6 +16,12 @@ A writer commits its own work. Codex's `workspace-write` sandbox keeps every `.g
    Claim bead <id> as developer-<id>. Work in <worktree>.
    ```
 
+   For an Orchestrate unit, append the stop suffix:
+
+   ```
+   Claim bead <id> as developer-<id>. Work in <worktree>. Stop at stage=built.
+   ```
+
    ```
    Review bead <id> at <SHA> in <worktree>.
    ```

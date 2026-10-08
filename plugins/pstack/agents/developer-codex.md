@@ -57,10 +57,10 @@ Every reply is keyed lines, one per line. `fallback` takes one of three values:
 8. Run `git -C <worktree> log --format='%H %s' <BEFORE>..HEAD` and `git -C <worktree> status --porcelain`. SHA is the newest commit whose subject ends with `(<id>)`. If no subject ends that way, or the status output is not empty, reply `fallback: claude`, `command: <COMMAND exactly as run>`, `exit code: 0`, `reason: codex exited 0 but made no commit ending (<id>)` or `reason: codex exited 0 but left uncommitted changes`, and stop.
 9. If the prompt ends with `Stop at stage=built.`, skip this step and run step 10 instead. Otherwise run `{ cat <TMP>/last-message.md; printf '\ncommit %s\n' <SHA>; } > <TMP>/close-reason.md`, then `bd close <id> --reason-file <TMP>/close-reason.md`. Never put Codex's message or bead text inside a command, because the shell runs backticks and `$(...)` in it. Pass that text through a file. If `bd close` exits non-zero, reply `fallback: stop`, `command: bd close <id> --reason-file <TMP>/close-reason.md`, `exit code: <its exit code>`, `reason: <the error bd printed>`, and stop.
 10. Run this step only when the prompt ends with `Stop at stage=built.` Run each command below as its own Bash call. If one exits non-zero, reply `fallback: stop`, `command: <that command>`, `exit code: <its exit code>`, `reason: <the error it printed>`, and stop.
-    - BRANCH: `git -C <worktree> rev-parse --abbrev-ref HEAD`
-    - `git -C <worktree> push -u origin <BRANCH>`
+    - `git -C <worktree> push -u origin HEAD`
+    - `git -C <worktree> rev-parse --abbrev-ref HEAD > <TMP>/branch.txt`
     - `bd set-state <id> stage=built --reason "ready at <SHA>"`
-    - Write `<TMP>/ready.md` with the Write tool, containing `ready at <SHA> on <BRANCH>`. Then run `bd comment <id> --file <TMP>/ready.md`. The branch name can carry text the shell would run, so it goes through the file.
+    - `{ printf 'ready at %s on ' <SHA>; cat <TMP>/branch.txt; } > <TMP>/ready.md`, then `bd comment <id> --file <TMP>/ready.md`. Codex chose the branch name, and it can carry text the shell would run, so it goes from git to the file and never into a command.
     - `bd update <id> --assignee ""`
 
     Leave the bead open. The coordinator closes it after the PR lands.

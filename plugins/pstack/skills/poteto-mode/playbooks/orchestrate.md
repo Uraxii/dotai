@@ -56,7 +56,7 @@ The program lives in the beads store that the session's `BEADS_DIR` names, in gi
   | `stage=verified` | Whoever records a passing verdict, per Verification. |
   | `stage=stacked` | The stacker, after the PR enters the stack. |
   | `stage=landed`, status `closed` | The coordinator, after the merge. It runs `bd set-state <id> stage=landed --reason "<merge SHA>"`, then `bd close <id> --reason "landed <merge SHA> PR <number>"`. |
-  | `stage=abandoned`, status `closed` | The coordinator, per Liveness and failure. `bd close` refuses a blocked unit, so first clear each blocker that `bd blocked --parent <epic>` lists for it: `bd dep remove <id> <upstream unit>`, or `bd gate resolve <gate> --reason "unit abandoned"`. Then run one Bash call, so the unit never shows as ready: `bd set-state <id> stage=abandoned --reason "<why>" && bd unclaim <id> --if-assignee <actor> && bd close <id> --reason "abandoned: <why>"`. Drop the `bd unclaim` when no worker holds the claim. Closing it unblocks its dependents, so replan them in the same drain. |
+  | `stage=abandoned`, status `closed` | The coordinator, per Abandon a unit in Liveness and failure. |
 
   A new head SHA sets the unit back to `stage=built`.
 
@@ -177,7 +177,21 @@ A unit is not done until its output is externalized the moment it lands, never b
 
 - Never resume an agent to check on it; a resume restarts an idle agent. Probe read-only: `bd show <id>` and its lease, `gh`, pushed branches, and the background task list. Transcript mtime is not liveness.
 - Record a silent death on its bead with `bd comment <id> "died: <failure mode>; last evidence <what>; options <what>"`, then recover the bead per [the beads work loop](../references/beads-work-loop.md). Replan on evidence as it arrives; never wait for full quiescence.
-- Retry by mode: cap-hit or oom, respawn with smaller scope; network-drop, retry as-is; tool-error, retry on a different model; unknown, retry once. Two retries, then abandon the unit per the stage table and replan around it.
+- Retry by mode: cap-hit or oom, respawn with smaller scope; network-drop, retry as-is; tool-error, retry on a different model; unknown, retry once. Two retries, then abandon the unit and replan around it.
+- **Abandon a unit.** Keep the unit and its dependents out of `bd ready` from the first command to the replan. `bd unclaim` reopens a unit, so take the claim instead.
+  1. Read the unit's dependents with `bd dep list <id> --direction up -t blocks`, its upstream units with `bd dep list <id> -t blocks`, and its gates with `bd gate list <id>`.
+  2. Run one chain, with one line for each dependent, upstream unit, and gate.
+
+     ```sh
+     bd update <id> --assignee <your actor> --if-assignee <worker actor> &&   # a held unit; for an unheld unit, bd update <id> --claim
+     bd gate create --type human --blocks <dependent> --title "replan after <id> abandoned" &&
+     bd dep remove <id> <upstream unit> &&
+     bd gate resolve <gate> --reason "unit abandoned" &&
+     bd set-state <id> stage=abandoned --reason "<why>" &&
+     bd close <id> --reason "abandoned: <why>"
+     ```
+
+  3. Replan each dependent. If it needs a replacement upstream unit, run `bd dep add <dependent> <replacement>` first. Then run `bd dep remove <dependent> <id>`, and last resolve its replan gate with `bd gate resolve <gate> --reason "replanned: <how>"`.
 - A zombie that returns hours late reconciles against the current frontier and the bead's verdicts before anything is accepted. Salvage unique findings through a fresh unit, never a blind merge.
 - When continued spawning would produce garbage tree-wide (bad upstream output, broken acceptance, dead infra), create a decision bead `Hold: no spawns until <cause> is fixed` and send it to every sub-coordinator with `SendMessage`. Let in-flight work finish, fix the cause, then close the hold bead with the fix as its reason.
 - Bound your own infra retries the same way you bound a child's. After a few consecutive tool aborts, stop retrying: comment a terminal handoff on the epic (what is done, where it lives, the exact command to resume) and end the run.
