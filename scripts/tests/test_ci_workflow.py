@@ -1,9 +1,9 @@
-"""Pin the two CI commands that went quietly narrow when the plugins split.
+"""Pin the CI commands that went quietly narrow or quietly missing.
 
-Both failures looked identical from the outside: a green run that had stopped
-looking at most of the repository. `pytest plugins/pstack scripts` collected
-122 of 202 tests, and `validate-skills.py plugins/pstack/skills` inspected 44
-of 55 skills. Neither said so.
+The two narrowings looked identical from the outside: a green run that had
+stopped looking at most of the repository. `pytest plugins/pstack scripts`
+collected 122 of 202 tests, and `validate-skills.py plugins/pstack/skills`
+inspected 44 of 55 skills. Neither said so.
 
 A number to compare against would churn on every test added. What actually
 broke was the enumeration, so these tests forbid the enumeration.
@@ -11,10 +11,14 @@ broke was the enumeration, so these tests forbid the enumeration.
 Forbidding it in `ci.yml` only guards one spelling. `PytestCollectsEveryTest`
 below measures the effect instead: it runs collection and compares what the
 repository root sees against what each test directory sees on its own.
+
+The bd and bun steps guard the other silent pass. The bd-backed modules skip
+when bd is not on PATH, and no step ran a `*.test.ts` at all.
 """
 
 from __future__ import annotations
 
+import os
 import re
 import subprocess
 import sys
@@ -24,6 +28,19 @@ from pathlib import Path
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 WORKFLOW = REPOSITORY_ROOT / ".github" / "workflows" / "ci.yml"
+BD_INSTALLER = REPOSITORY_ROOT / "scripts" / "install-bd.sh"
+BD_VERSION = "1.3.1"
+BD_CONCURRENCY_CHECK = (
+    "python3 plugins/pstack/skills/poteto-mode/scripts/check_bd_concurrency.py"
+)
+MOST_CONCURRENCY_ROUNDS_IN_A_MINUTE = 3
+
+def command_starting_with_workflow(prefix: str) -> str:
+    matches = [line for line in run_commands() if line.startswith(prefix)]
+    if len(matches) != 1:
+        raise AssertionError(f"expected one {prefix!r} step, found {matches}")
+    return matches[0]
+
 
 RUN_RE = re.compile(r"^\s*run:\s*(.+?)\s*$", re.MULTILINE)
 
@@ -44,6 +61,19 @@ def directories_holding_tests() -> list[Path]:
         if "__pycache__" not in path.parts and ".git" not in path.parts
     }
     return sorted(found)
+
+
+def bun_test_files() -> list[Path]:
+    """Every `*.test.ts` in the repository, relative to the root.
+
+    A `fixtures` directory holds input for an eval, not a suite to run.
+    """
+    skipped = {"node_modules", ".git", "fixtures"}
+    return sorted(
+        path.relative_to(REPOSITORY_ROOT)
+        for path in REPOSITORY_ROOT.rglob("*.test.ts")
+        if not skipped.intersection(path.parts)
+    )
 
 
 def collected_node_ids(*paths: str) -> list[str]:
@@ -76,41 +106,56 @@ def collected_node_ids(*paths: str) -> list[str]:
     return [line for line in result.stdout.splitlines() if "::" in line]
 
 
+CHECK = REPOSITORY_ROOT / "scripts" / "check"
+
+
+def check_commands() -> list[str]:
+    """The `run` lines of scripts/check, in order, one per stage."""
+    return [
+        line.strip()
+        for line in CHECK.read_text().splitlines()
+        if line.startswith(("run ", "optional "))
+    ]
+
+
 def command_starting_with(prefix: str) -> str:
-    matches = [line for line in run_commands() if line.startswith(prefix)]
+    matches = [line for line in check_commands() if prefix in line]
     if len(matches) != 1:
-        raise AssertionError(f"expected one {prefix!r} step, found {matches}")
+        raise AssertionError(f"expected one {prefix!r} stage, found {matches}")
     return matches[0]
 
 
 class CiWorkflowTests(unittest.TestCase):
-    def test_pytest_names_no_paths(self) -> None:
-        command = command_starting_with("pytest")
+    def test_ci_runs_scripts_check_and_nothing_else_to_check(self) -> None:
+        commands = run_commands()
 
-        arguments = command.split()[1:]
-        self.assertEqual(
-            ["-q"],
-            arguments,
-            "pytest collects from the repository root so a new plugin's "
-            "tests run without anyone editing this file. Adding a path here "
-            "silently drops everything outside it.",
+        self.assertIn("scripts/check", commands)
+        self.assertNotIn("pytest", " ".join(commands).replace("pytest-", ""))
+        self.assertIn(
+            'CHECK_REQUIRE_ALL: "1"',
+            WORKFLOW.read_text(),
+            "without it a missing bd or bun skips instead of failing",
         )
+        self.assertTrue(os.access(CHECK, os.X_OK))
+
+    def test_pytest_names_no_paths(self) -> None:
+        command = command_starting_with("run pytest")
+
+        self.assertEqual("run pytest pytest -q -n auto", command)
 
     def test_skill_validation_covers_every_plugin(self) -> None:
-        command = command_starting_with("python3 scripts/validate-skills.py")
-
         self.assertIn(
             "plugins/*/skills",
-            command,
+            command_starting_with("scripts/validate-skills.py"),
             "one run over every tree, because cross-plugin citations and "
             "pre-split deletions are invisible to a per-plugin loop",
         )
 
     def test_generated_manifests_are_checked(self) -> None:
-        command_starting_with("python3 scripts/generate-plugin-manifests.py --check")
+        command_starting_with("scripts/generate-plugin-manifests.py --check")
 
     def test_home_paths_are_checked(self) -> None:
-        command_starting_with("python3 scripts/validate-no-home-paths.py")
+        command_starting_with("scripts/validate-no-home-paths.py")
 
     def test_checkout_keeps_the_full_history(self) -> None:
         # validate-skills.py learns deleted skill names from git log.
@@ -125,6 +170,50 @@ class CiWorkflowTests(unittest.TestCase):
             "the plugins/*/skills glob without naming a single path, which "
             "no test outside this file can see.",
         )
+
+    def test_bd_installs_the_pinned_release_onto_the_path(self) -> None:
+        installer = BD_INSTALLER.read_text()
+
+        self.assertIn("$GITHUB_PATH", command_starting_with_workflow("scripts/install-bd.sh"))
+        self.assertIn(f"VERSION={BD_VERSION}\n", installer)
+        self.assertRegex(installer, r"\nSHA256=[0-9a-f]{64}\n")
+        self.assertIn("sha256sum -c", installer)
+
+    def test_bd_concurrency_runs_before_pytest(self) -> None:
+        commands = check_commands()
+        self.assertLess(
+            commands.index(command_starting_with(BD_CONCURRENCY_CHECK)),
+            commands.index(command_starting_with("run pytest")),
+            "the concurrency check fails without bd, so running it before "
+            "pytest proves the bd-backed modules saw bd",
+        )
+
+    def test_bd_concurrency_check_runs_a_few_rounds(self) -> None:
+        rounds = re.fullmatch(r".* --rounds (\d+)", command_starting_with(BD_CONCURRENCY_CHECK))
+        self.assertIsNotNone(
+            rounds,
+            "without --rounds the check runs its default ten rounds, "
+            "several minutes of CI",
+        )
+        self.assertLessEqual(int(rounds.group(1)), MOST_CONCURRENCY_ROUNDS_IN_A_MINUTE)
+
+    def test_bun_is_pinned(self) -> None:
+        text = WORKFLOW.read_text()
+
+        self.assertRegex(text, r"uses: oven-sh/setup-bun@v\d+\.\d+\.\d+\n")
+        self.assertRegex(text, r"bun-version: \d+\.\d+\.\d+\n")
+        self.assertIn("--frozen-lockfile", command_starting_with("bun install"))
+
+    def test_bun_runs_every_bun_test_file(self) -> None:
+        roots = command_starting_with("bun test").split("bun test")[1].strip(" '").split()
+        self.assertTrue(roots, "bun test from the root also runs fixtures")
+        for path in bun_test_files():
+            with self.subTest(path=path.as_posix()):
+                self.assertTrue(
+                    any(path.is_relative_to(root) for root in roots),
+                    f"{path} is outside every path the bun stage names "
+                    f"({roots}), so CI never runs it",
+                )
 
     def test_no_step_swallows_its_own_failure(self) -> None:
         self.assertNotIn(

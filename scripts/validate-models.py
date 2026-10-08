@@ -70,7 +70,7 @@ def validate_models_json(data: dict) -> None:
 
 
 def main(arguments: list[str] | None = None) -> int:
-    models_path = plugin_root() / "models.json"
+    models_path = Path(arguments[0]) if arguments else plugin_root() / "models.json"
     try:
         validate_models_json(json.loads(models_path.read_text()))
     except ValueError as error:
@@ -80,4 +80,4 @@ def main(arguments: list[str] | None = None) -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    raise SystemExit(main(sys.argv[1:]))

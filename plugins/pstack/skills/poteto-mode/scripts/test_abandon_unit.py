@@ -1,8 +1,7 @@
 """Tests for the Orchestrate abandon chain.
 
 The planner tests run anywhere. The store tests drive the real script against
-a throwaway bd store in a temp dir and are skipped where bd is not on PATH,
-which includes CI.
+a throwaway bd store in a temp dir and are skipped where bd is not on PATH.
 """
 
 from __future__ import annotations

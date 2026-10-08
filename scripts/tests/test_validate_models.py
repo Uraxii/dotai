@@ -2,6 +2,7 @@ import importlib.util
 import json
 import subprocess
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -90,19 +91,16 @@ class ValidatorCommandTests(unittest.TestCase):
         self.assertEqual(0, result.returncode, result.stderr)
 
     def test_nonzero_when_a_gpt_slug_is_planted_under_claude(self) -> None:
-        models_path = PLUGIN_ROOT / "models.json"
-        original_text = models_path.read_text()
-        planted = json.loads(original_text)
+        planted = json.loads((PLUGIN_ROOT / "models.json").read_text())
         planted["roles"][0]["models"]["claude"].append("gpt-5.5")
-        try:
-            models_path.write_text(json.dumps(planted, indent=2))
+        with tempfile.TemporaryDirectory() as scratch:
+            path = Path(scratch) / "models.json"
+            path.write_text(json.dumps(planted, indent=2))
 
-            result = run_validator()
+            result = run_validator(str(path))
 
-            self.assertNotEqual(0, result.returncode)
-            self.assertIn("gpt-5.5", result.stderr)
-        finally:
-            models_path.write_text(original_text)
+        self.assertNotEqual(0, result.returncode)
+        self.assertIn("gpt-5.5", result.stderr)
 
 
 if __name__ == "__main__":
