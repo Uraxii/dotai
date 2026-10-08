@@ -31,11 +31,20 @@ The program lives in the beads store that the session's `BEADS_DIR` names, in gi
   ```
 
 - **Tracks.** A track is a label, `track:<name>`, on each of its units. Keep every unit a direct child of the program epic, because `bd swarm status` counts only direct children. A sub-coordinator's own bead stays outside the epic: create it with `bd create "Track <name>" --label track:<name> --body-file <brief.md>`. It reads its units with `bd ready --parent <epic> --label track:<name>`.
-- **Units.** One child bead per unit, with its brief in the description and its done-when in the acceptance. Order units with `bd dep add <later> <earlier>`, so a unit becomes ready only after the units it depends on land.
+- **Units.** One child bead per unit, with its brief in the description and its done-when in the acceptance. Order units with `bd dep add <later> <earlier>`. `bd ready` lists a dependent unit only after every unit it depends on lands.
 
   ```sh
   bd create "<unit>" --parent <epic> --acceptance "<done-when>" --body-file <brief.md>
   ```
+
+  To stack a dependent unit on upstream work that has not landed, read its blockers and their stages.
+
+  ```sh
+  bd blocked --parent <epic>     # each blocked unit and the beads that block it
+  bd state <blocker> stage       # built, verified, or stacked
+  ```
+
+  Spawn the dependent unit when every blocker is a unit at `built` or later. Set its base to the branch in the blocker's `ready at <SHA> on <branch>` comment, and name that branch and SHA in its brief. If the blockers sit on more than one unlanded branch, base the unit on the branch that contains the others, or wait until only one is unlanded. A gate has no stage, so a unit behind an open gate waits for the gate.
 
 - **Unit stage.** A unit bead stays open until its PR lands. The `stage:<value>` label records where an in-progress unit is, and `bd set-state` replaces the old value and records the change.
 
@@ -43,11 +52,11 @@ The program lives in the beads store that the session's `BEADS_DIR` names, in gi
   |---|---|
   | none, status `open` | Not started. `bd ready` lists it. |
   | none, status `in_progress` | The worker claimed it and is building. |
-  | `stage=built` | The worker, after it pushes. It runs `bd comment <id> "ready at <SHA> on <branch>"` and `bd set-state <id> stage=built --reason "ready at <SHA>"`, and it leaves the bead open. |
+  | `stage=built` | The worker, after it pushes, per step 5 of [the beads work loop](../references/beads-work-loop.md). It comments `ready at <SHA> on <branch>`, clears its assignee, and leaves the bead open. |
   | `stage=verified` | Whoever records a passing verdict, per Verification. |
   | `stage=stacked` | The stacker, after the PR enters the stack. |
-  | `stage=landed`, status `closed` | The coordinator, after the merge. It runs `bd set-state <id> stage=landed --reason "<merge SHA>"`, then `bd close <id> --force --reason "landed <merge SHA> PR <number>"`. The worker still holds the claim, so `bd close` needs `--force`. |
-  | `stage=abandoned`, status `closed` | The coordinator, per Liveness and failure, with `bd close <id> --force`. The close reason says why. |
+  | `stage=landed`, status `closed` | The coordinator, after the merge. It runs `bd set-state <id> stage=landed --reason "<merge SHA>"`, then `bd close <id> --reason "landed <merge SHA> PR <number>"`. |
+  | `stage=abandoned`, status `closed` | The coordinator, per Liveness and failure. If a dead worker still holds the claim, it runs `bd unclaim <id> --if-assignee <actor>` first. The close reason says why. |
 
   A new head SHA sets the unit back to `stage=built`.
 
@@ -89,7 +98,7 @@ Spawn only from `bd ready`. `bd swarm status` ignores gates, counts open decisio
 
 #### The brief
 
-Your prompts to agents are your only product, and a sloppy brief compounds into slop across the whole tree. The brief is the unit bead's description, and the spawn prompt is the one line from [Agent runs](../SKILL.md#subagents). A field you cannot fill is a unit you have not scoped yet.
+Your prompts to agents are your only product, and a sloppy brief compounds into slop across the whole tree. The brief is the unit bead's description, and the spawn prompt is the one line from [Agent runs](../SKILL.md#subagents) with `Stop at stage=built.` appended. A field you cannot fill is a unit you have not scoped yet.
 
 ```
 GOAL         one sentence, the outcome, executable by a stranger with no chat access
@@ -100,9 +109,8 @@ ACCEPTANCE   the bead's acceptance, checkable criteria, one per line
 VERIFY       exact commands or the resolved driver skill path, plus known gotchas
 TIMEBOX      rough cap on runtime; on expiry, return partial findings and stop rather than run on
 FORBIDDEN    no gt, no rebase, no force-push, no fixes outside scope, plus unit-specific bans
-REPORT       comment "ready at <SHA> on <branch>", set stage=built, and leave the bead open;
-             the final message carries status, branch, head SHA, PRs, verdict, what you
-             actually ran, deviations, suggested follow-ups
+REPORT       what the final message carries: status, branch, head SHA, PRs, verdict,
+             what you actually ran, deviations, suggested follow-ups
 DECISIONS    the ids of the decision beads that bind this unit; read each with bd show
 ```
 
@@ -173,7 +181,7 @@ A unit is not done until its output is externalized the moment it lands, never b
 - A zombie that returns hours late reconciles against the current frontier and the bead's verdicts before anything is accepted. Salvage unique findings through a fresh unit, never a blind merge.
 - When continued spawning would produce garbage tree-wide (bad upstream output, broken acceptance, dead infra), create a decision bead `Hold: no spawns until <cause> is fixed` and send it to every sub-coordinator with `SendMessage`. Let in-flight work finish, fix the cause, then close the hold bead with the fix as its reason.
 - Bound your own infra retries the same way you bound a child's. After a few consecutive tool aborts, stop retrying: comment a terminal handoff on the epic (what is done, where it lives, the exact command to resume) and end the run.
-- After a session restart, in-flight subagents are dead. Pushed branches, open PRs, and the beads store are not. Read the epic and its open decisions. Run `bd list --parent <epic> --status in_progress --json` and read each unit's stage label and assignee. A unit with no stage label was mid-build, so respawn its worker under the same actor. A unit at `stage=built` needs a verdict, `stage=verified` needs a stack entry, and `stage=stacked` needs a land. Run `bd merge-slot check` and recompute the frontier. Reattach in-flight work by PR and branch rather than agent id. Respawn one sub-coordinator per track from its track bead, drain, and resume. A merge slot held by a dead agent stays held until you release it per Stack safety.
+- After a session restart, in-flight subagents are dead. Pushed branches, open PRs, and the beads store are not. Read the epic and its open decisions. Run `bd list --parent <epic> --status in_progress --json` and read each unit's stage label and assignee. A unit with no stage label was mid-build, so respawn its worker under the same actor. A unit at `stage=built` needs a verdict, `stage=verified` needs a stack entry, and `stage=stacked` needs a land. Run `bd merge-slot check` and recompute the frontier. Reattach in-flight work by PR and branch rather than agent id. List the track beads with `bd list --label-pattern 'track:*' --no-parent --status open` and each track's open units with `bd list --parent <epic> --label track:<name> --json`. Respawn one sub-coordinator per track from its track bead, drain, and resume. A merge slot held by a dead agent stays held until you release it per Stack safety.
 
 #### Escalation
 
