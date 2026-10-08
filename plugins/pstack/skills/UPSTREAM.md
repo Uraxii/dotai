@@ -96,6 +96,15 @@ The changes landed in pull requests #125 through #131. A skill ported from the
 revision above and later changed by those pull requests no longer matches
 upstream. Re-syncing one of them from upstream restores the run-dir text.
 
+## Feature and refactoring workers run on Sonnet
+
+This tree diverges from upstream here. The `feature, refactoring` role in
+`models.json` lists only `sonnet` for Claude and drops `claude-opus-5` from
+Copilot. The `poteto-mode` Agent-call defaults send every code delegate to the
+role's first model instead of tiering the hardest changes to the
+strongest-judgment model. Re-syncing either file from upstream restores the
+tiering.
+
 ## Local to this plugin
 
 Every skill directory in this tree is local to this project unless a section
