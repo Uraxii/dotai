@@ -33,9 +33,10 @@ export BEADS_ACTOR=<actor> BD_ACTOR=<actor>
 bd records claims and history under `BEADS_ACTOR`. The beads `prepare-commit-msg` hook reads only `BD_ACTOR` and appends `Executed-By: <actor>` to the commit message. A commit made without `BD_ACTOR` gets no trailer.
 
 1. Claim the bead with `bd update <id> --claim`. If another actor holds it, the claim exits 1 and changes nothing. Stop and report the holder.
-2. A claim carries a lease that expires 5 minutes after the claim or the last heartbeat. During long work, run `bd heartbeat <id>` more often than that. A heartbeat writes no Dolt commit.
-3. End each commit subject with `(<id>)` and put the why in the commit body. `git log --grep '(<id>)'` lists the bead's commits.
-4. Close the bead with `bd close <id> --reason "<what changed, proof, SHA>"`. The final message repeats the reason.
+2. Read the scope with `bd show <id>`.
+3. A claim carries a lease that expires 5 minutes after the claim or the last heartbeat. During long work, run `bd heartbeat <id>` more often than that. A heartbeat writes no Dolt commit.
+4. End each commit subject with `(<id>)` and put the why in the commit body. `git log --grep '(<id>)'` lists the bead's commits.
+5. Close the bead with `bd close <id> --reason "<what changed, proof, SHA>"`. The final message repeats the reason.
 
 ## Reviewer records the verdict
 
