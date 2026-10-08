@@ -1,3 +1,4 @@
+import fcntl
 import importlib.util
 import os
 import subprocess
@@ -15,11 +16,60 @@ assert SPEC.loader is not None
 SPEC.loader.exec_module(HOOK)
 
 
+def write_indexer(bin_directory: Path) -> None:
+    """A stub indexer that logs its start, then holds the lock until released."""
+    bin_directory.mkdir()
+    binary = bin_directory / "codebase-memory-mcp"
+    binary.write_text(
+        "#!/bin/sh\n"
+        "printf 'spawned\\n' >> \"$SPAWN_MARKER\"\n"
+        "read _ < \"$RELEASE_FIFO\"\n"
+    )
+    binary.chmod(0o755)
+
+
+def release(fifo: Path) -> None:
+    """Let the indexer blocked on `fifo` exit; it reads end-of-file."""
+    deadline = time.monotonic() + 30
+    while True:
+        try:
+            os.close(os.open(fifo, os.O_WRONLY | os.O_NONBLOCK))
+            return
+        except OSError:  # no reader has opened the fifo yet
+            if time.monotonic() > deadline:
+                raise
+            time.sleep(0.01)
+
+
+def wait_for_unlock(lock_path: Path) -> None:
+    """Return once no process holds `lock_path`."""
+    descriptor = os.open(lock_path, os.O_WRONLY)
+    try:
+        deadline = time.monotonic() + 30
+        while True:
+            try:
+                fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                return
+            except BlockingIOError:
+                if time.monotonic() > deadline:
+                    raise
+                time.sleep(0.01)
+    finally:
+        os.close(descriptor)
+
+
 class AutoIndexTests(unittest.TestCase):
     def test_non_git_cwd_does_nothing(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
-            environment = {"PATH": ""}
-            self.assertFalse(HOOK.run(directory, environment))
+            cwd = Path(directory) / "not-a-repository"
+            cwd.mkdir()
+            cache = Path(directory) / "cache"
+            bin_directory = Path(directory) / "bin"
+            write_indexer(bin_directory)
+            environment = {"PATH": str(bin_directory), "CBM_CACHE_DIR": str(cache)}
+
+            self.assertFalse(HOOK.run(str(cwd), environment))
+            self.assertFalse(cache.exists())
 
     def test_worktree_uses_main_checkout_project_name(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -63,44 +113,35 @@ class AutoIndexTests(unittest.TestCase):
             cache = Path(directory) / "cache"
             bin_directory = Path(directory) / "bin"
             marker = Path(directory) / "spawned"
+            fifo = Path(directory) / "release"
             root.mkdir()
-            bin_directory.mkdir()
+            os.mkfifo(fifo)
             subprocess.run(["git", "init", "-q", str(root)], check=True)
-            binary = bin_directory / "codebase-memory-mcp"
-            binary.write_text(
-                "#!/bin/sh\n"
-                "printf 'spawned\\n' >> \"$SPAWN_MARKER\"\n"
-                "exec /bin/sleep 2\n"
-            )
-            binary.chmod(0o755)
+            write_indexer(bin_directory)
             environment = {
                 "PATH": str(bin_directory),
                 "CBM_CACHE_DIR": str(cache),
                 "SPAWN_MARKER": str(marker),
+                "RELEASE_FIFO": str(fifo),
             }
+            lock = cache / f"{HOOK.project_name(root.resolve())}.index.lock"
 
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore", ResourceWarning)
                 self.assertTrue(HOOK.run(str(root), environment))
                 self.assertFalse(HOOK.run(str(root), environment))
-            deadline = time.monotonic() + 1
-            while not marker.exists() and time.monotonic() < deadline:
-                time.sleep(0.01)
+            release(fifo)
+            wait_for_unlock(lock)
 
-            self.assertTrue(marker.exists())
             self.assertEqual(["spawned"], marker.read_text().splitlines())
-
-            time.sleep(2.1)
 
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore", ResourceWarning)
                 self.assertTrue(HOOK.run(str(root), environment))
-            deadline = time.monotonic() + 1
-            while len(marker.read_text().splitlines()) < 2 and time.monotonic() < deadline:
-                time.sleep(0.01)
+            release(fifo)
+            wait_for_unlock(lock)
 
             self.assertEqual(["spawned", "spawned"], marker.read_text().splitlines())
-            time.sleep(2.1)
 
 
 if __name__ == "__main__":

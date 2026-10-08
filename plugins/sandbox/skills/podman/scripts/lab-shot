@@ -54,7 +54,7 @@ if [ "$#" -gt 0 ]; then
 		echo "lab-shot: Xvfb failed to acquire $display" >&2
 		exit 1
 	fi
-	DISPLAY=$display "$@" >/tmp/lab-shot-cmd.log 2>&1 &
+	DISPLAY=$display "$@" >"${TMPDIR:-/tmp}/lab-shot-cmd.log" 2>&1 &
 	cmd_pid=$!
 	sleep "$seconds"
 fi

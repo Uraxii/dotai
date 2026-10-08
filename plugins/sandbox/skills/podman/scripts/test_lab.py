@@ -148,6 +148,7 @@ class GitWorktreeTest(unittest.TestCase):
             head = subprocess.run(["git", "rev-parse", "HEAD"], cwd=str(worktree),
                                   check=True, capture_output=True, text=True).stdout.strip()
             common = lab.resolve_git_common_dir(worktree)
+            self.assertEqual(common, (repo / ".git").resolve())
             clone = parent / "clone"
             subprocess.run(["git", "clone", str(common), str(clone)], check=True,
                            capture_output=True, text=True)
