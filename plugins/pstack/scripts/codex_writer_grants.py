@@ -10,9 +10,9 @@ plus the worktree's own gitdir.
 
 Exits 1 with the reason on stderr, printing nothing on stdout, when Codex
 must not run there: the target is a main checkout, whose gitdir is the
-whole `.git`, or a grant would cover the hooks dir or a config file git
-reads. The watcher runs git outside the sandbox after Codex exits, so a
-hook or config Codex could write would run with the watcher's rights.
+whole `.git`, or a grant would cover the hooks dir or the shared `config`. The watcher
+runs git outside the sandbox after Codex exits, so a hook or config Codex
+could write would run with the watcher's rights.
 """
 
 from __future__ import annotations
@@ -51,13 +51,7 @@ def git_path(worktree: Path, *args: str) -> Path:
 def read_layout(worktree: Path) -> GitLayout:
     git_dir = git_path(worktree, "--git-dir")
     common_dir = git_path(worktree, "--git-common-dir")
-    per_worktree_config = read_git(
-        worktree, "config", "--type=bool", "--get",
-        "extensions.worktreeConfig",
-    ).stdout.strip() == "true"
-    config_files = (common_dir / "config",) + (
-        (git_dir / "config.worktree",) if per_worktree_config else ()
-    )
+    config_files = (common_dir / "config",)
     return GitLayout(
         git_dir=git_dir,
         common_dir=common_dir,
