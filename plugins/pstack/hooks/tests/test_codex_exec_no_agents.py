@@ -36,21 +36,29 @@ class RewriteCommandTests(unittest.TestCase):
     def test_a_plain_codex_exec_gets_the_flag(self) -> None:
         self.assertEqual(
             HOOK.rewrite_command("codex exec 'do the thing'"),
-            "codex -c agents.enabled=false exec 'do the thing'",
+            "codex exec -c agents.enabled=false 'do the thing'",
         )
 
-    def test_a_codex_exec_with_flags_before_exec_gets_it_right_after_codex(
+    def test_a_codex_exec_with_flags_before_exec_gets_it_right_after_exec(
         self,
     ) -> None:
         self.assertEqual(
             HOOK.rewrite_command("codex -m gpt-5.6-terra exec 'go'"),
-            "codex -c agents.enabled=false -m gpt-5.6-terra exec 'go'",
+            "codex -m gpt-5.6-terra exec -c agents.enabled=false 'go'",
         )
+
+    def test_the_rewritten_argv_matches_the_delegate_collision_pattern(self) -> None:
+        import re
+
+        rewritten = HOOK.rewrite_command("codex exec -C /w/tree 'go'")
+
+        self.assertIn("agents.enabled=false", rewritten)
+        self.assertRegex(rewritten, re.compile(r"codex exec.*-C /w/tree"))
 
     def test_codex_exec_resume_gets_the_flag(self) -> None:
         self.assertEqual(
             HOOK.rewrite_command("codex exec resume --last"),
-            "codex -c agents.enabled=false exec resume --last",
+            "codex exec -c agents.enabled=false resume --last",
         )
 
     def test_a_command_that_already_has_the_flag_is_unchanged(self) -> None:
@@ -60,8 +68,8 @@ class RewriteCommandTests(unittest.TestCase):
     def test_two_chained_codex_exec_calls_both_get_the_flag(self) -> None:
         self.assertEqual(
             HOOK.rewrite_command("codex exec A && codex exec B"),
-            "codex -c agents.enabled=false exec A && "
-            "codex -c agents.enabled=false exec B",
+            "codex exec -c agents.enabled=false A && "
+            "codex exec -c agents.enabled=false B",
         )
 
     def test_codex_without_exec_is_unchanged(self) -> None:
@@ -93,7 +101,7 @@ class MainHookTests(unittest.TestCase):
         self.assertEqual("PreToolUse", decision["hookEventName"])
         self.assertNotIn("permissionDecision", decision)
         self.assertEqual(
-            "codex -c agents.enabled=false exec 'go'",
+            "codex exec -c agents.enabled=false 'go'",
             decision["updatedInput"]["command"],
         )
         self.assertEqual("run codex", decision["updatedInput"]["description"])

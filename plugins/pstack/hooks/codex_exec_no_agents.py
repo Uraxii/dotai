@@ -52,9 +52,13 @@ def rewrite_command(command: str) -> str:
 
     Each `codex ...` invocation, up to the next shell separator or the end
     of the string, is one segment. A segment that contains `exec` as its
-    own word gets `-c agents.enabled=false` right after `codex`, unless the
-    segment already carries the flag. `codex login status` or
+    own word gets `-c agents.enabled=false` right after that `exec`, unless
+    the segment already carries the flag. `codex login status` or
     `codex --version`, with no `exec` in their own segment, are untouched.
+
+    The flag goes after `exec`, not after `codex`, so the rewritten argv
+    still reads `codex exec`, which the delegate-to-codex collision check
+    `codex exec.*-C <worktree>` matches.
     """
     pieces: list[str] = []
     cursor = 0
@@ -65,10 +69,12 @@ def rewrite_command(command: str) -> str:
         boundary = SEGMENT_END.search(command, codex_end)
         segment_end = boundary.start() if boundary else len(command)
         segment = command[codex_end:segment_end]
-        if EXEC_WORD.search(segment) and FLAG_MARKER not in segment:
-            pieces.append(command[cursor:codex_end])
+        exec_word = EXEC_WORD.search(segment)
+        if exec_word and FLAG_MARKER not in segment:
+            exec_end = codex_end + exec_word.end()
+            pieces.append(command[cursor:exec_end])
             pieces.append(f" {FLAG}")
-            cursor = codex_end
+            cursor = exec_end
     pieces.append(command[cursor:])
     return "".join(pieces)
 

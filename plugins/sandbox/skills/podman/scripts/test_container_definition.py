@@ -28,7 +28,9 @@ class LoadDefinitionTest(unittest.TestCase):
     """One fixed directory in the repository, no search and no fallback."""
 
     def setUp(self) -> None:
-        self.root = Path(tempfile.mkdtemp())
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        self.root = Path(temporary.name)
         self.repo = self.root / "myrepo"
         self.repo.mkdir()
 
@@ -143,7 +145,9 @@ class HashDirectoryTest(unittest.TestCase):
     """`hash_directory` is the whole converge check, so it is tested first."""
 
     def setUp(self) -> None:
-        self.root = Path(tempfile.mkdtemp())
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        self.root = Path(temporary.name)
 
     def write(self, name: str, recipe: str = RECIPE) -> Path:
         repo = self.root / name

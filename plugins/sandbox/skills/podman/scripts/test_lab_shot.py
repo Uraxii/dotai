@@ -13,8 +13,12 @@ from pathlib import Path
 
 
 LAB_SHOT = Path(__file__).resolve().parent / "lab-shot"
-DISPLAY = ":4917"
-LOCK = Path("/tmp/.X4917-lock")
+# Xvfb's lock path is fixed under /tmp, so the display number must differ
+# between concurrent test processes. A live pid is unique among them, and the
+# offset keeps it clear of the low numbers real X servers take.
+DISPLAY_NUMBER = 100000 + os.getpid()
+DISPLAY = f":{DISPLAY_NUMBER}"
+LOCK = Path(f"/tmp/.X{DISPLAY_NUMBER}-lock")
 
 
 class LabShotTest(unittest.TestCase):
@@ -31,6 +35,8 @@ class LabShotTest(unittest.TestCase):
         self.env["PATH"] = str(self.bin_dir) + os.pathsep + self.env["PATH"]
         self.env["LAB_SHOT_TEST_MARKER"] = str(self.marker)
         self.env["LAB_SHOT_TEST_MODE"] = "run"
+        self.env["LAB_SHOT_TEST_LOCK"] = str(LOCK)
+        self.env["TMPDIR"] = str(self.root)
         self.write_stubs()
         self.remove_lock()
 
@@ -53,7 +59,7 @@ class LabShotTest(unittest.TestCase):
 
             if os.environ["LAB_SHOT_TEST_MODE"] == "die":
                 raise SystemExit(1)
-            Path("/tmp/.X4917-lock").write_text(str(os.getpid()))
+            Path(os.environ["LAB_SHOT_TEST_LOCK"]).write_text(str(os.getpid()))
             time.sleep(30)
             """,
         )
@@ -81,13 +87,11 @@ class LabShotTest(unittest.TestCase):
                 while stub_alive():
                     time.sleep(0.01)
                 raise SystemExit(0)
-            lock = Path("/tmp/.X4917-lock")
-            for _ in range(50):
-                owner = Path(f"/proc/{lock.read_text()}/cmdline") if lock.exists() else None
-                if owner and owner.exists() and b"Xvfb" in owner.read_bytes():
-                    raise SystemExit(0)
-                time.sleep(0.01)
-            raise SystemExit(1)
+            # One look per call: lab-shot's own retry loop is the wait.
+            lock = Path(os.environ["LAB_SHOT_TEST_LOCK"])
+            owner = Path(f"/proc/{lock.read_text()}/cmdline") if lock.exists() else None
+            ready = owner is not None and owner.exists() and b"Xvfb" in owner.read_bytes()
+            raise SystemExit(0 if ready else 1)
             """,
         )
         self.write_executable(
@@ -128,7 +132,7 @@ class LabShotTest(unittest.TestCase):
         result = self.run_lab_shot()
 
         self.assertNotEqual(result.returncode, 0)
-        self.assertIn("Xvfb failed to start on :4917", result.stderr)
+        self.assertIn(f"Xvfb failed to start on {DISPLAY}", result.stderr)
         self.assertFalse(self.marker.exists())
 
     def test_starts_xvfb_past_a_lock_not_owned_by_xvfb(self) -> None:
@@ -138,6 +142,7 @@ class LabShotTest(unittest.TestCase):
 
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertTrue(self.marker.exists())
+        self.assertTrue((self.root / "lab-shot-cmd.log").exists())
 
     def test_rejects_lock_owned_by_a_live_xvfb(self) -> None:
         owner_dir = self.root / "owner-bin"
@@ -146,7 +151,11 @@ class LabShotTest(unittest.TestCase):
         owner.symlink_to(shutil.which("sleep") or "/bin/sleep")
         process = subprocess.Popen([str(owner), "30"])
         try:
-            time.sleep(0.1)
+            comm = Path(f"/proc/{process.pid}/comm")
+            deadline = time.monotonic() + 10
+            while comm.read_text().strip() != "Xvfb":
+                self.assertLess(time.monotonic(), deadline, "owner never became Xvfb")
+                time.sleep(0.01)
             LOCK.write_text(str(process.pid))
 
             result = self.run_lab_shot()

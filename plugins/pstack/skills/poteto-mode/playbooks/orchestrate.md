@@ -70,7 +70,7 @@ The program lives in the beads store that the session's `BEADS_DIR` names, in gi
   bd gate create --type gh:run --await-id <run id> --blocks <id>
   ```
 
-  `bd gate list` shows the open gates. `bd gate resolve <gate> --reason "<answer>"` closes a human gate. Quote the human's answer in the reason.
+  `bd gate list` shows every open gate, human and GitHub, and has no type filter. List only the open human gates with `bd gate list --json | jq -r '.[] | select(.await_type == "human") | .id'`. `bd gate resolve <gate> --reason "<answer>"` closes a human gate. Quote the human's answer in the reason.
 
   Run `bd gate check --type gh` from the repo root, because it calls `gh` against the repo in the current directory. It closes each GitHub gate whose PR merged or whose run succeeded. It exits 0 even when a check fails, so read its output, not its exit code.
 
@@ -201,4 +201,4 @@ Never reaches the human: frontier nudges, restack mechanics, retries, CI flake t
 
 Mid-run discoveries fix only what blocks the frontier. Everything else parks in follow-up beads; at this fan-out a small scope leak multiplies into PRs nobody asked for.
 
-**Reply:** at checkpoints and close: the predicate and the count of `stage:landed` units against it, tracks and what each landed, the frontier (PR list plus SHAs), verdicts summary from the bead comments, what was abandoned and why, open gates from `bd gate list` (the only asks), and the epic id. Numbers from `bd` and `gh`, not narrative. Include PR links.
+**Reply:** at checkpoints and close: the predicate and the count of `stage:landed` units against it, tracks and what each landed, the frontier (PR list plus SHAs), verdicts summary from the bead comments, what was abandoned and why, the open human gates from the `jq` filter under Gates (the only asks), each open `gh:pr` or `gh:run` gate with the PR or run it waits on, and the epic id. Numbers from `bd` and `gh`, not narrative. Include PR links.
