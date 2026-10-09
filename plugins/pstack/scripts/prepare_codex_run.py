@@ -103,9 +103,10 @@ class GitLayout:
         return (self.git_dir, common / "objects", common / "refs", common / "logs")
 
 
-def git(worktree: Path, *args: str) -> str:
+def git(worktree: Path, *args: str, hooks_path: str = "/dev/null") -> str:
+    override = ["-c", f"core.hooksPath={hooks_path}"] if hooks_path else []
     result = subprocess.run(
-        ["git", "-c", "core.hooksPath=/dev/null", "-C", str(worktree), *args],
+        ["git", *override, "-C", str(worktree), *args],
         capture_output=True, text=True,
     )
     if result.returncode != 0:
@@ -123,18 +124,18 @@ def worktree_config_enabled(worktree: Path) -> bool:
 
 
 def read_layout(worktree: Path) -> GitLayout:
-    def path(*args: str) -> Path:
-        return Path(git(worktree, "rev-parse", "--path-format=absolute", *args))
+    def path(*args: str, **kwargs: str) -> Path:
+        return Path(git(worktree, "rev-parse", "--path-format=absolute", *args, **kwargs))
 
     common_dir = path("--git-common-dir")
-    configured = subprocess.run(
-        ["git", "-C", str(worktree), "config", "--get", "core.hooksPath"],
-        capture_output=True, text=True,
-    ).stdout.strip()
-    hooks_dirs = (common_dir / "hooks",)
-    if configured:
-        hooks_dirs += (worktree / configured,)
+    hooks_dirs = (common_dir / "hooks", path("--git-path", "hooks", hooks_path=""))
     return GitLayout(git_dir=path("--git-dir"), common_dir=common_dir, hooks_dirs=hooks_dirs)
+
+
+def resolved_grants(request: Request, layout: GitLayout, beads_dir: Path) -> tuple[Path, ...]:
+    grants = [*(layout.git_grants if request.role == "writer" else ()),
+              beads_dir.parent, *request.grants]
+    return tuple(grant.resolve() for grant in grants)
 
 
 def check_layout(request: Request, layout: GitLayout, grants: tuple[Path, ...]) -> None:
@@ -148,20 +149,21 @@ def check_layout(request: Request, layout: GitLayout, grants: tuple[Path, ...]) 
             "the repo sets extensions.worktreeConfig=true; a writable per-worktree "
             "config could set core.hooksPath for later git commands",
         )
+    roots = (*grants, request.worktree.resolve()) if request.role == "writer" else grants
     for protected in (*layout.hooks_dirs, *layout.config_files):
-        for grant in grants:
-            if protected.is_relative_to(grant) or grant.is_relative_to(protected):
-                raise Refusal(f"grant {grant} would make {protected} writable")
+        protected = protected.resolve()
+        for root in roots:
+            if protected.is_relative_to(root) or root.is_relative_to(protected):
+                raise Refusal(f"{root} would make {protected} writable")
 
 
 def ere_escape(text: str) -> str:
     return re.sub(r"([.\[\]()*+?{}|^$\\])", r"\\\1", text)
 
 
-def check_not_live(run_dir: Path) -> None:
+def is_live(run_dir: Path) -> bool:
     pattern = f"^bash {ere_escape(str(run_dir))}/run\\.sh$"
-    if subprocess.run(["pgrep", "-f", pattern], capture_output=True).returncode == 0:
-        raise Refusal(f"a Codex run is already live in {run_dir}")
+    return subprocess.run(["pgrep", "-f", pattern], capture_output=True).returncode == 0
 
 
 def model_for(role: str) -> str:
@@ -211,11 +213,10 @@ def reviewer_prompt(request: Request) -> str:
 """
 
 
-def run_script(request: Request, run_dir: Path, beads_dir: Path, layout: GitLayout) -> str:
+def run_script(request: Request, run_dir: Path, beads_dir: Path, grants: tuple[Path, ...]) -> str:
     q = lambda value: shlex.quote(str(value))
     writer = request.role == "writer"
     cwd = request.worktree if writer else run_dir / "cwd"
-    grants = [*(layout.git_grants if writer else ()), beads_dir.parent, *request.grants]
     flags = [
         "-m", model_for(request.role), "-s", "workspace-write",
         "-c", "agents.enabled=false",
@@ -241,6 +242,7 @@ def run_dir_for(request: Request) -> Path:
 def prepare(text: str, beads_env: str | None) -> Path:
     request = parse_request(text)
     run_dir = run_dir_for(request)
+    live = False
     try:
         if not beads_env or not os.path.isabs(beads_env):
             raise Refusal("BEADS_DIR must be set to an absolute path")
@@ -249,19 +251,21 @@ def prepare(text: str, beads_env: str | None) -> Path:
             if not grant.exists():
                 raise Refusal(f"Grant path does not exist: {grant}")
         layout = read_layout(request.worktree)
-        grants = [*(layout.git_grants if request.role == "writer" else ()),
-                  beads_dir.parent, *request.grants]
-        check_layout(request, layout, tuple(grants))
-        check_not_live(run_dir)
+        grants = resolved_grants(request, layout, beads_dir)
+        check_layout(request, layout, grants)
+        live = is_live(run_dir)
+        if live:
+            raise Refusal(f"a Codex run is already live in {run_dir}")
     except Refusal as refusal:
-        run_dir.mkdir(parents=True, exist_ok=True)
-        (run_dir / "refused.txt").write_text(f"{refusal}\n")
+        if not live:
+            run_dir.mkdir(parents=True, exist_ok=True)
+            (run_dir / "refused.txt").write_text(f"{refusal}\n")
         raise
     shutil.rmtree(run_dir, ignore_errors=True)
     (run_dir / "cwd").mkdir(parents=True)
     prompt = writer_prompt(request) if request.role == "writer" else reviewer_prompt(request)
     (run_dir / "prompt.md").write_text(prompt)
-    (run_dir / "run.sh").write_text(run_script(request, run_dir, beads_dir, layout))
+    (run_dir / "run.sh").write_text(run_script(request, run_dir, beads_dir, grants))
     return run_dir
 
 

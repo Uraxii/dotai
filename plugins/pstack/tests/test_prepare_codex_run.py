@@ -246,6 +246,24 @@ def test_grant_over_hooks_or_config_is_refused(env: Env, grant: str) -> None:
     assert "writable" in result.stderr
 
 
+def test_hooks_path_inside_the_worktree_is_refused(env: Env) -> None:
+    git("config", "core.hooksPath", ".githooks", cwd=env.main)
+
+    result = env.prepare(env.writer_prompt())
+
+    assert result.returncode == 2
+    assert "writable" in result.stderr
+
+
+def test_grant_reaching_hooks_through_dotdot_is_refused(env: Env) -> None:
+    sneaky = env.main / ".git/objects/../hooks"
+
+    result = env.prepare(env.writer_prompt(f" Grant: {sneaky}"))
+
+    assert result.returncode == 2
+    assert "writable" in result.stderr
+
+
 def test_beads_parent_over_the_git_dir_is_refused(env: Env) -> None:
     result = env.prepare(env.writer_prompt(), BEADS_DIR=str(env.main / ".beads"))
 
@@ -266,6 +284,7 @@ def test_live_run_is_refused(env: Env) -> None:
 
     assert result.returncode == 2
     assert "already live" in result.stderr
+    assert not (run_dir / "refused.txt").exists()
 
 
 def test_rerun_empties_the_run_dir(env: Env) -> None:
