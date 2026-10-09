@@ -53,7 +53,7 @@
     {
       "name": "codebase-memory",
       "source": "./plugins/codebase-memory",
-      "description": "Keep codebase-memory indexed at session start, then query its code graph from a shell."
+      "description": "Keep codebase-memory indexed at session start and after worktree creation, then query its code graph from a shell."
     },
     {
       "name": "caveman",

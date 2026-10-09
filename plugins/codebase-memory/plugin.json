@@ -1,7 +1,7 @@
 {
   "name": "codebase-memory",
   "version": "1.2.2",
-  "description": "Keep codebase-memory indexed at session start, then query its code graph from a shell.",
+  "description": "Keep codebase-memory indexed at session start and after worktree creation, then query its code graph from a shell.",
   "author": {
     "name": "Uraxii",
     "url": "https://github.com/Uraxii"
