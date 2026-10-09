@@ -1,7 +1,9 @@
 import fcntl
 import importlib.util
+import json
 import os
 import subprocess
+import sys
 import tempfile
 import time
 import unittest
@@ -22,6 +24,7 @@ def write_indexer(bin_directory: Path) -> None:
     binary = bin_directory / "codebase-memory-mcp"
     binary.write_text(
         "#!/bin/sh\n"
+        'if [ -n "$ARGV_MARKER" ]; then printf "%s\\n" "$@" > "$ARGV_MARKER"; fi\n'
         "printf 'spawned\\n' >> \"$SPAWN_MARKER\"\n"
         "read _ < \"$RELEASE_FIFO\"\n"
     )
@@ -71,7 +74,7 @@ class AutoIndexTests(unittest.TestCase):
             self.assertFalse(HOOK.run(str(cwd), environment))
             self.assertFalse(cache.exists())
 
-    def test_worktree_uses_main_checkout_project_name(self) -> None:
+    def test_worktree_uses_its_own_project_name(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory) / "main-checkout"
             worktree = Path(directory) / "linked-worktree"
@@ -101,9 +104,9 @@ class AutoIndexTests(unittest.TestCase):
 
             resolved = HOOK.repository_root(str(worktree))
 
-            self.assertEqual(root.resolve(), resolved)
+            self.assertEqual(worktree.resolve(), resolved)
             self.assertEqual(
-                HOOK.project_name(root.resolve()),
+                HOOK.project_name(worktree.resolve()),
                 HOOK.project_name(resolved),
             )
 
@@ -142,6 +145,131 @@ class AutoIndexTests(unittest.TestCase):
             wait_for_unlock(lock)
 
             self.assertEqual(["spawned", "spawned"], marker.read_text().splitlines())
+
+
+class WorktreeEventTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.directory = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        self.root = self.directory / "main-checkout"
+        self.worktree = self.directory / "linked worktree"
+        self.cache = self.directory / "cache"
+        self.marker = self.directory / "spawned"
+        self.argv = self.directory / "argv"
+        self.fifo = self.directory / "release"
+        self.root.mkdir()
+        self.cache.mkdir()
+        os.mkfifo(self.fifo)
+        subprocess.run(["git", "init", "-q", str(self.root)], check=True)
+        subprocess.run(
+            [
+                "git", "-C", str(self.root),
+                "-c", "user.name=Test", "-c", "user.email=test@example.com",
+                "commit", "--allow-empty", "-qm", "initial",
+            ],
+            check=True,
+        )
+        subprocess.run(
+            ["git", "-C", str(self.root), "worktree", "add", "-q",
+             "-b", "agent", str(self.worktree)],
+            check=True,
+        )
+        bin_directory = self.directory / "bin"
+        write_indexer(bin_directory)
+        self.environment = {
+            **os.environ,
+            "PATH": f"{bin_directory}{os.pathsep}{os.environ['PATH']}",
+            "CBM_CACHE_DIR": str(self.cache),
+            "SPAWN_MARKER": str(self.marker),
+            "ARGV_MARKER": str(self.argv),
+            "RELEASE_FIFO": str(self.fifo),
+        }
+        (self.cache / f"{HOOK.project_name(self.root.resolve())}.db").touch()
+
+    def invoke_event(self, event: dict) -> None:
+        result = subprocess.run(
+            [sys.executable, str(HOOK_PATH)],
+            input=json.dumps(event),
+            capture_output=True,
+            text=True,
+            env=self.environment,
+            timeout=5,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout, "")
+        self.assertEqual(result.stderr, "")
+
+    def assert_worktree_indexed(self) -> None:
+        lock = self.cache / f"{HOOK.project_name(self.worktree.resolve())}.index.lock"
+        release(self.fifo)
+        wait_for_unlock(lock)
+        arguments = self.argv.read_text().splitlines()
+        self.assertEqual(arguments[:2], ["cli", "index_repository"])
+        self.assertEqual(
+            json.loads(arguments[2]),
+            {"repo_path": str(self.worktree.resolve()), "mode": "fast"},
+        )
+        self.assertEqual(self.marker.read_text().splitlines(), ["spawned"])
+
+    def post_tool_event(self, command: str) -> dict:
+        return {
+            "hook_event_name": "PostToolUse",
+            "tool_name": "Bash",
+            "cwd": str(self.root),
+            "tool_input": {"command": command},
+        }
+
+    def test_worktree_add_indexes_new_worktree_without_waiting(self) -> None:
+        self.invoke_event(self.post_tool_event(
+            f'git worktree add -b agent "{self.worktree}"'
+        ))
+        self.assert_worktree_indexed()
+
+    def test_unrelated_bash_command_starts_nothing(self) -> None:
+        self.invoke_event(self.post_tool_event("git status --short"))
+        self.assertFalse(self.marker.exists())
+        self.assertEqual(list(self.cache.glob("*.index.lock")), [])
+
+    def test_existing_worktree_database_starts_nothing(self) -> None:
+        (self.cache / f"{HOOK.project_name(self.worktree.resolve())}.db").touch()
+        self.invoke_event(self.post_tool_event("git worktree add agent"))
+        self.assertFalse(self.marker.exists())
+        self.assertEqual(list(self.cache.glob("*.index.lock")), [])
+
+    def test_session_start_inside_worktree_indexes_worktree(self) -> None:
+        nested = self.worktree / "src"
+        nested.mkdir()
+        self.invoke_event({"hook_event_name": "SessionStart", "cwd": str(nested)})
+        self.assert_worktree_indexed()
+
+    def test_invalid_tool_input_starts_nothing(self) -> None:
+        event = self.post_tool_event("git worktree add agent")
+        event["tool_input"] = None
+        self.invoke_event(event)
+        self.assertFalse(self.marker.exists())
+
+    def test_missing_git_exits_silently(self) -> None:
+        self.environment["PATH"] = str(self.directory / "bin")
+        self.invoke_event(self.post_tool_event("git worktree add agent"))
+        self.assertFalse(self.marker.exists())
+
+    def test_non_repository_exits_silently(self) -> None:
+        event = self.post_tool_event("git worktree add agent")
+        event["cwd"] = str(self.directory)
+        self.invoke_event(event)
+        self.assertFalse(self.marker.exists())
+
+    def test_both_harnesses_register_worktree_hook(self) -> None:
+        for harness in ("claude", "codex"):
+            with self.subTest(harness=harness):
+                document = json.loads(
+                    (HOOK_PATH.parent / f"{harness}-hooks.json").read_text()
+                )
+                registration, = document["hooks"]["PostToolUse"]
+                self.assertEqual(registration["matcher"], "Bash")
+                hook, = registration["hooks"]
+                self.assertEqual(hook["type"], "command")
+                self.assertEqual(hook["timeout"], 5)
+                self.assertTrue(hook["command"].endswith("/hooks/auto_index.py"))
 
 
 if __name__ == "__main__":

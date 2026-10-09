@@ -1,7 +1,7 @@
 {
   "name": "codebase-memory",
-  "version": "1.2.1",
-  "description": "Keep codebase-memory indexed at session start, then query its code graph from a shell.",
+  "version": "1.2.2",
+  "description": "Index the session's own checkout at session start and each new linked worktree after git worktree add, then query its code graph from a shell.",
   "author": {
     "name": "Uraxii",
     "url": "https://github.com/Uraxii"

@@ -1,7 +1,7 @@
 {
   "name": "codebase-memory",
-  "version": "1.2.1",
-  "description": "Keep codebase-memory indexed at session start, then query its code graph from a shell.",
+  "version": "1.2.2",
+  "description": "Index the session's own checkout at session start and each new linked worktree after git worktree add, then query its code graph from a shell.",
   "author": {
     "name": "Uraxii",
     "url": "https://github.com/Uraxii"
@@ -18,8 +18,8 @@
   "hooks": "./hooks/codex-hooks.json",
   "interface": {
     "displayName": "codebase-memory",
-    "shortDescription": "Shell queries over the codebase-memory code graph.",
-    "longDescription": "Starts a detached fast index for the current Git main checkout at Claude Code and Codex session start. Runs codebase-memory-mcp cli against that indexed repository with no MCP server involved, so a shell script or an agent without the MCP tools can still ask structural questions: who calls a function, how a change propagates, which modules cluster together, which functions have no callers, and what a symbol's source says.",
+    "shortDescription": "Shell queries over codebase-memory, indexed per checkout and new worktree.",
+    "longDescription": "Starts a detached fast index for the session's own checkout at Claude Code and Codex session start, and for any new linked worktree created via Bash 'git worktree add'. Runs codebase-memory-mcp cli against that indexed repository with no MCP server involved, so a shell script or an agent without the MCP tools can still ask structural questions: who calls a function, how a change propagates, which modules cluster together, which functions have no callers, and what a symbol's source says.",
     "developerName": "Uraxii",
     "category": "Developer Tools",
     "capabilities": [
