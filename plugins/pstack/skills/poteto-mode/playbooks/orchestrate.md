@@ -60,7 +60,7 @@ The program lives in the beads store that the session's `BEADS_DIR` names, in gi
 
   A new head SHA sets the unit back to `stage=built`.
 
-- **Decisions.** Each constraint the program holds (model policy, stack shape and count, verification bar, forbidden paths, escalation policy, a human ruling) is one decision bead under the epic, created with `bd create "<decision>" -t decision --parent <epic>`. For a human ruling, quote the human's words with attribution in the description, per [Claims about human decisions](../../why/references/epistemics.md#claims-about-human-decisions), and label your own interpretation. To change a decision, create the new one and run `bd supersede <old> --with <new>`. `bd list --parent <epic> -t decision --status open` lists the decisions in force. When you catch yourself restating an instruction, record it as a decision bead before you act (principle-encode-lessons-in-structure).
+- **Decisions.** Each constraint the program holds (model policy, stack shape and count, verification bar, forbidden paths, escalation policy, a human ruling) is one decision bead under the epic, created with `bd create "<decision>" -t decision --parent <epic>`. For a human ruling, quote the human's words with attribution in the description, per [Claims about human decisions](../../why/references/epistemics.md#claims-about-human-decisions), and label your own interpretation. To change a decision, create the new one and mark the old one superseded by it (`bd supersede <old> --with <new>`). `bd list --parent <epic> -t decision --status open` lists the decisions in force. When you catch yourself restating an instruction, record it as a decision bead before you act (principle-encode-lessons-in-structure).
 - **Verdicts.** A verdict is a comment on the unit bead, per Verification.
 - **Gates.** A unit that waits on the human, a PR merge, or a workflow run gets a gate. The gate keeps the unit out of `bd ready` until the gate closes.
 
@@ -94,7 +94,7 @@ bd gate list                                                 # open gates
 gh pr list --state open --json number,title,headRefName,baseRefName,headRefOid
 ```
 
-Spawn only from `bd ready`. `bd swarm status` ignores gates, counts open decision beads as ready work, and counts abandoned units as completed, so read it for progress, not for what to spawn or for the predicate count. Count landed units with `bd list --parent <epic> --status closed --label stage:landed --json`. After you create or reorder units, run `bd swarm validate <epic>`. It rejects a dependency cycle and prints the waves of parallel work and the maximum parallelism, with decision beads in the first wave.
+Spawn only from `bd ready`. `bd swarm status` ignores gates, counts open decision beads as ready work, and counts abandoned units as completed, so read it for progress, not for what to spawn or for the predicate count. Count landed units with `bd list --parent <epic> --status closed --label stage:landed --json`. After you create or reorder units, validate the swarm (`bd swarm validate <epic>`). It rejects a dependency cycle and prints the waves of parallel work and the maximum parallelism, with decision beads in the first wave.
 
 #### The brief
 
