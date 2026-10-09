@@ -4,7 +4,7 @@ Skills and agents for Claude Code, Codex, GitHub Copilot CLI, opencode, and
 Hermes, written in the open Agent Skills format. Fourteen plugins live under
 `plugins/`, and each one installs on its own. `pstack` carries the shared
 machinery: the poteto-mode workflow, the principles, the playbooks, and the
-agent files. The other ten each cover one tool or one job, and none of them
+agent files. The other thirteen each cover one tool or one job, and none of them
 needs `pstack` installed.
 
 ## Plugins
