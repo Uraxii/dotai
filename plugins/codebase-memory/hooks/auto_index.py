@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Start one detached fast index for the current main checkout."""
+"""Start detached fast indexes for the current or newly created checkouts."""
 
 import fcntl
 import json
@@ -28,8 +28,7 @@ def repository_root(cwd: str) -> Path | None:
         "-C",
         cwd,
         "rev-parse",
-        "--path-format=absolute",
-        "--git-common-dir",
+        "--show-toplevel",
     ]
     result = subprocess.run(
         command,
@@ -38,10 +37,11 @@ def repository_root(cwd: str) -> Path | None:
         stderr=subprocess.DEVNULL,
         text=True,
         check=False,
+        timeout=5,
     )
     if result.returncode != 0:
         return None
-    return Path(result.stdout.strip()).parent.resolve()
+    return Path(result.stdout.strip()).resolve()
 
 
 def acquire_lock(cache_root: Path, name: str) -> int | None:
@@ -56,12 +56,8 @@ def acquire_lock(cache_root: Path, name: str) -> int | None:
     return descriptor
 
 
-def event_cwd() -> str:
-    try:
-        event = json.load(sys.stdin)
-    except (json.JSONDecodeError, OSError):
-        event = {}
-    cwd = event.get("cwd") if isinstance(event, dict) else None
+def event_cwd(event: dict) -> str:
+    cwd = event.get("cwd")
     return cwd if isinstance(cwd, str) and cwd else os.getcwd()
 
 
@@ -99,8 +95,43 @@ def run(cwd: str, environment: dict[str, str]) -> bool:
     return True
 
 
+def index_worktrees(cwd: str, environment: dict[str, str]) -> None:
+    result = subprocess.run(
+        ["git", "-C", cwd, "worktree", "list", "--porcelain", "-z"],
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        text=True,
+        check=False,
+        timeout=5,
+    )
+    if result.returncode != 0:
+        return
+    cache_root = cache_directory(environment)
+    for field in result.stdout.split("\0"):
+        if field.startswith("worktree "):
+            root = Path(field.removeprefix("worktree ")).resolve()
+            if not (cache_root / f"{project_name(root)}.db").exists():
+                run(str(root), environment)
+
+
 def main() -> int:
-    run(event_cwd(), dict(os.environ))
+    try:
+        event = json.load(sys.stdin)
+        if not isinstance(event, dict):
+            return 0
+        if event.get("hook_event_name") == "PostToolUse":
+            tool_input = event.get("tool_input")
+            command = (
+                tool_input.get("command") if isinstance(tool_input, dict) else None
+            )
+            if not isinstance(command, str) or "worktree add" not in command:
+                return 0
+            index_worktrees(event_cwd(event), dict(os.environ))
+        else:
+            run(event_cwd(event), dict(os.environ))
+    except (OSError, ValueError, subprocess.SubprocessError):
+        pass
     return 0
 
 
