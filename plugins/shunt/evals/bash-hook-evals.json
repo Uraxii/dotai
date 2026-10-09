@@ -568,6 +568,14 @@
       "fixture": {"lines": 800},
       "expected_decision": "allow",
       "reason": "Handoff directory permits a full read above the threshold"
+    },
+    {
+      "id": 66,
+      "name": "cat-handoff-parent-traversal",
+      "input": {"cwd": "{{FIXTURES}}", "tool_input": {"command": "cat .handoffs/../big.md"}},
+      "fixture": {"lines": 800},
+      "expected_decision": "block",
+      "reason": "Parent traversal cannot grant the handoff exception"
     }
   ]
 }

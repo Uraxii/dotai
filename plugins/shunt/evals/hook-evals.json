@@ -481,6 +481,14 @@
       "fixture": {"lines": 800},
       "expected_decision": "block",
       "reason": "Only exact handoff directory segments bypass the threshold"
+    },
+    {
+      "id": 56,
+      "name": "read-handoff-parent-traversal",
+      "input": {"cwd": "{{FIXTURES}}", "tool_input": {"file_path": ".handoffs/../big.md"}},
+      "fixture": {"lines": 800},
+      "expected_decision": "block",
+      "reason": "Parent traversal cannot grant the handoff exception"
     }
   ]
 }

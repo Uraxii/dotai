@@ -39,6 +39,7 @@ fi
 esac
 
 case "/$file_path" in
+  */../*) ;;
   */.handoffs/*|*/handoffs/*) exit 0 ;;
 esac
 

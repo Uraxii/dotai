@@ -138,7 +138,7 @@ Fires on Claude Code `Read` and Copilot CLI `view` calls. Blocks full-file reads
 - Targeted reads (offset or limit set)
 - Files under the threshold
 - Nonexistent files (let Read handle the error)
-- Files under a directory named `.handoffs` or `handoffs`, after resolving relative paths from the session cwd. Agents need the full handoff to resume work; `handoffs.txt` and `myhandoffs/` do not qualify.
+- Files under a directory named `.handoffs` or `handoffs`, after resolving relative paths from the session cwd, provided the path has no `..` segment. Agents need the full handoff to resume work; `handoffs.txt` and `myhandoffs/` do not qualify.
 
 ### check-bash-read (Bash hook)
 
@@ -147,7 +147,7 @@ Fires on Claude Code and Codex `Bash` calls and Copilot CLI `bash` calls. Catche
 - Redirections (`cat file > out`) — not reading into context
 - Commands with flags that indicate targeted reads
 - Non-read commands (`git status`, `grep`, etc.)
-- Files under a directory named `.handoffs` or `handoffs`, after resolving relative paths from the session cwd, on Claude Code, Codex, and Copilot CLI
+- Files under a directory named `.handoffs` or `handoffs`, after resolving relative paths from the session cwd, provided the path has no `..` segment, on Claude Code, Codex, and Copilot CLI
 
 ## Configuration
 

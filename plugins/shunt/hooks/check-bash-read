@@ -50,6 +50,7 @@ fi
   *) file_path="$cwd/$file_path" ;;
 esac
 case "/$file_path" in
+  */../*) ;;
   */.handoffs/*|*/handoffs/*) exit 0 ;;
 esac
 [ ! -f "$file_path" ] && exit 0
