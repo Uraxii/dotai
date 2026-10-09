@@ -75,6 +75,8 @@ def worktree(request: pytest.FixtureRequest, tmp_path: Path) -> Path:
     worktree = tmp_path / dirname
     git("init", "-q", "--bare", str(remote), cwd=tmp_path)
     git("init", "-q", "-b", "develop", str(main), cwd=tmp_path)
+    git("config", "gc.auto", "0", cwd=main)
+    git("config", "maintenance.auto", "false", cwd=main)
     (main / "test_unit.py").write_text(
         "import unittest\n\n\nclass T(unittest.TestCase):\n"
         "    def test_ok(self):\n        self.assertTrue(True)\n"
