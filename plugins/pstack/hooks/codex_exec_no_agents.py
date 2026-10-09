@@ -43,8 +43,8 @@ FLAG_MARKER = "agents.enabled=false"
 # slip past it either way. Upgrade to a real shell tokenizer if a live
 # command trips it.
 CODEX_INVOCATION = re.compile(r"(?:\A|[;&|`\n(])\s*codex\b")
-HEREDOC = re.compile(r"<<-?[ \t]*(['\"]?)(\w+)\1[^\n]*\n(.*?)(?:\n[ \t]*\2[ \t]*(?=\n|\Z)|\Z)", re.S)
-QUOTED = re.compile(r"'[^']*'|\"(?:\\.|[^\"\\])*\"")
+HEREDOC_OPERATOR = re.compile(r"<<(-?)[ \t]*(['\"]?)(\w+)\2")
+WORD_START = frozenset(" \t\n;&|()<>=`")
 SEGMENT_END = re.compile(r"[;&|`\n)]")
 EXEC_WORD = re.compile(r"\bexec\b")
 TOKEN = re.compile(r"\S+")
@@ -69,19 +69,104 @@ def exec_end(segment: str) -> int | None:
     return None
 
 
-def blank(match: re.Match[str]) -> str:
-    return re.sub(r"[^\n]", " ", match.group())
+def closing_quote(command: str, start: int) -> int:
+    """Index of the quote closing the one at `start`, or -1."""
+    if command[start] == "'":
+        return command.find("'", start + 1)
+    i = start + 1
+    while i < len(command):
+        if command[i] == "\\":
+            i += 1
+        elif command[i] == '"':
+            return i
+        i += 1
+    return -1
+
+
+def substitution_spans(body: str) -> list[tuple[int, int]]:
+    """Spans of `$(...)` in an unquoted heredoc body, which bash executes."""
+    spans = []
+    i = body.find("$(")
+    while i != -1:
+        depth, j = 1, i + 2
+        while j < len(body) and depth:
+            depth += (body[j] == "(") - (body[j] == ")")
+            j += 1
+        spans.append((i, j))
+        i = body.find("$(", j)
+    return spans
 
 
 def mask_text(command: str) -> str:
-    """Same-length copy with heredoc bodies and quoted strings blanked.
+    """Same-length copy with text the command only writes or prints blanked.
 
-    Text a command writes or prints (`cat <<EOF`, `echo "codex exec"`) is
-    not an invocation. Blanking keeps offsets valid against `command`.
+    Heredoc bodies, quoted strings, and `#` comments are not invocations.
+    A heredoc body is blanked only when its closing delimiter exists, and an
+    unquoted body keeps its `$(...)` substitutions. A quote or `#` counts
+    only at the start of a word, `\\x` escapes are skipped, and `<<<` and
+    `<<` inside `$((...))` are not heredocs. Blanking keeps offsets valid.
     ponytail: `bash -c "codex exec ..."` is blanked too and passes through
     unrewritten; unwrap `-c` strings if that matters.
     """
-    return QUOTED.sub(blank, HEREDOC.sub(blank, command))
+    out = list(command)
+    n = len(command)
+
+    def blank(start: int, end: int) -> None:
+        for k in range(start, end):
+            if out[k] != "\n":
+                out[k] = " "
+
+    def consume_heredoc(start: int, dash: str, quote: str, delim: str) -> int:
+        """Blank the body starting at `start`; return where scanning resumes."""
+        pos = start
+        while pos <= n:
+            eol = command.find("\n", pos)
+            eol = n if eol == -1 else eol
+            line = command[pos:eol]
+            if (line.lstrip("\t") if dash else line) == delim:
+                blank(start, eol)
+                if not quote:
+                    body = command[start:pos]
+                    for a, b in substitution_spans(body):
+                        out[start + a:start + b] = body[a:b]
+                return eol
+            if eol == n:
+                return start
+            pos = eol + 1
+        return start
+
+    pending: list[tuple[str, str, str]] = []
+    i = 0
+    while i < n:
+        c = command[i]
+        at_word = i == 0 or command[i - 1] in WORD_START
+        if c == "\\":
+            i += 2
+        elif c == "#" and at_word:
+            eol = command.find("\n", i)
+            eol = n if eol == -1 else eol
+            blank(i, eol)
+            i = eol
+        elif c in "'\"" and at_word and (end := closing_quote(command, i)) != -1:
+            blank(i, end + 1)
+            i = end + 1
+        elif command.startswith("$((", i):
+            end = command.find("))", i)
+            i = n if end == -1 else end + 2
+        elif command.startswith("<<<", i):
+            i += 3
+        elif c == "<" and (op := HEREDOC_OPERATOR.match(command, i)):
+            pending.append(op.groups())
+            i = op.end()
+        elif c == "\n" and pending:
+            i += 1
+            for dash, quote, delim in pending:
+                i = consume_heredoc(i, dash, quote, delim)
+                i = min(i + 1, n) if command.startswith("\n", i) else i
+            pending.clear()
+        else:
+            i += 1
+    return "".join(out)
 
 
 def rewrite_command(command: str) -> str:
@@ -95,8 +180,7 @@ def rewrite_command(command: str) -> str:
     `codex --version`, with no `exec` in their own segment, are untouched.
 
     The flag goes after `exec`, not after `codex`, so the rewritten argv
-    still reads `codex exec`, which a worktree-keyed process match
-    `codex exec.*-C <worktree>` matches.
+    still reads `codex exec`.
     """
     pieces: list[str] = []
     cursor = 0

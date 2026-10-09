@@ -111,6 +111,46 @@ class RewriteCommandTests(unittest.TestCase):
             "cat <<EOF\n`codex exec -c agents.enabled=false`\nEOF\ncodex exec -c agents.enabled=false go",
         )
 
+    def test_real_invocations_near_shell_syntax_still_get_the_flag(self) -> None:
+        flagged = "codex exec -c agents.enabled=false"
+        cases = {
+            "comment with apostrophe": (
+                "# don't break\ncodex exec 'do it'",
+                f"# don't break\n{flagged} 'do it'",
+            ),
+            "escaped quote": (
+                "echo it\\'s; codex exec 'go'",
+                f"echo it\\'s; {flagged} 'go'",
+            ),
+            "here-string": (
+                "cat <<<word\ncodex exec go",
+                f"cat <<<word\n{flagged} go",
+            ),
+            "arithmetic shift": (
+                "x=$((1<<N))\ncodex exec go",
+                f"x=$((1<<N))\n{flagged} go",
+            ),
+            "heredoc operator in double quotes": (
+                'echo "see <<X"\ncodex exec go',
+                f'echo "see <<X"\n{flagged} go',
+            ),
+            "substitution in unquoted heredoc": (
+                "cat <<EOF > f\n$(codex exec go)\nEOF",
+                f"cat <<EOF > f\n$({flagged} go)\nEOF",
+            ),
+            "heredoc without closing delimiter": (
+                "cat <<EOF\ncodex exec go",
+                f"cat <<EOF\n{flagged} go",
+            ),
+            "adjacent single-quoted strings": (
+                "codex exec -C /w 'it''s fine'",
+                f"{flagged} -C /w 'it''s fine'",
+            ),
+        }
+        for name, (command, expected) in cases.items():
+            with self.subTest(name):
+                self.assertEqual(HOOK.rewrite_command(command), expected)
+
     def test_a_path_containing_codex_exec_is_not_mangled(self) -> None:
         command = "/tmp/codex/exec.sh --help"
         self.assertEqual(HOOK.rewrite_command(command), command)
