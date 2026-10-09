@@ -3,7 +3,7 @@
 Claude Code kills a watcher's wrapper shell once its background-shell time
 limit passes. The watcher's launch command must start Codex in its own
 session and leave its exit code in `<TMP>/exit-code`, and the documented
-Monitor loop must read that code, or print `lost` when the wrapper died
+pgrep wait must end with that code, or print `lost` when the wrapper died
 without writing one. These tests read the run script and both commands from
 the agent definitions and run them against a stub `codex`.
 """
@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import os
 import re
+import shutil
 import signal
 import subprocess
 import textwrap
@@ -24,6 +25,14 @@ import pytest
 PLUGIN_ROOT = Path(__file__).resolve().parents[1]
 WATCHERS = ["developer-codex", "reviewer-codex"]
 STUB_EXIT_CODE = 7
+SHELLS = [["bash", "-c", "set -m; "], ["zsh", "-c", ""]]
+
+
+@pytest.fixture(params=SHELLS, ids=["bash-job-control", "zsh"])
+def shell_argv(request: pytest.FixtureRequest) -> list[str]:
+    if shutil.which(request.param[0]) is None:
+        pytest.skip(f"{request.param[0]} not installed")
+    return request.param
 
 
 def read_definition(watcher: str) -> str:
@@ -47,9 +56,9 @@ def launch_command(watcher: str) -> str:
 
 
 def wait_command(watcher: str) -> str:
-    wait = re.search(r"^   (until \[ -e [^\n]*)$", read_definition(watcher), re.M)
-    assert wait, f"{watcher}.md lacks an until-loop wait"
-    return wait.group(1)
+    wait = re.search(r"^   (sleep 1; while pgrep [^\n]*)$", read_definition(watcher), re.M)
+    assert wait, f"{watcher}.md lacks a pgrep wait"
+    return wait.group(1).replace("sleep 5", "sleep 0.2").replace("sleep 1;", "sleep 0.1;")
 
 
 def fill(command: str, tmp: Path, adddirs: str = "", worktree: Path | None = None) -> str:
@@ -66,6 +75,11 @@ def fill(command: str, tmp: Path, adddirs: str = "", worktree: Path | None = Non
 def processes_naming(tmp: Path) -> list[str]:
     result = subprocess.run(["pgrep", "-f", str(tmp)], capture_output=True, text=True)
     return result.stdout.split()
+
+
+def wrapper_pids(tmp: Path) -> list[int]:
+    result = subprocess.run(["pgrep", "-f", f"^bash {tmp}/run\\.sh"], capture_output=True, text=True)
+    return [int(pid) for pid in result.stdout.split()]
 
 
 def wait_for(path: Path, what: str) -> None:
@@ -87,6 +101,7 @@ def launch(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     stub_seconds: int,
+    shell_argv: list[str],
     worktree: Path | None = None,
     adddirs: str = "",
     linger: bool = True,
@@ -110,16 +125,16 @@ def launch(
     script = fill(launch_command(watcher), work)
     if linger:
         script += "\nsleep 30"
-    shell = subprocess.Popen(["bash", "-c", script], start_new_session=True)
+    shell = subprocess.Popen([*shell_argv[:-1], shell_argv[-1] + script], start_new_session=True)
     wait_for(work / "stub-pid", "stub codex never started")
     return work, shell
 
 
 @pytest.mark.parametrize("watcher", WATCHERS)
 def test_codex_survives_launching_shell_kill(
-    watcher: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    watcher: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, shell_argv: list[str]
 ) -> None:
-    work, shell = launch(watcher, tmp_path, monkeypatch, stub_seconds=2)
+    work, shell = launch(watcher, tmp_path, monkeypatch, stub_seconds=2, shell_argv=shell_argv)
     os.killpg(shell.pid, signal.SIGKILL)
     shell.wait()
 
@@ -129,20 +144,21 @@ def test_codex_survives_launching_shell_kill(
         text=True,
         timeout=10,
     )
-    assert waited.stdout.strip() == str(STUB_EXIT_CODE)
+    assert waited.stdout.split() == ["exited", str(STUB_EXIT_CODE)]
     assert (work / "exit-code").read_text().strip() == str(STUB_EXIT_CODE)
+    assert not wrapper_pids(work)
     wait_until_gone(work, "launch or heartbeat process outlived codex")
 
 
 @pytest.mark.parametrize("watcher", WATCHERS)
 def test_dead_wrapper_ends_loops_and_prints_lost(
-    watcher: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    watcher: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, shell_argv: list[str]
 ) -> None:
-    work, shell = launch(watcher, tmp_path, monkeypatch, stub_seconds=30, linger=False)
-    wrapper_pid = int((work / "pid").read_text())
-    stub_pid = int((work / "stub-pid").read_text())
-    os.kill(wrapper_pid, signal.SIGKILL)
-    os.kill(stub_pid, signal.SIGKILL)
+    work, shell = launch(watcher, tmp_path, monkeypatch, stub_seconds=30, shell_argv=shell_argv, linger=False)
+    wrappers = wrapper_pids(work)
+    assert wrappers, "no live run.sh wrapper to kill"
+    for pid in [*wrappers, int((work / "stub-pid").read_text())]:
+        os.kill(pid, signal.SIGKILL)
 
     waited = subprocess.run(
         ["bash", "-c", fill(wait_command(watcher), work)],
@@ -150,14 +166,14 @@ def test_dead_wrapper_ends_loops_and_prints_lost(
         text=True,
         timeout=5,
     )
-    assert waited.stdout.strip() == "lost"
+    assert waited.stdout.split() == ["exited", "lost"]
     assert not (work / "exit-code").exists()
     shell.wait()
     wait_until_gone(work, "heartbeat loop outlived the dead wrapper")
 
 
 def test_worktree_and_adddirs_with_spaces_reach_codex_intact(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, shell_argv: list[str]
 ) -> None:
     worktree = tmp_path / "my work tree"
     worktree.mkdir()
@@ -166,6 +182,7 @@ def test_worktree_and_adddirs_with_spaces_reach_codex_intact(
         tmp_path,
         monkeypatch,
         stub_seconds=0,
+        shell_argv=shell_argv,
         worktree=worktree,
         adddirs=f"--add-dir '{tmp_path}/grant dir'",
     )

@@ -49,10 +49,10 @@ Every reply is keyed lines, one per line. `fallback` takes one of three values:
    mv <TMP>/exit-code.part <TMP>/exit-code
    ```
 
-   Then launch it with Bash, one call, with nothing chained after it. It starts Codex detached in its own session and returns at once, so no shell time limit can kill Codex or lose its exit code. `<TMP>/pid` holds the wrapper's PID:
+   Then launch it with Bash, one call, with nothing chained after it. It starts Codex detached in its own session and returns at once, so no shell time limit can kill Codex or lose its exit code:
 
    ```
-   setsid nohup bash <TMP>/run.sh >/dev/null 2>&1 & echo $! > <TMP>/pid
+   setsid nohup bash <TMP>/run.sh >/dev/null 2>&1 &
    ```
 
    `-c agents.enabled=false` stops Codex from handing the review to a helper agent. A plugin hook adds that flag to any `codex exec` that lacks it, but write it in COMMAND yourself.
@@ -60,11 +60,11 @@ Every reply is keyed lines, one per line. `fallback` takes one of three values:
    Then wait with the Monitor tool, `timeout_ms: 1800000`, command:
 
    ```
-   until [ -e <TMP>/exit-code ]; do kill -0 "$(cat <TMP>/pid)" 2>/dev/null || { [ -e <TMP>/exit-code ] || { echo lost; exit; }; }; sleep 1; done; cat <TMP>/exit-code
+   sleep 1; while pgrep -f '^bash <TMP>/run\.sh' >/dev/null; do sleep 5; done; echo exited; cat <TMP>/exit-code 2>/dev/null || echo lost
    ```
 
-   The event it prints is Codex's exit code, or `lost` when the wrapper died without writing one. When Monitor expires with no event, Codex is still running, so re-arm the same Monitor. Never reply `fallback: claude` while Codex is alive. A slow run is never a reason to report a failure.
-7. If the event was `lost`, reply `fallback: claude`, `command: <COMMAND exactly as run>`, `exit code: (none)`, `reason: codex wrapper died without an exit code`, and stop. If Codex exited non-zero, reply `fallback: claude`, `command: <COMMAND exactly as run>`, `exit code: <its exit code>`, `reason: codex exec exited <its exit code>; see <TMP>/codex-exec.log`, and stop.
+   The wait prints `exited` when the wrapper is gone, then Codex's exit code, or `lost` when the wrapper died without writing one. The pattern is anchored so only the `bash <TMP>/run.sh` wrapper matches, never the wait or heartbeat command lines. When Monitor expires with no event, Codex is still running, so re-arm the same Monitor. Never reply `fallback: claude` while Codex is alive. A slow run is never a reason to report a failure.
+7. If the wait printed `lost`, reply `fallback: claude`, `command: <COMMAND exactly as run>`, `exit code: (none)`, `reason: codex wrapper died without an exit code`, and stop. If Codex exited non-zero, reply `fallback: claude`, `command: <COMMAND exactly as run>`, `exit code: <its exit code>`, `reason: codex exec exited <its exit code>; see <TMP>/codex-exec.log`, and stop.
 8. Run `python3 ${CLAUDE_PLUGIN_ROOT}/skills/poteto-mode/scripts/final_verdict.py <TMP>/last-message.md <SHA> > <TMP>/verdict.md`. The script takes the last `verdict: pass` or `verdict: fail` line and the first `reason:` line after it, indented or not. If it exits non-zero, reply `fallback: claude`, `command: <COMMAND exactly as run>`, `exit code: 0`, `reason: codex gave no verdict line; see <TMP>/last-message.md`, and stop. Otherwise VERDICT is the second word of `<TMP>/verdict.md`.
 9. Add the verdict file as a comment on the bead (`bd comment <id> --file <TMP>/verdict.md`). Never put Codex's message or bead text inside a command, because the shell runs backticks and `$(...)` in it. Pass that text through a file. If `bd comment` exits non-zero, reply `fallback: stop`, `command: bd comment <id> --file <TMP>/verdict.md`, `exit code: <its exit code>`, `reason: <the error bd printed>`, and stop.
 10. Reply exactly:

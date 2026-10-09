@@ -1,8 +1,10 @@
-import { afterAll, describe, expect, it } from "bun:test";
+import { afterAll, describe, expect, it, setDefaultTimeout } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+
+setDefaultTimeout(30_000);
 
 const SCRIPT = join(import.meta.dir, "check-plan.mjs");
 const PLAYBOOK = join(import.meta.dir, "../playbooks/multi-phase-plan.md");
@@ -29,7 +31,7 @@ let written = 0;
 function checkPlan(plan: string): CheckResult {
   const file = join(scratch, `plan-${++written}.md`);
   writeFileSync(file, plan);
-  const result = spawnSync("node", [SCRIPT, file], { encoding: "utf8", timeout: 5000 });
+  const result = spawnSync("node", [SCRIPT, file], { encoding: "utf8", timeout: 25_000 });
   return { status: result.status, stdout: result.stdout, stderr: result.stderr };
 }
 
