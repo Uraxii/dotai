@@ -41,16 +41,18 @@ HOOK_WIRING_PATHS = {
 PLUGINS: list[dict[str, object]] = [
     {
         "name": "pstack",
-        "version": "2.0.3",
+        "version": "2.0.4",
         "hooks": ["claude", "codex", "copilot"],
         "description": (
             "Skills and thin named agents: poteto-mode, principles, "
-            "playbooks, tools."
+            "playbooks, tools. Requires the beads CLI (bd 1.3.1)."
         ),
         "short": "Reusable skills for software development work.",
         "long": (
             "A collection of reusable workflows, principles, playbooks, and "
-            "tools for Codex and other coding agents."
+            "tools for Codex and other coding agents. Requires the beads CLI "
+            "(bd 1.3.1) and a BEADS_DIR that names the project's "
+            "store. Install bd from https://github.com/gastownhall/beads."
         ),
         "keywords": ["software-development"],
         "prompts": [
