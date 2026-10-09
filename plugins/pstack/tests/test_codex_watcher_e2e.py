@@ -5,6 +5,12 @@ and a logged-in Claude Code. A stub `codex` sleeps past the shrunk Bash timeout,
 commits in a linked worktree, and exits 0. The watcher must still reply with
 that exit code and commit.
 
+The run is tuned for speed. Both the parent and the watcher run on Haiku (the
+watcher declares sonnet, so ANTHROPIC_DEFAULT_SONNET_MODEL remaps it), the stub
+sleeps 30 s, and an empty ZDOTDIR keeps the user's .zshrc from adding seconds
+to the first Bash call. The stub has to outlast the watcher's first status
+reply, or an older watcher that replies early finishes before anyone notices.
+
 BASH_DEFAULT_TIMEOUT_MS and BASH_MAX_TIMEOUT_MS shrink the foreground Bash
 timeout, so a Bash call that runs Codex inline moves to the background after a
 few seconds. No variable shrinks the background time limit itself (30 minutes,
@@ -29,9 +35,11 @@ import pytest
 
 PLUGIN_ROOT = Path(__file__).resolve().parents[1]
 PLUGIN_DIR = Path(os.environ.get("PSTACK_WATCHER_E2E_PLUGIN_DIR", PLUGIN_ROOT))
-BASH_LIMIT_MS = 3000
-STUB_SECONDS = 40
+BASH_LIMIT_MS = 1000
+STUB_SECONDS = 30
 CLAUDE_TIMEOUT_SECONDS = 150
+FAST_MODEL = "haiku"
+FAST_MODEL_ID = "claude-haiku-5-5"
 
 pytestmark = pytest.mark.skipif(
     os.environ.get("PSTACK_WATCHER_E2E") != "1"
@@ -101,16 +109,21 @@ def test_watcher_survives_shrunk_bash_timeout(tmp_path: Path) -> None:
         f"prompt, verbatim: {watcher_prompt}\n"
         "Wait for the agent to finish. Then print its final reply verbatim and nothing else."
     )
+    zdotdir = tmp_path / "zdotdir"
+    zdotdir.mkdir()
     env = {
         **os.environ,
         "PATH": f"{bin_dir}:{os.environ['PATH']}",
         "BEADS_DIR": str(tmp_path / "store" / ".beads"),
+        "ZDOTDIR": str(zdotdir),
+        "ANTHROPIC_DEFAULT_SONNET_MODEL": FAST_MODEL_ID,
         "BASH_DEFAULT_TIMEOUT_MS": str(BASH_LIMIT_MS),
         "BASH_MAX_TIMEOUT_MS": str(BASH_LIMIT_MS),
     }
     result = subprocess.run(
         ["claude", "-p", ask, "--plugin-dir", str(PLUGIN_DIR), "--setting-sources", "project",
-         "--permission-mode", "bypassPermissions", "--model", "sonnet"],
+         "--permission-mode", "bypassPermissions", "--model", FAST_MODEL,
+         "--strict-mcp-config"],
         cwd=tmp_path, env=env, capture_output=True, text=True, timeout=CLAUDE_TIMEOUT_SECONDS,
     )
     reply = result.stdout
