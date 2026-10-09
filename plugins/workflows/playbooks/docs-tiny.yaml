@@ -1,0 +1,5 @@
+kind: playbook
+name: docs-tiny
+summary: A docs change at 1 or 2 points, like fix a README typo or update one command.
+when: {task: docs, points: [1, 2]}
+chain: [build, review, pr]

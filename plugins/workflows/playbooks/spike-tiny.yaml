@@ -1,0 +1,5 @@
+kind: playbook
+name: spike-tiny
+summary: A spike at 1 or 2 points, like check a library license or read one API doc.
+when: {task: spike, points: [1, 2]}
+chain: [research]

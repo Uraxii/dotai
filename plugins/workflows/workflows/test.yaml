@@ -1,0 +1,11 @@
+kind: workflow
+name: test
+phase: check
+summary: Run the suite against the change.
+roles: [tester]
+inputs: [change]
+outputs: [test-report]
+steps:
+  - {id: run, do: Run the suite.}
+  - {id: report, do: Report failures to the author.}
+loop: {until: the suite is green, back_to: run, max: 3, on_exhaust: escalate}

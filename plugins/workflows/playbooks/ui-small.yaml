@@ -1,0 +1,5 @@
+kind: playbook
+name: ui-small
+summary: A UI change at 3 points, like new empty state or responsive fix on a page.
+when: {task: ui, points: [3]}
+chain: [build, verify, review, pr]

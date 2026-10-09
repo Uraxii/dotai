@@ -1,0 +1,11 @@
+kind: workflow
+name: ops
+phase: make
+summary: Change the infrastructure with a dry run before the apply.
+roles: [devops]
+inputs: [plan]
+outputs: [change]
+steps:
+  - {id: dry-run, do: Run the change as a dry run and read the planned diff.}
+  - {id: apply, do: Apply the change and read back the real state.}
+loop: {until: the real state matches the plan, back_to: dry-run, max: 3, on_exhaust: escalate}

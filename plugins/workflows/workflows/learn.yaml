@@ -1,0 +1,10 @@
+kind: workflow
+name: learn
+phase: finish
+summary: Keep the lasting facts from a run for the next one.
+roles: [monitor]
+inputs: [friction-report]
+outputs: [memory]
+steps:
+  - {id: read, do: Read the memories and the friction report from the run.}
+  - {id: record, do: "Write each lasting fact to core-memory.md, which agents read at startup."}

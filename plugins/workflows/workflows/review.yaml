@@ -1,0 +1,11 @@
+kind: workflow
+name: review
+phase: check
+summary: Check code quality and the evidence behind the claim in one pass.
+roles: [reviewer]
+inputs: [change, test-report]
+outputs: [verdict]
+steps:
+  - {id: read, do: Read the diff and the evidence.}
+  - {id: verdict, do: Approve or request changes.}
+loop: {until: the verdict is approve, back_to: read, max: 3, on_exhaust: escalate}

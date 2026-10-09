@@ -1,0 +1,5 @@
+kind: playbook
+name: infra-medium
+summary: An infra change at 5 points, like new staging environment or add a cache layer.
+when: {task: infra, points: [5]}
+chain: [plan, threat, ops, test, verify, review, pr]

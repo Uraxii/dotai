@@ -1,0 +1,8 @@
+kind: playbook
+name: refactor-tiny
+summary: A refactor at 1 or 2 points, like rename a function or extract a constant.
+when: {task: refactor, points: [1, 2]}
+chain:
+  - pin
+  - loop: {until: the target shape is reached, max: 10, on_exhaust: re-score, do: [build, test]}
+  - pr

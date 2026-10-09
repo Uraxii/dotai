@@ -1,0 +1,5 @@
+kind: playbook
+name: security-small
+summary: A security fix at 3 points, like rate-limit login or escape output in a view.
+when: {task: security, points: [3]}
+chain: [threat, build, test, review, pr]

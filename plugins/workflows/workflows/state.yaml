@@ -1,0 +1,11 @@
+kind: workflow
+name: state
+phase: coordinate
+summary: Save the work state so another session can pick it up.
+roles: [developer]
+inputs: [change]
+outputs: [handoff]
+steps:
+  - {id: save, do: Make a WIP commit and write the bead notes.}
+  - {id: read-back, do: Read the beads back as a new session would.}
+loop: {until: the bead notes name the next step and its evidence, back_to: save, max: 2, on_exhaust: escalate}

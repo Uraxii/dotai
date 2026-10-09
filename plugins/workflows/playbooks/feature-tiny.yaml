@@ -1,0 +1,5 @@
+kind: playbook
+name: feature-tiny
+summary: A feature at 1 or 2 points, like copy change on a button or add a config flag.
+when: {task: feature, points: [1, 2]}
+chain: [build, test, pr]

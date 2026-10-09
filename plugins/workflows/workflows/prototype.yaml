@@ -1,0 +1,11 @@
+kind: workflow
+name: prototype
+phase: shape
+summary: Build throwaway variants and let the comparison pick one.
+roles: [developer]
+inputs: [task]
+outputs: [recommendation]
+steps:
+  - {id: variants, do: Build throwaway variants behind a switcher.}
+  - {id: compare, do: Compare the variants on the stated criteria and recommend one.}
+loop: {until: one variant wins on the stated criteria, back_to: variants, max: 3, on_exhaust: escalate}

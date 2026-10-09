@@ -1,0 +1,15 @@
+kind: playbook
+name: refactor-huge
+summary: A refactor at 13 points, like framework major upgrade or split a monolith module.
+when: {task: refactor, points: [13]}
+chain:
+  - prototype
+  - research
+  - pin
+  - plan
+  - design
+  - loop: {until: the target shape is reached, max: 10, on_exhaust: re-score, do: [build, test]}
+  - verify
+  - review
+  - pr
+  - learn

@@ -1,0 +1,11 @@
+kind: workflow
+name: ship
+phase: deliver
+summary: Land verified PRs from the bottom of the stack up.
+roles: [developer]
+inputs: [mergeable-pr, verdict]
+outputs: [landed-change]
+steps:
+  - {id: merge, do: Merge the bottom verified PR.}
+  - {id: confirm, do: Confirm the change landed on the base branch.}
+loop: {until: no verified PR is left in the stack, back_to: merge, max: 10, on_exhaust: stop}

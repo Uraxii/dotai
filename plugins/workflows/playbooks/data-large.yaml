@@ -1,0 +1,5 @@
+kind: playbook
+name: data-large
+summary: A data change at 8 points, like migrate to a new schema or event sourcing for orders.
+when: {task: data, points: [8]}
+chain: [pin, plan, threat, design, build, test, verify, review, pr]

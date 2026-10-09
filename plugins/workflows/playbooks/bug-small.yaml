@@ -1,0 +1,5 @@
+kind: playbook
+name: bug-small
+summary: A bug at 3 points, like null crash on empty input or timezone shown wrong.
+when: {task: bug, points: [3]}
+chain: [pin, diagnose, build, test, review, pr]

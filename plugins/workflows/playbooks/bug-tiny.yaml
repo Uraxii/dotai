@@ -1,0 +1,5 @@
+kind: playbook
+name: bug-tiny
+summary: A bug at 1 or 2 points, like typo in an error message or wrong default value.
+when: {task: bug, points: [1, 2]}
+chain: [pin, build, test, pr]

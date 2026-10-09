@@ -1,0 +1,9 @@
+kind: playbook
+name: refactor-small
+summary: A refactor that moves in small steps under a pinned behavior.
+when: {task: refactor, points: [3]}
+chain:
+  - pin
+  - loop: {until: the target shape is reached, max: 10, on_exhaust: re-score, do: [build, test]}
+  - review
+  - pr

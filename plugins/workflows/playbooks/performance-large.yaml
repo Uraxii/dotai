@@ -1,0 +1,11 @@
+kind: playbook
+name: performance-large
+summary: Push one metric to a target by measured hypotheses, one accepted change at a time.
+when: {task: performance, points: [8]}
+chain:
+  - measure
+  - research
+  - plan
+  - loop: {until: the metric meets the target, max: 10, on_exhaust: re-score, do: [build, measure]}
+  - review
+  - pr

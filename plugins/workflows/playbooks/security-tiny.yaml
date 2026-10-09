@@ -1,0 +1,5 @@
+kind: playbook
+name: security-tiny
+summary: A security fix at 1 or 2 points, like patch a vulnerable package or add a security header.
+when: {task: security, points: [1, 2]}
+chain: [build, test, review, pr]

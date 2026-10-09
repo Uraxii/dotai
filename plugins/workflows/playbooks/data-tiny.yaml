@@ -1,0 +1,5 @@
+kind: playbook
+name: data-tiny
+summary: A data change at 1 or 2 points, like add a nullable column or fix one bad seed row.
+when: {task: data, points: [1, 2]}
+chain: [build, test, pr]

@@ -1,0 +1,11 @@
+kind: workflow
+name: verify
+phase: finish
+summary: Prove the change works in a real environment and log friction.
+roles: [developer]
+inputs: [change]
+outputs: [verification, friction-report]
+steps:
+  - {id: run, do: Exercise the change on the real surface.}
+  - {id: friction, do: Write the friction report.}
+loop: {until: the change works on the real surface, back_to: run, max: 3, on_exhaust: escalate}

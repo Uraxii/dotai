@@ -1,0 +1,5 @@
+kind: playbook
+name: ui-medium
+summary: A UI change at 5 points, like redesign settings page or new onboarding flow.
+when: {task: ui, points: [5]}
+chain: [plan, design, build, verify, review, pr]

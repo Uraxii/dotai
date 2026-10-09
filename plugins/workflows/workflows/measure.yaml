@@ -1,0 +1,11 @@
+kind: workflow
+name: measure
+phase: understand
+summary: Capture a trace or baseline number and compare it with the last one.
+roles: [developer]
+inputs: [task]
+outputs: [measurement]
+steps:
+  - {id: capture, do: Run the frozen harness on the real surface and save the trace or number.}
+  - {id: compare, do: Compare it with the previous capture and record the delta on the bead.}
+loop: {until: two captures agree within the harness noise band, back_to: capture, max: 3, on_exhaust: escalate}

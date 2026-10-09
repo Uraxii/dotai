@@ -1,0 +1,5 @@
+kind: playbook
+name: infra-large
+summary: An infra change at 8 points, like blue-green deploys or DB major version upgrade.
+when: {task: infra, points: [8]}
+chain: [research, plan, threat, design, ops, test, verify, review, pr]

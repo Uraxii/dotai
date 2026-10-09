@@ -1,0 +1,5 @@
+kind: playbook
+name: delivery-large
+summary: Open the PR, then drive CI and review threads to mergeable.
+when: {task: delivery, points: [8]}
+chain: [pr, babysit]

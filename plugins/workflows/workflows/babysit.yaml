@@ -1,0 +1,11 @@
+kind: workflow
+name: babysit
+phase: deliver
+summary: Drive an open PR to mergeable.
+roles: [developer]
+inputs: [pull-request]
+outputs: [mergeable-pr]
+steps:
+  - {id: fix, do: "Fix conflicts, then review threads, then CI."}
+  - {id: check, do: Ask the forge if the PR is mergeable.}
+loop: {until: the forge reports the PR mergeable, back_to: fix, max: 5, on_exhaust: escalate}

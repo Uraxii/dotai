@@ -1,0 +1,12 @@
+kind: playbook
+name: refactor-medium
+summary: A refactor at 5 points, like extract a service class or swap a library.
+when: {task: refactor, points: [5]}
+chain:
+  - research
+  - pin
+  - plan
+  - loop: {until: the target shape is reached, max: 10, on_exhaust: re-score, do: [build, test]}
+  - verify
+  - review
+  - pr

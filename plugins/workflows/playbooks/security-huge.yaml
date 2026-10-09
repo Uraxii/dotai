@@ -1,0 +1,5 @@
+kind: playbook
+name: security-huge
+summary: A security fix at 13 points, like enterprise SSO or pen test fixes, all apps.
+when: {task: security, points: [13]}
+chain: [research, threat, plan, design, build, test, verify, review, pr, learn]

@@ -1,0 +1,11 @@
+kind: workflow
+name: diagnose
+phase: understand
+summary: Find the cause by ruling out hypotheses with evidence.
+roles: [developer]
+inputs: [pinning-test]
+outputs: [cause]
+steps:
+  - {id: list, do: List candidate hypotheses.}
+  - {id: rule-out, do: Rule each out with an observation until one survives.}
+loop: {until: one hypothesis survives with evidence, back_to: list, max: 5, on_exhaust: escalate}

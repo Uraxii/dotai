@@ -1,0 +1,9 @@
+kind: playbook
+name: spike-huge
+summary: A spike at 13 points, like choose a new framework or study architecture options.
+when: {task: spike, points: [13]}
+chain:
+  - research
+  - loop: {until: one variant wins on the stated criteria, max: 3, on_exhaust: escalate, do: [prototype, verify]}
+  - review
+  - learn

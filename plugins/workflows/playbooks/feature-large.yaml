@@ -1,0 +1,5 @@
+kind: playbook
+name: feature-large
+summary: A feature at 8 points, like OAuth sign-in or role-based permissions.
+when: {task: feature, points: [8]}
+chain: [research, design, plan, build, test, verify, review, pr]

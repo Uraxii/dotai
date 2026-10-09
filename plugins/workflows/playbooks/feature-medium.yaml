@@ -1,0 +1,5 @@
+kind: playbook
+name: feature-medium
+summary: A feature at 5 points, like user profile page or email on password reset.
+when: {task: feature, points: [5]}
+chain: [research, plan, build, test, verify, review, pr]

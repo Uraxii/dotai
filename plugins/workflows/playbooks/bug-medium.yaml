@@ -1,0 +1,5 @@
+kind: playbook
+name: bug-medium
+summary: A bug with a known surface and an unknown cause.
+when: {task: bug, points: [5]}
+chain: [pin, diagnose, plan, build, test, verify, review, pr]

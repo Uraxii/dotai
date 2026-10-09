@@ -1,0 +1,5 @@
+kind: playbook
+name: infra-huge
+summary: An infra change at 13 points, like move cloud regions or zero-downtime DB migration.
+when: {task: infra, points: [13]}
+chain: [prototype, research, plan, threat, design, ops, test, verify, review, pr, learn]

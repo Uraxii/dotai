@@ -1,0 +1,5 @@
+kind: playbook
+name: data-huge
+summary: A data change at 13 points, like move to a new database or rebuild the warehouse.
+when: {task: data, points: [13]}
+chain: [research, pin, plan, threat, design, build, test, verify, review, pr, learn]

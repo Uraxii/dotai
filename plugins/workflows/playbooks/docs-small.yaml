@@ -1,0 +1,5 @@
+kind: playbook
+name: docs-small
+summary: A docs change at 3 points, like document a new endpoint or update the setup guide.
+when: {task: docs, points: [3]}
+chain: [research, build, review, pr]

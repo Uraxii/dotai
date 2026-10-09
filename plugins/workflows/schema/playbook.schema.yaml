@@ -1,0 +1,47 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: playbook.schema.yaml
+title: Playbook
+description: An ordered chain of workflows for one task type at a set of complexity points.
+type: object
+additionalProperties: false
+required: [kind, name, summary, when, chain]
+properties:
+  kind: {const: playbook}
+  name: {$ref: "#/$defs/name"}
+  summary: {type: string, minLength: 1}
+  when:
+    type: object
+    additionalProperties: false
+    required: [task, points]
+    properties:
+      task: {$ref: "#/$defs/name"}
+      points:
+        type: array
+        minItems: 1
+        uniqueItems: true
+        items: {enum: [1, 2, 3, 5, 8, 13, 21]}
+  chain:
+    type: array
+    minItems: 1
+    items: {$ref: "#/$defs/item"}
+$defs:
+  name: {type: string, pattern: "^[a-z][a-z0-9-]*$"}
+  item:
+    oneOf:
+      - {$ref: "#/$defs/name"}
+      - type: object
+        additionalProperties: false
+        required: [loop]
+        properties:
+          loop:
+            type: object
+            additionalProperties: false
+            required: [until, max, on_exhaust, do]
+            properties:
+              until: {type: string, minLength: 1}
+              max: {type: integer, minimum: 1}
+              on_exhaust: {enum: [escalate, re-score, split, stop]}
+              do:
+                type: array
+                minItems: 1
+                items: {$ref: "#/$defs/name"}

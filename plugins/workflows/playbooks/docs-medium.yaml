@@ -1,0 +1,5 @@
+kind: playbook
+name: docs-medium
+summary: A docs change at 5 points, like write a how-to guide or runbook for one service.
+when: {task: docs, points: [5]}
+chain: [research, plan, build, test, review, pr]

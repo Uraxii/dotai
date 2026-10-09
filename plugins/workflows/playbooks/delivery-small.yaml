@@ -1,0 +1,5 @@
+kind: playbook
+name: delivery-small
+summary: Open one small PR.
+when: {task: delivery, points: [3]}
+chain: [pr]

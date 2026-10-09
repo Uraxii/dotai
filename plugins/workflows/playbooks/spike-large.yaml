@@ -1,0 +1,7 @@
+kind: playbook
+name: spike-large
+summary: A spike at 8 points, like picking a queue system or checking if offline mode is feasible.
+when: {task: spike, points: [8]}
+chain:
+  - research
+  - loop: {until: one variant wins on the stated criteria, max: 3, on_exhaust: escalate, do: [prototype, verify]}
