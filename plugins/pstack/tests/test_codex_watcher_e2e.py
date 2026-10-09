@@ -11,6 +11,10 @@ timeout, so a Bash call that runs Codex inline moves to the background after a
 few seconds. The watcher never keeps Codex in a shell that limit could kill,
 because it launches Codex detached.
 
+The parent runs on Haiku and ANTHROPIC_DEFAULT_SONNET_MODEL remaps the watcher's
+declared sonnet to Haiku. An empty ZDOTDIR keeps the user's .zshrc out of the
+first Bash call, and --strict-mcp-config skips MCP server startup.
+
 PSTACK_WATCHER_E2E_PLUGIN_DIR points the run at another pstack tree.
 """
 
@@ -27,9 +31,11 @@ import pytest
 
 PLUGIN_ROOT = Path(__file__).resolve().parents[1]
 PLUGIN_DIR = Path(os.environ.get("PSTACK_WATCHER_E2E_PLUGIN_DIR", PLUGIN_ROOT))
-BASH_LIMIT_MS = 3000
-STUB_SECONDS = 40
+BASH_LIMIT_MS = 1000
+STUB_SECONDS = 15
 CLAUDE_TIMEOUT_SECONDS = 150
+FAST_MODEL = "haiku"
+FAST_MODEL_ID = "claude-haiku-5-5"
 
 pytestmark = pytest.mark.skipif(
     os.environ.get("PSTACK_WATCHER_E2E") != "1"
@@ -97,8 +103,12 @@ def test_watcher_survives_shrunk_bash_timeout(tmp_path: Path) -> None:
         f"prompt, verbatim: {watcher_prompt}\n"
         "Wait for the agent to finish, then reply with the word done."
     )
+    zdotdir = tmp_path / "zdotdir"
+    zdotdir.mkdir()
     env = {
         **os.environ,
+        "ZDOTDIR": str(zdotdir),
+        "ANTHROPIC_DEFAULT_SONNET_MODEL": FAST_MODEL_ID,
         "PATH": f"{bin_dir}:{os.environ['PATH']}",
         "BEADS_DIR": str(tmp_path / "store" / ".beads"),
         "BASH_DEFAULT_TIMEOUT_MS": str(BASH_LIMIT_MS),
@@ -106,7 +116,8 @@ def test_watcher_survives_shrunk_bash_timeout(tmp_path: Path) -> None:
     }
     result = subprocess.run(
         ["claude", "-p", ask, "--plugin-dir", str(PLUGIN_DIR), "--setting-sources", "project",
-         "--permission-mode", "bypassPermissions", "--model", "sonnet"],
+         "--permission-mode", "bypassPermissions", "--model", FAST_MODEL,
+         "--strict-mcp-config"],
         cwd=tmp_path, env=env, capture_output=True, text=True, timeout=CLAUDE_TIMEOUT_SECONDS,
     )
     assert result.returncode == 0, result.stderr
