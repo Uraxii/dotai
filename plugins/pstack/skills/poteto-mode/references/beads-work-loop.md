@@ -2,36 +2,20 @@
 
 A bead holds the state of one delegated unit, from creation to close. This reference names who writes what to the bead and when. It matches bd 1.3.1. `bd help <command>` is the authority on flags.
 
-## Plugin skills and raw bd
+## Beads plugin
 
-pstack requires the beads Claude plugin. On Claude Code, run a bd operation through the matching `beads:*` plugin skill with the `Skill` tool, not as a raw `bd` command. Every `bd <command>` in a pstack file that appears in this table means the skill named beside it.
-
-| bd operation | Skill |
-| --- | --- |
-| `bd create` (task, epic, or child) | `beads:create` |
-| `bd create -t decision` and a decision supersede | `beads:decision` |
-| `bd show` | `beads:show` |
-| `bd update` (claim, assignee, notes, acceptance, description) | `beads:update` |
-| `bd close` | `beads:close` |
-| `bd comment`, `bd comments` | `beads:comments` |
-| `bd ready` | `beads:ready` |
-| `bd blocked` | `beads:blocked` |
-| `bd list` | `beads:list` |
-| `bd dep add` | `beads:dep` |
-| `bd label` | `beads:label` |
-
-Raw `bd` stays in two cases. No beads skill covers `bd heartbeat`, `bd set-state`, `bd state`, `bd gate`, `bd merge-slot`, `bd swarm`, `bd worktree`, `bd reclaim`, or `bd unclaim`. A script or shell pipeline runs the command, such as the watcher's heartbeat loop, `scripts/abandon_unit.py`, and any `bd ... --json | jq` pipe. The `developer-codex` and `reviewer-codex` watchers run their `bd` commands from shell scripts.
+pstack requires the beads plugin. Run these operations with your harness's beads skill; the `bd` forms in pstack files define the exact behavior.
 
 ## Coordinator creates the bead and spawns the worker
 
-1. Create the bead with its done-when and its epic, through `beads:create`.
+1. Create the bead with its done-when and its epic.
 
    ```sh
    bd create "<title>" --acceptance "<done-when>" --parent <epic>
    ```
 
-2. Record a program decision as a decision bead under the epic, through `beads:decision` (`bd create "<decision>" -t decision --parent <epic>`). To change a decision, use the supersede action of `beads:decision` with the new decision bead. It closes the old bead with a pointer to the new one.
-3. Create the worktree with raw `bd worktree create <path> --branch <branch>`. It branches from the main checkout's HEAD, and it adds a path inside the checkout to `.gitignore`, so give a path outside the checkout. If the command fails or the branch needs another base, use `git worktree add <path> -b <branch> <base>`.
+2. Record a program decision as a decision bead under the epic (`bd create "<decision>" -t decision --parent <epic>`). To change a decision, create the new decision bead and supersede the old one with it (`bd supersede <old> --with <new>`). The supersede closes the old bead with a pointer to the new one.
+3. Create the worktree (`bd worktree create <path> --branch <branch>`). It branches from the main checkout's HEAD, and it adds a path inside the checkout to `.gitignore`, so give a path outside the checkout. If the command fails or the branch needs another base, use `git worktree add <path> -b <branch> <base>`.
 4. Spawn the worker with this prompt and nothing else. For an Orchestrate unit, append ` Stop at stage=built.` to it.
 
    ```text
@@ -52,9 +36,9 @@ export BEADS_ACTOR=<actor> BD_ACTOR=<actor>
 
 bd records claims and history under `BEADS_ACTOR`. The beads `prepare-commit-msg` hook reads only `BD_ACTOR`. It appends `Executed-By: <actor>` after a blank line, which splits the trailer block, unless the message already has an `Executed-By:` trailer. Every commit therefore writes both trailers with `git commit --trailer`, so they form one block and the hook skips.
 
-1. Claim the bead with `beads:update` (`bd update <id> --claim`). If another actor holds it, the claim exits 1 and changes nothing. Stop and report the holder.
-2. Read the scope with `beads:show`.
-3. A claim carries a lease that expires 5 minutes after the claim or the last heartbeat. During long work, run raw `bd heartbeat <id>` more often than that. A heartbeat writes no Dolt commit.
+1. Claim the bead (`bd update <id> --claim`). If another actor holds it, the claim exits 1 and changes nothing. Stop and report the holder.
+2. Read the scope (`bd show <id>`).
+3. A claim carries a lease that expires 5 minutes after the claim or the last heartbeat. During long work, send a heartbeat (`bd heartbeat <id>`) more often than that. A heartbeat writes no Dolt commit.
 4. End each commit subject with `(<id>)` and put the why in the commit body. `git log --grep '(<id>)'` lists the bead's commits. Commit with this form, which fails when `BD_ACTOR` is unset, and put no trailer in the `-m` text:
 
    ```sh
@@ -65,15 +49,15 @@ bd records claims and history under `BEADS_ACTOR`. The beads `prepare-commit-msg
 5. If your spawn prompt ends with `Stop at stage=built.`, leave the bead open. After your last push, run these, then end with a final message that names the branch and the SHA. Clearing the assignee hands the bead back to the coordinator, which closes it after the PR lands.
 
    ```sh
-   bd set-state <id> stage=built --reason "ready at <SHA>"   # raw bd, no skill
-   bd comment <id> "ready at <SHA> on <branch>"              # beads:comments
-   bd update <id> --assignee ""                              # beads:update
+   bd set-state <id> stage=built --reason "ready at <SHA>"
+   bd comment <id> "ready at <SHA> on <branch>"
+   bd update <id> --assignee ""
    ```
 
 6. Otherwise, close the bead with a reason that says what changed, the proof, and the SHA. The final message repeats the reason. Write the reason to a file, per Text with quotes or several lines.
 
    ```sh
-   bd close <id> --reason-file <file>   # beads:close
+   bd close <id> --reason-file <file>
    ```
 
 ## Text with quotes or several lines
@@ -90,17 +74,17 @@ Use `-` in place of `<file>` to read the text from stdin. `bd comment` takes `--
 
 ## Reviewer records the verdict
 
-Set `BEADS_ACTOR` to the reviewer's actor name, and set `BD_ACTOR` too if the reviewer commits. Then record `verdict <X> at <SHA>` with `beads:comments` (`bd comment <id> "verdict <X> at <SHA>"`). The SHA ties the verdict to the commit that was reviewed.
+Set `BEADS_ACTOR` to the reviewer's actor name, and set `BD_ACTOR` too if the reviewer commits. Then record `verdict <X> at <SHA>` as a comment (`bd comment <id> "verdict <X> at <SHA>"`). The SHA ties the verdict to the commit that was reviewed.
 
 ## Recover a dead worker or correct a live one
 
 To replace a dead worker, spawn a fresh worker with the same prompt. It runs under the same actor name, and `bd update <id> --claim` succeeds for the actor that already holds the bead, so the bead needs no reclaim.
 
-If a different actor takes over the bead, first run raw `bd reclaim --id <id>`. It sets that bead back to open with no assignee, but only if its lease expired more than a grace window ago. The grace window is 10 minutes, twice the lease, and `--older-than <duration>` changes it. A bead with a live lease stays as it is.
+If a different actor takes over the bead, first reclaim the bead (`bd reclaim --id <id>`). It sets that bead back to open with no assignee, but only if its lease expired more than a grace window ago. The grace window is 10 minutes, twice the lease, and `--older-than <duration>` changes it. A bead with a live lease stays as it is.
 
 Run `bd reclaim` only with `--id`. Without it, the command reverts every stale lease in the store, including the beads of workers that are alive but have not sent a heartbeat.
 
-To correct a live worker, send the correction with `SendMessage`. Otherwise, change the bead with `beads:update` (`bd update <id> --description "<text>"` or `--acceptance "<text>"`) and respawn. `bd edit` opens an editor and blocks, so do not use it.
+To correct a live worker, send the correction with `SendMessage`. Otherwise, change the bead (`bd update <id> --description "<text>"` or `--acceptance "<text>"`) and respawn. `bd edit` opens an editor and blocks, so do not use it.
 
 ## Notes
 

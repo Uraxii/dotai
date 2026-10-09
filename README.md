@@ -38,7 +38,7 @@ breaks that rule.
 ## pstack requires beads
 
 `pstack` keeps all work state in [beads](https://github.com/gastownhall/beads).
-Agents claim, comment on, and close work through the beads plugin's skills.
+Agents claim, comment on, and close work through the beads plugin.
 Install `bd` and the beads plugin before you install or use `pstack`.
 
 - Requires `bd` 1.3.1 on `PATH`. CI tests that version.

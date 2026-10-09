@@ -24,16 +24,14 @@ Depth stays at coordinator, track, worker. Author the track decomposition per pr
 
 The program lives in the beads store that the session's `BEADS_DIR` names, in git, and on GitHub. All three outlive this chat, so a session restart loses only in-flight subagents.
 
-Raw `bd` stays in this playbook for the commands no beads plugin skill covers (`bd set-state`, `bd state`, `bd gate`, `bd merge-slot`, `bd swarm`, `bd unclaim`, `bd undefer`), for the status block below that pipes `--json`, and for `abandon_unit.py`. Every other `bd` command here means its `beads:*` skill, per [the beads work loop](../references/beads-work-loop.md#plugin-skills-and-raw-bd).
-
-- **Program.** One epic. Its description holds the goal and scope, and its acceptance holds the done predicate. Change them with `beads:update` (`bd update <epic> --description "<text>"` or `--acceptance "<text>"`).
+- **Program.** One epic. Its description holds the goal and scope, and its acceptance holds the done predicate. Change them with `bd update <epic> --description "<text>"` or `--acceptance "<text>"`.
 
   ```sh
   bd create "<program>" -t epic --description "<goal and scope>" --acceptance "<done predicate>"
   ```
 
 - **Tracks.** A track is a label, `track:<name>`, on each of its units. Keep every unit a direct child of the program epic, because `bd swarm status` counts only direct children. A sub-coordinator's own bead stays outside the epic: create it with `bd create "Track <name>" --label track:<name> --body-file <brief.md>`. It reads its units with `bd ready --parent <epic> --label track:<name>`.
-- **Units.** One child bead per unit, with its brief in the description and its done-when in the acceptance. Order units with `beads:dep` (`bd dep add <later> <earlier>`). `beads:ready` lists a dependent unit only after every unit it depends on lands.
+- **Units.** One child bead per unit, with its brief in the description and its done-when in the acceptance. Order units with `bd dep add <later> <earlier>`. `bd ready` lists a dependent unit only after every unit it depends on lands.
 
   ```sh
   bd create "<unit>" --parent <epic> --acceptance "<done-when>" --body-file <brief.md>
@@ -62,7 +60,7 @@ Raw `bd` stays in this playbook for the commands no beads plugin skill covers (`
 
   A new head SHA sets the unit back to `stage=built`.
 
-- **Decisions.** Each constraint the program holds (model policy, stack shape and count, verification bar, forbidden paths, escalation policy, a human ruling) is one decision bead under the epic, created with `beads:decision` (`bd create "<decision>" -t decision --parent <epic>`). For a human ruling, quote the human's words with attribution in the description, per [Claims about human decisions](../../why/references/epistemics.md#claims-about-human-decisions), and label your own interpretation. To change a decision, create the new one and supersede the old with `beads:decision`. `bd list --parent <epic> -t decision --status open` lists the decisions in force. When you catch yourself restating an instruction, record it as a decision bead before you act (principle-encode-lessons-in-structure).
+- **Decisions.** Each constraint the program holds (model policy, stack shape and count, verification bar, forbidden paths, escalation policy, a human ruling) is one decision bead under the epic, created with `bd create "<decision>" -t decision --parent <epic>`. For a human ruling, quote the human's words with attribution in the description, per [Claims about human decisions](../../why/references/epistemics.md#claims-about-human-decisions), and label your own interpretation. To change a decision, create the new one and run `bd supersede <old> --with <new>`. `bd list --parent <epic> -t decision --status open` lists the decisions in force. When you catch yourself restating an instruction, record it as a decision bead before you act (principle-encode-lessons-in-structure).
 - **Verdicts.** A verdict is a comment on the unit bead, per Verification.
 - **Gates.** A unit that waits on the human, a PR merge, or a workflow run gets a gate. The gate keeps the unit out of `bd ready` until the gate closes.
 
@@ -96,7 +94,7 @@ bd gate list                                                 # open gates
 gh pr list --state open --json number,title,headRefName,baseRefName,headRefOid
 ```
 
-Spawn only from `beads:ready`. `bd swarm status` ignores gates, counts open decision beads as ready work, and counts abandoned units as completed, so read it for progress, not for what to spawn or for the predicate count. Count landed units with `bd list --parent <epic> --status closed --label stage:landed --json`. After you create or reorder units, run `bd swarm validate <epic>`. It rejects a dependency cycle and prints the waves of parallel work and the maximum parallelism, with decision beads in the first wave.
+Spawn only from `bd ready`. `bd swarm status` ignores gates, counts open decision beads as ready work, and counts abandoned units as completed, so read it for progress, not for what to spawn or for the predicate count. Count landed units with `bd list --parent <epic> --status closed --label stage:landed --json`. After you create or reorder units, run `bd swarm validate <epic>`. It rejects a dependency cycle and prints the waves of parallel work and the maximum parallelism, with decision beads in the first wave.
 
 #### The brief
 
@@ -125,7 +123,7 @@ A dependency is a context relay, not just ordering: undeclared upstream context 
 #### Steps
 
 1. **Frame.** State the done predicate as something countable ("all 126 units merged, each with a `unit-test-verified` or better verdict at its merged head"). Quantify scope: units, rough effort, expected stacks, and the wall-clock budget. If one agent could finish inside that budget, stop here and run Autonomous run instead. Collapsing must not depend on another document being present: it means do the work directly in this session, plain workers where they help, verification inline, landing as you go, and none of the epic, gate, or pilot machinery below. Schedule landing against the budget: by roughly 70% of it, stop spawning and land what is verified. Name the tracks per project. A contested decomposition or one-way door goes through the arena skill before the pilot. Present the framing once; reversible prep proceeds without waiting.
-2. **Create the program.** Create the epic, the decision beads, the unit beads, and their dependencies per Program state, then run raw `bd swarm validate <epic>`. If the program stacks PRs, create the merge slot once per store with `bd merge-slot create`. Read the open PRs the program inherits with `gh pr list`.
+2. **Create the program.** Create the epic, the decision beads, the unit beads, and their dependencies per Program state, then run `bd swarm validate <epic>`. If the program stacks PRs, create the merge slot once per store with `bd merge-slot create`. Read the open PRs the program inherits with `gh pr list`.
 3. **Pilot.** Push one unit through the whole path: brief, worker, verification, stack entry, verdict comment, merge. The pilot exists to falsify the brief template, the verify recipe, and the unit size while that costs one agent instead of fifty. Fix the contract from pilot evidence before any fan-out. Scale the pilot to the unit: on programs of near-identical cheap units, the first unit is the pilot, run as a normal unit with its verify command inline, and fan-out starts the moment it lands. The dedicated pilot pipeline (separate verifier agent, audit gate) is for expensive or novel unit shapes, not for clone-units where a serialized pilot has nothing to falsify.
 4. **Scale.** Spawn a rolling window of workers up to the in-flight cap, refilling as children finish; blocking batches pay the slowest child of every batch. Spawn track sub-coordinators only past the one-drain threshold in Roles. Read `bd ready --parent <epic> --exclude-type decision` after each drain; name upstream beads in downstream briefs; keep sibling communication upward only. The sampled brief audit runs alongside the wave it samples and stops the next refill on failure, not the current one.
 5. **Drain.** Run the queue discipline below at every drain point.
@@ -137,7 +135,7 @@ A dependency is a context relay, not just ordering: undeclared upstream context 
 - On a completion notification, note the bead id and return to what you were doing. Never deep-review inline; a completion that needs review becomes a verifier unit. Never review a diff inside a drain.
 - Drain in batches at four points: the end of a critical section, a track rollup, a frontier watcher wake (arm it via the loop skill, with a long heartbeat fallback), and before a human report. Begin each batch with `bd show <id>` for every bead whose completion arrived since the last drain. Arrivals during a drain wait for the next one.
 - Critical sections you finish first: authoring a brief, a stack operation, a conflict decision, opening a gate, recording a verdict.
-- Each drain classifies every completion (landed, needs-verify, failed, zombie, noise) and records the result on its bead per the stage table in Program state, with `beads:comments`, raw `bd set-state`, or `beads:close`. Then it runs `bd gate check --type gh`, reads the program per Program state, and spawns the next wave in one message.
+- Each drain classifies every completion (landed, needs-verify, failed, zombie, noise) and records the result on its bead per the stage table in Program state, with `bd comment`, `bd set-state`, or `bd close`. Then it runs `bd gate check --type gh`, reads the program per Program state, and spawns the next wave in one message.
 - Account for every spawned child at its track's rollup: arrived, respawned, or its scope explicitly absorbed. Silently redoing a missing child's work hides both the wasted spend and the coverage gap its result existed to close.
 - A drain turn ends with three lines: the counts from `bd swarm status <epic>`, what changed, and the open gates from `bd gate list`. The full reply contract applies at checkpoints and close.
 
@@ -177,8 +175,8 @@ A unit is not done until its output is externalized the moment it lands, never b
 
 #### Liveness and failure
 
-- Never resume an agent to check on it; a resume restarts an idle agent. Probe read-only: `beads:show` and its lease, `gh`, pushed branches, and the background task list. Transcript mtime is not liveness.
-- Record a silent death on its bead with `beads:comments` (`bd comment <id> "died: <failure mode>; last evidence <what>; options <what>"`), then recover the bead per [the beads work loop](../references/beads-work-loop.md). Replan on evidence as it arrives; never wait for full quiescence.
+- Never resume an agent to check on it; a resume restarts an idle agent. Probe read-only: `bd show <id>` and its lease, `gh`, pushed branches, and the background task list. Transcript mtime is not liveness.
+- Record a silent death on its bead with `bd comment <id> "died: <failure mode>; last evidence <what>; options <what>"`, then recover the bead per [the beads work loop](../references/beads-work-loop.md). Replan on evidence as it arrives; never wait for full quiescence.
 - Retry by mode: cap-hit or oom, respawn with smaller scope; network-drop, retry as-is; tool-error, retry on a different model; unknown, retry once. Two retries, then abandon the unit and replan around it.
 - **Abandon a unit.** Keep the unit and its dependents out of `bd ready` from the first write to the replan. `bd unclaim` reopens a unit, so take the claim instead.
   1. Run `skills/poteto-mode/scripts/abandon_unit.py` under the installed plugin, with `BEADS_ACTOR` set to your actor.
