@@ -13,7 +13,7 @@ needs `pstack` installed.
 
 | Plugin | What it does |
 |---|---|
-| `pstack` | Skills and thin named agents: poteto-mode, principles, playbooks, tools. Requires the beads CLI (bd 1.3.1). |
+| `pstack` | Skills and thin named agents: poteto-mode, principles, playbooks, tools. Requires the beads CLI (bd 1.3.1) and the beads plugin. |
 | `artifact` | Explain a code change as a self-contained interactive HTML page. |
 | `notion` | Reach Notion from the command line, and publish a code-change explainer as a Notion page. |
 | `azure` | Read Azure DevOps projects, repos, pipelines, releases, and work items over the REST API. |
@@ -38,8 +38,8 @@ breaks that rule.
 ## pstack requires beads
 
 `pstack` keeps all work state in [beads](https://github.com/gastownhall/beads).
-Agents run the `bd` CLI to claim, heartbeat, comment on, and close work.
-Install `bd` before you install or use `pstack`.
+Agents claim, comment on, and close work through the beads plugin's skills.
+Install `bd` and the beads plugin before you install or use `pstack`.
 
 - Requires `bd` 1.3.1 on `PATH`. CI tests that version.
 - Install `bd` from the [beads releases](https://github.com/gastownhall/beads).
@@ -47,7 +47,8 @@ Install `bd` before you install or use `pstack`.
 - Set `BEADS_DIR` to the absolute path of the project's store, for example
   `<project>/.nikki-agents/.beads`. Put it in the `env` block of the
   project's `.claude/settings.local.json` so every session inherits it.
-- `pstack` calls only the `bd` CLI. The beads Claude plugin is not required.
+- Requires the beads plugin. Install it for your harness from
+  [gastownhall/beads](https://github.com/gastownhall/beads).
 
 ## Layout
 

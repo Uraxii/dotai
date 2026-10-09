@@ -34,8 +34,8 @@ Tests alone are not sufficient verification. A PR is verified only when its unit
 ### Arm the program
 
 - [ ] State the protocol and this plan to the operator, then stop. Start execution only on her explicit go.
-- [ ] On her go, create the program epic with `bd create "<program>" -t epic --description "<this exact text>" --acceptance "<the done condition>"` and restate the text in your todolist. "<The plan path, the PR ids in order, the verification rule, who merges, and the done condition.>"
-- [ ] Record her go as a decision bead under the program epic with `bd create "<her go, quoted>" -t decision --parent <epic>`.
+- [ ] On her go, create the program epic with `beads:create` (`bd create "<program>" -t epic --description "<this exact text>" --acceptance "<the done condition>"`) and restate the text in your todolist. "<The plan path, the PR ids in order, the verification rule, who merges, and the done condition.>"
+- [ ] Record her go as a decision bead under the program epic with `beads:decision` (`bd create "<her go, quoted>" -t decision --parent <epic>`).
 - [ ] Read these from the installed plugin at program start. Re-read them at every tick.
   - [ ] `skills/poteto-mode/playbooks/<execution playbook>.md`
   - [ ] `skills/swarm/SKILL.md`
@@ -43,7 +43,7 @@ Tests alone are not sufficient verification. A PR is verified only when its unit
   - [ ] `skills/poteto-mode/playbooks/opening-a-pr.md`
   - [ ] `skills/<each other leaf skill the program uses>/SKILL.md`
 - [ ] Arm the 30-minute audit tick as a real `/loop` in dynamic mode, which schedules its own wake-up rather than blocking on a sleep. Never leave the cadence to memory.
-- [ ] Use this tick prompt, verbatim. "Re-read the execution playbook from the installed plugin and the program epic with `bd show <epic>`. Audit the operation against both and fix drift in this tick. Probe every active lane and judge progress by side effects only. Stand down a stuck lane and dispatch its replacement now. Then send the operator a status message, whether or not anything changed, with the queue table of PR, owner, state, and head SHA, the verdicts since the last tick, what merged, open operator gates, and blockers."
+- [ ] Use this tick prompt, verbatim. "Re-read the execution playbook from the installed plugin and the program epic with `beads:show`. Audit the operation against both and fix drift in this tick. Probe every active lane and judge progress by side effects only. Stand down a stuck lane and dispatch its replacement now. Then send the operator a status message, whether or not anything changed, with the queue table of PR, owner, state, and head SHA, the verdicts since the last tick, what merged, open operator gates, and blockers."
 - [ ] On the operator's hold or stand-down, send every owner a zero-writes order at once.
 
 ### Spawn owners

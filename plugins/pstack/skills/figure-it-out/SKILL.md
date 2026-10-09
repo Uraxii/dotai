@@ -21,7 +21,7 @@ Ground first, then commit. Don't start the run until you can state:
 
 Present the framing and tradeoffs before committing to a long run. Reversible work proceeds (the **principle-never-block-on-the-human** principle skill), but a multi-hour run earns one checkpoint.
 
-Create the run's epic with `bd create "<goal>" -t epic --acceptance "<predicate>"`, or use the epic you were given.
+Create the run's epic with `beads:create` (`bd create "<goal>" -t epic --acceptance "<predicate>"`), or use the epic you were given.
 
 ## Phase B: Design the workflow
 
@@ -30,7 +30,7 @@ Decompose into atomic, independently-landable units. Sequence riskiest-unknown-f
 - Build the verification harness before the work, with the baseline captured from the pre-change state, so the check reads as "old value vs new value".
 - For one-way-door design decisions, run the **architect** skill (it runs **arena**). Skip it for mechanical work whose shape is already concrete. A second arena over a settled design is over-engineering (the **principle-laziness-protocol** principle skill).
 - Decide what fans out. Parallelize only across seams, and give each worker its own worktree or branch (the **principle-separate-before-serializing-shared-state** principle skill). Don't over-fan.
-- Write the designed phase list down as one child bead per unit with `bd create "<unit>" --parent <epic>`. That list is what the human reviews.
+- Write the designed phase list down as one child bead per unit with `beads:create` (`bd create "<unit>" --parent <epic>`). That list is what the human reviews.
 
 Then execute the design. Add its steps to the todolist as concrete items, after the Phase C entry and before Phase D. Run each under the Phase C loop discipline, and record the Phase D facts as each step lands, rather than saving them for the end.
 
