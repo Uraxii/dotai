@@ -55,7 +55,7 @@ The program lives in the beads store that the session's `BEADS_DIR` names, in gi
   | `stage=built` | The worker, after it pushes, per step 5 of [the beads work loop](../references/beads-work-loop.md). It comments `ready at <SHA> on <branch>`, clears its assignee, and leaves the bead open. |
   | `stage=verified` | Whoever records a passing verdict, per Verification. |
   | `stage=stacked` | The stacker, after the PR enters the stack. |
-  | `stage=landed`, status `closed` | The coordinator, after the merge. It runs `bd set-state <id> stage=landed --reason "<merge SHA>"`, then `bd close <id> --reason "landed <merge SHA> PR <number>"`. |
+  | `stage=landed`, status `closed` | The coordinator, after the merge. It sets the stage label (`bd set-state <id> stage=landed --reason "<merge SHA>"`), then closes the bead (`bd close <id> --reason "landed <merge SHA> PR <number>"`). |
   | `stage=abandoned`, status `closed` | The coordinator, per Abandon a unit in Liveness and failure. |
 
   A new head SHA sets the unit back to `stage=built`.
@@ -70,11 +70,11 @@ The program lives in the beads store that the session's `BEADS_DIR` names, in gi
   bd gate create --type gh:run --await-id <run id> --blocks <id>
   ```
 
-  `bd gate list` shows every open gate, human and GitHub, and has no type filter. List only the open human gates with `bd gate list --json | jq -r '.[] | select(.await_type == "human") | .id'`. `bd gate resolve <gate> --reason "<answer>"` closes a human gate. Quote the human's answer in the reason.
+  Listing gates (`bd gate list`) shows every open gate, human and GitHub, and has no type filter. List only the open human gates with `bd gate list --json | jq -r '.[] | select(.await_type == "human") | .id'`. Resolve a human gate with `bd gate resolve <gate> --reason "<answer>"`. Quote the human's answer in the reason.
 
-  Run `bd gate check --type gh` from the repo root, because it calls `gh` against the repo in the current directory. It closes each GitHub gate whose PR merged or whose run succeeded. It exits 0 even when a check fails, so read its output, not its exit code.
+  Check the GitHub gates (`bd gate check --type gh`) from the repo root, because it calls `gh` against the repo in the current directory. It closes each GitHub gate whose PR merged or whose run succeeded. It exits 0 even when a check fails, so read its output, not its exit code.
 
-  - `ESCALATE - workflow '<name>' failed`. Create a fix unit, make the gated unit depend on it with `bd dep add <gated unit> <fix unit>`, and run `bd gate resolve <gate> --reason "run <id> failed; fix in <fix unit>"`.
+  - `ESCALATE - workflow '<name>' failed`. Create a fix unit, make the gated unit depend on it (`bd dep add <gated unit> <fix unit>`), and resolve the gate (`bd gate resolve <gate> --reason "run <id> failed; fix in <fix unit>"`).
   - `ESCALATE - PR '<title>' was closed without merging`. Open a human gate on the gated unit that asks whether to reopen, replace, or drop the PR, then resolve the PR gate with a reason that names the human gate.
   - `error checking`. The command ran outside the repo, or `gh` failed. Fix the cause and run the check again.
 
@@ -123,7 +123,7 @@ A dependency is a context relay, not just ordering: undeclared upstream context 
 #### Steps
 
 1. **Frame.** State the done predicate as something countable ("all 126 units merged, each with a `unit-test-verified` or better verdict at its merged head"). Quantify scope: units, rough effort, expected stacks, and the wall-clock budget. If one agent could finish inside that budget, stop here and run Autonomous run instead. Collapsing must not depend on another document being present: it means do the work directly in this session, plain workers where they help, verification inline, landing as you go, and none of the epic, gate, or pilot machinery below. Schedule landing against the budget: by roughly 70% of it, stop spawning and land what is verified. Name the tracks per project. A contested decomposition or one-way door goes through the arena skill before the pilot. Present the framing once; reversible prep proceeds without waiting.
-2. **Create the program.** Create the epic, the decision beads, the unit beads, and their dependencies per Program state, then run `bd swarm validate <epic>`. If the program stacks PRs, create the merge slot once per store with `bd merge-slot create`. Read the open PRs the program inherits with `gh pr list`.
+2. **Create the program.** Create the epic, the decision beads, the unit beads, and their dependencies per Program state, then validate the swarm (`bd swarm validate <epic>`). If the program stacks PRs, create the merge slot once per store (`bd merge-slot create`). Read the open PRs the program inherits with `gh pr list`.
 3. **Pilot.** Push one unit through the whole path: brief, worker, verification, stack entry, verdict comment, merge. The pilot exists to falsify the brief template, the verify recipe, and the unit size while that costs one agent instead of fifty. Fix the contract from pilot evidence before any fan-out. Scale the pilot to the unit: on programs of near-identical cheap units, the first unit is the pilot, run as a normal unit with its verify command inline, and fan-out starts the moment it lands. The dedicated pilot pipeline (separate verifier agent, audit gate) is for expensive or novel unit shapes, not for clone-units where a serialized pilot has nothing to falsify.
 4. **Scale.** Spawn a rolling window of workers up to the in-flight cap, refilling as children finish; blocking batches pay the slowest child of every batch. Spawn track sub-coordinators only past the one-drain threshold in Roles. Read `bd ready --parent <epic> --exclude-type decision` after each drain; name upstream beads in downstream briefs; keep sibling communication upward only. The sampled brief audit runs alongside the wave it samples and stops the next refill on failure, not the current one.
 5. **Drain.** Run the queue discipline below at every drain point.
@@ -133,9 +133,9 @@ A dependency is a context relay, not just ordering: undeclared upstream context 
 #### Queue and drain
 
 - On a completion notification, note the bead id and return to what you were doing. Never deep-review inline; a completion that needs review becomes a verifier unit. Never review a diff inside a drain.
-- Drain in batches at four points: the end of a critical section, a track rollup, a frontier watcher wake (arm it via the loop skill, with a long heartbeat fallback), and before a human report. Begin each batch with `bd show <id>` for every bead whose completion arrived since the last drain. Arrivals during a drain wait for the next one.
+- Drain in batches at four points: the end of a critical section, a track rollup, a frontier watcher wake (arm it via the loop skill, with a long heartbeat fallback), and before a human report. Begin each batch by reading every bead (`bd show <id>`) whose completion arrived since the last drain. Arrivals during a drain wait for the next one.
 - Critical sections you finish first: authoring a brief, a stack operation, a conflict decision, opening a gate, recording a verdict.
-- Each drain classifies every completion (landed, needs-verify, failed, zombie, noise) and records the result on its bead per the stage table in Program state, with `bd comment`, `bd set-state`, or `bd close`. Then it runs `bd gate check --type gh`, reads the program per Program state, and spawns the next wave in one message.
+- Each drain classifies every completion (landed, needs-verify, failed, zombie, noise) and records the result on its bead per the stage table in Program state, with a comment (`bd comment`), a stage label (`bd set-state`), or a close (`bd close`). Then it checks the GitHub gates (`bd gate check --type gh`), reads the program per Program state, and spawns the next wave in one message.
 - Account for every spawned child at its track's rollup: arrived, respawned, or its scope explicitly absorbed. Silently redoing a missing child's work hides both the wasted spend and the coverage gap its result existed to close.
 - A drain turn ends with three lines: the counts from `bd swarm status <epic>`, what changed, and the open gates from `bd gate list`. The full reply contract applies at checkpoints and close.
 
@@ -150,10 +150,10 @@ A dependency is a context relay, not just ordering: undeclared upstream context 
 
   The lowest unmerged PR is the first `OPEN` one. If `gh pr view` finds no PR for a branch, that branch has no PR on GitHub. Ask the stacker to submit it, and never guess a PR number. For a stack that gt does not track, follow `baseRefName` up from trunk in `gh pr list --state open --json number,headRefName,baseRefName,headRefOid`.
 - Exactly one stacker at a time may run `gt` or rewrite a stack, and the beads merge slot enforces it. The slot covers the whole beads store, not one program, so it serializes every stack of every program that shares the store. A restack at this scale is slow and blocks whoever runs it, so give it its own unit and keep the coordinator out of it.
-  - The stacker runs `bd merge-slot acquire` before its first stack command. If another actor holds the slot, the command exits 1. Stop and report the holder. Run `acquire` again after the holder releases. Nothing wakes a waiting stacker.
-  - After each PR enters the stack, the stacker runs `bd set-state <id> stage=stacked --reason "PR <number> at <SHA>"` on its unit.
-  - The stacker that acquired the slot releases it with `bd merge-slot release --holder <actor>` after its last push and before it reports, inside the same unit. Always pass `--holder`. A release without it frees the slot whoever holds it.
-  - The slot has no lease. If its holder dies, the coordinator confirms the holder has no live agent, then runs `bd merge-slot release --holder <dead actor>`. `bd merge-slot check` names the holder.
+  - The stacker acquires the merge slot (`bd merge-slot acquire`) before its first stack command. If another actor holds the slot, the command exits 1. Stop and report the holder. Run `acquire` again after the holder releases. Nothing wakes a waiting stacker.
+  - After each PR enters the stack, the stacker sets the stage label on its unit (`bd set-state <id> stage=stacked --reason "PR <number> at <SHA>"`).
+  - The stacker that acquired the slot releases it (`bd merge-slot release --holder <actor>`) after its last push and before it reports, inside the same unit. Always pass `--holder`. A release without it frees the slot whoever holds it.
+  - The slot has no lease. If its holder dies, the coordinator confirms the holder has no live agent, then releases the slot on the holder's behalf (`bd merge-slot release --holder <dead actor>`). Checking the slot (`bd merge-slot check`) names the holder.
 - Workers never rebase and never run `gt`. Babysitters follow `playbooks/babysit.md`, one per stack, scoped to the PR numbers and head SHAs in their brief; a new head SHA ends that scope. They report conflicts to the stacker rather than restacking.
 - PR closes and retargets go through the stacker only; closing a base PR orphans every chain above it. Merges and stack surgery are units with briefs like any other.
 - One retro watcher follows merged PRs for reverts, post-merge CI breaks, and orphaned follow-ups.
@@ -162,7 +162,7 @@ A dependency is a context relay, not just ordering: undeclared upstream context 
 
 Scale verification to the unit. When VERIFY is a single cheap command, the worker runs it and reports the output, and the coordinator spot-checks receipts; a dedicated verifier agent (on a different model family than the worker) is for units whose verification is expensive, judgment-laden, or high-blast-radius. A verifier agent whose entire product would be rerunning one command is ceremony, not verification.
 
-Record each verdict on the unit bead, keyed by PR number and head SHA.
+Record each verdict on the unit bead, keyed by PR number and head SHA. Add a comment with the verdict, then set the stage label.
 
 ```sh
 bd comment <id> "verdict <verdict> at <SHA> on PR <number>"
@@ -175,8 +175,8 @@ A unit is not done until its output is externalized the moment it lands, never b
 
 #### Liveness and failure
 
-- Never resume an agent to check on it; a resume restarts an idle agent. Probe read-only: `bd show <id>` and its lease, `gh`, pushed branches, and the background task list. Transcript mtime is not liveness.
-- Record a silent death on its bead with `bd comment <id> "died: <failure mode>; last evidence <what>; options <what>"`, then recover the bead per [the beads work loop](../references/beads-work-loop.md). Replan on evidence as it arrives; never wait for full quiescence.
+- Never resume an agent to check on it; a resume restarts an idle agent. Probe read-only: the bead and its lease (`bd show <id>`), `gh`, pushed branches, and the background task list. Transcript mtime is not liveness.
+- Record a silent death as a comment on its bead (`bd comment <id> "died: <failure mode>; last evidence <what>; options <what>"`), then recover the bead per [the beads work loop](../references/beads-work-loop.md). Replan on evidence as it arrives; never wait for full quiescence.
 - Retry by mode: cap-hit or oom, respawn with smaller scope; network-drop, retry as-is; tool-error, retry on a different model; unknown, retry once. Two retries, then abandon the unit and replan around it.
 - **Abandon a unit.** Keep the unit and its dependents out of `bd ready` from the first write to the replan. `bd unclaim` reopens a unit, so take the claim instead.
   1. Run `skills/poteto-mode/scripts/abandon_unit.py` under the installed plugin, with `BEADS_ACTOR` set to your actor.
@@ -187,11 +187,11 @@ A unit is not done until its output is externalized the moment it lands, never b
 
      The script takes the unit's claim from whoever holds it and defers each open or in-progress dependent. A deferred dependent is out of `bd ready` and refuses every claim. Then the script resolves each open gate on the unit, removes the unit's dependency on each upstream unit, sets `stage=abandoned`, and closes the unit. It reads the store first and writes only what is missing. If it fails, fix the cause and run it again. A run on an abandoned unit prints `nothing to change`.
   2. For each `paused <dependent>; stop worker <actor>` line, stop that worker's agent and confirm it stopped. Deferring the bead does not stop an agent that is already building.
-  3. Replan each dependent. `bd list --parent <epic> --status deferred` lists the dependents that wait for a replan. If one needs a replacement upstream unit, run `bd dep add <dependent> <replacement>` first. Then run `bd dep remove <dependent> <id>`, and last run `bd undefer <dependent>`, which puts it back in `bd ready`.
+  3. Replan each dependent. List the deferred dependents that wait for a replan (`bd list --parent <epic> --status deferred`). If one needs a replacement upstream unit, add that dependency first (`bd dep add <dependent> <replacement>`). Then remove the dependency on the abandoned unit (`bd dep remove <dependent> <id>`), and last undefer the dependent (`bd undefer <dependent>`), which puts it back in `bd ready`.
 - A zombie that returns hours late reconciles against the current frontier and the bead's verdicts before anything is accepted. Salvage unique findings through a fresh unit, never a blind merge.
 - When continued spawning would produce garbage tree-wide (bad upstream output, broken acceptance, dead infra), create a decision bead `Hold: no spawns until <cause> is fixed` and send it to every sub-coordinator with `SendMessage`. Let in-flight work finish, fix the cause, then close the hold bead with the fix as its reason.
 - Bound your own infra retries the same way you bound a child's. After a few consecutive tool aborts, stop retrying: comment a terminal handoff on the epic (what is done, where it lives, the exact command to resume) and end the run.
-- After a session restart, in-flight subagents are dead. Pushed branches, open PRs, and the beads store are not. Read the epic and its open decisions. Run `bd list --parent <epic> --status in_progress --json` and read each unit's stage label and assignee. A unit with no stage label was mid-build, so respawn its worker under the same actor. A unit at `stage=built` needs a verdict, `stage=verified` needs a stack entry, and `stage=stacked` needs a land. Run `bd merge-slot check` and recompute the frontier. Reattach in-flight work by PR and branch rather than agent id. List the track beads with `bd list --label-pattern 'track:*' --no-parent --status open` and each track's open units with `bd list --parent <epic> --label track:<name> --json`. Respawn one sub-coordinator per track from its track bead, drain, and resume. A merge slot held by a dead agent stays held until you release it per Stack safety.
+- After a session restart, in-flight subagents are dead. Pushed branches, open PRs, and the beads store are not. Read the epic and its open decisions. List the in-progress units (`bd list --parent <epic> --status in_progress --json`) and read each unit's stage label and assignee. A unit with no stage label was mid-build, so respawn its worker under the same actor. A unit at `stage=built` needs a verdict, `stage=verified` needs a stack entry, and `stage=stacked` needs a land. Check the merge slot (`bd merge-slot check`) and recompute the frontier. Reattach in-flight work by PR and branch rather than agent id. List the track beads with `bd list --label-pattern 'track:*' --no-parent --status open` and each track's open units with `bd list --parent <epic> --label track:<name> --json`. Respawn one sub-coordinator per track from its track bead, drain, and resume. A merge slot held by a dead agent stays held until you release it per Stack safety.
 
 #### Escalation
 

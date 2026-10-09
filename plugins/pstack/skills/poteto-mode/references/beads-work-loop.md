@@ -4,7 +4,7 @@ A bead holds the state of one delegated unit, from creation to close. This refer
 
 ## Beads plugin
 
-pstack requires the beads plugin. Run these operations with your harness's beads skill; the `bd` forms in pstack files define the exact behavior.
+pstack requires the beads plugin. Run these operations with your harness's beads skill; the `bd` forms in pstack files define the exact behavior. An agent with only a shell, such as the Codex watchers, runs the `bd` form directly.
 
 ## Coordinator creates the bead and spawns the worker
 
@@ -48,11 +48,9 @@ bd records claims and history under `BEADS_ACTOR`. The beads `prepare-commit-msg
    `git interpret-trailers --parse` on the resulting message lists both trailers.
 5. If your spawn prompt ends with `Stop at stage=built.`, leave the bead open. After your last push, run these, then end with a final message that names the branch and the SHA. Clearing the assignee hands the bead back to the coordinator, which closes it after the PR lands.
 
-   ```sh
-   bd set-state <id> stage=built --reason "ready at <SHA>"
-   bd comment <id> "ready at <SHA> on <branch>"
-   bd update <id> --assignee ""
-   ```
+   - Set the stage label (`bd set-state <id> stage=built --reason "ready at <SHA>"`).
+   - Add a comment naming the SHA and branch (`bd comment <id> "ready at <SHA> on <branch>"`).
+   - Clear the assignee (`bd update <id> --assignee ""`).
 
 6. Otherwise, close the bead with a reason that says what changed, the proof, and the SHA. The final message repeats the reason. Write the reason to a file, per Text with quotes or several lines.
 
@@ -82,7 +80,7 @@ To replace a dead worker, spawn a fresh worker with the same prompt. It runs und
 
 If a different actor takes over the bead, first reclaim the bead (`bd reclaim --id <id>`). It sets that bead back to open with no assignee, but only if its lease expired more than a grace window ago. The grace window is 10 minutes, twice the lease, and `--older-than <duration>` changes it. A bead with a live lease stays as it is.
 
-Run `bd reclaim` only with `--id`. Without it, the command reverts every stale lease in the store, including the beads of workers that are alive but have not sent a heartbeat.
+Reclaim a stale lease (`bd reclaim`) only with `--id`. Without it, the command reverts every stale lease in the store, including the beads of workers that are alive but have not sent a heartbeat.
 
 To correct a live worker, send the correction with `SendMessage`. Otherwise, change the bead (`bd update <id> --description "<text>"` or `--acceptance "<text>"`) and respawn. `bd edit` opens an editor and blocks, so do not use it.
 
