@@ -78,7 +78,7 @@ def rewrite_command(command: str) -> str:
     `codex --version`, with no `exec` in their own segment, are untouched.
 
     The flag goes after `exec`, not after `codex`, so the rewritten argv
-    still reads `codex exec`, which the delegate-to-codex collision check
+    still reads `codex exec`, which a worktree-keyed process match
     `codex exec.*-C <worktree>` matches.
     """
     pieces: list[str] = []

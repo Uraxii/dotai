@@ -1,225 +1,147 @@
-"""Codex writers can do their job in every git layout the watcher meets.
+"""Codex does the bead and git work itself, inside the sandbox the script builds.
 
-What a `developer-codex` run needs, read from agents/developer-codex.md and
-the delegate-to-codex playbook:
-
-- edit files inside the worktree (`-s workspace-write -C <worktree>`)
-- `git add`, `git switch -c`, `git commit`: write loose objects, the branch
-  ref, the reflogs, and the worktree's own gitdir (index, HEAD, locks)
-- run the project's tests from the worktree
-- never write the shared `config` or `hooks`, which the watcher's own git
-  commands would later run with its rights
-
-These tests run the real grants script on real repositories, then perform the
-commit and assert every file git changed sits under a grant. The opt-in
-end-to-end test runs the watcher's real `codex exec -c agents.enabled=false` command shape.
+Opt-in: set PSTACK_CODEX_LIVE=1 with `codex` (logged in), `bd`, and `jq` on PATH.
+It spends Codex tokens. Each case builds a fixture under ~/.cache (Codex's
+workspace-write sandbox already makes /tmp writable, which would hide a missing
+grant), runs the real `prepare_codex_run.py` and the real `run.sh`, and asserts
+only from outside the sandbox: the bead state, the bead comments, and the bare
+remote. A scratch CODEX_HOME (auth symlinked, one-line config) keeps the run
+from appending trust entries to ~/.codex/config.toml.
 """
 
 from __future__ import annotations
 
 import json
 import os
-import re
-import shlex
 import shutil
 import subprocess
+import tempfile
 from pathlib import Path
-from typing import Callable
 
 import pytest
 
-from test_codex_writer_git_isolation import (
-    GRANTS_SCRIPT, WATCHER, PLUGIN_ROOT, git, granted_paths, run_grants,
+
+PLUGIN_ROOT = Path(__file__).resolve().parents[1]
+SCRIPT = PLUGIN_ROOT / "scripts/prepare_codex_run.py"
+MODEL = os.environ.get("CODEX_MODEL", "gpt-5.6-terra")
+
+pytestmark = pytest.mark.skipif(
+    os.environ.get("PSTACK_CODEX_LIVE") != "1"
+    or any(shutil.which(tool) is None for tool in ("codex", "bd")),
+    reason="set PSTACK_CODEX_LIVE=1 with codex and bd on PATH",
 )
 
 
-Setup = Callable[[Path, Path], None]
+def run(*args: str, cwd: Path, env: dict[str, str] | None = None) -> str:
+    return subprocess.run(
+        list(args), cwd=cwd, env=env, check=True, capture_output=True, text=True,
+    ).stdout.strip()
 
 
-def with_worktree_config(main: Path, worktree: Path) -> None:
-    git("config", "extensions.worktreeConfig", "true", cwd=main)
+class Fixture:
+    def __init__(self) -> None:
+        cache = Path.home() / ".cache"
+        cache.mkdir(exist_ok=True)
+        self.root = Path(tempfile.mkdtemp(prefix="pstack-codex-live.", dir=cache))
+        self.remote, self.repo = self.root / "remote.git", self.root / "repo"
+        self.worktree, self.store = self.root / "wt", self.root / "store"
+        base = {k: v for k, v in os.environ.items() if k not in {"BEADS_DIR", "BEADS_ACTOR", "BD_ACTOR"}}
+        self.env = {**base, "BEADS_DIR": str(self.store / ".beads"),
+                    "XDG_STATE_HOME": str(self.root / "state"),
+                    "CODEX_HOME": str(self.root / "codex-home")}
+        run("git", "init", "-q", "--bare", str(self.remote), cwd=self.root)
+        run("git", "init", "-q", "-b", "main", str(self.repo), cwd=self.root)
+        run("git", "-c", "user.name=t", "-c", "user.email=t@example.com",
+            "commit", "-q", "--allow-empty", "-m", "init", cwd=self.repo)
+        run("git", "remote", "add", "origin", str(self.remote), cwd=self.repo)
+        run("git", "push", "-q", "origin", "main", cwd=self.repo)
+        self.store.mkdir()
+        init_env = {k: v for k, v in self.env.items() if k != "BEADS_DIR"}
+        run("bd", "init", "-q", "--non-interactive", "-p", "live", cwd=self.store, env=init_env)
+        run("bd", "hooks", "install", cwd=self.repo, env=self.env)
+        run("git", "worktree", "add", "-q", str(self.worktree), "-b", "live-branch", cwd=self.repo)
+        home = self.root / "codex-home"
+        home.mkdir()
+        (home / "auth.json").symlink_to(Path.home() / ".codex/auth.json")
+        (home / "config.toml").write_text(f'model = "{MODEL}"\n')
+        self.bead = json.loads(run(
+            "bd", "create", "append a line to probe.txt", "--json",
+            "--description", "Append the line `change` to probe.txt in the worktree root, creating it.",
+            "--acceptance", "probe.txt holds the line `change`, committed.",
+            cwd=self.repo, env=self.env,
+        ))["id"]
+
+    def bd(self, *args: str) -> str:
+        return run("bd", *args, cwd=self.repo, env=self.env)
+
+    def launch(self, prompt: str) -> None:
+        prepared = subprocess.run(["python3", str(SCRIPT)], input=prompt, env=self.env,
+                                  capture_output=True, text=True)
+        assert prepared.returncode == 0, prepared.stderr
+        run_dir = Path(prepared.stdout.strip())
+        subprocess.run(["bash", str(run_dir / "run.sh")], env=self.env, timeout=900)
+        log = (run_dir / "codex.jsonl").read_text()
+        self.log = log + (run_dir / "codex.stderr").read_text()
+        assert '"code":0' in log.splitlines()[-1], self.log
+
+    def bead_json(self) -> dict:
+        shown = json.loads(self.bd("show", self.bead, "--json"))
+        return shown[0] if isinstance(shown, list) else shown
+
+    def comments(self) -> str:
+        return " | ".join(c["text"] for c in json.loads(self.bd("comments", self.bead, "--json")))
+
+    def close(self) -> None:
+        shutil.rmtree(self.root, ignore_errors=True)
 
 
-def with_upstream(main: Path, worktree: Path) -> None:
-    git("push", "-q", "-u", "origin", "HEAD", cwd=worktree)
+@pytest.fixture
+def fixture():
+    made = Fixture()
+    yield made
+    made.close()
 
 
-def with_both(main: Path, worktree: Path) -> None:
-    with_worktree_config(main, worktree)
-    with_upstream(main, worktree)
+def test_writer_claims_commits_and_closes(fixture: Fixture) -> None:
+    fixture.launch(f"Claim bead {fixture.bead} as developer-{fixture.bead}. Work in {fixture.worktree}.")
+
+    bead = fixture.bead_json()
+    assert bead["status"] == "closed", fixture.log
+    subject = run("git", "log", "-1", "--format=%s", cwd=fixture.worktree)
+    assert subject.endswith(f"({fixture.bead})")
+    sha = run("git", "rev-parse", "HEAD", cwd=fixture.worktree)
+    assert sha[:7] in bead["close_reason"]
+    trailer = run("git", "log", "-1", "--format=%(trailers:key=Executed-By,valueonly)", cwd=fixture.worktree)
+    assert trailer == f"developer-{fixture.bead}"
+    assert run("git", "show", "HEAD:probe.txt", cwd=fixture.worktree) == "change"
+    assert run("git", "status", "--porcelain", cwd=fixture.worktree) == ""
 
 
-def with_packed_refs(main: Path, worktree: Path) -> None:
-    git("pack-refs", "--all", cwd=main)
-
-
-def with_hooks_path_in_worktree(main: Path, worktree: Path) -> None:
-    git("config", "core.hooksPath", ".githooks", cwd=main)
-
-
-LAYOUTS: dict[str, tuple[Setup, str]] = {
-    "plain": (lambda main, worktree: None, "linked"),
-    "worktree-config": (with_worktree_config, "linked"),
-    "upstream": (with_upstream, "linked"),
-    "worktree-config-and-upstream": (with_both, "linked"),
-    "packed-refs": (with_packed_refs, "linked"),
-    "hooks-path-in-worktree": (with_hooks_path_in_worktree, "linked"),
-    "path-with-spaces": (lambda main, worktree: None, "my linked tree"),
-}
-
-
-@pytest.fixture(params=LAYOUTS)
-def worktree(request: pytest.FixtureRequest, tmp_path: Path) -> Path:
-    setup, dirname = LAYOUTS[request.param]
-    remote, main = tmp_path / "remote.git", tmp_path / "main"
-    worktree = tmp_path / dirname
-    git("init", "-q", "--bare", str(remote), cwd=tmp_path)
-    git("init", "-q", "-b", "develop", str(main), cwd=tmp_path)
-    git("config", "gc.auto", "0", cwd=main)
-    git("config", "maintenance.auto", "false", cwd=main)
-    (main / "test_unit.py").write_text(
-        "import unittest\n\n\nclass T(unittest.TestCase):\n"
-        "    def test_ok(self):\n        self.assertTrue(True)\n"
-    )
-    git("add", "test_unit.py", cwd=main)
-    git("-c", "user.name=t", "-c", "user.email=t@example.com",
-        "commit", "-q", "-m", "root", cwd=main)
-    git("remote", "add", "origin", str(remote), cwd=main)
-    git("worktree", "add", "-q", "-b", "fix/unit", str(worktree), cwd=main)
-    setup(main, worktree)
-    return worktree
-
-
-def snapshot(root: Path) -> dict[Path, tuple[int, int]]:
-    return {
-        path: (path.stat().st_size, path.stat().st_mtime_ns)
-        for path in root.rglob("*") if path.is_file()
-    }
-
-
-def common_dir(worktree: Path) -> Path:
-    return Path(git("rev-parse", "--path-format=absolute",
-                    "--git-common-dir", cwd=worktree))
-
-
-def test_grant_script_accepts_the_layout(worktree: Path) -> None:
-    result = run_grants(worktree)
-
-    assert result.returncode == 0, result.stderr
-    assert len(granted_paths(result.stdout)) == 4
-
-
-def test_every_path_a_commit_writes_is_granted(worktree: Path) -> None:
-    result = run_grants(worktree)
-    assert result.returncode == 0, result.stderr
-    grants = granted_paths(result.stdout)
-    shared = common_dir(worktree)
-    before = snapshot(shared)
-
-    (worktree / "feature.txt").write_text("work\n")
-    committer = ["-c", "user.name=t", "-c", "user.email=t@example.com",
-                 "-c", "core.hooksPath=/dev/null"]
-    git(*committer, "switch", "-q", "-c", "unit/codex", cwd=worktree)
-    git(*committer, "add", "feature.txt", cwd=worktree)
-    git(*committer, "commit", "-q", "-m", "work (x.1)", cwd=worktree)
-
-    after = snapshot(shared)
-    written = [path for path, stat in after.items() if before.get(path) != stat]
-    assert written, "the commit changed nothing under the git dirs"
-    uncovered = [
-        path for path in written
-        if not any(path.is_relative_to(grant) for grant in grants)
-    ]
-    assert uncovered == []
-    assert git("log", "-1", "--format=%s", cwd=worktree) == "work (x.1)"
-
-
-def test_grants_leave_config_and_hooks_read_only(worktree: Path) -> None:
-    result = run_grants(worktree)
-    assert result.returncode == 0, result.stderr
-    grants = granted_paths(result.stdout)
-    shared = common_dir(worktree)
-
-    for protected in (shared / "config", shared / "hooks"):
-        assert not any(protected.is_relative_to(grant) for grant in grants)
-
-
-def test_project_tests_run_in_the_worktree(worktree: Path) -> None:
-    result = subprocess.run(
-        ["python3", "-m", "unittest", "-q"], cwd=worktree,
-        capture_output=True, text=True,
+def test_writer_stops_at_built_with_the_branch_on_the_remote(fixture: Fixture) -> None:
+    fixture.launch(
+        f"Claim bead {fixture.bead} as developer-{fixture.bead}. Work in {fixture.worktree}. "
+        f"Stop at stage=built. Grant: {fixture.remote}"
     )
 
-    assert result.returncode == 0, result.stderr
+    sha = run("git", "rev-parse", "HEAD", cwd=fixture.worktree)
+    bead = fixture.bead_json()
+    assert bead["status"] != "closed", fixture.log
+    assert "stage:built" in bead.get("labels", []), fixture.log
+    assert not bead.get("assignee")
+    assert f"ready at {sha} on live-branch" in fixture.comments()
+    assert run("git", "rev-parse", "live-branch", cwd=fixture.remote) == sha
 
 
-def test_main_checkout_is_refused(tmp_path: Path) -> None:
-    git("init", "-q", "-b", "develop", str(tmp_path / "main"), cwd=tmp_path)
+def test_reviewer_records_a_verdict_and_edits_nothing(fixture: Fixture) -> None:
+    worktree_file = fixture.worktree / "probe.txt"
+    worktree_file.write_text("change\n")
+    run("git", "add", "probe.txt", cwd=fixture.worktree)
+    run("git", "-c", "user.name=t", "-c", "user.email=t@example.com", "commit", "-q",
+        "-m", f"append change ({fixture.bead})", cwd=fixture.worktree)
+    sha = run("git", "rev-parse", "HEAD", cwd=fixture.worktree)
 
-    result = run_grants(tmp_path / "main")
+    fixture.launch(f"Review bead {fixture.bead} at {sha} in {fixture.worktree}.")
 
-    assert result.returncode != 0
-    assert "main checkout" in result.stderr
-
-
-def codex_command(worktree: Path, tmp: Path) -> str:
-    """The watcher's `codex exec -c agents.enabled=false` line, with its placeholders filled in."""
-    [command] = re.findall(
-        r"codex exec -m <MODEL> -s workspace-write .*?(?=; RC=)",
-        WATCHER.read_text(),
-    )
-    models = json.loads((PLUGIN_ROOT / "models.json").read_text())["roles"]
-    [model] = [r["models"]["codex"][0] for r in models
-               if r["role"] == "feature, refactoring"]
-    grants = run_grants(worktree)
-    assert grants.returncode == 0, grants.stderr
-    adddirs = grants.stdout.strip()
-    for placeholder, value in {
-        "<MODEL>": model, "<worktree>": shlex.quote(str(worktree)),
-        "<ADDDIRS>": adddirs, "<TMP>": shlex.quote(str(tmp)),
-    }.items():
-        command = command.replace(placeholder, value)
-    return command
-
-
-@pytest.mark.skipif(
-    os.environ.get("PSTACK_CODEX_E2E") != "1" or shutil.which("codex") is None,
-    reason="set PSTACK_CODEX_E2E=1 with codex installed to run",
-)
-@pytest.mark.parametrize("layout", ["plain", "worktree-config"])
-def test_codex_creates_and_commits_with_the_watcher_command(
-    layout: str, tmp_path: Path,
-) -> None:
-    setup, dirname = LAYOUTS[layout]
-    remote, main = tmp_path / "remote.git", tmp_path / "main"
-    worktree, out = tmp_path / dirname, tmp_path / "out"
-    out.mkdir()
-    git("init", "-q", "--bare", str(remote), cwd=tmp_path)
-    git("init", "-q", "-b", "develop", str(main), cwd=tmp_path)
-    git("-c", "user.name=t", "-c", "user.email=t@example.com",
-        "commit", "-q", "--allow-empty", "-m", "root", cwd=main)
-    git("worktree", "add", "-q", "-b", "fix/unit", str(worktree), cwd=main)
-    setup(main, worktree)
-    (out / "prompt.md").write_text(
-        "Create a file named hello.txt containing the word hello in the "
-        "current directory. Run `python3 -c 'print(1)'` to prove you can run "
-        "a command. Then commit with `git add hello.txt && git commit -m "
-        "'add hello (e2e.1)'`. Reply in one line.\n"
-    )
-    before = git("rev-parse", "HEAD", cwd=worktree)
-    environment = {**os.environ, "GIT_AUTHOR_NAME": "t",
-                   "GIT_AUTHOR_EMAIL": "t@example.com",
-                   "GIT_COMMITTER_NAME": "t",
-                   "GIT_COMMITTER_EMAIL": "t@example.com"}
-
-    result = subprocess.run(
-        ["bash", "-c", f"{codex_command(worktree, out)} "
-                       f"< {shlex.quote(str(out / 'prompt.md'))}"],
-        capture_output=True, text=True, env=environment, timeout=600,
-    )
-
-    log = result.stdout + result.stderr
-    assert result.returncode == 0, log
-    assert git("rev-parse", "HEAD", cwd=worktree) != before, log
-    assert git("log", "-1", "--format=%s", cwd=worktree).endswith("(e2e.1)")
-    assert git("show", "HEAD:hello.txt", cwd=worktree).strip() == "hello"
+    assert f"verdict pass at {sha}" in fixture.comments() or f"verdict fail at {sha}" in fixture.comments(), fixture.log
+    assert run("git", "status", "--porcelain", cwd=fixture.worktree) == ""
+    assert run("git", "rev-parse", "HEAD", cwd=fixture.worktree) == sha
