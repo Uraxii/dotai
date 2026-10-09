@@ -4,7 +4,7 @@ A bead holds the state of one delegated unit, from creation to close. This refer
 
 ## Beads plugin
 
-pstack requires the beads plugin. Run these operations with your harness's beads skill; the `bd` forms in pstack files define the exact behavior. An agent with only a shell, such as the Codex watchers, runs the `bd` form directly.
+pstack requires the beads plugin. Run these operations with your harness's beads skill; the `bd` forms in pstack files define the exact behavior. An agent with only a shell, such as Codex inside its sandbox, runs the `bd` form directly.
 
 ## Coordinator creates the bead and spawns the worker
 
@@ -46,7 +46,7 @@ bd records claims and history under `BEADS_ACTOR`. The beads `prepare-commit-msg
    ```
 
    `git interpret-trailers --parse` on the resulting message lists both trailers.
-5. If your spawn prompt ends with `Stop at stage=built.`, leave the bead open. After your last push, run these, then end with a final message that names the branch and the SHA. Clearing the assignee hands the bead back to the coordinator, which closes it after the PR lands.
+5. If your spawn prompt ends with `Stop at stage=built.`, leave the bead open. Push the branch (`git push origin HEAD`; a Codex sandbox cannot write the repository config, so leave out `-u`). Then run these, then end with a final message that names the branch and the SHA. Clearing the assignee hands the bead back to the coordinator, which closes it after the PR lands.
 
    - Set the stage label (`bd set-state <id> stage=built --reason "ready at <SHA>"`).
    - Add a comment naming the SHA and branch (`bd comment <id> "ready at <SHA> on <branch>"`).

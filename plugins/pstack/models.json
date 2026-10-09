@@ -2,7 +2,8 @@
   "available": {
     "claude": [
       { "label": "Opus 5", "slug": "opus" },
-      { "label": "Sonnet 5", "slug": "sonnet" }
+      { "label": "Sonnet 5", "slug": "sonnet" },
+      { "label": "Haiku", "slug": "haiku" }
     ],
     "codex": [
       { "label": "GPT-6.1-Sol", "slug": "gpt-6.1-sol" },
@@ -29,7 +30,7 @@
     {
       "role": "codex watchers",
       "models": {
-        "claude": ["sonnet"]
+        "claude": ["haiku"]
       }
     },
     {

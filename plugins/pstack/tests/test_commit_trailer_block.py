@@ -14,6 +14,7 @@ import os
 import re
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -21,7 +22,6 @@ import pytest
 
 PLUGIN_ROOT = Path(__file__).resolve().parents[1]
 WORK_LOOP = PLUGIN_ROOT / "skills/poteto-mode/references/beads-work-loop.md"
-DEVELOPER_CODEX = PLUGIN_ROOT / "agents/developer-codex.md"
 ACTOR = "developer-test.1"
 ATTRIBUTION = "Co-Authored-By: Test Model <test@example.com>"
 
@@ -36,9 +36,12 @@ def work_loop_form() -> str:
 
 
 def codex_form() -> str:
-    text = DEVELOPER_CODEX.read_text()
-    match = re.search(r"`(git commit -m [^`]*)`", text)
-    assert match, "developer-codex.md has no git commit form"
+    sys.path.insert(0, str(PLUGIN_ROOT / "scripts"))
+    import prepare_codex_run
+
+    request = prepare_codex_run.parse_request("Claim bead test.1 as developer-x. Work in /w.")
+    match = re.search(r"`(git commit -m [^`]*)`", prepare_codex_run.writer_prompt(request))
+    assert match, "the writer prompt has no git commit form"
     return match.group(1)
 
 

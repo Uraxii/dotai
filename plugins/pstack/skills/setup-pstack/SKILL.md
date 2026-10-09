@@ -130,7 +130,7 @@ or `auto` runs that role on the parent session's model (the `Agent` call omits
 fan-out. Rows here apply to Claude Code alone; Codex reads
 `~/.codex/pstack-models.md`.
 
-codex watchers: sonnet
+codex watchers: haiku
 feature, refactoring: sonnet, opus
 judgment and prose: opus, sonnet
 arena runners: opus, sonnet
