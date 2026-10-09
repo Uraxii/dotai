@@ -11,9 +11,9 @@ timeout, so a Bash call that runs Codex inline moves to the background after a
 few seconds. The watcher never keeps Codex in a shell that limit could kill,
 because it launches Codex detached.
 
-The parent runs on Haiku and ANTHROPIC_DEFAULT_SONNET_MODEL remaps the watcher's
-declared sonnet to Haiku. An empty ZDOTDIR keeps the user's .zshrc out of the
-first Bash call, and --strict-mcp-config skips MCP server startup.
+An empty ZDOTDIR keeps the user's .zshrc out of the first Bash call, and
+--strict-mcp-config skips MCP server startup. The parent runs on Haiku to speed up
+token processing.
 
 PSTACK_WATCHER_E2E_PLUGIN_DIR points the run at another pstack tree.
 """
@@ -35,7 +35,6 @@ BASH_LIMIT_MS = 1000
 STUB_SECONDS = 15
 CLAUDE_TIMEOUT_SECONDS = 150
 FAST_MODEL = "haiku"
-FAST_MODEL_ID = "claude-haiku-5-5"
 
 pytestmark = pytest.mark.skipif(
     os.environ.get("PSTACK_WATCHER_E2E") != "1"
@@ -108,7 +107,6 @@ def test_watcher_survives_shrunk_bash_timeout(tmp_path: Path) -> None:
     env = {
         **os.environ,
         "ZDOTDIR": str(zdotdir),
-        "ANTHROPIC_DEFAULT_SONNET_MODEL": FAST_MODEL_ID,
         "PATH": f"{bin_dir}:{os.environ['PATH']}",
         "BEADS_DIR": str(tmp_path / "store" / ".beads"),
         "BASH_DEFAULT_TIMEOUT_MS": str(BASH_LIMIT_MS),
