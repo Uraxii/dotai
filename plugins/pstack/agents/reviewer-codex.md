@@ -2,7 +2,7 @@
 name: reviewer-codex
 description: "Default for one review gate on Claude Code: runs one read-only `codex exec` on a bead's commits, records the verdict as a bead comment, and replies with keyed lines."
 color: gray
-tools: Bash, Write, SendMessage
+tools: Bash, Write, SendMessage, Monitor
 model: sonnet
 background: true
 ---
@@ -41,15 +41,21 @@ Every reply is keyed lines, one per line. `fallback` takes one of three values:
    `git log --grep '(<id>)' <SHA>` lists the bead's commits. Review their combined diff against the scope and the done-when. Look for wrong behavior, a missed requirement, and a claim the diff does not back. Run read-only checks if they help. End with a last message whose final two lines are `verdict: pass` or `verdict: fail`, then `reason: <one sentence>`.
    ```
 
-6. Run COMMAND with Bash, `timeout: 600000`, one call, with nothing chained after it:
+6. Launch COMMAND with Bash, one call, with nothing chained after it. It starts Codex detached in its own session and returns at once, so no shell time limit can kill Codex or lose its exit code:
 
    ```
-   codex exec -m <MODEL> -s read-only -c agents.enabled=false -C <worktree> -o <TMP>/last-message.md - < <TMP>/prompt.md > <TMP>/codex-exec.log 2>&1
+   setsid nohup bash -c 'codex exec -m <MODEL> -s read-only -c agents.enabled=false -C <worktree> -o <TMP>/last-message.md - < <TMP>/prompt.md > <TMP>/codex-exec.log 2>&1; echo $? > <TMP>/exit-code.part; mv <TMP>/exit-code.part <TMP>/exit-code' >/dev/null 2>&1 &
    ```
 
    `-c agents.enabled=false` stops Codex from handing the review to a helper agent. A plugin hook adds that flag to any `codex exec` that lacks it, but write it in COMMAND yourself.
 
-   A run that outlives the timeout moves to the background. When the Bash result says so, send `fallback: pending` and `command: <COMMAND exactly as run>`, one per line, with SendMessage `to: "main"`, and end your turn with no other reply. Claude Code delivers only one reply per agent, so the pending note must not use it. You are woken when Codex exits. Then continue at step 7 with the real exit code. A slow run is never a reason to report a failure.
+   Then wait with the Monitor tool, `timeout_ms: 1800000`, command:
+
+   ```
+   until [ -e <TMP>/exit-code ]; do sleep 2; done; cat <TMP>/exit-code
+   ```
+
+   The event it prints is Codex's exit code. When Monitor expires with no event, Codex is still running, so re-arm the same Monitor. Never reply `fallback: claude` while Codex is alive. A slow run is never a reason to report a failure.
 7. If Codex exited non-zero, reply `fallback: claude`, `command: <COMMAND exactly as run>`, `exit code: <its exit code>`, `reason: codex exec exited <its exit code>; see <TMP>/codex-exec.log`, and stop.
 8. Run `python3 ${CLAUDE_PLUGIN_ROOT}/skills/poteto-mode/scripts/final_verdict.py <TMP>/last-message.md <SHA> > <TMP>/verdict.md`. The script takes the last `verdict: pass` or `verdict: fail` line and the first `reason:` line after it, indented or not. If it exits non-zero, reply `fallback: claude`, `command: <COMMAND exactly as run>`, `exit code: 0`, `reason: codex gave no verdict line; see <TMP>/last-message.md`, and stop. Otherwise VERDICT is the second word of `<TMP>/verdict.md`.
 9. Run `bd comment <id> --file <TMP>/verdict.md`. Never put Codex's message or bead text inside a command, because the shell runs backticks and `$(...)` in it. Pass that text through a file. If `bd comment` exits non-zero, reply `fallback: stop`, `command: bd comment <id> --file <TMP>/verdict.md`, `exit code: <its exit code>`, `reason: <the error bd printed>`, and stop.
