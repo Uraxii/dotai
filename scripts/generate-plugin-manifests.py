@@ -41,7 +41,7 @@ HOOK_WIRING_PATHS = {
 PLUGINS: list[dict[str, object]] = [
     {
         "name": "pstack",
-        "version": "2.0.2",
+        "version": "2.0.3",
         "hooks": ["claude", "codex", "copilot"],
         "description": (
             "Skills and thin named agents: poteto-mode, principles, "

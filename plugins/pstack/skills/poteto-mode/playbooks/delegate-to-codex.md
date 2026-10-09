@@ -2,7 +2,7 @@
 
 **In plain words:** hand one coding or review job to Codex, a different AI tool, instead of doing it here. A small watcher agent runs one Codex session on a bead and tells you how it ended; you read the bead and check it against git.
 
-**You own the run.** Claude Code only; skip this playbook on any other harness. The watcher agents (`developer-codex`, `reviewer-codex`) hold only Bash, Write, and SendMessage. A watcher runs every `bd` command, because Codex's sandbox cannot open the bead store. It builds Codex's prompt from `bd show <id> --json`, sends it on stdin, and reads Codex's last message back from a temp file. It never does any part of the task itself. This page is the owner's half. The bead loop itself is in [`references/beads-work-loop.md`](../references/beads-work-loop.md).
+**You own the run.** Claude Code only; skip this playbook on any other harness. The watcher agents (`developer-codex`, `reviewer-codex`) hold only Bash, Write, SendMessage, and Monitor. A watcher runs every `bd` command, because Codex's sandbox cannot open the bead store. It builds Codex's prompt from `bd show <id> --json`, sends it on stdin to a detached Codex process, waits on its exit-code file with Monitor, and reads Codex's last message back from a temp file. It never does any part of the task itself. This page is the owner's half. The bead loop itself is in [`references/beads-work-loop.md`](../references/beads-work-loop.md).
 
 Run plain `codex`. The watchers share the user's own `~/.codex`: login, config, plugins, and `codex resume` history, all with the interactive session. A missing login ends the run with `fallback: claude` and a `reason` that names `codex login`.
 
@@ -27,7 +27,7 @@ A writer commits its own work. Codex's `workspace-write` sandbox keeps every `.g
    ```
 
    Use the actor `developer-<id>` for a Codex writer, so a Claude fallback with the same prompt holds the same claim. Pin the watcher's own model from the `codex watchers` row (its frontmatter already carries `model: sonnet`).
-4. Read the reply by key: `fallback`, `command`, `exit code`, then `commit` from a writer, `verdict` from a reviewer, and `reason` on a fallback. Ignore any other line. `exit code` is a number or `(none)`. `fallback: pending` arrives as a message, not as the watcher's reply. It means Codex outlived the watcher's Bash timeout and still runs in the background. Wait for the watcher's reply, which carries the final lines, and never fall back on `pending`.
+4. Read the reply by key: `fallback`, `command`, `exit code`, then `commit` from a writer, `verdict` from a reviewer, and `reason` on a fallback. Ignore any other line. `exit code` is a number or `(none)`. A long run sends no interim message. The watcher's one reply arrives when Codex exits.
 5. `fallback: none`: run `bd show <id>` for the close reason and `bd comments <id>` for the verdict. A writer prompt that ends with `Stop at stage=built.` leaves the bead open, and its `ready at <SHA> on <branch>` comment takes the place of the close reason. Then run `git log --grep '(<id>)'` and `git diff <base>..<SHA>` in the worktree. A commit the close reason claims counts only when git shows it.
 6. `fallback: stop`: no agent can start. Fix the cause the `reason` names, such as a malformed prompt or a bead another actor holds, then spawn a fresh watcher.
 7. `fallback: claude` means Codex did not finish. Handle it in this order.
