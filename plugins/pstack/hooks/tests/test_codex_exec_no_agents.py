@@ -95,6 +95,22 @@ class RewriteCommandTests(unittest.TestCase):
         command = 'echo "codex exec is a subcommand"'
         self.assertEqual(HOOK.rewrite_command(command), command)
 
+    def test_heredoc_and_quoted_text_is_not_mangled(self) -> None:
+        for command in (
+            "cat > doc.md <<'EOF'\nrun any `codex exec -c agents.enabled=false` that lacks it\n"
+            "line\ncodex exec go\nEOF",
+            "cat <<EOF\nany `codex exec -c agents.enabled=false` here\nEOF\n",
+            'printf "%s" "x `codex exec -c agents.enabled=false` y" > doc.md',
+        ):
+            with self.subTest(command=command):
+                self.assertEqual(HOOK.rewrite_command(command), command)
+
+    def test_invocation_after_a_heredoc_is_rewritten(self) -> None:
+        self.assertEqual(
+            HOOK.rewrite_command("cat <<EOF\n`codex exec -c agents.enabled=false`\nEOF\ncodex exec go"),
+            "cat <<EOF\n`codex exec -c agents.enabled=false`\nEOF\ncodex exec -c agents.enabled=false go",
+        )
+
     def test_a_path_containing_codex_exec_is_not_mangled(self) -> None:
         command = "/tmp/codex/exec.sh --help"
         self.assertEqual(HOOK.rewrite_command(command), command)

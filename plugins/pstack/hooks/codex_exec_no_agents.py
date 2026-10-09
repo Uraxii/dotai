@@ -43,6 +43,8 @@ FLAG_MARKER = "agents.enabled=false"
 # slip past it either way. Upgrade to a real shell tokenizer if a live
 # command trips it.
 CODEX_INVOCATION = re.compile(r"(?:\A|[;&|`\n(])\s*codex\b")
+HEREDOC = re.compile(r"<<-?[ \t]*(['\"]?)(\w+)\1[^\n]*\n(.*?)(?:\n[ \t]*\2[ \t]*(?=\n|\Z)|\Z)", re.S)
+QUOTED = re.compile(r"'[^']*'|\"(?:\\.|[^\"\\])*\"")
 SEGMENT_END = re.compile(r"[;&|`\n)]")
 EXEC_WORD = re.compile(r"\bexec\b")
 TOKEN = re.compile(r"\S+")
@@ -67,6 +69,21 @@ def exec_end(segment: str) -> int | None:
     return None
 
 
+def blank(match: re.Match[str]) -> str:
+    return re.sub(r"[^\n]", " ", match.group())
+
+
+def mask_text(command: str) -> str:
+    """Same-length copy with heredoc bodies and quoted strings blanked.
+
+    Text a command writes or prints (`cat <<EOF`, `echo "codex exec"`) is
+    not an invocation. Blanking keeps offsets valid against `command`.
+    ponytail: `bash -c "codex exec ..."` is blanked too and passes through
+    unrewritten; unwrap `-c` strings if that matters.
+    """
+    return QUOTED.sub(blank, HEREDOC.sub(blank, command))
+
+
 def rewrite_command(command: str) -> str:
     """Add the no-helper-agents flag to every `codex exec` in `command`.
 
@@ -83,7 +100,7 @@ def rewrite_command(command: str) -> str:
     """
     pieces: list[str] = []
     cursor = 0
-    for match in CODEX_INVOCATION.finditer(command):
+    for match in CODEX_INVOCATION.finditer(mask_text(command)):
         codex_end = match.end()
         if codex_end < cursor:
             continue  # inside a segment this loop already rewrote
