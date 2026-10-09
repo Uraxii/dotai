@@ -62,7 +62,7 @@ Every reply is keyed lines, one per line. `fallback` takes one of three values:
    Then wait with the Monitor tool, `timeout_ms: 1800000`, command:
 
    ```
-   while pgrep -f '^bash <TMP>/run\.sh' >/dev/null; do sleep 5; done; echo exited; cat <TMP>/exit-code 2>/dev/null || echo lost
+   sleep 1; while pgrep -f '^bash <TMP>/run\.sh' >/dev/null; do sleep 5; done; echo exited; cat <TMP>/exit-code 2>/dev/null || echo lost
    ```
 
    The wait prints `exited` when the wrapper is gone, then Codex's exit code, or `lost` when the wrapper died without writing one. The pattern is anchored so only the `bash <TMP>/run.sh` wrapper matches, never the wait or heartbeat command lines. When Monitor expires with no event, Codex is still running, so re-arm the same Monitor. Never reply `fallback: claude` while Codex is alive. A slow run is never a reason to report a failure.

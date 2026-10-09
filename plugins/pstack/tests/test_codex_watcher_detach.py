@@ -25,7 +25,7 @@ import pytest
 PLUGIN_ROOT = Path(__file__).resolve().parents[1]
 WATCHERS = ["developer-codex", "reviewer-codex"]
 STUB_EXIT_CODE = 7
-SHELLS = [["bash", "-m"], ["zsh"]]
+SHELLS = [["bash", "-c", "set -m; "], ["zsh", "-c", ""]]
 
 
 @pytest.fixture(params=SHELLS, ids=["bash-job-control", "zsh"])
@@ -56,9 +56,9 @@ def launch_command(watcher: str) -> str:
 
 
 def wait_command(watcher: str) -> str:
-    wait = re.search(r"^   (while pgrep [^\n]*)$", read_definition(watcher), re.M)
+    wait = re.search(r"^   (sleep 1; while pgrep [^\n]*)$", read_definition(watcher), re.M)
     assert wait, f"{watcher}.md lacks a pgrep wait"
-    return wait.group(1).replace("sleep 5", "sleep 0.2")
+    return wait.group(1).replace("sleep 5", "sleep 0.2").replace("sleep 1;", "sleep 0.1;")
 
 
 def fill(command: str, tmp: Path, adddirs: str = "", worktree: Path | None = None) -> str:
@@ -125,7 +125,7 @@ def launch(
     script = fill(launch_command(watcher), work)
     if linger:
         script += "\nsleep 30"
-    shell = subprocess.Popen([*shell_argv, "-c", script], start_new_session=True)
+    shell = subprocess.Popen([*shell_argv[:-1], shell_argv[-1] + script], start_new_session=True)
     wait_for(work / "stub-pid", "stub codex never started")
     return work, shell
 
