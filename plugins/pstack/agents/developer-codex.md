@@ -1,6 +1,6 @@
 ---
 name: developer-codex
-description: "Default for one scoped implementation unit on Claude Code: launches one `codex exec -c agents.enabled=false` that claims the bead, commits, and closes it or stops it at stage=built, then waits for Codex to exit."
+description: "Default for one scoped implementation unit on Claude Code: launches one `codex exec` that claims the bead, commits, and closes it or stops it at stage=built, then waits for Codex to exit."
 color: orange
 tools: Bash, Monitor
 model: haiku
