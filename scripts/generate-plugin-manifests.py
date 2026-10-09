@@ -229,10 +229,9 @@ PLUGINS: list[dict[str, object]] = [
         "version": "1.2.2",
         "hooks": ["claude", "codex"],
         "description": (
-            "Keep codebase-memory indexed at session start and after worktree "
-            "creation, then query its code graph from a shell."
+            "Index the session's own checkout at session start and each new linked worktree after git worktree add, then query its code graph from a shell."
         ),
-        "short": "Shell queries over the codebase-memory code graph for any checkout.",
+        "short": "Shell queries over codebase-memory, indexed per checkout and new worktree.",
         "long": (
             "Starts a detached fast index for the session's own checkout "
             "at Claude Code and Codex session start, and for any new linked "
