@@ -85,9 +85,9 @@ shunt/
 │   └── code-writer/
 │       └── SKILL.md         # When/how to call code-write
 └── evals/
-    ├── run.sh                # Runs hook + transport evals (65 tests)
-    ├── hook-evals.json       # Read and view hook test cases (25)
-    ├── bash-hook-evals.json  # Bash hook test cases (23)
+    ├── run.sh                # Runs hook + transport evals (137 tests)
+    ├── hook-evals.json       # Read and view hook test cases (55)
+    ├── bash-hook-evals.json  # Bash hook test cases (65)
     ├── transport-evals.sh    # scripts/lib/aika.sh against a stubbed CLI (17)
     ├── evals.json            # End-to-end skill test cases (3)
     ├── benchmarks.json       # Token savings scenarios (4)
@@ -138,6 +138,7 @@ Fires on Claude Code `Read` and Copilot CLI `view` calls. Blocks full-file reads
 - Targeted reads (offset or limit set)
 - Files under the threshold
 - Nonexistent files (let Read handle the error)
+- Files under a directory named `.handoffs` or `handoffs`, after resolving relative paths from the session cwd. Agents need the full handoff to resume work; `handoffs.txt` and `myhandoffs/` do not qualify.
 
 ### check-bash-read (Bash hook)
 
@@ -146,6 +147,7 @@ Fires on Claude Code and Codex `Bash` calls and Copilot CLI `bash` calls. Catche
 - Redirections (`cat file > out`) — not reading into context
 - Commands with flags that indicate targeted reads
 - Non-read commands (`git status`, `grep`, etc.)
+- Files under a directory named `.handoffs` or `handoffs`, after resolving relative paths from the session cwd, on Claude Code, Codex, and Copilot CLI
 
 ## Configuration
 

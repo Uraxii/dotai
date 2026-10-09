@@ -38,6 +38,10 @@ fi
   *) file_path="$cwd/$file_path" ;;
 esac
 
+case "/$file_path" in
+  */.handoffs/*|*/handoffs/*) exit 0 ;;
+esac
+
 # Allow if file doesn't exist or path is empty
 if [ -z "$file_path" ] || [ ! -f "$file_path" ]; then
   exit 0
