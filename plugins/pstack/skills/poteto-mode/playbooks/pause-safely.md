@@ -11,10 +11,10 @@
    bd list --status in_progress --json | jq -r '.[] | "\(.id)\t\(.assignee)"'
    ```
 
-   For each kept bead, run `bd update <id> --notes "<branch>, wip <SHA>, verified: <what passed>, next: <first step on resume>"`. `--notes` replaces the bead's notes, so the note holds the current state only.
+   For each kept bead, set its notes (`bd update <id> --notes "<branch>, wip <SHA>, verified: <what passed>, next: <first step on resume>"`). `--notes` replaces the bead's notes, so the note holds the current state only.
 5. Put the artifacts the user asked to keep for after resume into beads. Keep the user's wording, every item, and the order.
-   - A checklist becomes the bead's done-when. Run `bd update <id> --acceptance "<checklist>"`.
-   - An open question becomes a bead that blocks the work. Run `bd create "<question>" --labels question --deps blocks:<id>`, or `bd gate create --type human --blocks <id> --title "<question>"`. Ten questions means ten blockers.
+   - A checklist becomes the bead's done-when. Set the bead's acceptance (`bd update <id> --acceptance "<checklist>"`).
+   - An open question becomes a bead that blocks the work. Create a bead that blocks it (`bd create "<question>" --labels question --deps blocks:<id>`), or a human gate (`bd gate create --type human --blocks <id> --title "<question>"`). Ten questions means ten blockers.
 6. Release the merge slot only if you hold it. `bd merge-slot release` exits 1 when the slot is free or missing, so check the holder first. A free or missing slot has no holder, and the block below then does nothing and exits 0.
 
    ```sh
@@ -22,6 +22,6 @@
      bd merge-slot release --holder <actor>
    fi
    ```
-7. Read each bead back with `bd show <id>`. Check that the note, the acceptance, and every blocker are there before you declare the pause ready.
+7. Read each bead back (`bd show <id>`). Check that the note, the acceptance, and every blocker are there before you declare the pause ready.
 
 **Reply:** where you are in the loop, the beads you noted, what is still only in your head, the commits you made and whether the tree is clean, and the first action on resume. This is a pause, not a final report.

@@ -9,7 +9,7 @@ background: true
 
 ### Codex reviewer watcher
 
-You run one review through Codex. You run every `bd` command yourself, because Codex's sandbox cannot open the bead store. Codex reviews. You never review anything yourself.
+You run one review through Codex. You run every bead operation yourself, because Codex's sandbox cannot open the bead store. Codex reviews. You never review anything yourself.
 
 Your prompt reads `Review bead <id> at <SHA> in <worktree>.` Your actor is `reviewer-<id>`. Each shell call starts fresh, so begin every call that runs `bd` with `export BEADS_ACTOR=reviewer-<id>;`. `BEADS_DIR` comes from the session environment.
 
@@ -25,7 +25,7 @@ Every reply is keyed lines, one per line. `fallback` takes one of three values:
 4. Collect these values, one Bash call each. If a call exits non-zero or prints nothing, reply `fallback: claude`, `command: <that command>`, `exit code: <its exit code>`, `reason: could not read <the value's name>`, and stop.
    - MODEL: `jq -r '.roles[] | select(.role == "judgment and prose") | .models.codex[0]' ${CLAUDE_PLUGIN_ROOT}/models.json`
    - TMP: `mktemp -d`
-5. Run `bd show <id> --json`. If it exits non-zero, reply `fallback: stop`, `command: bd show <id> --json`, `exit code: <its exit code>`, `reason: <the error bd printed>`, and stop. Otherwise write `<TMP>/prompt.md` with the Write tool, using the text below. Fill in `title`, `description`, and `acceptance_criteria` from the JSON, and write `(none)` for a missing field.
+5. Read the bead as JSON (`bd show <id> --json`). If it exits non-zero, reply `fallback: stop`, `command: bd show <id> --json`, `exit code: <its exit code>`, `reason: <the error bd printed>`, and stop. Otherwise write `<TMP>/prompt.md` with the Write tool, using the text below. Fill in `title`, `description`, and `acceptance_criteria` from the JSON, and write `(none)` for a missing field.
 
    ```text
    Review the work for bead <id> in <worktree>, at commit <SHA>. Do not edit any file.
@@ -66,7 +66,7 @@ Every reply is keyed lines, one per line. `fallback` takes one of three values:
    The event it prints is Codex's exit code, or `lost` when the wrapper died without writing one. When Monitor expires with no event, Codex is still running, so re-arm the same Monitor. Never reply `fallback: claude` while Codex is alive. A slow run is never a reason to report a failure.
 7. If the event was `lost`, reply `fallback: claude`, `command: <COMMAND exactly as run>`, `exit code: (none)`, `reason: codex wrapper died without an exit code`, and stop. If Codex exited non-zero, reply `fallback: claude`, `command: <COMMAND exactly as run>`, `exit code: <its exit code>`, `reason: codex exec exited <its exit code>; see <TMP>/codex-exec.log`, and stop.
 8. Run `python3 ${CLAUDE_PLUGIN_ROOT}/skills/poteto-mode/scripts/final_verdict.py <TMP>/last-message.md <SHA> > <TMP>/verdict.md`. The script takes the last `verdict: pass` or `verdict: fail` line and the first `reason:` line after it, indented or not. If it exits non-zero, reply `fallback: claude`, `command: <COMMAND exactly as run>`, `exit code: 0`, `reason: codex gave no verdict line; see <TMP>/last-message.md`, and stop. Otherwise VERDICT is the second word of `<TMP>/verdict.md`.
-9. Run `bd comment <id> --file <TMP>/verdict.md`. Never put Codex's message or bead text inside a command, because the shell runs backticks and `$(...)` in it. Pass that text through a file. If `bd comment` exits non-zero, reply `fallback: stop`, `command: bd comment <id> --file <TMP>/verdict.md`, `exit code: <its exit code>`, `reason: <the error bd printed>`, and stop.
+9. Add the verdict file as a comment on the bead (`bd comment <id> --file <TMP>/verdict.md`). Never put Codex's message or bead text inside a command, because the shell runs backticks and `$(...)` in it. Pass that text through a file. If `bd comment` exits non-zero, reply `fallback: stop`, `command: bd comment <id> --file <TMP>/verdict.md`, `exit code: <its exit code>`, `reason: <the error bd printed>`, and stop.
 10. Reply exactly:
 
     ```
