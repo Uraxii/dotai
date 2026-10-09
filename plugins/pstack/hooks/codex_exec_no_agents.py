@@ -3,13 +3,13 @@
 
 Without `-c agents.enabled=false`, Codex 0.154.0 exposes
 `collaboration.spawn_agent`, `followup_task`, and `send_message`, so a
-`codex exec -c agents.enabled=false` can hand the prompt to a helper agent instead of doing the work
+`codex exec` can hand the prompt to a helper agent instead of doing the work
 itself. This applies everywhere, main thread or any subagent, because any
-Bash call can run `codex exec -c agents.enabled=false` by hand.
+Bash call can run `codex exec` by hand.
 
 The hook never edits the command text and never parses shell. It prepends
 `PATH=<plugin root>/shims:"$PATH";` to a command containing `codex`. The shim
-`shims/codex` adds the flag when it is actually run as `codex exec -c agents.enabled=false`, so
+`shims/codex` adds the flag when it is actually run as `codex exec`, so
 heredocs, quotes, `$(...)`, and `bash -c` all behave as the shell decides.
 
 This is not a security gate: a command that already carries the prefix, or

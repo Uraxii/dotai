@@ -1,5 +1,5 @@
 #!/bin/sh
-# Runs the real codex, adding `-c agents.enabled=false` after `exec` so a
+# Runs the real codex, adding `-c agents.enabled=false` when an arg is `exec` so a
 # `codex exec` cannot hand its prompt to Codex's own helper agents.
 self=$0
 old_ifs=$IFS
@@ -17,8 +17,9 @@ if [ -z "$real" ]; then
   echo "codex shim: no codex on PATH besides the shim" >&2
   exit 127
 fi
-if [ "${1-}" = exec ]; then
-  shift
-  exec "$real" exec -c agents.enabled=false "$@"
-fi
+for arg in "$@"; do
+  if [ "$arg" = exec ]; then
+    exec "$real" -c agents.enabled=false "$@"
+  fi
+done
 exec "$real" "$@"

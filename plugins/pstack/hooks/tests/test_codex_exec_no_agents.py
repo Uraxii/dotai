@@ -112,7 +112,13 @@ class ShimTests(unittest.TestCase):
     def test_exec_gets_the_flag_right_after_exec(self) -> None:
         self.run_shim("exec", "resume", "--last")
         self.assertEqual(
-            self.fake.calls(), [" ".join(["exec", *FLAG, "resume", "--last"])]
+            self.fake.calls(), [" ".join([*FLAG, "exec", "resume", "--last"])]
+        )
+
+    def test_a_global_option_before_exec_still_gets_the_flag_first(self) -> None:
+        self.run_shim("-m", "m", "exec", "go")
+        self.assertEqual(
+            self.fake.calls(), [" ".join([*FLAG, "-m", "m", "exec", "go"])]
         )
 
     def test_exec_with_the_flag_already_present_still_runs(self) -> None:
@@ -156,13 +162,13 @@ class HookedCommandInRealShellTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         calls = self.fake.calls()
         self.assertEqual(len(calls), 1, f"{shell}: {calls}")
-        self.assertEqual(calls[0].split()[:3], ["exec", *FLAG])
+        self.assertEqual(calls[0].split()[:3], [*FLAG, "exec"])
 
     def test_real_invocations_get_the_flag_in_every_shell(self) -> None:
         cases = {
             "plain call": "codex exec go",
             "command substitution in double quotes":
-                'out="$(codex exec -c agents.enabled=false go)"',
+                'out="$(codex exec go)"',
             "backticks in double quotes": 'out="`codex exec go`"',
             "substitution in unquoted heredoc":
                 "cat <<EOF > /dev/null\n$(codex exec go)\nEOF",
@@ -179,7 +185,7 @@ class HookedCommandInRealShellTests(unittest.TestCase):
     def test_a_heredoc_writing_a_doc_leaves_it_unchanged_and_runs_no_codex(
         self,
     ) -> None:
-        body = "run any `codex exec -c agents.enabled=false` that lacks it\ncodex exec go\n"
+        body = "run any `codex exec` that lacks it\ncodex exec go\n"
         command = f"cat > doc.md <<'EOF'\n{body}EOF"
         for shell in shells():
             with self.subTest(shell=shell):
