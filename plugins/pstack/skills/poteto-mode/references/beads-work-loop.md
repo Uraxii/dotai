@@ -37,7 +37,7 @@ export BEADS_ACTOR=<actor> BD_ACTOR=<actor>
 bd records claims and history under `BEADS_ACTOR`. The beads `prepare-commit-msg` hook reads only `BD_ACTOR`. It appends `Executed-By: <actor>` after a blank line, which splits the trailer block, unless the message already has an `Executed-By:` trailer. Every commit therefore writes both trailers with `git commit --trailer`, so they form one block and the hook skips.
 
 1. Claim the bead (`bd update <id> --claim`). If another actor holds it, the claim exits 1 and changes nothing. Stop and report the holder.
-2. Read the scope (`bd show <id>`).
+2. Read the scope (`bd show <id>`), including its NOTES section. A reopened bead holds the reason for the reopen there.
 3. A claim carries a lease that expires 5 minutes after the claim or the last heartbeat. During long work, send a heartbeat (`bd heartbeat <id>`) more often than that. A heartbeat writes no Dolt commit.
 4. End each commit subject with `(<id>)` and put the why in the commit body. `git log --grep '(<id>)'` lists the bead's commits. Commit with this form, which fails when `BD_ACTOR` is unset, and put no trailer in the `-m` text:
 
@@ -73,6 +73,10 @@ Use `-` in place of `<file>` to read the text from stdin. `bd comment` takes `--
 ## Reviewer records the verdict
 
 Set `BEADS_ACTOR` to the reviewer's actor name, and set `BD_ACTOR` too if the reviewer commits. Then record `verdict <X> at <SHA>` as a comment (`bd comment <id> "verdict <X> at <SHA>"`). The SHA ties the verdict to the commit that was reviewed.
+
+## Reopen a closed bead
+
+In bd 1.3.1, the reason given to `bd reopen <id> --reason <text>` does not show in `bd show`, `bd show --json`, or `bd comments`. The next worker never sees it. Put the reason in the bead notes before you reopen (`bd update <id> --append-notes "<reason>"`), then reopen the bead (`bd reopen <id>`). Use `--append-notes`, because `--notes` replaces the existing notes.
 
 ## Recover a dead worker or correct a live one
 
