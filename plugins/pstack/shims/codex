@@ -1,0 +1,24 @@
+#!/bin/sh
+# Runs the real codex, adding `-c agents.enabled=false` after `exec` so a
+# `codex exec` cannot hand its prompt to Codex's own helper agents.
+self=$0
+old_ifs=$IFS
+IFS=:
+real=
+for dir in $PATH; do
+  candidate=${dir:-.}/codex
+  if [ -x "$candidate" ] && [ ! -d "$candidate" ] && ! [ "$candidate" -ef "$self" ]; then
+    real=$candidate
+    break
+  fi
+done
+IFS=$old_ifs
+if [ -z "$real" ]; then
+  echo "codex shim: no codex on PATH besides the shim" >&2
+  exit 127
+fi
+if [ "${1-}" = exec ]; then
+  shift
+  exec "$real" exec -c agents.enabled=false "$@"
+fi
+exec "$real" "$@"
