@@ -22,11 +22,6 @@ jobs:
         with:
           python-version: "3.12"
 
-      # The bd-backed pytest modules skip when bd is not on PATH, so without
-      # this step they report green having run nothing.
-      - name: Install bd
-        run: scripts/install-bd.sh "$RUNNER_TEMP/bin" && echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
-
       - uses: oven-sh/setup-bun@v2.2.0
         with:
           bun-version: 1.4.2

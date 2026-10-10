@@ -41,19 +41,18 @@ HOOK_WIRING_PATHS = {
 PLUGINS: list[dict[str, object]] = [
     {
         "name": "pstack",
-        "version": "2.0.10",
+        "version": "3.0.0",
         "hooks": ["claude", "codex", "copilot"],
         "description": (
             "Skills and thin named agents: poteto-mode, principles, "
-            "playbooks, tools. Requires the beads CLI (bd 1.3.1) and the beads plugin."
+            "playbooks, tools. Recommends the beads plugin for tracking work."
         ),
         "short": "Reusable skills for software development work.",
         "long": (
             "A collection of reusable workflows, principles, playbooks, and "
-            "tools for Codex and other coding agents. Requires the beads CLI "
-            "(bd 1.3.1), the beads plugin, and a BEADS_DIR that names the "
-            "project's store. Install both from "
-            "https://github.com/gastownhall/beads."
+            "tools for Codex and other coding agents. The track-work skill "
+            "uses the beads plugin, which is recommended but not required. "
+            "Install it from https://github.com/gastownhall/beads."
         ),
         "keywords": ["software-development"],
         "prompts": [

@@ -16,7 +16,7 @@ into.
 
 | Plugin | What it does |
 |---|---|
-| `pstack` | Skills and thin named agents: poteto-mode, principles, playbooks, tools. Requires the beads CLI (bd 1.3.1) and the beads plugin. |
+| `pstack` | Skills and thin named agents: poteto-mode, principles, playbooks, tools. Recommends the beads plugin for tracking work. |
 | `artifact` | Explain a code change as a self-contained interactive HTML page. |
 | `notion` | Reach Notion from the command line, and publish a code-change explainer as a Notion page. |
 | `azure` | Read Azure DevOps projects, repos, pipelines, releases, and work items over the REST API. |
@@ -38,20 +38,22 @@ No plugin cites a skill in another plugin, because a reader may have
 installed only one of them. `scripts/validate-skills.py` fails a build that
 breaks that rule.
 
-## pstack requires beads
+## pstack and beads
 
-`pstack` keeps all work state in [beads](https://github.com/gastownhall/beads).
-Agents claim, comment on, and close work through the beads plugin.
-Install `bd` and the beads plugin before you install or use `pstack`.
+`pstack` uses [beads](https://github.com/gastownhall/beads) through its
+`track-work` skill. That skill tells agents which beads-plugin skill to use to
+create, claim, comment on, and close local work. The beads plugin is
+recommended, not required. Without it, `track-work` uses the `bd` CLI, or the
+session's task list when `bd` is not available. No other pstack part needs
+beads.
 
-- Requires `bd` 1.3.1 on `PATH`. CI tests that version.
-- Install `bd` from the [beads releases](https://github.com/gastownhall/beads).
-  `scripts/install-bd.sh` installs the pinned release on Linux amd64.
+To use beads with `pstack`:
+
+- Install the beads plugin and `bd` for your harness from
+  [gastownhall/beads](https://github.com/gastownhall/beads).
 - Set `BEADS_DIR` to the absolute path of the project's store, for example
   `<project>/.nikki-agents/.beads`. Put it in the `env` block of the
   project's `.claude/settings.local.json` so every session inherits it.
-- Requires the beads plugin. Install it for your harness from
-  [gastownhall/beads](https://github.com/gastownhall/beads).
 
 ## Layout
 

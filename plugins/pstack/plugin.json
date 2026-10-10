@@ -1,7 +1,7 @@
 {
   "name": "pstack",
-  "version": "1.3.0",
-  "description": "Skills and thin named agents: poteto-mode, principles, playbooks, tools.",
+  "version": "3.0.0",
+  "description": "Skills and thin named agents: poteto-mode, principles, playbooks, tools. Recommends the beads plugin for tracking work.",
   "author": {
     "name": "Uraxii",
     "url": "https://github.com/Uraxii"

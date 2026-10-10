@@ -8,7 +8,7 @@
     {
       "name": "pstack",
       "source": "./plugins/pstack",
-      "description": "Skills and thin named agents: poteto-mode, principles, playbooks, tools. Requires the beads CLI (bd 1.3.1) and the beads plugin."
+      "description": "Skills and thin named agents: poteto-mode, principles, playbooks, tools. Recommends the beads plugin for tracking work."
     },
     {
       "name": "artifact",

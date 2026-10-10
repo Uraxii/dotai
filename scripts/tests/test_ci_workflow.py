@@ -12,8 +12,7 @@ Forbidding it in `ci.yml` only guards one spelling. `PytestCollectsEveryTest`
 below measures the effect instead: it runs collection and compares what the
 repository root sees against what each test directory sees on its own.
 
-The bd and bun steps guard the other silent pass. The bd-backed modules skip
-when bd is not on PATH, and no step ran a `*.test.ts` at all.
+The bun step guards the other silent pass: no step ran a `*.test.ts` at all.
 """
 
 from __future__ import annotations
@@ -28,18 +27,6 @@ from pathlib import Path
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 WORKFLOW = REPOSITORY_ROOT / ".github" / "workflows" / "ci.yml"
-BD_INSTALLER = REPOSITORY_ROOT / "scripts" / "install-bd.sh"
-BD_VERSION = "1.3.1"
-BD_CONCURRENCY_CHECK = (
-    "python3 plugins/pstack/skills/poteto-mode/scripts/check_bd_concurrency.py"
-)
-MOST_CONCURRENCY_ROUNDS_IN_A_MINUTE = 3
-
-def command_starting_with_workflow(prefix: str) -> str:
-    matches = [line for line in run_commands() if line.startswith(prefix)]
-    if len(matches) != 1:
-        raise AssertionError(f"expected one {prefix!r} step, found {matches}")
-    return matches[0]
 
 
 RUN_RE = re.compile(r"^\s*run:\s*(.+?)\s*$", re.MULTILINE)
@@ -134,7 +121,7 @@ class CiWorkflowTests(unittest.TestCase):
         self.assertIn(
             'CHECK_REQUIRE_ALL: "1"',
             WORKFLOW.read_text(),
-            "without it a missing bd or bun skips instead of failing",
+            "without it a missing bun skips instead of failing",
         )
         self.assertTrue(os.access(CHECK, os.X_OK))
 
@@ -170,32 +157,6 @@ class CiWorkflowTests(unittest.TestCase):
             "the plugins/*/skills glob without naming a single path, which "
             "no test outside this file can see.",
         )
-
-    def test_bd_installs_the_pinned_release_onto_the_path(self) -> None:
-        installer = BD_INSTALLER.read_text()
-
-        self.assertIn("$GITHUB_PATH", command_starting_with_workflow("scripts/install-bd.sh"))
-        self.assertIn(f"VERSION={BD_VERSION}\n", installer)
-        self.assertRegex(installer, r"\nSHA256=[0-9a-f]{64}\n")
-        self.assertIn("sha256sum -c", installer)
-
-    def test_bd_concurrency_runs_before_pytest(self) -> None:
-        commands = check_commands()
-        self.assertLess(
-            commands.index(command_starting_with(BD_CONCURRENCY_CHECK)),
-            commands.index(command_starting_with("run pytest")),
-            "the concurrency check fails without bd, so running it before "
-            "pytest proves the bd-backed modules saw bd",
-        )
-
-    def test_bd_concurrency_check_runs_a_few_rounds(self) -> None:
-        rounds = re.fullmatch(r".* --rounds (\d+)", command_starting_with(BD_CONCURRENCY_CHECK))
-        self.assertIsNotNone(
-            rounds,
-            "without --rounds the check runs its default ten rounds, "
-            "several minutes of CI",
-        )
-        self.assertLessEqual(int(rounds.group(1)), MOST_CONCURRENCY_ROUNDS_IN_A_MINUTE)
 
     def test_bun_is_pinned(self) -> None:
         text = WORKFLOW.read_text()
