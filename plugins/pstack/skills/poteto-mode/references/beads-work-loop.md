@@ -75,7 +75,7 @@ The coordinator runs two gates on each bead that changes code or tests, in this 
 1. **Reviewer.** Spawn `Review bead <id> at <SHA> in <worktree>.` as `reviewer-<id>`. The reviewer makes sure the code is solid. It edits no file.
 2. **Tester.** After `verdict pass at <SHA>`, spawn `Test bead <id> at <SHA> in <worktree>.` as `tester-<id>`. The tester writes tests that stop the reviewed behavior from regressing. It changes only test files: tests, their fixtures, and test-only config. Production code and package scripts are not test files.
 
-A bead that changes no code or tests, such as a docs-only or skill-prose bead, still gets the reviewer and skips the tester.
+A bead that changes no code or tests, such as a docs-only or skill-prose bead, still gets the reviewer and skips the tester. A playbook can also spawn the reviewer on an `architect` sketch commit, before implementation starts. That review checks the design against the done-when, and it skips the tester.
 
 The last failed round is the most recent `verdict fail at <SHA>` or `tests fail at <SHA>` comment. A tester failure counts as one must-fix item for each failing test.
 
@@ -102,12 +102,8 @@ When the bead's comments end in a failed round, the writer does this before it c
 Set `BEADS_ACTOR` to the reviewer's actor name.
 
 1. Read the done-when (`bd show <id>`) and the earlier rounds (`bd comments <id>`).
-2. Review the combined diff of the bead's commits (`<base>..<SHA>`, the range the prompt or close reason names) against the scope and the done-when, with Claude Code's built-in code-review skill. If there is a last failed round at `<old SHA>`, check each of its items at `<SHA>`, and read `git diff <old SHA>..<SHA>` closely, because those commits are the fixes. Check that no test the tester committed was weakened or deleted without a reason you accept. Still review the full diff, because a fix can break code an earlier round passed.
-3. Put each finding in one tier.
-   - **Must-fix.** Wrong behavior, a missed requirement, or a claim the diff does not back. One must-fix makes the verdict `fail`.
-   - **Should-fix-or-explain.** A real weakness. The writer fixes it or answers it. An item from the last round with neither, or with an answer you reject, becomes a must-fix. Give the reason you reject the answer.
-   - **Worth-noting.** Not blocking. The writer can ignore it.
-4. Write the verdict to a file. The first line is `verdict pass at <SHA>` or `verdict fail at <SHA>`. Then list the findings under the three tiers. Mark each item from the last failed round `fixed`, `answered: <reason>`, or `still open`. Add the file as a comment (`bd comment <id> --file <file>`). The SHA ties the verdict to the commit that was reviewed.
+2. Review the combined diff of the bead's commits (`<base>..<SHA>`, the range the prompt or close reason names) against the scope and the done-when, with Claude Code's built-in code-review skill. The diff is an `architect` sketch or code. Judge it by the **principle-skeptical-review** principle skill, which holds the three tiers and the pass and fail rule. If there is a last failed round at `<old SHA>`, read `git diff <old SHA>..<SHA>` closely, because those commits are the fixes. Check that no test the tester committed was weakened or deleted without a reason you accept.
+3. Write the verdict to a file. The first line is `verdict pass at <SHA>` or `verdict fail at <SHA>`. Then list the findings under the three tiers. Mark each item from the last failed round `fixed`, `answered: <reason>`, or `still open`. Add the file as a comment (`bd comment <id> --file <file>`). The SHA ties the verdict to the commit that was reviewed.
 
 ## Tester records the result
 
