@@ -1,6 +1,0 @@
-kind: playbook
-schema_version: 1
-name: docs-huge
-summary: A docs change at 13 points, like full public API docs or docs site with search.
-when: {task: docs, points: [13]}
-chain: [research, plan, design, build, test, fanout, verify, review, pr, learn]

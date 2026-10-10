@@ -1,6 +1,0 @@
-kind: playbook
-schema_version: 1
-name: delivery-small
-summary: Open one small PR.
-when: {task: delivery, points: [3]}
-chain: [pr]

@@ -1,6 +1,0 @@
-kind: playbook
-schema_version: 1
-name: data-medium
-summary: A data change at 5 points, like split a table in two or add a new ETL source.
-when: {task: data, points: [5]}
-chain: [pin, plan, build, test, verify, review, pr]

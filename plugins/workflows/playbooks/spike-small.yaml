@@ -1,6 +1,0 @@
-kind: playbook
-schema_version: 1
-name: spike-small
-summary: A spike at 3 points, like compare two libraries or time one slow query.
-when: {task: spike, points: [3]}
-chain: [research]

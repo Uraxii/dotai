@@ -1,6 +1,0 @@
-kind: playbook
-schema_version: 1
-name: performance-tiny
-summary: A performance fix at 1 or 2 points, like add a missing DB index or cache one hot lookup.
-when: {task: performance, points: [1, 2]}
-chain: [measure, build, measure, pr]

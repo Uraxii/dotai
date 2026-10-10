@@ -1,6 +1,0 @@
-kind: playbook
-schema_version: 1
-name: infra-small
-summary: An infra change at 3 points, like add a CI job or new log alert.
-when: {task: infra, points: [3]}
-chain: [ops, test, review, pr]

@@ -1,6 +1,0 @@
-kind: playbook
-schema_version: 1
-name: feature-small
-summary: A feature at 3 points, like new sort option on a list or CSV export of one table.
-when: {task: feature, points: [3]}
-chain: [build, test, review, pr]

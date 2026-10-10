@@ -1,6 +1,0 @@
-kind: playbook
-schema_version: 1
-name: bug-large
-summary: A bug at 8 points, like data corrupted on sync or random logouts.
-when: {task: bug, points: [8]}
-chain: [measure, pin, diagnose, plan, design, build, test, verify, review, pr]

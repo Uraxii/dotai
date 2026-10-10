@@ -1,6 +1,0 @@
-kind: playbook
-schema_version: 1
-name: bug-huge
-summary: A bug at 13 points, like silent data loss in prod or auth security hole.
-when: {task: bug, points: [13]}
-chain: [measure, research, pin, diagnose, plan, threat, design, build, test, verify, review, pr, learn]

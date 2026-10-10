@@ -1,6 +1,0 @@
-kind: playbook
-schema_version: 1
-name: feature-huge
-summary: A feature at 13 points, like payments with webhooks or real-time collaboration.
-when: {task: feature, points: [13]}
-chain: [prototype, research, design, plan, build, test, verify, review, pr, learn]

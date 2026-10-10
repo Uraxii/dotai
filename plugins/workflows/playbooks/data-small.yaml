@@ -1,6 +1,0 @@
-kind: playbook
-schema_version: 1
-name: data-small
-summary: A data change at 3 points, like backfill a new column or add a unique constraint.
-when: {task: data, points: [3]}
-chain: [pin, build, test, review, pr]

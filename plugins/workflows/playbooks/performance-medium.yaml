@@ -1,6 +1,0 @@
-kind: playbook
-schema_version: 1
-name: performance-medium
-summary: A performance fix at 5 points, like speed up a slow report or cut cold start time.
-when: {task: performance, points: [5]}
-chain: [measure, research, plan, build, measure, review, pr]
