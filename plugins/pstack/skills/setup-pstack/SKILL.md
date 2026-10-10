@@ -132,6 +132,7 @@ fan-out. Rows here apply to Claude Code alone; Codex reads
 
 codex watchers: haiku
 feature, refactoring: sonnet, opus
+research: sonnet
 judgment and prose: opus, sonnet
 arena runners: opus, sonnet
 arena cross-judge pool: opus, sonnet
@@ -144,6 +145,7 @@ The Codex sheet is the same file with Codex slugs and no `codex watchers` row
 
 ```markdown
 feature, refactoring: gpt-6.1-sol, gpt-6-sol, gpt-5.6-terra, gpt-5.6-sol
+research: gpt-6.1-sol, gpt-6-sol, gpt-5.6-terra, gpt-5.6-sol
 judgment and prose: gpt-6.1-sol, gpt-6-sol, gpt-5.6-sol, gpt-5.6-terra
 arena runners: gpt-6.1-sol, gpt-6-sol, gpt-5.6-sol, gpt-5.6-terra
 arena cross-judge pool: gpt-6.1-sol, gpt-6-sol, gpt-5.6-sol, gpt-5.6-terra
