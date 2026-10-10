@@ -6,6 +6,9 @@ Hermes, written in the open Agent Skills format. Fourteen plugins live under
 machinery: the poteto-mode workflow, the principles, the playbooks, and the
 agent files. The other thirteen each cover one tool or one job, and none of them
 needs `pstack` installed.
+[`plugins/pstack/README.md`](plugins/pstack/README.md) explains the pstack
+model: principles, playbooks, roles, and skills, and which part a change goes
+into.
 
 ## Plugins
 
