@@ -1,5 +1,5 @@
 #!/bin/bash
-# Block full-file reads on large files, redirect to /bulk-reader skill
+# Block full-file reads on large files, explain how to keep reading
 # Self-contained: all routing logic lives here, no CLAUDE.md needed
 #
 # Modified from spotify/portal-ai-plugins; see ../upstream-source.md
@@ -49,7 +49,19 @@ if [ "$lines" -le "$MIN_LINES" ]; then
   exit 0
 fi
 
-reason="File is ${lines} lines (threshold: ${MIN_LINES}). Use the /bulk-reader skill to delegate this read to AiKA instead of reading it directly. If you need exact content for editing, re-read with an offset/limit for just the section you need."
+reason="File is ${lines} lines. Read it in chunks of at most ${MIN_LINES} lines until you have read the full file."
+case "$harness" in
+  claude)
+    reason="$reason Use Read with offset and limit (start with offset=1, limit=${MIN_LINES}, then advance offset by ${MIN_LINES})."
+    ;;
+  copilot)
+    reason="$reason Use view with view_range [start, end] (inclusive; start with [1, ${MIN_LINES}], then continue at $((MIN_LINES + 1)))."
+    ;;
+esac
+reason="$reason Or use bash: sed -n 'START,ENDp' FILE, with END-START+1 <= ${MIN_LINES}. Use grep for targeted lookups."
+if [ -n "${PORTAL_CLI_BIN:-}" ] || command -v portal-cli >/dev/null 2>&1; then
+  reason="$reason For a delegated summary, you can also use /bulk-reader."
+fi
 if [ "$harness" = copilot ]; then
   jq -cn --arg reason "$reason" \
     '{permissionDecision: "deny", permissionDecisionReason: $reason}'

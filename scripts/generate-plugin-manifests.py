@@ -290,7 +290,7 @@ PLUGINS: list[dict[str, object]] = [
     },
     {
         "name": "shunt",
-        "version": "0.2.3",
+        "version": "0.2.4",
         "hooks": ["claude", "codex", "copilot"],
         "skills": False,
         "description": (

@@ -8,13 +8,20 @@ Vendored from Spotify's [`portal-ai-plugins`](https://github.com/spotify/portal-
 
 Three layers, from hard gate to soft suggestion:
 
-1. **Hooks** block large direct reads and redirect to the bulk-reader skill
+1. **Hooks** block large direct reads and explain how to read in chunks
 2. **Scripts** handle the AiKA invocation and output cleanup
 3. **Skills** tell Claude when and how to call the scripts
 
 Claude never assembles bash pipelines from prose. It calls a script with named arguments. The scripts handle everything internally.
 
 Delegation goes through the Portal CLI actions registry — one `aika:invoke-chat` call per delegation — so the plugin works against any Portal instance with AiKA enabled. Modes are addressed by name and resolved server-side: case-insensitive, preferring your own mode, then your groups', then public ones; a name matching nothing or several modes equally fails with the candidate ids.
+
+The deny reason gives the file's line count and directs agents to read the full
+file in chunks of at most `SHUNT_MIN_LINES` lines. Claude uses Read's `offset`
+and `limit`; Copilot uses view's inclusive `view_range [start, end]`. Every
+harness can use `sed -n 'START,ENDp' FILE` in bash, or `grep` for targeted
+lookups. The hooks suggest `/bulk-reader` only when `PORTAL_CLI_BIN` is nonempty
+or `portal-cli` is on PATH; they do not rely on the scripts' npx fallback.
 
 ## Prerequisites
 
@@ -85,9 +92,10 @@ shunt/
 │   └── code-writer/
 │       └── SKILL.md         # When/how to call code-write
 └── evals/
-    ├── run.sh                # Runs hook + transport evals (65 tests)
+    ├── run.sh                # Runs hook, reason + transport evals
     ├── hook-evals.json       # Read and view hook test cases (25)
     ├── bash-hook-evals.json  # Bash hook test cases (23)
+    ├── reason-evals.sh       # Chunk guidance and Portal availability
     ├── transport-evals.sh    # scripts/lib/aika.sh against a stubbed CLI (17)
     ├── evals.json            # End-to-end skill test cases (3)
     ├── benchmarks.json       # Token savings scenarios (4)

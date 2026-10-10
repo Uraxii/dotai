@@ -1,6 +1,6 @@
 {
   "name": "shunt",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "description": "Spotify's shunt, vendored and patched to the current PreToolUse hook output schema: shunts large reads and boilerplate generation to AiKA modes to save tokens.",
   "author": {
     "name": "Uraxii",
