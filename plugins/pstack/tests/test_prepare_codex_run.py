@@ -152,6 +152,8 @@ def test_reviewer_has_no_git_grants_and_no_network(env: Env) -> None:
     assert "bd comments t-1" in prompt and f"diff <old SHA>..{SHA}" in prompt
     assert all(tier in prompt for tier in ("Must-fix", "Should-fix-or-explain", "Worth-noting"))
     assert "tests fail at <old SHA>" in prompt
+    assert "codex review --base" in prompt and f"{SHA}^" in prompt
+    assert "--grep" not in prompt
 
 
 def test_reviewer_accepts_a_main_checkout_and_extra_grant(env: Env, tmp_path: Path) -> None:

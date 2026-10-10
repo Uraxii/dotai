@@ -85,7 +85,7 @@ The coordinator does not review the diff again. It checks these facts instead:
 
 - The last result names the head SHA of the branch.
 - When the tester committed, `git diff --stat <verdict SHA>..<head>` touches only test files.
-- `git log --grep '(<id>)'` and `git status --porcelain` agree with the bead. A close reason can name an older SHA when gate commits came after the close.
+- `git log <base>..<head>` and `git status --porcelain` agree with the bead. A close reason can name an older SHA when gate commits came after the close.
 - Each item of the last failed round is marked `fixed` or `answered`.
 
 Read the diff only when one of these checks fails, or when the bead has no verdict. In a Codex worktree, the diff read in the Base grants of `playbooks/delegate-to-codex.md` still applies.
@@ -102,7 +102,7 @@ When the bead's comments end in a failed round, the writer does this before it c
 Set `BEADS_ACTOR` to the reviewer's actor name.
 
 1. Read the done-when (`bd show <id>`) and the earlier rounds (`bd comments <id>`).
-2. Review the combined diff of the bead's commits (`git log --grep '(<id>)' <SHA>`) against the scope and the done-when. If there is a last failed round at `<old SHA>`, check each of its items at `<SHA>`, and read `git diff <old SHA>..<SHA>` closely, because those commits are the fixes. Check that no test the tester committed was weakened or deleted without a reason you accept. Still review the full diff, because a fix can break code an earlier round passed.
+2. Review the combined diff of the bead's commits (`<base>..<SHA>`, the range the prompt or close reason names) against the scope and the done-when, with Claude Code's built-in code-review skill. If there is a last failed round at `<old SHA>`, check each of its items at `<SHA>`, and read `git diff <old SHA>..<SHA>` closely, because those commits are the fixes. Check that no test the tester committed was weakened or deleted without a reason you accept. Still review the full diff, because a fix can break code an earlier round passed.
 3. Put each finding in one tier.
    - **Must-fix.** Wrong behavior, a missed requirement, or a claim the diff does not back. One must-fix makes the verdict `fail`.
    - **Should-fix-or-explain.** A real weakness. The writer fixes it or answers it. An item from the last round with neither, or with an answer you reject, becomes a must-fix. Give the reason you reject the answer.

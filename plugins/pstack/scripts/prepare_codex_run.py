@@ -207,7 +207,7 @@ def reviewer_prompt(request: Request) -> str:
     return f"""You are the reviewer for bead {bead} at commit {sha}. Your actor is {request.actor}. BEADS_DIR and BEADS_ACTOR are already set. Do not edit any file in {tree}.
 
 1. Read the scope and the done-when: `bd show {bead}`.
-2. `git -C {shlex.quote(str(tree))} log --grep '({bead})' {sha}` lists the bead's commits. Review their combined diff against the scope and the done-when. Run read-only checks if they help.
+2. Review the bead's commits with Codex's review mode. `git -C {shlex.quote(str(tree))} rev-parse HEAD` must print {sha}; if not, go to step 6. Run `cd {shlex.quote(str(tree))} && codex review --base <base> "<review instructions>"`, where `<base>` is `{sha}^` unless the bead's notes or close reason name an earlier base, and the review instructions are the done-when from step 1 plus the tiers in step 4. Judge its output against the scope and the done-when. Run read-only checks if they help.
 3. Read the earlier rounds: `bd comments {bead}`. The last failed round is the most recent `verdict fail at <old SHA>` or `tests fail at <old SHA>`; each failing test in a tester failure is one must-fix item. If there is one, check each of its items at {sha}, check that no test the tester committed was weakened or deleted without a reason you accept, and read `git -C {shlex.quote(str(tree))} diff <old SHA>..{sha}` closely, because those commits are the fixes. Step 2 still covers the full diff, because a fix can break code an earlier round passed.
 4. Put each finding in one tier.
    - Must-fix: wrong behavior, a missed requirement, or a claim the diff does not back. One must-fix makes the verdict fail.

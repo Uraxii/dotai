@@ -37,7 +37,7 @@ Run plain `codex`. The runs share the user's own `~/.codex`: login, config, plug
    - A `codex could not finish` comment: Codex did not finish.
    - Unclaimed, with `refused.txt` in the run dir: the script refused. Fix the cause it names, then spawn a fresh watcher.
    - Claimed with none of the above: read the last line of `codex.jsonl` and `codex.stderr`, then treat it as Codex did not finish.
-5. Check the outcome against git before you trust it. Run `git -c core.hooksPath=/dev/null -c core.fsmonitor=false log --grep '(<id>)'`, the same prefix on `git status --porcelain` in the worktree, and `git diff <base>..<SHA>`. For a built bead, `git ls-remote origin <branch>` must match the SHA. A SHA the bead claims counts only when git shows it.
+5. Check the outcome against git before you trust it. Run `git -c core.hooksPath=/dev/null -c core.fsmonitor=false log <base>..<SHA>`, the same prefix on `git status --porcelain` in the worktree, and `git diff <base>..<SHA>`. For a built bead, `git ls-remote origin <branch>` must match the SHA. A SHA the bead claims counts only when git shows it.
 6. When Codex did not finish, handle it in this order.
 
    - Record it on the bead. Write `codex did not finish: <reason>` to a `mktemp` file with the Write tool and add it as a comment (`bd comment <id> --file <path>`).
