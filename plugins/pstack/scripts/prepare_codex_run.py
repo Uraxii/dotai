@@ -193,8 +193,8 @@ def writer_prompt(request: Request) -> str:
     return f"""You are the writer for bead {bead}. Your actor is {actor}. BEADS_DIR, BEADS_ACTOR, and BD_ACTOR are already set. Work only in {tree}. Run every step yourself, in order. If a bd or git command exits non-zero and you cannot fix the cause inside {tree}, skip to step 6. A command that exits 0 succeeded, even when it prints a warning such as `Unable to create ... packed-refs.lock`; git prints that one from the sandbox on a good commit.
 
 1. Claim the bead: `bd update {bead} --claim`. If it exits non-zero, another actor holds it. End with the error it printed and run nothing else.
-2. Read the scope and the done-when: `bd show {bead}`. Read its NOTES too; a reopened bead keeps the reopen reason there.
-3. Do the work in {tree}. The claim's lease expires 5 minutes after the claim or the last heartbeat. Send a heartbeat, `bd heartbeat {bead}`, at least every 3 minutes: before and after each build or test run, and between edits. Run any command that can take longer than 3 minutes as `{heartbeat_loop}`.
+2. Read the scope and the done-when: `bd show {bead}`. Read its NOTES too; a reopened bead keeps the reopen reason there. Read `bd comments {bead}`. If the last `verdict fail at <SHA>` or `tests fail at <SHA>` comment is newer than any pass, this is a fix round: fix each must-fix item and each failing test, never weaken or delete a test the tester committed (if a test is wrong, say why in a comment and leave it for the reviewer), and fix each should-fix-or-explain item or answer it with a comment line `answered: <item>: <reason>` (`bd comment {bead} --file <file>`).
+3. Read `{PLUGIN_ROOT / "skills" / "write-tests" / "SKILL.md"}` and follow it. Open each skill it names from the same `skills` directory. Do the work in {tree}. The claim's lease expires 5 minutes after the claim or the last heartbeat. Send a heartbeat, `bd heartbeat {bead}`, at least every 3 minutes: before and after each build or test run, and between edits. Run any command that can take longer than 3 minutes as `{heartbeat_loop}`.
 4. Commit. End each subject with ` ({bead})` and put the why in the body: `git commit -m "<subject> ({bead})" -m "<why>" --trailer "Executed-By: ${{BD_ACTOR:?}}"`. Put no trailer in the -m text. Leave the working tree clean: `git status --porcelain` prints nothing.
 {finish}
 6. If you could not finish, write `codex could not finish: <what failed, the command, its error>` to a file and run `bd comment {bead} --file <file>`. Leave the bead claimed.
@@ -207,9 +207,14 @@ def reviewer_prompt(request: Request) -> str:
     return f"""You are the reviewer for bead {bead} at commit {sha}. Your actor is {request.actor}. BEADS_DIR and BEADS_ACTOR are already set. Do not edit any file in {tree}.
 
 1. Read the scope and the done-when: `bd show {bead}`.
-2. `git -C {shlex.quote(str(tree))} log --grep '({bead})' {sha}` lists the bead's commits. Review their combined diff against the scope and the done-when. Look for wrong behavior, a missed requirement, and a claim the diff does not back. Run read-only checks if they help.
-3. Record the verdict. Write a file whose first line is `verdict pass at {sha}` or `verdict fail at {sha}`, followed by the reasons, then run `bd comment {bead} --file <file>`.
-4. If you could not review, write `codex could not finish: <what failed>` to a file and run `bd comment {bead} --file <file>`.
+2. `git -C {shlex.quote(str(tree))} log --grep '({bead})' {sha}` lists the bead's commits. Review their combined diff against the scope and the done-when. Run read-only checks if they help.
+3. Read the earlier rounds: `bd comments {bead}`. The last failed round is the most recent `verdict fail at <old SHA>` or `tests fail at <old SHA>`; each failing test in a tester failure is one must-fix item. If there is one, check each of its items at {sha}, check that no test the tester committed was weakened or deleted without a reason you accept, and read `git -C {shlex.quote(str(tree))} diff <old SHA>..{sha}` closely, because those commits are the fixes. Step 2 still covers the full diff, because a fix can break code an earlier round passed.
+4. Put each finding in one tier.
+   - Must-fix: wrong behavior, a missed requirement, or a claim the diff does not back. One must-fix makes the verdict fail.
+   - Should-fix-or-explain: a real weakness the writer fixes or answers with a one-line reason. An item from the last round with neither a fix nor a reason, or with a reason you reject, is now a must-fix; say why you reject it.
+   - Worth-noting: not blocking.
+5. Record the verdict. Write a file whose first line is `verdict pass at {sha}` or `verdict fail at {sha}`. Then list the findings under the three tiers, and mark each item from the last failed round `fixed`, `answered: <reason>`, or `still open`. Then run `bd comment {bead} --file <file>`.
+6. If you could not review, write `codex could not finish: <what failed>` to a file and run `bd comment {bead} --file <file>`.
 """
 
 

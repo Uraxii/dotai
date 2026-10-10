@@ -149,6 +149,9 @@ def test_reviewer_has_no_git_grants_and_no_network(env: Env) -> None:
     assert seen["env"]["BEADS_ACTOR"] == "reviewer-t-1"
     prompt = (run_dir / "prompt.md").read_text()
     assert f"verdict pass at {SHA}" in prompt and "bd comment t-1 --file" in prompt
+    assert "bd comments t-1" in prompt and f"diff <old SHA>..{SHA}" in prompt
+    assert all(tier in prompt for tier in ("Must-fix", "Should-fix-or-explain", "Worth-noting"))
+    assert "tests fail at <old SHA>" in prompt
 
 
 def test_reviewer_accepts_a_main_checkout_and_extra_grant(env: Env, tmp_path: Path) -> None:
@@ -165,10 +168,12 @@ def test_writer_prompt_orders_claim_heartbeat_commit_close(env: Env) -> None:
     prompt = (run_dir / "prompt.md").read_text()
 
     positions = [prompt.index(s) for s in (
-        "bd update t-1 --claim", "bd heartbeat t-1", "git commit -m", "bd close t-1 --reason-file")]
+        "bd update t-1 --claim", "bd comments t-1", "bd heartbeat t-1", "git commit -m",
+        "bd close t-1 --reason-file")]
     assert positions == sorted(positions)
     assert 'Executed-By: ${BD_ACTOR:?}' in prompt
     assert "stage=built" not in prompt
+    assert "skills/write-tests/SKILL.md" in prompt
 
 
 def test_stop_at_built_prompt_pushes_labels_comments_and_unassigns(env: Env) -> None:
@@ -176,7 +181,7 @@ def test_stop_at_built_prompt_pushes_labels_comments_and_unassigns(env: Env) -> 
     prompt = (run_dir / "prompt.md").read_text()
 
     positions = [prompt.index(s) for s in (
-        "git push origin HEAD", "bd set-state t-1 stage=built", "bd comment t-1", 'bd update t-1 --assignee ""')]
+        "git push origin HEAD", "bd set-state t-1 stage=built", 'bd comment t-1 "ready at','bd update t-1 --assignee ""')]
     assert positions == sorted(positions)
     assert "bd close" not in prompt
     assert "push -u" not in prompt.replace("(no -u;", "")

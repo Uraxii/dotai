@@ -44,6 +44,6 @@ Run plain `codex`. The runs share the user's own `~/.codex`: login, config, plug
    - Tell the user in your next user-facing reply that Codex did not run for this task and why, even when the Claude fallback then succeeds. A spawner that is itself a subagent puts the failure in its own report instead.
    - Confirm no Codex run still holds the worktree: `pgrep -f "^bash <run dir>/run\.sh$"` finds nothing.
    - Spawn `pstack:developer` or `pstack:reviewer` without `isolation`, with the prompt the watcher got. A writer's claim succeeds again for the same actor, and the writer reads the bead and the worktree to continue from what Codex left.
-7. Review the diff yourself and write your own summary. Codex's close reason or verdict is evidence, not your verdict.
+7. Run the gates per the Gates section of [`references/beads-work-loop.md`](../references/beads-work-loop.md). After a writer run, spawn the reviewer. After a pass, spawn the tester. Check each result with the facts that section lists. Read the full diff yourself only when a check fails. The diff read in Base grants is a security check, and it always applies. Write your own summary.
 
-**Reply:** your own summary of the diff, the bead ID with its close reason or verdict, and the git evidence you checked them against.
+**Reply:** your own summary of the change, the bead ID with its close reason or verdict, and the git evidence you checked them against.

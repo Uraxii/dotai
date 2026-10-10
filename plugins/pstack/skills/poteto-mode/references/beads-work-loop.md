@@ -37,7 +37,7 @@ export BEADS_ACTOR=<actor> BD_ACTOR=<actor>
 bd records claims and history under `BEADS_ACTOR`. The beads `prepare-commit-msg` hook reads only `BD_ACTOR`. It appends `Executed-By: <actor>` after a blank line, which splits the trailer block, unless the message already has an `Executed-By:` trailer. Every commit therefore writes both trailers with `git commit --trailer`, so they form one block and the hook skips.
 
 1. Claim the bead (`bd update <id> --claim`). If another actor holds it, the claim exits 1 and changes nothing. Stop and report the holder.
-2. Read the scope (`bd show <id>`), including its NOTES section. A reopened bead holds the reason for the reopen there.
+2. Read the scope (`bd show <id>`), including its NOTES section. A reopened bead holds the reason for the reopen there. If the comments end in a failed round, follow Fix a failed round.
 3. A claim carries a lease that expires 5 minutes after the claim or the last heartbeat. During long work, send a heartbeat (`bd heartbeat <id>`) more often than that. A heartbeat writes no Dolt commit.
 4. End each commit subject with `(<id>)` and put the why in the commit body. `git log --grep '(<id>)'` lists the bead's commits. Commit with this form, which fails when `BD_ACTOR` is unset, and put no trailer in the `-m` text:
 
@@ -70,9 +70,55 @@ The shell runs backticks and `$(...)` inside double quotes, and a quote in the t
 
 Use `-` in place of `<file>` to read the text from stdin. `bd comment` takes `--stdin` for the same purpose. Short text with no quote, backtick, or `$` can stay inline.
 
+## Gates after the writer
+
+The coordinator runs two gates on each bead that changes code or tests, in this order. Each gate is a fresh agent that did not write the code. An Orchestrate unit uses the Verification section of `playbooks/orchestrate.md` instead.
+
+1. **Reviewer.** Spawn `Review bead <id> at <SHA> in <worktree>.` as `reviewer-<id>`. The reviewer makes sure the code is solid. It edits no file.
+2. **Tester.** After `verdict pass at <SHA>`, spawn `Test bead <id> at <SHA> in <worktree>.` as `tester-<id>`. The tester writes tests that stop the reviewed behavior from regressing. It changes only test files: tests, their fixtures, and test-only config. Production code and package scripts are not test files.
+
+A bead that changes no code or tests, such as a docs-only or skill-prose bead, still gets the reviewer and skips the tester.
+
+The last failed round is the most recent `verdict fail at <SHA>` or `tests fail at <SHA>` comment. A tester failure counts as one must-fix item for each failing test.
+
+When a gate fails, send the bead back to the writer. Append `<gate> fail at <SHA>, see comments` to the notes, reopen the bead if it is closed (per Reopen a closed bead), and spawn the writer with its same prompt. The writer follows Fix a failed round. Then the reviewer runs at the new head, and after its pass the tester runs again. A gate fails at most 3 rounds on one bead. After a third fail from the same gate, stop and report the open findings to the user.
+
+The coordinator does not review the diff again. It checks these facts instead:
+
+- The last result names the head SHA of the branch.
+- When the tester committed, `git diff --stat <verdict SHA>..<head>` touches only test files.
+- `git log --grep '(<id>)'` and `git status --porcelain` agree with the bead. A close reason can name an older SHA when gate commits came after the close.
+- Each item of the last failed round is marked `fixed` or `answered`.
+
+Read the diff only when one of these checks fails, or when the bead has no verdict. In a Codex worktree, the diff read in the Base grants of `playbooks/delegate-to-codex.md` still applies.
+
+## Fix a failed round
+
+When the bead's comments end in a failed round, the writer does this before it commits or closes.
+
+1. Fix each must-fix item, including each failing test. Do not weaken or delete a test the tester committed. If the test is wrong, say why in a comment and leave it for the reviewer.
+2. Fix each should-fix-or-explain item, or answer it in a comment (`bd comment <id> --file <file>`) with a line `answered: <item>: <reason>`.
+
 ## Reviewer records the verdict
 
-Set `BEADS_ACTOR` to the reviewer's actor name, and set `BD_ACTOR` too if the reviewer commits. Then record `verdict <X> at <SHA>` as a comment (`bd comment <id> "verdict <X> at <SHA>"`). The SHA ties the verdict to the commit that was reviewed.
+Set `BEADS_ACTOR` to the reviewer's actor name.
+
+1. Read the done-when (`bd show <id>`) and the earlier rounds (`bd comments <id>`).
+2. Review the combined diff of the bead's commits (`git log --grep '(<id>)' <SHA>`) against the scope and the done-when. If there is a last failed round at `<old SHA>`, check each of its items at `<SHA>`, and read `git diff <old SHA>..<SHA>` closely, because those commits are the fixes. Check that no test the tester committed was weakened or deleted without a reason you accept. Still review the full diff, because a fix can break code an earlier round passed.
+3. Put each finding in one tier.
+   - **Must-fix.** Wrong behavior, a missed requirement, or a claim the diff does not back. One must-fix makes the verdict `fail`.
+   - **Should-fix-or-explain.** A real weakness. The writer fixes it or answers it. An item from the last round with neither, or with an answer you reject, becomes a must-fix. Give the reason you reject the answer.
+   - **Worth-noting.** Not blocking. The writer can ignore it.
+4. Write the verdict to a file. The first line is `verdict pass at <SHA>` or `verdict fail at <SHA>`. Then list the findings under the three tiers. Mark each item from the last failed round `fixed`, `answered: <reason>`, or `still open`. Add the file as a comment (`bd comment <id> --file <file>`). The SHA ties the verdict to the commit that was reviewed.
+
+## Tester records the result
+
+Set `BEADS_ACTOR` and `BD_ACTOR` to the tester's actor name, because the tester commits.
+
+1. Read the done-when (`bd show <id>`), the last verdict, and your own last result if there is one (`bd comments <id>`). Check that each earlier failure now passes. If the reviewer accepted that one of your tests is wrong, fix that test.
+2. Start from the writer's tests and add what they miss. Write tests that fail if the reviewed behavior regresses. Cover the done-when, the edge cases, and the failure paths, per the **principle-test-behavior-not-implementation** principle skill. Change only test files. If a test needs a production change, do not make it. Report it as a failure, and the bead goes back to the developer.
+3. Run the new tests and the project's full suite. A test named in the bead's `baseline failures` comment does not fail the gate, unless the done-when says it must pass. Name it in the result. Commit the tests with the commit form in Worker claims, commits, and closes.
+4. Write the result to a file. The first line is `tests pass at <SHA>` or `tests fail at <SHA>`, where `<SHA>` is the new head. Then give the count passed out of the count run, each failure with steps to reproduce it, and the coverage gaps. A pass does not prove the code is correct, so name what the tests do not cover. Add the file as a comment (`bd comment <id> --file <file>`).
 
 ## Reopen a closed bead
 
