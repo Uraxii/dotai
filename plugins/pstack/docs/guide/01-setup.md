@@ -20,11 +20,9 @@ Run:
 /setup-pstack
 ```
 
-[`/setup-pstack`](../../skills/setup-pstack/SKILL.md) detects the models you have access to, asks for a reasoning budget, shows you each role (code delegates, judgment, the review panels), and asks what you want. Answer the questions. It writes `~/.cursor/rules/pstack-models.mdc`, a small rule every pstack skill reads.
+[`/setup-pstack`](../../skills/setup-pstack/SKILL.md) detects the models you have access to, shows you each role (code delegates, judgment, the review panels), and asks what you want. Answer the questions. It writes an override sheet for your harness, such as `~/.claude/pstack-models.md` on Claude Code, and wires it into the harness's instructions. Every pstack skill reads its role picks from the plugin's `models.json`, and a row in your sheet replaces one role's list.
 
-The defaults run at `xhigh` reasoning, the same as the `large` budget. `unlimited` lifts each model to its highest tier, up to `max`. Opus goes to `max`. Grok tops out at `xhigh`, so it stays there. `medium` and `small` lower the reasoning and spend fewer tokens.
-
-You only override what you care about. A role with no line in the rule keeps the skill's default. To restore a default, delete that role's line. A rerun of `/setup-pstack` keeps any role whose model differs from the default. When a default changes, a rule written before the change still pins the old default, so delete those role lines, or delete the file, then run `/setup-pstack` again.
+You only override what you care about. A role with no row in the sheet keeps its `models.json` list. To use the `models.json` list again, delete that role's row. A rerun of `/setup-pstack` keeps every row in the sheet.
 
 You might be wondering what happens if you use Auto. Set a role to `inherit-parent` or `auto` and pstack omits the subagent `model` field, so the subagent inherits your parent chat model. Both values mean the same thing, and neither is a model slug. For a panel role the value is a list, and one subagent runs per entry, so the list length sets the panel size. Setup also configures `swarm workers`, the default model for every `/swarm` worker unless a race names a model for each arm.
 
@@ -36,13 +34,13 @@ Say yes and it writes `.cursor/skills/verify-<app>/`, a project-local skill that
 
 If you're new to pstack, say yes. An agent that can check its own work keeps going until the check passes. An agent that can't hands every result back to you to check by hand. Of everything in this guide, the verification skill pays off the most.
 
-After setup, start a new chat. The model rule applies to new sessions.
+After setup, start a new chat. The sheet loads in new sessions.
 
 ## Keep the cost in check
 
 pstack spends extra tokens on subagents and review panels. That's the price of the rigor. To spend fewer:
 
-- Rerun `/setup-pstack` and pick a smaller reasoning budget or cheaper models. A strong model in the main chat with cheaper, faster models in the code roles is a good split.
+- Rerun `/setup-pstack` and pick cheaper models. A strong model in the main chat with cheaper, faster models in the code roles is a good split.
 - Set a role to `auto` or `inherit-parent` so it runs on the chat's own model.
 - Shorten a panel list. Each entry runs one subagent.
 - Save `/poteto-mode` for work that needs rigor. A small, obvious edit doesn't.
