@@ -43,7 +43,7 @@ Arena returns one synthesized design package. The synthesis decision populates t
 
 ## Phase C: Agree (opt-in)
 
-Default: proceed directly to implementation with the synthesized design. No human checkpoint.
+The synthesized sketch goes through the skeptic review before implementation (poteto-mode's [Skeptic review](../poteto-mode/SKILL.md#skeptic-review)). The agent that picked the playbook spawns `skeptic-reviewer` on the sketch and sends a fail back to the author. Phase D starts only after a pass. There is no human checkpoint by default.
 
 Opt in to a checkpoint when the invoker explicitly asks: "/architect with checkpoint," "stop and show me before implementing," or similar. Then surface the synthesized design and pause for sign-off.
 

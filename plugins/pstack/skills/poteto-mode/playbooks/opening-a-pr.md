@@ -4,6 +4,8 @@ Invoked at the end of every other playbook.
 
 **Worktree.** Work from a git worktree off main; subagents inherit it. Multiple `Agent` calls on the same branch each get their own worktree, or `git fetch && git reset --hard origin/<branch>` between them. Dirty branch with unrelated work: patch out, fresh worktree, apply. Snarled worktree: reset from main, redo minimally. Before you commit, merge, or deploy from a worktree, run `git status` and read the tree you are about to ship.
 
+**Skeptic review.** New code opens a PR only after its skeptic review passes (poteto-mode's [Skeptic review](../SKILL.md#skeptic-review)). The Prototype playbook opens no PR.
+
 **Commits.** Commit liberally; rebase into small, ordered commits before opening PRs. Each commit is a future PR: landable, ordered to tell the story. Amend when the fix belongs in a just-made commit; new commit when separable.
 
 **Writing Pull-Requests.** Read the `write-pr` skill before you write a PR title or description, and follow it.

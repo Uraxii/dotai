@@ -85,6 +85,14 @@ role's first model instead of tiering the hardest changes to the
 strongest-judgment model. Re-syncing either file from upstream restores the
 tiering.
 
+## Skeptic review gate
+
+This tree diverges from upstream here. `poteto-mode`, `architect`, and the
+Feature, Bug fix, Perf issue, Refactoring, Hillclimb, Delegate to Codex,
+Opening a PR, and Prototype playbooks require a skeptic review after a sketch
+and after new code. The `reviewer` role is `skeptic-reviewer`. Re-syncing one
+of these files from upstream removes the gate.
+
 ## Local to this plugin
 
 Every skill directory in this tree is local to this project unless a section

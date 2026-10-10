@@ -23,6 +23,7 @@ Remaining triggers:
 - Any code → name the data shape first, and choose its organizing structure per **principle-model-the-domain**. Code written, changed, or reviewed also loads **principle-code-quality**. Code written or changed also loads the **write-tests** skill.
 - Any name chosen for a file, directory, document, or identifier, and any new file about to be written → **principle-naming**.
 - Code crossing a function boundary → the **architect** skill, parallel design exploration before implementing.
+- A sketch from `architect`, or new code written → the skeptic review, per [Skeptic review](#skeptic-review), before the next step.
 - Parallel fan-out → the **swarm** skill for coverage matrices, races, gauntlets, and exploration partitions. Use **arena** for design or code bakeoffs with base selection and grafting.
 - Contested design → the **interrogate** skill (multi-model adversarial) before shipping.
 - Nontrivial multi-step → write the throughput checkpoint (Feature step 3).
@@ -106,6 +107,19 @@ Read the leaf skill in full for any principle you apply. Each entry names when i
 While a background agent runs, do other work or end your turn and let its completion notification wake you; don't spend turns on `sleep`, reading the agent's output, or `ps` to check on it, except a playbook's own long heartbeat. Run anything you'd wait on (test suites, builds, app runs) as one call that either blocks until it finishes or runs in the background and wakes you on exit; never launch it and then poll with `sleep`, `pgrep`, or status checks.
 
 You own every subagent's work. Review the diff and write your own summary, don't pass through what it said. Interrupt-chained resumes silently drop directives, so fire a fresh subagent with consolidated scope rather than trusting a "done" summary. Never write files or run a suite in a worktree a live delegate holds. Telling that delegate in its brief to leave a file alone is not a lock. **Stop the abandoned agent first, and confirm it stopped.** Stop the grandchildren you never launched too, because a delegate's children do not inherit its brief and a read-only instruction never reaches them. In the agent listing `completed` means the completion was *notified*, not that the process exited: an agent with live background children reports completed and then resumes. Only an explicit stop ends it, and the stop tool may be deferred, so load it before you need it. The tell that one is still running is a claim about the working tree that `git status` contradicts. A second opinion is the same prompt against a different model. Agreement is high-signal.
+
+## Skeptic review
+
+A skeptic review is necessary after `architect` makes a sketch and after new code is written. It is the gate to the next step: implementation starts only after the sketch passes, and the code goes to verification and **Opening a PR** only after it passes. No reason skips it. A small diff, time pressure, a passing suite, and your own review of the diff do not replace it.
+
+The agent that picked the playbook runs the gate:
+
+1. Spawn `pstack:skeptic-reviewer` with pointers to the sketch or the diff and to its done-when. On Claude Code, `pstack:skeptic-reviewer-codex` can run the same review through Codex, per `playbooks/delegate-to-codex.md`. The reviewer is never the author of the work.
+2. Read the verdict. A pass moves the work to the next step. Keep the conditions of the pass in your todolist.
+3. Send a fail back to the author with each objection: with `SendMessage` to a live author, or else to a fresh author with the same scope and the objections. The author fixes the work, or goes back to the design when the verdict says that the approach is unsound.
+4. Send the new version to the same reviewer when it is live, or else to a fresh one with the last verdict. Repeat until the verdict is pass.
+
+The Prototype playbook has no skeptic review, because its code is throwaway. Prototype code that goes into production code gets the review at that point, as new code.
 
 ## Writing the reply
 
