@@ -3,7 +3,7 @@
 **You own the design. Plan, review, verify.** Delegate implementation; stay in the lead.
 
 1. `how` over the affected subsystem.
-2. `architect` for parallel design exploration, then `interrogate` on the design. Skipping both stays as `architect skipped: <reason>`; do not fold the design decision silently into implementation.
+2. `architect` for parallel design exploration, then commit the sketch on the unit's bead and spawn the reviewer on that commit per poteto-mode's **Agent runs**. A `verdict fail` goes back through the fix loop in `references/beads-work-loop.md`. Skipping both stays as `architect skipped: <reason>`; do not fold the design decision silently into implementation.
 3. Write the throughput checkpoint as four todo items. A dimension that genuinely does not apply (single file, no fan-out) keeps its item with `n/a: <reason>` rather than being dropped:
    - **Blocking first steps.** Gates run before fan-out.
    - **Independent workstreams.** Disjoint files, services, or layers parallelize. Shared writes serialize.

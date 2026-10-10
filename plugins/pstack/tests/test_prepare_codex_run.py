@@ -178,6 +178,15 @@ def test_reviewer_runs_codex_review_and_records_its_output_as_the_comment(env: E
     assert "--grep" not in prompt
 
 
+def test_reviewer_prompt_points_at_the_skeptical_review_principle(env: Env) -> None:
+    run_dir = Path(env.prepare(f"Review bead t-1 at {env.head} in {env.worktree}.").stdout.strip())
+    prompt = (run_dir / "prompt.md").read_text()
+
+    [principle] = re.findall(r"`(/\S+/principle-skeptical-review/SKILL\.md)`", prompt)
+    text = Path(principle).read_text()
+    assert all(tier in text for tier in ("Must-fix", "Should-fix-or-explain", "Worth-noting"))
+
+
 def codex_prints(env: Env, text: str) -> None:
     (env.root / "bin/codex").write_text(STUB.replace("sys.exit(", f"print({text!r}); sys.exit("))
 
