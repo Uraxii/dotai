@@ -53,7 +53,7 @@ sleep {STUB_SECONDS}
 bd update "$bead" --claim
 echo stub > "$worktree/stub-output"
 git -C "$worktree" add stub-output
-git -C "$worktree" commit -q -m "stub work ($bead)" --trailer "Executed-By: $BD_ACTOR"
+git -C "$worktree" commit -q -m "chore: stub work"
 bd close "$bead" --reason "stub done"
 echo "stub finished" > "$last"
 """
@@ -121,7 +121,7 @@ def test_watcher_survives_shrunk_bash_timeout(tmp_path: Path) -> None:
     assert result.returncode == 0, result.stderr
 
     commit = git("log", "-1", "--format=%H %s", cwd=worktree)
-    assert commit.endswith(f"stub work ({bead})"), f"stub never committed: {commit}\n{result.stdout}"
+    assert commit.endswith("chore: stub work"), f"stub never committed: {commit}\n{result.stdout}"
     assert commit.split()[0] != before
     shown = json.loads(subprocess.run(["bd", "show", bead, "--json"], env=env, capture_output=True,
                                       text=True, check=True).stdout)
