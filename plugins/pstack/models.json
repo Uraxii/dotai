@@ -2,12 +2,9 @@
   "available": {
     "claude": [
       { "label": "Opus 5", "slug": "opus" },
-      { "label": "Sonnet 5", "slug": "sonnet" },
-      { "label": "Haiku", "slug": "haiku" }
+      { "label": "Sonnet 5", "slug": "sonnet" }
     ],
     "codex": [
-      { "label": "GPT-6.1-Sol", "slug": "gpt-6.1-sol" },
-      { "label": "GPT-6-Sol", "slug": "gpt-6-sol" },
       { "label": "GPT-5.6-Terra", "slug": "gpt-5.6-terra" },
       { "label": "GPT-5.6-Sol", "slug": "gpt-5.6-sol" },
       { "label": "GPT-6-Astra", "slug": "gpt-6-astra" }
@@ -22,7 +19,7 @@
   "panels": {
     "reviewer-panel": {
       "claude": ["opus", "sonnet"],
-      "codex": ["gpt-6.1-sol", "gpt-6-sol", "gpt-5.6-sol", "gpt-5.6-terra"],
+      "codex": ["gpt-5.6-sol", "gpt-5.6-terra"],
       "copilot": ["claude-opus-5", "gpt-5.5", "claude-sonnet-5"]
     }
   },
@@ -30,30 +27,22 @@
     {
       "role": "codex watchers",
       "models": {
-        "claude": ["haiku"]
+        "claude": ["sonnet"]
       }
     },
     {
       "role": "feature, refactoring",
       "models": {
-        "claude": ["sonnet"],
-        "codex": ["gpt-6.1-sol", "gpt-6-sol", "gpt-5.6-terra", "gpt-5.6-sol"],
-        "copilot": ["claude-sonnet-5", "gpt-5.5", "gpt-5.4"]
-      }
-    },
-    {
-      "role": "research",
-      "models": {
-        "claude": ["sonnet"],
-        "codex": ["gpt-6.1-sol", "gpt-6-sol", "gpt-5.6-terra", "gpt-5.6-sol"],
-        "copilot": ["claude-sonnet-5", "gpt-5.5", "gpt-5.4"]
+        "claude": ["sonnet", "opus"],
+        "codex": ["gpt-5.6-terra", "gpt-5.6-sol"],
+        "copilot": ["claude-sonnet-5", "gpt-5.5", "gpt-5.4", "claude-opus-5"]
       }
     },
     {
       "role": "judgment and prose",
       "models": {
         "claude": ["opus", "sonnet"],
-        "codex": ["gpt-6.1-sol", "gpt-6-sol", "gpt-5.6-sol", "gpt-5.6-terra"],
+        "codex": ["gpt-5.6-sol", "gpt-5.6-terra"],
         "copilot": ["claude-opus-5", "gpt-5.5", "claude-sonnet-5", "gpt-5.4"]
       }
     },
@@ -61,7 +50,7 @@
       "role": "arena runners",
       "models": {
         "claude": ["opus", "sonnet"],
-        "codex": ["gpt-6.1-sol", "gpt-6-sol", "gpt-5.6-sol", "gpt-5.6-terra"],
+        "codex": ["gpt-5.6-sol", "gpt-5.6-terra"],
         "copilot": ["claude-opus-5", "claude-sonnet-5", "gpt-5.5"]
       }
     },
@@ -71,7 +60,7 @@
       "role": "swarm workers",
       "models": {
         "claude": ["sonnet"],
-        "codex": ["gpt-6.1-sol", "gpt-6-sol", "gpt-5.6-terra"],
+        "codex": ["gpt-5.6-terra"],
         "copilot": ["claude-sonnet-5", "gpt-5.5"]
       }
     }

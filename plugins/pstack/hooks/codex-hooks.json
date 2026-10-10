@@ -10,6 +10,17 @@
           }
         ]
       }
+    ],
+    "PostCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${PLUGIN_ROOT}/hooks/session_start_context.py --harness codex --event PostCompact",
+            "timeout": 5
+          }
+        ]
+      }
     ]
   }
 }

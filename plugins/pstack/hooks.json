@@ -4,7 +4,7 @@
     "sessionStart": [
       {
         "type": "command",
-        "bash": "python3 \"$PLUGIN_ROOT/hooks/session_start_context.py\" --harness copilot --event SessionStart",
+        "bash": "python3 hooks/session_start_context.py --harness copilot --event SessionStart",
         "timeoutSec": 5
       }
     ]

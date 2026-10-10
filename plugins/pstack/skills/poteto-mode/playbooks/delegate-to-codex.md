@@ -1,49 +1,42 @@
 ### Delegate to Codex
 
-**In plain words:** hand one coding or review job to Codex, a different AI tool, instead of doing it here. A small watcher agent launches one Codex session on a bead and waits for it to exit; Codex does the bead and git work itself, and you read the bead and check it against git.
+**In plain words:** hand one coding or review job to Codex, a different AI tool, instead of doing it here. A small watcher agent starts the Codex run and tells you where it landed; you read the result yourself and check it against git.
 
-**You own the run.** Claude Code only; skip this playbook on any other harness. The watcher agents (`developer-codex`, `reviewer-codex`) hold only Bash and Monitor and run on Haiku. A watcher pipes its spawn prompt to `scripts/prepare_codex_run.py`, launches the `run.sh` the script wrote, waits with Monitor until Codex exits, and ends its turn with no reply. Codex claims the bead, sends heartbeats, commits, pushes, comments, sets the stage, and closes, all inside its sandbox. This page is the owner's half. The bead loop itself is in [`references/beads-work-loop.md`](../references/beads-work-loop.md).
+**You own the run.** Claude Code only; skip this playbook on any other harness. The watcher's own steps are `references/codex-watcher-body.md`, which is the whole body of both watchers, and `hooks/codex_watcher_guard.py` locks it to exactly those commands. This page is the owner's half. The watcher prefers `codex-agent`, a dedicated Codex install with its own `CODEX_HOME`, so a run using it never shares the user's interactive Codex session, config, or authentication state.
 
-Run plain `codex`. The runs share the user's own `~/.codex`: login, config, plugins, and `codex resume` history, all with the interactive session. A run with no login leaves the bead unclaimed and the error in `codex.stderr`.
+No installer creates `codex-agent`; create it yourself, once per machine, to get that isolation:
 
-**Base grants.** Codex runs `-s workspace-write` with `-c agents.enabled=false`. A writer gets its worktree, network for `git push`, the worktree's own gitdir plus the shared `objects`, `refs`, and `logs` (never the whole `.git`, which would also open `config` and `hooks`), and the parent directory of `$BEADS_DIR`. The parent is needed because bd's cross-process lock sits beside the store. A reviewer gets the bead store parent and no network, and its worktree stays read-only. The script refuses a main checkout, a repo with `extensions.worktreeConfig=true`, and any grant that would make the hooks dir or the shared `config` writable, because the coordinator later runs git outside the sandbox in that repo. A writer can move refs for any branch, not only its own. Every git command you run in a Codex worktree after the run carries `-c core.hooksPath=/dev/null -c core.fsmonitor=false`, which stops the worktree's own hooks and fsmonitor from running outside the sandbox. It does not cover a rewritten `.git` pointer file aimed at a Codex-made gitdir whose config sets `diff.external` or `core.pager`, so read the diff before trusting it.
+```sh
+#!/bin/sh
+export CODEX_HOME="$HOME/.codex-agent"
+exec "$(command -v codex)" "$@"
+```
 
-**Extra grants.** Append `Grant: <abs path> [<abs path> ...]` to the spawn prompt, as its last sentence, and each path becomes one more `--add-dir`. Paths are absolute, exist, and hold no spaces. A file-path git remote needs its bare repo granted. A GitHub remote needs nothing extra.
+Without it on `PATH`, the watcher falls back to bare `codex`, sharing your interactive Codex session, config, and authentication state instead of isolating them. Delegation still runs; it just loses the isolation the wrapper buys.
 
-1. Reach for Codex when the unit is one scoped implementation (`pstack:developer-codex`) or one review gate (`pstack:reviewer-codex`). Multi-kind work, tests, search, and orchestration stay on Claude. A plugin `PreToolUse` hook (`hooks/codex_exec_no_agents.py`) puts `shims/codex` first on `PATH` for any Bash command that mentions codex, and the shim adds `-c agents.enabled=false` when it runs `codex exec`. The hook never edits the command text. If Codex is already known unavailable this session, spawn plain `pstack:developer` or `pstack:reviewer` instead.
-2. Create the bead and the worktree as poteto-mode's Agent runs paragraph says. Put the scope in the bead's description and the done-when in `--acceptance`; Codex reads them with `bd show`. The script picks the Codex model from `models.json`: the first `codex` entry of the `feature, refactoring` row for a writer, and of `judgment and prose` for a reviewer.
-3. Spawn the watcher without `isolation`, with the same prompt a Claude agent gets:
-
-   ```
-   Claim bead <id> as developer-<id>. Work in <worktree>.
-   ```
-
-   For an Orchestrate unit, append the stop suffix:
+1. Reach for Codex when the unit is one scoped implementation (`pstack:developer-codex`) or one review gate (`pstack:reviewer-codex`). Multi-kind work, tests, search, and orchestration stay on Claude: the watcher holds only Bash and Write, and the run starts with `-c agents.enabled=false`, so Codex does the brief itself and spawns no helpers. Codex already known unavailable this session: spawn plain `pstack:developer` or `pstack:reviewer` instead.
+2. Pick a run `name` fresh for this repo, lowercase letters, digits, and dashes. A reused name either fails the watcher's `git worktree add` step or leaves the previous run's `report.md` for you to misread as this one's.
+3. Open the watcher's prompt with this header, then the brief:
 
    ```
-   Claim bead <id> as developer-<id>. Work in <worktree>. Stop at stage=built.
+   CODEX RUN
+   kind: writer
+   repo: /absolute/path/of/the/main/checkout
+   name: short-slug
+   model: gpt-5.6-terra
+   worktree: create
+   base: develop
+   poteto-mode: /absolute/path/of/poteto-mode/SKILL.md
    ```
 
-   ```
-   Review bead <id> at <SHA> in <worktree>.
-   ```
+   `kind` is `writer` or `reviewer`. `worktree` is `create` or the absolute path of an existing worktree inside `repo`, and a reviewer omits it. `base` is the commit-ish the new worktree starts from (a branch, tag, or SHA that exists in `repo`), required when `worktree: create` and omitted otherwise. Put the branch you actually want the writer working from, such as `develop` or `agent/pr2-split`: the watcher's own checkout can sit on any branch, and it takes `base` literally instead of inheriting that branch. `hooks/codex_watcher_guard.py` never reads this header. It checks only that the watcher's command hangs together: under `workspace-write`, `-C` is the directory Codex may write to, and the guard requires it to sit strictly below the tree that receives the report. A `worktree` outside `repo` therefore fails the guard. A command naming some other tree in every one of its paths is self-consistent and passes, so `repo` is yours to get right. Take `model` from the plugin's `models.json`, two directories up from the `poteto-mode` skill's own directory and `plugins/pstack/models.json` in the repo (see that skill's Models section): the first `codex` entry of the `feature, refactoring` row for a writer, of `judgment and prose` for a reviewer.
+4. Spawn the watcher without `isolation`, always. Its worktree comes from the header, not from Claude's own worktree placement. Under `isolation: "worktree"` the harness auto-cleans a worktree that git reports as unchanged. The watcher's only write is a prompt file under the gitignored `.nikki-agents/`, so git reports the worktree unchanged, and the harness deletes it along with the Codex worktree nested under it while `codex exec` is still writing there. Pin the watcher's own model from the `codex watchers` row.
+5. Read the reply. It is five lines and nothing else: `fallback`, `command`, `exit code`, `worktree`, `base`. The watcher never opens the report and never retypes Codex's output, so those five lines are all you get from it. `exit code` is a number, `timeout`, `denied`, or `(none)`.
+6. `fallback: none`: open `<repo>/.nikki-agents/codex-runs/<name>/report.md` yourself, then run `git log` and `git diff <base>..HEAD` in the reply's `worktree`. A commit the report claims counts only when git shows it. No report file at that path despite `fallback: none` means the run failed anyway; treat it as step 7.
+7. `fallback: claude`: read `exit code` before you spawn anything.
 
-   Use the actor `developer-<id>` for a Codex writer, so a Claude fallback with the same prompt holds the same claim. Pin the watcher's model from the `codex watchers` row (its frontmatter carries `model: haiku`). The watcher returns nothing. Its completion notification means Codex exited.
-4. Read the outcome from the bead and git, never from the watcher. The run dir is `${XDG_STATE_HOME:-~/.local/state}/pstack/codex-runs/<id>/<writer|reviewer>/`, with `codex.jsonl`, `codex.stderr`, `last-message.md`, and `refused.txt` when the script refused. Read `bd show <id> --json` and `bd comments <id>`.
+   - `denied`. The guard blocked the `command` line, or, when `command` is `(none)`, the watcher refused a header the guard would have blocked. Spawn no fallback writer yet. Compare the header you wrote in step 3 against the reply. The usual cause is a `worktree` path outside `repo` or a run `name` that is not a slug. Fix the header, then spawn a fresh watcher with a fresh `name`. Spawn a Claude fallback only when the header was already right, and give it a worktree you pick inside `repo`. Never point a fallback writer at a path outside `repo`: no hook guards a Claude writer. A right header that the guard still blocks means the guard and this playbook disagree, which is a bug in one of them.
+   - Anything else. Spawn `pstack:developer` or `pstack:reviewer` with the same brief. A writer fallback works in the named `worktree` when that line is not `(none)` and reads git state there first; a partial `report.md` at the run path is worth reading. When `exit code: timeout` sent you here, confirm no run still holds that worktree before the fallback writer touches it. A plain `pgrep -af "codex exec"` fails two ways: it can self-match an ancestor process whose own command line carries that text, and it false-positives on any unrelated process that does too. Key the check to `<worktree>` instead, since `-C <worktree>` survives verbatim into the live process's argv once `codex-agent` execs the codex binary: `pgrep -af -- "codex exec.*-C <worktree>( |$)"`. Nothing found means no run still holds it.
+8. Review the diff yourself and write your own summary. Codex's report is evidence, not your verdict.
 
-   - Closed, with a close reason naming a SHA: done.
-   - Open, `stage:built`, and a `ready at <SHA> on <branch>` comment: built.
-   - A `verdict pass at <SHA>` or `verdict fail at <SHA>` comment: reviewed.
-   - A `codex could not finish` comment: Codex did not finish.
-   - Unclaimed, with `refused.txt` in the run dir: the script refused. Fix the cause it names, then spawn a fresh watcher.
-   - Claimed with none of the above: read the last line of `codex.jsonl` and `codex.stderr`, then treat it as Codex did not finish.
-5. Check the outcome against git before you trust it. Run `git -c core.hooksPath=/dev/null -c core.fsmonitor=false log <base>..<SHA>`, the same prefix on `git status --porcelain` in the worktree, and `git diff <base>..<SHA>`. For a built bead, `git ls-remote origin <branch>` must match the SHA. A SHA the bead claims counts only when git shows it.
-6. When Codex did not finish, handle it in this order.
-
-   - Record it on the bead. Write `codex did not finish: <reason>` to a `mktemp` file with the Write tool and add it as a comment (`bd comment <id> --file <path>`).
-   - Tell the user in your next user-facing reply that Codex did not run for this task and why, even when the Claude fallback then succeeds. A spawner that is itself a subagent puts the failure in its own report instead.
-   - Confirm no Codex run still holds the worktree: `pgrep -f "^bash <run dir>/run\.sh$"` finds nothing.
-   - Spawn `pstack:developer` or `pstack:reviewer` without `isolation`, with the prompt the watcher got. A writer's claim succeeds again for the same actor, and the writer reads the bead and the worktree to continue from what Codex left.
-7. Run the gates per the Gates section of [`references/beads-work-loop.md`](../references/beads-work-loop.md). After a writer run, spawn the reviewer. After a pass, spawn the tester. Check each result with the facts that section lists. Read the full diff yourself only when a check fails. The diff read in Base grants is a security check, and it always applies. Write your own summary.
-
-**Reply:** your own summary of the change, the bead ID with its close reason or verdict, and the git evidence you checked them against.
+**Reply:** your own summary of the diff, the run's report path, and the git evidence you checked the report against.

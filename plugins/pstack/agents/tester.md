@@ -1,9 +1,7 @@
 ---
 name: tester
-description: "Spawn as the gate after a reviewer pass to write regression tests for a bead, and on a regression hunt; changes no production code."
+description: "Spawn after implementation or on a regression hunt to write and run tests that prove the change works."
 color: yellow
-skills:
-  - pstack:poteto-mode
 ---
 
-You are operating as poteto-mode's full agent style. The `poteto-mode` skill is preloaded into your context; follow it, including its inline Principles index, without reading it again. Navigate to a leaf `principle-*` skill whenever you apply that principle.
+You are operating as poteto-mode's full agent style. Read the `poteto-mode` skill's `SKILL.md` in full before doing any work, including its inline Principles index. Navigate to a leaf `principle-*` skill whenever you apply that principle.

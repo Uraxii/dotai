@@ -18,21 +18,24 @@ class SessionStartContextTests(unittest.TestCase):
 
         self.assertEqual(HOOK.REMINDER_TEXT, output)
 
-    def test_codex_output_is_one_json_line(self) -> None:
-        output = HOOK.build_output("codex", "SessionStart")
+    def test_codex_output_is_one_json_line_per_event(self) -> None:
+        for event in ("SessionStart", "PostCompact"):
+            with self.subTest(event=event):
+                output = HOOK.build_output("codex", event)
+                parsed = json.loads(output)
 
-        self.assertEqual(
-            {
-                "hookSpecificOutput": {
-                    "hookEventName": "SessionStart",
-                    "additionalContext": HOOK.REMINDER_TEXT,
-                }
-            },
-            json.loads(output),
-        )
+                self.assertEqual(
+                    {
+                        "hookSpecificOutput": {
+                            "hookEventName": event,
+                            "additionalContext": HOOK.REMINDER_TEXT,
+                        }
+                    },
+                    parsed,
+                )
 
     def test_claude_manifest_wires_session_start(self) -> None:
-        config = json.loads((REPOSITORY_ROOT / "hooks" / "claude-hooks.json").read_text())
+        config = json.loads((REPOSITORY_ROOT / "hooks" / "hooks.json").read_text())
 
         session_start = config["hooks"]["SessionStart"][0]
         self.assertEqual("startup|clear|compact", session_start["matcher"])
@@ -72,26 +75,30 @@ class SessionStartContextTests(unittest.TestCase):
 
         session_start = config["hooks"]["sessionStart"][0]
         self.assertIn(
-            "--harness copilot --event SessionStart",
-            session_start["bash"],
-        )
-        self.assertIn(
-            '"$PLUGIN_ROOT/hooks/session_start_context.py"',
+            "session_start_context.py --harness copilot --event SessionStart",
             session_start["bash"],
         )
 
-    def test_codex_manifest_wires_session_start_only(self) -> None:
+    def test_codex_manifest_wires_session_start_and_post_compact(self) -> None:
         config = json.loads(
             (REPOSITORY_ROOT / "hooks" / "codex-hooks.json").read_text()
         )
 
-        entry = config["hooks"]["SessionStart"][0]
-        self.assertNotIn("matcher", entry)
+        session_start_command = config["hooks"]["SessionStart"][0]["hooks"][0][
+            "command"
+        ]
         self.assertIn(
             "session_start_context.py --harness codex --event SessionStart",
-            entry["hooks"][0]["command"],
+            session_start_command,
         )
-        self.assertNotIn("PostCompact", config["hooks"])
+
+        post_compact_command = config["hooks"]["PostCompact"][0]["hooks"][0][
+            "command"
+        ]
+        self.assertIn(
+            "session_start_context.py --harness codex --event PostCompact",
+            post_compact_command,
+        )
 
 
 if __name__ == "__main__":

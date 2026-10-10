@@ -14,11 +14,11 @@
     ],
     "PreToolUse": [
       {
-        "matcher": "Bash",
+        "matcher": "Bash|Write",
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/codex_exec_no_agents.py",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/codex_watcher_guard.py",
             "timeout": 5
           }
         ]
