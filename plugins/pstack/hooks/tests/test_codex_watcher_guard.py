@@ -24,7 +24,7 @@ assert SPEC.loader is not None
 SPEC.loader.exec_module(HOOK)
 
 
-WATCHERS = ("pstack:developer-codex", "reviewer-codex")
+WATCHERS = ("pstack:developer-codex", "skeptic-reviewer-codex")
 REPO = "/repo"
 OTHER_REPO = "/other-repo"
 RUN = f"{REPO}/.nikki-agents/codex-runs/sample-run"
@@ -90,7 +90,7 @@ class CodexWatcherGuardTests(unittest.TestCase):
         )
         for command in commands:
             with self.subTest(command=command):
-                self.assert_allowed("reviewer-codex", command)
+                self.assert_allowed("skeptic-reviewer-codex", command)
 
     def test_developer_playbook_commands_are_allowed(self) -> None:
         commands = (
@@ -132,7 +132,7 @@ class CodexWatcherGuardTests(unittest.TestCase):
             with self.subTest(agent_type=agent_type):
                 self.assert_allowed(agent_type, "codex --version")
                 self.assert_allowed(agent_type, "codex login status")
-        self.assert_allowed("reviewer-codex", reviewer_exec)
+        self.assert_allowed("skeptic-reviewer-codex", reviewer_exec)
         self.assert_allowed("pstack:developer-codex", developer_exec)
 
     def test_bare_codex_exec_still_enforces_repo_containment(self) -> None:
@@ -144,7 +144,7 @@ class CodexWatcherGuardTests(unittest.TestCase):
             f"-C {REPO} -o {other_run}/report.md - < {other_run}/prompt.txt"
         )
         self.assert_denied(
-            payload("reviewer-codex", "Bash", command=command), "Bash"
+            payload("skeptic-reviewer-codex", "Bash", command=command), "Bash"
         )
 
     def test_existing_worktree_must_sit_inside_the_repo(self) -> None:
@@ -192,13 +192,13 @@ class CodexWatcherGuardTests(unittest.TestCase):
             f"-C {REPO} -o {RUN}/report.md - < {RUN}/prompt.txt"
         )
         self.assert_denied(
-            payload("reviewer-codex", "Bash", command=command), "Bash"
+            payload("skeptic-reviewer-codex", "Bash", command=command), "Bash"
         )
 
     def test_reviewer_worktree_add_is_denied(self) -> None:
         command = f"git -C {REPO} worktree add {WORKTREE} -b agent/sample-run develop"
         self.assert_denied(
-            payload("reviewer-codex", "Bash", command=command), "Bash"
+            payload("skeptic-reviewer-codex", "Bash", command=command), "Bash"
         )
 
     # -- worktree add's trailing base commit-ish ---------------------------
@@ -240,7 +240,7 @@ class CodexWatcherGuardTests(unittest.TestCase):
             f"-C {REPO} -o {other_run}/report.md - < {other_run}/prompt.txt"
         )
         self.assert_denied(
-            payload("reviewer-codex", "Bash", command=command), "Bash"
+            payload("skeptic-reviewer-codex", "Bash", command=command), "Bash"
         )
 
     def test_o_repo_differs_from_c_repo_is_denied_for_developer(self) -> None:
@@ -265,7 +265,7 @@ class CodexWatcherGuardTests(unittest.TestCase):
             f"-C {repo} -o {run}/report.md - < {run}/prompt.txt"
         )
         self.assert_denied(
-            payload("reviewer-codex", "Bash", command=command), "Bash"
+            payload("skeptic-reviewer-codex", "Bash", command=command), "Bash"
         )
 
     def test_o_and_stdin_name_mismatch_is_denied(self) -> None:
@@ -275,7 +275,7 @@ class CodexWatcherGuardTests(unittest.TestCase):
             f"other-run/prompt.txt"
         )
         self.assert_denied(
-            payload("reviewer-codex", "Bash", command=command), "Bash"
+            payload("skeptic-reviewer-codex", "Bash", command=command), "Bash"
         )
 
     def test_o_and_stdin_repo_mismatch_is_denied(self) -> None:
@@ -285,7 +285,7 @@ class CodexWatcherGuardTests(unittest.TestCase):
             f"codex-runs/sample-run/prompt.txt"
         )
         self.assert_denied(
-            payload("reviewer-codex", "Bash", command=command), "Bash"
+            payload("skeptic-reviewer-codex", "Bash", command=command), "Bash"
         )
 
     def test_developer_c_equal_to_bare_repo_is_denied(self) -> None:
@@ -357,7 +357,7 @@ class CodexWatcherGuardTests(unittest.TestCase):
             f"-C {REPO} --add-dir /other -o {RUN}/report.md - < {RUN}/prompt.txt"
         )
         self.assert_denied(
-            payload("reviewer-codex", "Bash", command=command), "Bash"
+            payload("skeptic-reviewer-codex", "Bash", command=command), "Bash"
         )
 
     def test_codex_exec_without_agents_disabled_flag_is_denied(self) -> None:
@@ -366,7 +366,7 @@ class CodexWatcherGuardTests(unittest.TestCase):
             f"-o {RUN}/report.md - < {RUN}/prompt.txt"
         )
         self.assert_denied(
-            payload("reviewer-codex", "Bash", command=command), "Bash"
+            payload("skeptic-reviewer-codex", "Bash", command=command), "Bash"
         )
 
     def test_codex_exec_agents_disabled_flag_in_wrong_position_or_value_is_denied(
@@ -381,7 +381,7 @@ class CodexWatcherGuardTests(unittest.TestCase):
         for command in commands:
             with self.subTest(command=command):
                 self.assert_denied(
-                    payload("reviewer-codex", "Bash", command=command), "Bash"
+                    payload("skeptic-reviewer-codex", "Bash", command=command), "Bash"
                 )
 
     def test_codex_exec_with_a_second_dash_c_flag_is_denied(self) -> None:
@@ -391,7 +391,7 @@ class CodexWatcherGuardTests(unittest.TestCase):
             f"{RUN}/prompt.txt"
         )
         self.assert_denied(
-            payload("reviewer-codex", "Bash", command=command), "Bash"
+            payload("skeptic-reviewer-codex", "Bash", command=command), "Bash"
         )
 
     def test_ls_report_file_is_denied(self) -> None:
@@ -408,7 +408,7 @@ class CodexWatcherGuardTests(unittest.TestCase):
             f"-s read-only -C {REPO} -o {RUN}/report.md - < {RUN}/prompt.txt"
         )
         self.assert_denied(
-            payload("reviewer-codex", "Bash", command=command), "Bash"
+            payload("skeptic-reviewer-codex", "Bash", command=command), "Bash"
         )
 
     def test_bash_path_traversal_is_denied(self) -> None:
@@ -418,7 +418,7 @@ class CodexWatcherGuardTests(unittest.TestCase):
             f"{RUN}/prompt.txt"
         )
         self.assert_denied(
-            payload("reviewer-codex", "Bash", command=command), "Bash"
+            payload("skeptic-reviewer-codex", "Bash", command=command), "Bash"
         )
         self.assert_denied(
             payload(
@@ -440,7 +440,7 @@ class CodexWatcherGuardTests(unittest.TestCase):
     def test_write_path_traversal_is_denied(self) -> None:
         self.assert_denied(
             payload(
-                "pstack:reviewer-codex",
+                "pstack:skeptic-reviewer-codex",
                 "Write",
                 file_path=f"{REPO}/.nikki-agents/codex-runs/x/../../README.md",
             ),
@@ -459,13 +459,13 @@ class CodexWatcherGuardTests(unittest.TestCase):
 
     def test_invalid_writes_and_tools_are_denied(self) -> None:
         self.assert_denied(
-            payload("pstack:reviewer-codex", "Write", file_path="/r/README.md"),
+            payload("pstack:skeptic-reviewer-codex", "Write", file_path="/r/README.md"),
             "Write",
         )
         for tool_name in ("Edit", "WebFetch"):
             with self.subTest(tool_name=tool_name):
                 self.assert_denied(
-                    payload("pstack:reviewer-codex", tool_name), tool_name
+                    payload("pstack:skeptic-reviewer-codex", tool_name), tool_name
                 )
 
     def test_non_watchers_and_missing_agent_type_bypass_the_guard(self) -> None:

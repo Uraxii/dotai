@@ -15,7 +15,7 @@ DENIAL_REASON = (
     "codex watcher guard: {tool} call not in the delegate-to-codex allowlist; "
     "copy the playbook command exactly or send the fallback reply"
 )
-REVIEWER = "reviewer-codex"
+REVIEWER = "skeptic-reviewer-codex"
 DEVELOPER = "developer-codex"
 WATCHER_NAMES = frozenset({DEVELOPER, REVIEWER})
 # A `..` or `.` segment is rejected wherever it ends, not only when the next

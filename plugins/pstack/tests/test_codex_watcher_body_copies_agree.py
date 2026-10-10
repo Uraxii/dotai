@@ -1,6 +1,6 @@
 """The watcher body lives in three files; a fix must land in all three.
 
-`agents/developer-codex.md` and `agents/reviewer-codex.md` carry the Codex
+`agents/developer-codex.md` and `agents/skeptic-reviewer-codex.md` carry the Codex
 watcher's real system prompt inline, below their own frontmatter.
 `skills/poteto-mode/references/codex-watcher-body.md` is the copy a reader
 reaches through the skill. Editing only the reference copy ships nothing,
@@ -15,7 +15,7 @@ PLUGIN_ROOT = Path(__file__).resolve().parents[1]
 REFERENCE = PLUGIN_ROOT / "skills/poteto-mode/references/codex-watcher-body.md"
 AGENTS = (
     PLUGIN_ROOT / "agents/developer-codex.md",
-    PLUGIN_ROOT / "agents/reviewer-codex.md",
+    PLUGIN_ROOT / "agents/skeptic-reviewer-codex.md",
 )
 HEADING = "### Codex watcher"
 
