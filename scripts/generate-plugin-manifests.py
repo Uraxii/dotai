@@ -290,24 +290,23 @@ PLUGINS: list[dict[str, object]] = [
     },
     {
         "name": "shunt",
-        "version": "0.2.3",
+        "version": "0.3.0",
+        "marketplace_version": True,
         "hooks": ["claude", "codex", "copilot"],
         "skills": False,
         "description": (
-            "Spotify's shunt, vendored and patched to the current PreToolUse "
-            "hook output schema: shunts large reads and boilerplate "
-            "generation to AiKA modes to save tokens."
+            "Shunts large reads to small subagents and boilerplate generation "
+            "to Portal AiKA to save main-agent context tokens."
         ),
-        "short": "Delegate large reads and boilerplate to AiKA, token-cheap.",
+        "short": "Delegate large reads to subagents; generate boilerplate with AiKA.",
         "long": (
             "A vendored, patched fork of Spotify's shunt plugin from "
             "portal-ai-plugins. Hooks block full large-file reads on Claude "
             "Code and Copilot CLI, and large Bash reads on Codex, then "
-            "redirect agents to the bulk-reader skill; a code-writer "
-            "skill delegates boilerplate generation the same way. Both "
-            "route through the Portal CLI's AiKA modes. See "
-            "plugins/shunt/upstream-source.md for the source revision and "
-            "what this fork changed."
+            "redirect agents to the bulk-reader skill. Small reader subagents "
+            "return concise answers with line citations; chunked reads handle "
+            "exact content and edits. Only code-writer needs Portal AiKA. See "
+            "plugins/shunt/upstream-source.md for source and patch details."
         ),
         "keywords": ["token-optimization", "delegation", "aika"],
         "prompts": [
@@ -401,6 +400,10 @@ def claude_marketplace() -> dict[str, object]:
             {
                 "name": plugin["name"],
                 "source": f"./plugins/{plugin['name']}",
+                **(
+                    {"version": version_of(plugin)}
+                    if plugin.get("marketplace_version") else {}
+                ),
                 "description": plugin["description"],
             }
             for plugin in PLUGINS

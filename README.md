@@ -25,7 +25,7 @@ needs `pstack` installed.
 | `codebase-memory` | Index the session's own checkout at session start and each new linked worktree after git worktree add, then query its code graph from a shell. |
 | `caveman` | Answer in a compressed register that drops filler and keeps every technical fact. |
 | `steer` | Harness hooks that steer agent behaviour, independent of any skill. |
-| `shunt` | Spotify's shunt, vendored and patched to the current PreToolUse hook output schema: shunts large reads and boilerplate generation to AiKA modes to save tokens. |
+| `shunt` | Shunts large reads to small subagents and boilerplate generation to Portal AiKA to save main-agent context tokens. |
 | `personal-instructions` | Inject a hand-edited instructions.md at session start and, where the harness has a subagent-start hook, subagent start. |
 
 <!-- dotai:plugins:end -->
