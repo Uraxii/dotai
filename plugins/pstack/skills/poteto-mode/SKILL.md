@@ -88,6 +88,48 @@ Read the leaf skill in full for any principle you apply. Each entry names when i
 - **Encode Lessons in Structure** (**principle-encode-lessons-in-structure**). You catch yourself writing the same instruction a second time. Encode it as a lint, metadata flag, runtime check, or script instead of more text.
 - **Output to User** (**principle-output-to-user**). Any reply the human reads, before sending it, and whenever one is about to narrate progress or bury a path or command mid-sentence. Caps the turn at one outcome-first reply and puts every copy-paste value in a code block on its own line. Where it tightens **Writing the reply** above, follow the stricter of the two.
 
+## Skills
+
+Each entry names a workflow or tool skill and what it does. The triggers above say when to load most of them. Load a skill through the `Skill` tool, or read its `SKILL.md` on a harness without one.
+
+- **architect**. Sketch types, signatures, and module structure before code.
+- **arena**. Run parallel candidates at one task, pick a base, and graft the best parts of the others into it.
+- **blast-radius**. Find what a change could break outside the diff, and prove the one fact it is safe because of by running code.
+- **deslop**. Remove AI-generated slop from code before a commit.
+- **figure-it-out**. Design a bespoke playbook when no bundled playbook fits.
+- **how**. Explain how a subsystem works, and where code should live.
+- **index-the-codebase**. Index the code with codebase-memory, then query the index before grep.
+- **interrogate**. Multi-model adversarial review of a contested design or change.
+- **no-comments**. Spawn `comment-sicko` and act on the comments it condemns.
+- **reflect**. Review the transcript for lessons and route each to a skill edit.
+- **setup-pstack**. Change the model a role runs on for this machine.
+- **show-me-your-work**. Keep a decision trail for long or unattended work.
+- **swarm**. Fan out parallel workers and return one report.
+- **tdd**. Land a failing regression test before a bug fix, when the test path is cheap.
+- **technical-writing**. Structure and sentence rules for docs, PR descriptions, and commit messages.
+- **track-work**. Track and coordinate local work with the beads plugin.
+- **unslop**. Cut AI tells from any prose.
+- **why**. Find the reasons and history behind a design, from every evidence source.
+- **write-pr**. Write or refresh a PR title and description.
+- **write-tests**. Ship tests with every code change, and run the suite before and after.
+
+## Roles
+
+Each role is a named agent in the plugin's `agents/` directory. Spawn it as `pstack:<role>`. A playbook step names the role for its work.
+
+- `architect`. Settles types, contracts, and stub skeletons before implementation.
+- `comment-sicko`. Finds comments to delete and workaround code to condemn. The **no-comments** skill spawns it.
+- `developer`. Writes one scoped implementation unit. It opens no PR and spawns no reviewer. On Claude Code it is the fallback when `developer-codex` cannot run.
+- `developer-codex`. The `developer` role run through Codex. The default writer for one unit on Claude Code.
+- `explorer`. Finds where code and files live, and returns pointers.
+- `orchestrator`. Runs work with more than one kind or unit. It delegates, runs the gates, and opens the PR. It writes no implementation.
+- `poteto-agent`. The ad-hoc helper for work that no other role covers, and the routing target for `/poteto-mode`.
+- `researcher`. Answers one question from primary sources and writes the findings down.
+- `skeptic-reviewer`. The skeptic review gate on a sketch and on new code. Returns pass or fail and edits nothing. On Claude Code it is the fallback when `skeptic-reviewer-codex` cannot run.
+- `skeptic-reviewer-codex`. The `skeptic-reviewer` role run through Codex. The default reviewer on Claude Code.
+- `tester`. Designs, writes, and runs tests that try to break new code, after its skeptic review passes. Changes no production code.
+- `zakia`. A full poteto agent that speaks in the Zakia voice.
+
 ## Autonomy
 
 **Just do it.** Use any MCP tool. Reversible work and external actions (team chat, ticket updates, kicking off evals) proceed without asking.
