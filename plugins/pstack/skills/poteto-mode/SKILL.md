@@ -19,13 +19,14 @@ Remaining triggers:
 
 - Nontrivial change, architecture decision, or "are we sure?" → the **how** skill.
 - About to `AskUserQuestion` on a "which approach", "how should I", or "what should this do" fork → classify it before you ask. If the answer is a fact you could observe by running something (behavior, timing, layout, output, perf, even whether an eval separates), it is not the human's to answer. Sketch it via the Prototype playbook (`playbooks/prototype.md`) and let the result decide. If the task is a read-only Investigation whose deliverable is a cited answer, stay in it and answer from the evidence rather than building a sketch. Reserve the question for a genuine product or preference call no experiment can settle.
-- Any question about where code lives, who calls what, or what a change breaks → when a code indexer is available (for example `codebase-memory-mcp` or `graphify`), index the repo if it isn't indexed yet and query the index before grepping or reading files.
-- Any code → name the data shape first, and choose its organizing structure per **principle-model-the-domain**. Code written, changed, or reviewed also loads **principle-code-quality**.
+- Any question about where code lives, who calls what, or what a change breaks, and any start of work in a new checkout or worktree → the **index-the-codebase** skill. Index the code, then query the index before grepping or reading files.
+- Any code → name the data shape first, and choose its organizing structure per **principle-model-the-domain**. Code written, changed, or reviewed also loads **principle-code-quality**. Code written or changed also loads the **write-tests** skill.
 - Any name chosen for a file, directory, document, or identifier, and any new file about to be written → **principle-naming**.
 - Code crossing a function boundary → the **architect** skill, parallel design exploration before implementing.
 - Parallel fan-out → the **swarm** skill for coverage matrices, races, gauntlets, and exploration partitions. Use **arena** for design or code bakeoffs with base selection and grafting.
 - Contested design → the **interrogate** skill (multi-model adversarial) before shipping.
 - Nontrivial multi-step → write the throughput checkpoint (Feature step 3).
+- Work to coordinate across agents or sessions (a delegated unit, a pause or a pickup, a follow-up or a defect to record) → the **track-work** skill.
 - Any prose surface → the **unslop** skill. Your reply is a prose surface; write it per **Writing the reply**. Agent-facing prose also follows the **plugin-dev:skill-development** skill (Claude Code's authoring guidance for SKILL.md files).
 - Docs, RFCs, readmes, PR descriptions, commit messages → the **technical-writing** skill (`/technical-writing`) for structure and sentence discipline, on top of **unslop**.
 - Before commit → the **deslop** skill (`/deslop`).
@@ -71,6 +72,7 @@ Read the leaf skill in full for any principle you apply. Each entry names when i
 
 - **Prove It Works** (**principle-prove-it-works**). After a task, before declaring done. Verify against the real artifact, not a proxy or "it compiles".
 - **Fix Root Causes** (**principle-fix-root-causes**). Debugging. Trace each symptom to its root cause, reproduce first, ask why until you reach it.
+- **Skeptically Review** (**principle-skeptically-review**). Reviewing a design sketch or new code as a gate. Assume flaws and look for them, raise only substantive objections, and fail the review on one.
 - **Sequence Work into Verifiable Units** (**principle-sequence-verifiable-units**). Multi-step work (sweeps, migrations, runs of similar edits) and how you stack commits and PRs. Break work into small units that each end in a check, verify each before the next, and order delivery so the sequence proves itself.
 - **Test Behavior, Not Implementation** (**principle-test-behavior-not-implementation**). Writing, changing, or keeping a test. Identify a relevant defect and check that the complete test arrangement detects it. Assert the required result or effect, including absence and fixed values when the contract requires them.
 
