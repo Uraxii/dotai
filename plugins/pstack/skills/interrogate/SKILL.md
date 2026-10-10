@@ -21,8 +21,6 @@ Identify what to review from context:
 
 Package the diff (or file contents) plus any surrounding context files the reviewers need to understand the code.
 
-If a bead ordered a design review, look for an open review bead that blocks it: `bd dep list <ordering bead>`, then the open entry whose title starts with `Interrogate:`. If one exists, this is a later round. Read its comments (`bd comments <review bead>`) and append to the package, under an "Earlier findings" heading, the last round's Act On and Consider findings plus every earlier finding still marked `still open`, followed by the author's last `response to round <n>` comment. Reviewers check each earlier finding against that response first and still review the whole package.
-
 ## Step 2, State the Intent
 
 Before spawning reviewers, state the intent explicitly. Derive this from:
@@ -36,7 +34,7 @@ Write one clear paragraph. If you're unsure about the intent, ask the user befor
 
 ## Step 3, Spawn Reviewers
 
-Launch all reviewers in a single message using the `Agent` tool. Take the `interrogate reviewers` list from your harness's override sheet (see `setup-pstack`) when it has a row, otherwise from that role's entry for your harness in `plugins/pstack/models.json` (see [Models](#models)). A design review that a bead ordered (Step 6) spawns only the first entry, as Reviewer A. Every other run spawns one reviewer per entry, in order, labelling them Reviewer A, B, C, D as far as the list runs: the list length sets the reviewer count. The panel is only as adversarial as it is model-diverse, so keep the entries from different model families where the harness offers them.
+Launch all reviewers in a single message using the `Agent` tool. Take the `interrogate reviewers` list from your harness's override sheet (see `setup-pstack`) when it has a row, otherwise from that role's entry for your harness in `plugins/pstack/models.json` (see [Models](#models)). Spawn one reviewer per entry, in order, labelling them Reviewer A, B, C, D as far as the list runs: the list length sets the reviewer count. The panel is only as adversarial as it is model-diverse, so keep the entries from different model families where the harness offers them.
 
 For each reviewer:
 - `subagent_type`: `general-purpose`
@@ -80,20 +78,6 @@ For each finding, include:
 - Which model(s) raised it
 - The category (act on / consider / noted / dismissed)
 - A one-line rationale for the categorization
-
-## Step 6, Record the Verdict
-
-This step applies only to a design review that a bead ordered. A code review, or a run with no ordering bead, keeps its verdict in chat.
-
-1. If Step 1 found no open review bead, create one that blocks the bead that ordered the work. Until the review closes, the block keeps that bead and its children out of `bd ready` and makes `bd close` on it fail.
-
-   ```sh
-   bd create "Interrogate: <subject>" --deps blocks:<ordering bead> --silent
-   ```
-
-2. Write the round to a file and add it as a comment (`bd comment <review bead> --file <file>`). The first line is `round <n> at <SHA or artifact>`, where `<n>` is one more than the count of earlier round comments on this review bead. List each Act On and each Consider finding on its own line with its tier, including earlier findings still open. Mark each finding from the previous round `fixed`, `answered: <reason>`, or `still open`. Noted and Dismissed findings stay in the chat verdict.
-3. The design's author answers in one comment on the review bead. Its first line is `response to round <n>`. It marks each listed finding `fixed: <change>`, or for a Consider finding, `answered: <reason>`. An Act On finding can only be fixed.
-4. If the round had no Act On finding and the response resolves every listed finding, the author closes the review bead: `bd close <review bead> --reason "resolved in <n> rounds"`. If the round had an Act On finding, run interrogate again after the fix, so the next round checks it. Round 3 is the last. If round 3 ends with an Act On finding or an unresolved finding, leave the review bead open and report its open findings to the user.
 
 ## Output Format
 

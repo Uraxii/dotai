@@ -22,7 +22,7 @@ needs `pstack` installed.
 | `sandbox` | Give an agent a throwaway podman container with its own clone of the repo, ports, and a virtual display. |
 | `mpocock` | Compact a conversation into a handoff document another agent can pick the work up from. |
 | `skills` | Review and author SKILL.md files, finding and repairing the smells that stop a skill triggering. |
-| `codebase-memory` | Index the session's own checkout at session start and each new linked worktree after git worktree add, then query its code graph from a shell. |
+| `codebase-memory` | Index the session's own checkout at session start, then query its code graph from a shell. |
 | `caveman` | Answer in a compressed register that drops filler and keeps every technical fact. |
 | `steer` | Harness hooks that steer agent behaviour, independent of any skill. |
 | `shunt` | Shunts large reads to small subagents and boilerplate generation to Portal AiKA to save main-agent context tokens. |

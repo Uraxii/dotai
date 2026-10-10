@@ -10,18 +10,6 @@
           }
         ]
       }
-    ],
-    "PostToolUse": [
-      {
-        "matcher": "Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "${PLUGIN_ROOT}/hooks/auto_index.py",
-            "timeout": 5
-          }
-        ]
-      }
     ]
   }
 }

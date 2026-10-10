@@ -208,10 +208,7 @@ def reviewer_prompt(request: Request) -> str:
 
 1. Review `git diff <base>..{sha}` against the scope and the done-when of the bead. They are in the bead text appended below this brief. `<base>` is `{sha}^` unless that text names an earlier base for the bead's commits. Run read-only checks if they help.
 2. The appended bead comments hold the earlier rounds. The last failed round is the most recent `verdict fail at <old SHA>` or `tests fail at <old SHA>`; each failing test in a tester failure is one must-fix item. If there is one, check each of its items at {sha}, check that no test the tester committed was weakened or deleted without a reason you accept, and read `git diff <old SHA>..{sha}` closely, because those commits are the fixes. Step 1 still covers the full diff, because a fix can break code an earlier round passed.
-3. Put each finding in one tier.
-   - Must-fix: wrong behavior, a missed requirement, or a claim the diff does not back. One must-fix makes the verdict fail.
-   - Should-fix-or-explain: a real weakness the writer fixes or answers with a one-line reason. An item from the last round with neither a fix nor a reason, or with a reason you reject, is now a must-fix; say why you reject it.
-   - Worth-noting: not blocking.
+3. Read `{PLUGIN_ROOT / "skills" / "principle-skeptical-review" / "SKILL.md"}` and judge the diff by it. The diff is an `architect` sketch or code. Put each finding in one of its tiers: Must-fix, Should-fix-or-explain, or Worth-noting.
 4. Report each Must-fix and each Should-fix-or-explain finding as a native review finding, and begin its body with its tier word and a period, for example `Must-fix. <why>`. Leave Worth-noting items in the summary. Mark each item from the last failed round `fixed`, `answered: <reason>`, or `still open`; a `still open` item is a Must-fix finding. The recorded verdict line is added from your findings: `verdict fail at {sha}` when any finding begins `Must-fix.`, otherwise `verdict pass at {sha}`.
 """
 
