@@ -27,6 +27,7 @@ done
 
 generate_fixture() {
   local path="$1" lines="$2"
+  mkdir -p "$(dirname "$path")"
   if [ "$lines" -eq 0 ]; then
     touch "$path"
   else
@@ -150,13 +151,14 @@ run_suite() {
 
 # Runs as a child process: the suite stubs portal-cli, and that stub must not
 # leak into the benchmarks below, which need the real one.
-run_transport_suite() {
+run_shell_suite() {
+  local suite="$1" label="$2"
   echo ""
-  echo "Transport (scripts/lib/aika.sh, stubbed portal-cli)"
+  echo "$label"
   echo "────────────────────────────────────────────────────────────────"
 
   local output counts p f
-  output=$(bash "$SCRIPT_DIR/transport-evals.sh" 2>&1) || true
+  output=$(bash "$SCRIPT_DIR/$suite" 2>&1) || true
 
   printf '%s\n' "$output" | grep -v '^## ' || true
   # `|| true` so a missing trailer reaches the fallback below instead of
@@ -166,7 +168,7 @@ run_transport_suite() {
   f=$(printf '%s' "$counts" | awk '{print $3}')
 
   if [ -z "$p" ]; then
-    printf "  \033[31mFAIL\033[0m  %-32s suite did not report results\n" "transport-evals"
+    printf "  \033[31mFAIL\033[0m  %-32s suite did not report results\n" "$suite"
     FAILED=$((FAILED + 1))
     TOTAL=$((TOTAL + 1))
     return
@@ -181,39 +183,6 @@ run_transport_suite() {
 
 token_estimate() {
   echo $(( (${#1} + 3) / 4 ))
-}
-
-run_benchmark_bulk_read() {
-  local idx="$1"
-  local question corpus
-
-  question=$(jq -r ".benchmarks[$idx].question" "$BENCHMARKS")
-  corpus=""
-  local paths_args=()
-
-  while IFS= read -r p; do
-    local full="$SCRIPT_DIR/$p"
-    paths_args+=("$full")
-    corpus="$corpus$(cat "$full")"
-  done < <(jq -r ".benchmarks[$idx].paths[]" "$BENCHMARKS")
-
-  local without_tokens
-  without_tokens=$(token_estimate "$corpus")
-
-  local response
-  response=$("$PLUGIN_DIR/scripts/bulk-read" --question "$question" --paths "${paths_args[@]}" 2>/dev/null) || true
-
-  local with_tokens
-  with_tokens=$(token_estimate "$response")
-
-  local total_lines=0
-  while IFS= read -r p; do
-    local lines
-    lines=$(wc -l < "$SCRIPT_DIR/$p" | tr -d ' ')
-    total_lines=$(( total_lines + lines ))
-  done < <(jq -r ".benchmarks[$idx].paths[]" "$BENCHMARKS")
-
-  echo "$total_lines $without_tokens $with_tokens"
 }
 
 run_benchmark_code_write() {
@@ -275,9 +244,7 @@ run_benchmarks() {
     printf "  \033[2mRunning [%s] %s...\033[0m\n" "$btype" "$name"
 
     local total_lines without_tokens with_tokens
-    if [ "$btype" = "bulk-read" ]; then
-      read -r total_lines without_tokens with_tokens <<< "$(run_benchmark_bulk_read "$i")"
-    elif [ "$btype" = "code-write" ]; then
+    if [ "$btype" = "code-write" ]; then
       read -r total_lines without_tokens with_tokens <<< "$(run_benchmark_code_write "$i")"
     else
       continue
@@ -325,7 +292,6 @@ run_benchmarks() {
     "Total" "" "$total_without" "$total_with" "$total_pct"
   echo ""
   printf "  \033[2mToken estimate: chars / 4. Output tokens weighted 5x (Opus pricing).\033[0m\n"
-  printf "  \033[2mBulk-read: without = file content in context, with = AiKA summary in context.\033[0m\n"
   printf "  \033[2mCode-write: without = read files + generate code, with = code written to disk.\033[0m\n"
 }
 
@@ -333,7 +299,8 @@ run_benchmarks() {
 
 run_suite "$SCRIPT_DIR/../hooks/check-file-size" "$SCRIPT_DIR/hook-evals.json" "Read hook (check-file-size)"
 run_suite "$SCRIPT_DIR/../hooks/check-bash-read" "$SCRIPT_DIR/bash-hook-evals.json" "Bash hook (check-bash-read)"
-run_transport_suite
+run_shell_suite reason-evals.sh "Deny reasons and chunked reads"
+run_shell_suite transport-evals.sh "Transport (scripts/lib/aika.sh, stubbed portal-cli)"
 
 echo ""
 echo "════════════════════════════════════════════════════════════════"

@@ -1,7 +1,7 @@
 {
   "name": "shunt",
-  "version": "0.2.3",
-  "description": "Spotify's shunt, vendored and patched to the current PreToolUse hook output schema: shunts large reads and boilerplate generation to AiKA modes to save tokens.",
+  "version": "0.3.0",
+  "description": "Shunts large reads to small subagents and boilerplate generation to Portal AiKA to save main-agent context tokens.",
   "author": {
     "name": "Uraxii",
     "url": "https://github.com/Uraxii"
@@ -17,8 +17,8 @@
   "hooks": "./hooks/codex-hooks.json",
   "interface": {
     "displayName": "shunt",
-    "shortDescription": "Delegate large reads and boilerplate to AiKA, token-cheap.",
-    "longDescription": "A vendored, patched fork of Spotify's shunt plugin from portal-ai-plugins. Hooks block full large-file reads on Claude Code and Copilot CLI, and large Bash reads on Codex, then redirect agents to the bulk-reader skill; a code-writer skill delegates boilerplate generation the same way. Both route through the Portal CLI's AiKA modes. See plugins/shunt/upstream-source.md for the source revision and what this fork changed.",
+    "shortDescription": "Delegate large reads to subagents; generate boilerplate with AiKA.",
+    "longDescription": "A vendored, patched fork of Spotify's shunt plugin from portal-ai-plugins. Hooks block full large-file reads on Claude Code and Copilot CLI, and large Bash reads on Codex, then redirect agents to the bulk-reader skill. Small reader subagents return concise answers with line citations; chunked reads handle exact content and edits. Only code-writer needs Portal AiKA. See plugins/shunt/upstream-source.md for source and patch details.",
     "developerName": "Uraxii",
     "category": "Developer Tools",
     "capabilities": [

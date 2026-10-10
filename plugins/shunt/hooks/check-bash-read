@@ -1,5 +1,5 @@
 #!/bin/bash
-# Block Bash commands that read large files, redirect to /bulk-reader skill
+# Block Bash commands that read large files, explain how to keep reading
 # Catches cat/head/tail/less/more that bypass the Read hook
 #
 # Modified from spotify/portal-ai-plugins; see ../upstream-source.md
@@ -49,11 +49,19 @@ fi
   /*) ;;
   *) file_path="$cwd/$file_path" ;;
 esac
+case "/$file_path" in
+  */../*) ;;
+  */.handoffs/*|*/handoffs/*) exit 0 ;;
+esac
 [ ! -f "$file_path" ] && exit 0
 
 lines=$(wc -l < "$file_path" 2>/dev/null | tr -d ' ' || echo "0")
 if [ "$lines" -gt "$MIN_LINES" ]; then
-  reason="File is ${lines} lines (threshold: ${MIN_LINES}). Use the /bulk-reader skill to delegate this read to AiKA instead of cat/head/tail."
+  reason="Delegate via the bulk-reader skill for understanding or questions about this ${lines}-line file, including answers with line citations. Keep the file out of the main agent's context; the reader returns the citations. If you are already the reader subagent, do not delegate again. Use main-agent chunks only for edits, explicit requests for exact content, or when no subagent tool exists. For those cases or subagent reads:"
+  if [ "$harness" = claude ] && [ -n "$(echo "$input" | jq -r '.agent_id // empty')" ]; then
+    reason="You are the reader subagent; do not delegate again. File is ${lines} lines."
+  fi
+  reason="$reason Read it in chunks of at most ${MIN_LINES} lines until you have read the full file. Use bash: sed -n 'START,ENDp' FILE, with END-START+1 <= ${MIN_LINES} (start with sed -n '1,${MIN_LINES}p' FILE, then continue at $((MIN_LINES + 1))). Use grep for targeted lookups."
   if [ "$harness" = copilot ]; then
     jq -cn --arg reason "$reason" \
       '{permissionDecision: "deny", permissionDecisionReason: $reason}'

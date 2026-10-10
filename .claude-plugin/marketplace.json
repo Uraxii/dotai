@@ -68,7 +68,8 @@
     {
       "name": "shunt",
       "source": "./plugins/shunt",
-      "description": "Spotify's shunt, vendored and patched to the current PreToolUse hook output schema: shunts large reads and boilerplate generation to AiKA modes to save tokens."
+      "version": "0.3.0",
+      "description": "Shunts large reads to small subagents and boilerplate generation to Portal AiKA to save main-agent context tokens."
     },
     {
       "name": "personal-instructions",

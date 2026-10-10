@@ -1,199 +1,135 @@
 # shunt
 
-A Claude Code, Codex, and Copilot CLI plugin that shunts I/O-heavy work to AiKA modes, saving 82-94% of tokens on large file reads and boilerplate generation.
+Shunt saves main-agent context tokens by sending large reads to a small,
+fast subagent. The reader returns a short answer with file and line citations.
+Boilerplate generation still uses Portal AiKA through code-writer.
 
-Vendored from Spotify's [`portal-ai-plugins`](https://github.com/spotify/portal-ai-plugins/tree/e14bdb1dc894e0a2ef150fa811db5308ae2ddb37/plugins/shunt) at revision `e14bdb1dc894e0a2ef150fa811db5308ae2ddb37`, Apache-2.0 (see [LICENSE.md](LICENSE.md)). Patched fork: `hooks/check-file-size` and `hooks/check-bash-read` printed a legacy top-level `{"decision": "allow"}` that current Claude Code rejects (upstream [issue #10](https://github.com/spotify/portal-ai-plugins/issues/10)); both now pass through with empty stdout and `exit 0`, and block with the harness-specific deny envelope. Full detail in [upstream-source.md](upstream-source.md).
+Vendored from Spotify's [portal-ai-plugins](https://github.com/spotify/portal-ai-plugins/tree/e14bdb1dc894e0a2ef150fa811db5308ae2ddb37/plugins/shunt),
+revision `e14bdb1dc894e0a2ef150fa811db5308ae2ddb37`, under Apache-2.0.
+See [LICENSE.md](LICENSE.md) and [patch notes](upstream-source.md).
 
-## How it works
+## Large reads
 
-Three layers, from hard gate to soft suggestion:
+Hooks deny full reads of files over 350 lines and lead with "delegate via the
+bulk-reader skill" for understanding or questions. The main agent gives the
+reader paths and a specific question, without loading the file first.
 
-1. **Hooks** block large direct reads and redirect to the bulk-reader skill
-2. **Scripts** handle the AiKA invocation and output cleanup
-3. **Skills** tell Claude when and how to call the scripts
+Both read hooks allow full reads under an exact `.handoffs` or `handoffs`
+directory so agents can read the handoff needed to resume work. The exception
+runs before the size check, after resolving relative paths from the session
+cwd, and requires a path without any `..` segment. `.handoffs/../big.md`,
+`handoffs.txt`, and `myhandoffs/` still follow the size guard.
 
-Claude never assembles bash pipelines from prose. It calls a script with named arguments. The scripts handle everything internally.
+- Claude Code uses Agent with `subagent_type: Explore` and `model: haiku`.
+- Copilot CLI uses task with `agent_type: explore` and `mode: sync`. Its built-in
+  explore definition selects a fast model and read tools. Prefer
+  `model: gpt-5.4-mini` when exposed by the task schema.
+- Codex uses an available exploration subagent and small model. When no
+  subagent mechanism is exposed, it falls back to targeted or chunked reads.
 
-Delegation goes through the Portal CLI actions registry — one `aika:invoke-chat` call per delegation — so the plugin works against any Portal instance with AiKA enabled. Modes are addressed by name and resolved server-side: case-insensitive, preferring your own mode, then your groups', then public ones; a name matching nothing or several modes equally fails with the candidate ids.
+The reader uses the same hooks. Claude's `agent_id` switches the deny reason
+straight to chunk instructions. Copilot 1.0.95's live `preToolUse` input has
+`cwd`, `sessionId`, `timestamp`, `toolArgs`, and `toolName`, with no subagent
+identity. Its reason tells an existing reader to use
+chunks rather than delegate again. The skill includes that instruction in
+all reader prompts.
+
+For exact content, edits, or reader-subagent reads, use chunks of at most
+`SHUNT_MIN_LINES` lines until the required content has been read. Claude uses
+Read with `offset` and `limit`; Copilot uses view with inclusive
+`view_range [start, end]`. All harnesses can use `sed -n 'START,ENDp' FILE`
+or `grep` for targeted lookups. Before editing, the main agent re-reads only
+the exact cited lines. See [bulk-reader](skills/bulk-reader/SKILL.md).
 
 ## Prerequisites
 
-- [`jq`](https://jqlang.org) — `brew install jq`
-- The **portal** plugin from Spotify's [`portal-ai-plugins`](https://github.com/spotify/portal-ai-plugins) marketplace (not this dotai marketplace), which provides the Portal CLI that shunt delegates through:
+Reads need Bash and [jq](https://jqlang.org), plus the harness's subagent tools
+when available. No Portal CLI, Portal authentication, or AiKA reader mode is
+needed.
+
+### Portal setup for code-writer only
+
+Install Spotify's Portal plugin, then authenticate in a new session:
 
 ```bash
 claude plugin marketplace add spotify/portal-ai-plugins
 claude plugin install portal@portal
 ```
 
-Then, in a new session, set up and authenticate the CLI against your Portal instance:
-
 ```text
 /portal:setup
 ```
 
-Check whether the two AiKA modes (`bulk-reader` and `code-writer`) already exist on your instance — many instances ship them as public modes:
+Check whether the `code-writer` AiKA mode exists:
 
 ```bash
-portal-cli actions aika:list-modes --json --input '{"search": "bulk-reader"}'
+portal-cli actions aika:list-modes --json --input '{"search": "code-writer"}'
 ```
 
-If they exist, no mode creation is needed — just install the plugin and go. If not, or to create your own customized versions (e.g. different model or instructions):
+If needed, create it:
 
 ```bash
-portal-cli actions aika:create-mode --input '{
-  "name": "bulk-reader",
-  "description": "Bulk file reader for code analysis",
-  "instructions": "You are a precise code analyst. Read the provided files and answer the question concisely. Output structured bullets only. No greetings, no prose, no preambles, no summaries. Lead every bullet with the exact name, type, or line number. Use nested bullets for details. Skip anything the caller did not ask for.",
-  "tags": ["coding", "delegation"],
-  "resource_limits": { "temperature": 0.2 }
-}'
-
 portal-cli actions aika:create-mode --input '{
   "name": "code-writer",
   "description": "Boilerplate code generator",
-  "instructions": "You generate code files based on a spec and reference files. Match the existing patterns, conventions, naming, and style exactly. Output only the code — no explanations, no markdown fences unless asked. If the spec is ambiguous, make reasonable choices that match the patterns in the reference code.",
+  "instructions": "Generate code from the spec and reference. Match existing patterns, conventions, naming, and style. Output only code, without explanations or markdown fences.",
   "tags": ["coding", "delegation"],
   "resource_limits": { "temperature": 0.2 }
 }'
 ```
 
-A mode you create is private and owned by you, and name resolution prefers your own modes — so your customized `bulk-reader` automatically shadows the public one, no configuration needed.
+Mode names resolve server-side, preferring your own mode, then your groups',
+then public modes. Pin `SHUNT_CODE_WRITER_MODE_ID` when a name is ambiguous.
 
-## Plugin structure
+## Code generation
 
-```
-shunt/
-├── .claude-plugin/
-│   └── plugin.json          # Plugin manifest (name, description, version)
-├── .codex-plugin/
-│   └── plugin.json          # Codex plugin manifest
-├── hooks.json               # Copilot CLI hook registration
-├── hooks/
-│   ├── claude-hooks.json    # Claude Code hook registration
-│   ├── codex-hooks.json     # Codex hook registration
-│   ├── check-file-size      # Blocks Read on files > 350 lines
-│   └── check-bash-read      # Blocks cat/head/tail on large files
-├── scripts/
-│   ├── lib/
-│   │   └── aika.sh          # Shared aika:invoke-chat plumbing
-│   ├── bulk-read            # Invokes the bulk-reader mode
-│   └── code-write           # Invokes the code-writer mode
-├── skills/
-│   ├── bulk-reader/
-│   │   └── SKILL.md         # When/how to call bulk-read
-│   └── code-writer/
-│       └── SKILL.md         # When/how to call code-write
-└── evals/
-    ├── run.sh                # Runs hook + transport evals (65 tests)
-    ├── hook-evals.json       # Read and view hook test cases (25)
-    ├── bash-hook-evals.json  # Bash hook test cases (23)
-    ├── transport-evals.sh    # scripts/lib/aika.sh against a stubbed CLI (17)
-    ├── evals.json            # End-to-end skill test cases (3)
-    ├── benchmarks.json       # Token savings scenarios (4)
-    └── fixtures/             # Test fixture files
-```
-
-## Scripts
-
-### bulk-read
-
-Delegates file reading to AiKA. Files are wrapped in XML tags (`<file path="...">`) for clear boundaries.
+[code-writer](skills/code-writer/SKILL.md) calls `scripts/code-write`.
+`--reference` is required so generated code matches the project's patterns.
+The script strips markdown fences and optionally writes to `--target`.
+Each Portal invocation is one shot; follow up by referencing its output.
 
 ```bash
-bulk-read --question "What does this service do?" --paths src/Service.java src/Handler.java
-
-# Follow-up: ask again with the same paths
-bulk-read --question "Which methods call the database?" --paths src/Service.java src/Handler.java
+plugins/shunt/scripts/code-write --spec "Write UserService tests" \
+  --reference tests/OrderTest.java --target tests/UserTest.java
 ```
-
-### code-write
-
-Delegates boilerplate generation to AiKA. Strips markdown fences from output. Can write directly to disk via `--target`. `--reference` is required — without a file to match patterns against, the worker would generate context-free code that fits nothing in the project.
-
-```bash
-# Generate and write to file
-code-write --spec "Write tests for UserService" --reference tests/OrderTest.java --target tests/UserTest.java
-
-# Build on what was just generated by referencing it
-code-write --spec "Now add edge case tests" --reference tests/UserTest.java --target tests/UserEdgeCases.java
-
-# Output to stdout
-code-write --spec "Generate a config stub" --reference config/existing.yaml
-```
-
-### One shot per call
-
-`aika:invoke-chat` is ephemeral: nothing is stored server-side, and the action's own follow-up
-mechanism is for the caller to replay prior turns. Replaying a file corpus is the exact cost this
-plugin exists to avoid, so shunt does not do it — every call stands alone. Re-sending files is
-free where it matters, because the corpus goes to the worker model and never enters Claude's
-context.
-
-## Hooks
-
-### check-file-size (Read and view hook)
-
-Fires on Claude Code `Read` and Copilot CLI `view` calls. Blocks full-file reads on files exceeding `MIN_LINES` (default: 350, configurable via `SHUNT_MIN_LINES` env var). Allows through:
-- Targeted reads (offset or limit set)
-- Files under the threshold
-- Nonexistent files (let Read handle the error)
-
-### check-bash-read (Bash hook)
-
-Fires on Claude Code and Codex `Bash` calls and Copilot CLI `bash` calls. Catches `cat`, `head`, `tail`, `less`, `more` on large files. Allows through:
-- Piped commands (`cat file | grep`) — targeted reads
-- Redirections (`cat file > out`) — not reading into context
-- Commands with flags that indicate targeted reads
-- Non-read commands (`git status`, `grep`, etc.)
 
 ## Configuration
 
-All settings are environment variables — add them to the `env` block in `.claude/settings.json`.
-
 | Variable | Default | Purpose |
 |----------|---------|---------|
-| `SHUNT_MIN_LINES` | `350` | Line count above which the Read hook blocks and redirects |
-| `SHUNT_PORTAL_INSTANCE` | CLI default | Portal instance name or URL to invoke against |
-| `PORTAL_CLI_BIN` | `portal-cli`, else `npx` | Override how portal-cli is launched |
-| `SHUNT_MAX_PAYLOAD_BYTES` | `400000` (`120000` on Linux) | Request ceiling, since input travels through argv |
-| `SHUNT_TIMEOUT_SECONDS` | `180` | Timeout for one action invocation |
-| `SHUNT_BULK_READER_MODE_ID` | — | Pin a specific mode id if the name is ambiguous |
-| `SHUNT_CODE_WRITER_MODE_ID` | — | Pin a specific mode id if the name is ambiguous |
+| `SHUNT_MIN_LINES` | `350` | Read threshold and suggested chunk size |
+| `SHUNT_PORTAL_INSTANCE` | CLI default | Code-writer Portal instance |
+| `PORTAL_CLI_BIN` | `portal-cli`, else `npx` | Code-writer CLI override |
+| `SHUNT_MAX_PAYLOAD_BYTES` | `120000` on Linux, `400000` elsewhere | Code-writer request ceiling |
+| `SHUNT_TIMEOUT_SECONDS` | `180` | Code-writer invocation timeout |
+| `SHUNT_CODE_WRITER_MODE_ID` | Unset | Code-writer mode pin |
 
-## What doesn't get delegated
+## Hooks and limitations
 
-The plugin is designed to know when NOT to delegate:
-- **Debugging** — requires Claude's reasoning, not a summary
-- **Editing** — Claude needs exact content in context; use targeted reads (offset/limit)
-- **Small files** — delegation overhead exceeds savings under 350 lines
-- **Architectural decisions** — judgment calls stay on Claude
+`hooks/check-file-size` covers Claude Read and Copilot view.
+`hooks/check-bash-read` covers Claude and Codex Bash and Copilot bash for
+`cat`, `head`, `tail`, `less`, and `more`. Small files, missing files, targeted
+reads, pipes, and redirections pass through without granting permissions.
+These hooks guide cooperative agents; existing offset-only reads,
+`view_range [1, -1]`, and the `head -n 5` parser gap remain unchanged.
+
+Code-writer has no hook enforcement. Debugging, editing, and architectural
+judgment stay with the main agent; the reader supplies evidence as needed.
+Portal payload and invocation timeout limits apply only to code-writer.
+Read delegation saves main-agent context; it still consumes reader tokens.
+The upstream 82–94% AiKA read benchmarks do not measure this subagent path.
 
 ## Evals
 
 ```bash
-# Hook routing + transport plumbing — needs no Portal access
-bash evals/run.sh
-
-# Also re-measure token savings against the real modes — needs portal-cli auth
-bash evals/run.sh --benchmark
+bash plugins/shunt/evals/run.sh
+python3 scripts/generate-plugin-manifests.py --check
 ```
 
-## Benchmarks
+The default suite checks hook routing, six deny-reason scenarios, chunk
+continuation, and code-writer transport against a stub. No Portal access is
+needed. `--benchmark` also runs the retained code-writer estimate and requires
+Portal auth. [evals/evals.json](evals/evals.json) describes live skill checks.
 
-Tested against a 162K-line Java monorepo:
-
-| Scenario | Lines | Without shunt | With shunt | Savings |
-|----------|-------|--------------|------------|---------|
-| Single large file | 4,014 | 33,684 tokens | 5,737 tokens | 82% |
-| Source + test pair | 7,408 | 75,990 tokens | 4,148 tokens | 94% |
-| Multi-file cross-service | 1,281 | 16,221 tokens | 821 tokens | 94% |
-| Code-write | 3,667 | 40,614 tokens + generation | 833 lines to disk | - |
-
-Mean bulk-read savings: **90%**
-
-## Known limitations
-
-- **No enforcement for code-writer** — only bulk-reader has hook enforcement. Code-writer relies on Claude recognizing when to use it via the skill description.
-- **Request size** — `aika:invoke-chat` input is passed on the command line, so a request must fit in `ARG_MAX` (1 MB on macOS, shared with the environment; Linux additionally caps a single argument at 128 KiB). shunt refuses anything over `SHUNT_MAX_PAYLOAD_BYTES` with a clear error rather than failing with `E2BIG`. Split into smaller batches.
-- **Invocation timeout** — shunt caps one action invocation at `SHUNT_TIMEOUT_SECONDS` (default 180). Very large generations can exceed it; raise the timeout or split the spec into smaller calls.
+Bead dotai-4cy's close reason records the live Claude and Copilot checks,
+including subagent hook continuation.
