@@ -49,7 +49,11 @@ if [ "$lines" -le "$MIN_LINES" ]; then
   exit 0
 fi
 
-reason="File is ${lines} lines. Read it in chunks of at most ${MIN_LINES} lines until you have read the full file."
+reason="Delegate via the bulk-reader skill for understanding or questions about this ${lines}-line file, including answers with line citations. Keep the file out of the main agent's context; the reader returns the citations. If you are already the reader subagent, do not delegate again. Use main-agent chunks only for edits, explicit requests for exact content, or when no subagent tool exists. For those cases or subagent reads:"
+if [ "$harness" = claude ] && [ -n "$(echo "$input" | jq -r '.agent_id // empty')" ]; then
+  reason="You are the reader subagent; do not delegate again. File is ${lines} lines."
+fi
+reason="$reason Read it in chunks of at most ${MIN_LINES} lines until you have read the full file."
 case "$harness" in
   claude)
     reason="$reason Use Read with offset and limit (start with offset=1, limit=${MIN_LINES}, then advance offset by ${MIN_LINES})."
@@ -59,9 +63,6 @@ case "$harness" in
     ;;
 esac
 reason="$reason Or use bash: sed -n 'START,ENDp' FILE, with END-START+1 <= ${MIN_LINES}. Use grep for targeted lookups."
-if [ -n "${PORTAL_CLI_BIN:-}" ] || command -v portal-cli >/dev/null 2>&1; then
-  reason="$reason For a delegated summary, you can also use /bulk-reader."
-fi
 if [ "$harness" = copilot ]; then
   jq -cn --arg reason "$reason" \
     '{permissionDecision: "deny", permissionDecisionReason: $reason}'

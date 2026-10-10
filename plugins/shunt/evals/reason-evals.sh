@@ -10,9 +10,6 @@ for tool in cat jq wc tr grep sed; do
 done
 BASH_BIN=$(command -v bash)
 seq 1 480 > "$WORKDIR/full.txt"
-printf '#!/bin/bash\nexit 1\n' > "$WORKDIR/portal-stub"
-chmod +x "$WORKDIR/portal-stub"
-ln -s "$WORKDIR/portal-stub" "$WORKDIR/bin/npx"
 PASSED=0
 FAILED=0
 
@@ -28,55 +25,60 @@ check() {
 }
 
 invoke() {
-  PATH="$WORKDIR/bin" PORTAL_CLI_BIN="$portal_bin" SHUNT_MIN_LINES="$chunk" \
+  PATH="$WORKDIR/bin" SHUNT_MIN_LINES="$chunk" \
     "$BASH_BIN" "$SCRIPT_DIR/../hooks/$hook" --harness "$harness" <<< "$1"
 }
 
-for harness in claude codex copilot; do
-  for hook in check-file-size check-bash-read; do
-    for portal in absent path override override-with-args; do
-      portal_bin=""
-      rm -f "$WORKDIR/bin/portal-cli"
-      case "$portal" in
-        path) ln -s "$WORKDIR/portal-stub" "$WORKDIR/bin/portal-cli" ;;
-        override) portal_bin="$WORKDIR/portal-stub" ;;
-        override-with-args) portal_bin="$WORKDIR/portal-stub --instance test" ;;
-      esac
-      for chunk in 350 200; do
-        args=$(jq -cn --arg file "$WORKDIR/full.txt" \
-          '{file_path: $file, path: $file, command: ("cat " + $file)}')
-        input=$(jq -cn --argjson args "$args" \
-          '{tool_input: $args, toolArgs: $args}')
-        result=$(invoke "$input")
-        reason=$(jq -r '.permissionDecisionReason // .hookSpecificOutput.permissionDecisionReason' <<< "$result")
-        label="$harness/$hook/$portal/$chunk"
-        check "$label/deny" deny "$(jq -r '.permissionDecision // .hookSpecificOutput.permissionDecision' <<< "$result")"
-        check "$label/guidance" true "$(jq -n --arg r "$reason" --arg chunk "$chunk" \
-          '$r | startswith("File is 480 lines.") and contains("chunks of at most " + $chunk + " lines") and contains("full file") and contains("sed -n '\''START,ENDp'\'' FILE") and contains("grep")')"
-        expected=true
-        [ "$portal" = absent ] && expected=false
-        check "$label/delegation" "$expected" "$(jq -n --arg r "$reason" '$r | contains("/bulk-reader")')"
-        if [ "$hook" = check-file-size ] && [ "$harness" != codex ]; then
-          if [ "$harness" = copilot ]; then
-            check "$label/view-params" true "$(jq -n --arg r "$reason" --arg chunk "$chunk" '$r | contains("view_range [start, end]") and contains("[1, " + $chunk + "]") and (contains("offset") | not)')"
-            args=$(jq -c --argjson chunk "$chunk" '. + {view_range: [1, $chunk]}' <<< "$args")
-          else
-            check "$label/read-params" true "$(jq -n --arg r "$reason" --arg chunk "$chunk" '$r | contains("offset=1, limit=" + $chunk)')"
-            args=$(jq -c --argjson chunk "$chunk" '. + {offset: 1, limit: $chunk}' <<< "$args")
-          fi
-          input=$(jq -cn --argjson args "$args" '{tool_input: $args, toolArgs: $args}')
-          check "$label/native-chunk-allowed" "" "$(invoke "$input")"
-        fi
-        command="sed -n '1,${chunk}p' $WORKDIR/full.txt"
-        input=$(jq -cn --arg cmd "$command" '{tool_input: {command: $cmd}, toolArgs: {command: $cmd}}')
-        saved_hook="$hook"
-        hook=check-bash-read
-        check "$label/bash-chunk-allowed" "" "$(invoke "$input")"
-        hook="$saved_hook"
-      done
-    done
-  done
-done
+# Copilot 1.0.95 has no subagent identity in observed preToolUse input. Its shared
+# reason must let a reader continue without another task invocation.
+while read -r harness hook agent_id chunk; do
+  args=$(jq -cn --arg file "$WORKDIR/full.txt" \
+    '{file_path: $file, path: $file, command: ("cat " + $file)}')
+  input=$(jq -cn --argjson args "$args" --arg id "$agent_id" \
+    '{tool_input: $args, toolArgs: $args} +
+     (if $id == "parent" then {} else {agent_id: $id} end)')
+  result=$(invoke "$input")
+  reason=$(jq -r '.permissionDecisionReason // .hookSpecificOutput.permissionDecisionReason' <<< "$result")
+  label="$harness/$hook/$agent_id"
+  check "$label/deny" deny "$(jq -r '.permissionDecision // .hookSpecificOutput.permissionDecision' <<< "$result")"
+  check "$label/chunks" true "$(jq -n --arg r "$reason" --arg chunk "$chunk" \
+    '$r | contains("chunks of at most " + $chunk + " lines") and
+     contains("full file") and contains("sed -n '\''START,ENDp'\'' FILE") and
+     contains("grep") and contains("do not delegate again")')"
+  if [ "$agent_id" = parent ]; then
+    check "$label/delegate-first-without-portal" true "$(jq -n --arg r "$reason" \
+      '$r | startswith("Delegate via the bulk-reader skill") and contains("exact content")')"
+  else
+    check "$label/subagent-no-recursion" false "$(jq -n --arg r "$reason" \
+      '$r | contains("Delegate via")')"
+  fi
+  if [ "$hook" = check-file-size ] && [ "$harness" != codex ]; then
+    if [ "$harness" = copilot ]; then
+      check "$label/view-guidance" true "$(jq -n --arg r "$reason" \
+        '$r | contains("view_range [start, end]")')"
+      args=$(jq -c --argjson chunk "$chunk" '. + {view_range: [1, $chunk]}' <<< "$args")
+    else
+      check "$label/read-guidance" true "$(jq -n --arg r "$reason" --arg chunk "$chunk" \
+        '$r | contains("offset=1, limit=" + $chunk)')"
+      args=$(jq -c --argjson chunk "$chunk" '. + {offset: 1, limit: $chunk}' <<< "$args")
+    fi
+    input=$(jq -cn --argjson args "$args" --arg id "$agent_id" \
+      '{tool_input: $args, toolArgs: $args, agent_id: $id}')
+    check "$label/native-chunk-allowed" "" "$(invoke "$input")"
+  fi
+  hook=check-bash-read
+  input=$(jq -cn --arg cmd "sed -n '1,${chunk}p' $WORKDIR/full.txt" \
+    --arg id "$agent_id" \
+    '{tool_input: {command: $cmd}, toolArgs: {command: $cmd}, agent_id: $id}')
+  check "$label/bash-chunk-allowed" "" "$(invoke "$input")"
+done <<'CASES'
+claude check-file-size parent 350
+claude check-file-size reader 350
+claude check-bash-read reader 200
+copilot check-file-size parent 350
+copilot check-bash-read parent 350
+codex check-bash-read parent 350
+CASES
 
 sed -n '1,350p' "$WORKDIR/full.txt" > "$WORKDIR/chunks.txt"
 sed -n '351,480p' "$WORKDIR/full.txt" >> "$WORKDIR/chunks.txt"

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Shared AiKA plumbing for shunt's delegation scripts.
+# Portal AiKA plumbing for shunt's code-write script.
 #
 # Everything goes through the Portal CLI actions registry (aika:invoke-chat),
 # so the plugin works anywhere Portal does rather than depending on
@@ -10,11 +10,6 @@
 # fails the request on no match or a genuine tie (listing the candidate ids).
 # Pin a specific mode past an ambiguity with SHUNT_<NAME>_MODE_ID.
 #
-# Every delegation is one shot. invoke-chat is ephemeral — nothing is kept
-# server-side — and the only way to carry context across calls would be to
-# replay it from this side, which for a file corpus is the very cost the
-# plugin exists to avoid. Ask again with the files instead.
-
 # invoke-chat input travels through argv. The whole request has to fit in
 # ARG_MAX alongside the environment, and on Linux a single argument is
 # additionally capped at MAX_ARG_STRLEN (128 KiB); macOS has no per-argument
@@ -111,7 +106,7 @@ shunt_invoke() {
   if [ "$bytes" -gt "$SHUNT_MAX_PAYLOAD_BYTES" ]; then
     echo "Error: request is $bytes bytes, over the $SHUNT_MAX_PAYLOAD_BYTES byte limit." >&2
     echo "invoke-chat input is passed on the command line, so it must fit in ARG_MAX." >&2
-    echo "Send fewer or smaller files, or raise SHUNT_MAX_PAYLOAD_BYTES if there is headroom." >&2
+    echo "Send a smaller reference or spec, or raise SHUNT_MAX_PAYLOAD_BYTES if there is headroom." >&2
     return 1
   fi
 

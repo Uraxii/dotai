@@ -1,0 +1,16 @@
+{
+  "claude-reader.jsonl": {
+    "source": ".agent-proof/claude-hook.jsonl",
+    "sha256": "0b804f3fd5ae2725a24b33eb76e3c029e79caef77ce2645bc4a061c2e320827d"
+  },
+  "copilot-reader.jsonl": {
+    "session_id": "306a3114-ba7b-4340-b26d-c8f36f15422b",
+    "source": ".agent-proof/copilot-home/session-state/306a3114-ba7b-4340-b26d-c8f36f15422b/events.jsonl",
+    "sha256": "34a48710549b7a76365dbf9dd0ebd69efb871f811db9f7229e983fa62a62796e"
+  },
+  "copilot-subagent-denial.jsonl": {
+    "session_id": "2ea61fde-f06c-4639-bc8b-38beb2020268",
+    "source": ".agent-proof/copilot-home/session-state/2ea61fde-f06c-4639-bc8b-38beb2020268/events.jsonl",
+    "sha256": "7571b62151472b3df5afea02489be63e13eebc6481ddb5edba7f0bbedecdd2e3"
+  }
+}
