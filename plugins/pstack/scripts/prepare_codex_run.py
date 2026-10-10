@@ -12,7 +12,7 @@ Grant paths are absolute, exist, and hold no spaces. Each becomes an extra
 `--add-dir`. On success the script empties and recreates
 `${XDG_STATE_HOME:-~/.local/state}/pstack/codex-runs/<id>/<role>/`, writes
 `prompt.md` and `run.sh` there, prints the run dir, and exits 0. `run.sh` runs
-`codex exec` and appends `{"pstack":"codex exited","code":N}` to `codex.jsonl`.
+`codex exec` (a writer) or `codex review` (a reviewer, which records its output as the bead comment) and appends `{"pstack":"codex exited","code":N}` to `codex.jsonl`.
 
 Exit 2, with the reason on stderr and in `<run dir>/refused.txt` once a bead id
 parsed, when the run must not start: the prompt does not parse, BEADS_DIR is
@@ -144,7 +144,7 @@ def check_layout(request: Request, layout: GitLayout, grants: tuple[Path, ...]) 
             f"{layout.git_dir} is a main checkout's git dir; run Codex in a linked "
             "worktree",
         )
-    if worktree_config_enabled(request.worktree):
+    if request.role == "writer" and worktree_config_enabled(request.worktree):
         raise Refusal(
             "the repo sets extensions.worktreeConfig=true; a writable per-worktree "
             "config could set core.hooksPath for later git commands",
@@ -203,39 +203,58 @@ def writer_prompt(request: Request) -> str:
 
 
 def reviewer_prompt(request: Request) -> str:
-    bead, sha, tree = request.bead, request.sha, request.worktree
-    return f"""You are the reviewer for bead {bead} at commit {sha}. Your actor is {request.actor}. BEADS_DIR and BEADS_ACTOR are already set. Do not edit any file in {tree}.
+    bead, sha = request.bead, request.sha
+    return f"""You are the reviewer for bead {bead} at commit {sha}. Do not edit any file.
 
-1. Read the scope and the done-when: `bd show {bead}`.
-2. Review the bead's commits with Codex's review mode. `git -C {shlex.quote(str(tree))} rev-parse HEAD` must print {sha}; if not, go to step 6. Run `cd {shlex.quote(str(tree))} && codex review --base <base> "<review instructions>"`, where `<base>` is `{sha}^` unless the bead's notes or close reason name an earlier base, and the review instructions are the done-when from step 1 plus the tiers in step 4. Judge its output against the scope and the done-when. Run read-only checks if they help.
-3. Read the earlier rounds: `bd comments {bead}`. The last failed round is the most recent `verdict fail at <old SHA>` or `tests fail at <old SHA>`; each failing test in a tester failure is one must-fix item. If there is one, check each of its items at {sha}, check that no test the tester committed was weakened or deleted without a reason you accept, and read `git -C {shlex.quote(str(tree))} diff <old SHA>..{sha}` closely, because those commits are the fixes. Step 2 still covers the full diff, because a fix can break code an earlier round passed.
-4. Put each finding in one tier.
+1. Review `git diff <base>..{sha}` against the scope and the done-when of the bead. They are in the bead text appended below this brief. `<base>` is `{sha}^` unless that text names an earlier base for the bead's commits. Run read-only checks if they help.
+2. The appended bead comments hold the earlier rounds. The last failed round is the most recent `verdict fail at <old SHA>` or `tests fail at <old SHA>`; each failing test in a tester failure is one must-fix item. If there is one, check each of its items at {sha}, check that no test the tester committed was weakened or deleted without a reason you accept, and read `git diff <old SHA>..{sha}` closely, because those commits are the fixes. Step 1 still covers the full diff, because a fix can break code an earlier round passed.
+3. Put each finding in one tier.
    - Must-fix: wrong behavior, a missed requirement, or a claim the diff does not back. One must-fix makes the verdict fail.
    - Should-fix-or-explain: a real weakness the writer fixes or answers with a one-line reason. An item from the last round with neither a fix nor a reason, or with a reason you reject, is now a must-fix; say why you reject it.
    - Worth-noting: not blocking.
-5. Record the verdict. Write a file whose first line is `verdict pass at {sha}` or `verdict fail at {sha}`. Then list the findings under the three tiers, and mark each item from the last failed round `fixed`, `answered: <reason>`, or `still open`. Then run `bd comment {bead} --file <file>`.
-6. If you could not review, write `codex could not finish: <what failed>` to a file and run `bd comment {bead} --file <file>`.
+4. Report each Must-fix and each Should-fix-or-explain finding as a native review finding, and begin its body with its tier word and a period, for example `Must-fix. <why>`. Leave Worth-noting items in the summary. Mark each item from the last failed round `fixed`, `answered: <reason>`, or `still open`; a `still open` item is a Must-fix finding. The recorded verdict line is added from your findings: `verdict fail at {sha}` when any finding begins `Must-fix.`, otherwise `verdict pass at {sha}`.
 """
 
 
 def run_script(request: Request, run_dir: Path, beads_dir: Path, grants: tuple[Path, ...]) -> str:
     q = lambda value: shlex.quote(str(value))
-    writer = request.role == "writer"
-    cwd = request.worktree if writer else run_dir / "cwd"
+    env = f"export BEADS_DIR={q(beads_dir)} BEADS_ACTOR={q(request.actor)} BD_ACTOR={q(request.actor)}"
+    done = lambda code: f"""printf '{{"pstack":"{EXIT_MARKER}","code":%d}}\\n' {code} >> {q(run_dir / "codex.jsonl")}"""
+    if request.role == "reviewer":
+        bead, tree, review = request.bead, request.worktree, run_dir / "review.md"
+        stderr, context = q(run_dir / "codex.stderr"), q(run_dir / "context.md")
+        return f"""#!/usr/bin/env bash
+cd {q(tree)}
+{env}
+review() {{
+  [ "$(git rev-parse --verify -q {q(request.sha)}^{{commit}})" = "$(git rev-parse HEAD)" ] || return 1
+  {{ cat {q(run_dir / "prompt.md")} && bd show {q(bead)} && bd comments {q(bead)}; }} > {context} 2> {stderr} || return 1
+  codex review -c model={q(model_for("reviewer"))} -c sandbox_mode=read-only - < {context} > {q(run_dir / "native.md")} 2>> {stderr} || return $?
+  [ -s {q(run_dir / "native.md")} ] || return 1
+  verdict=pass
+  grep -qE '^[[:space:]]*Must-fix[.]' {q(run_dir / "native.md")} && verdict=fail
+  {{ echo "verdict $verdict at {request.sha}"; echo; cat {q(run_dir / "native.md")}; }} > {q(review)}
+}}
+review
+code=$?
+[ $code -eq 0 ] || {{ echo "codex could not finish: HEAD is not {request.sha}, the bead text did not load, or codex review failed"; tail -n 20 {stderr}; }} > {q(review)}
+bd comment {q(bead)} --file {q(review)} || code=1
+{done("$code")}
+"""
     flags = [
         "-m", model_for(request.role), "-s", "workspace-write",
         "-c", "agents.enabled=false",
-        *(["-c", "sandbox_workspace_write.network_access=true"] if writer else ["--skip-git-repo-check"]),
-        "-C", cwd,
+        "-c", "sandbox_workspace_write.network_access=true",
+        "-C", request.worktree,
     ]
     for grant in grants:
         flags += ["--add-dir", grant]
     command = " ".join(q(f) for f in flags)
     return f"""#!/usr/bin/env bash
-cd {q(cwd)}
-export BEADS_DIR={q(beads_dir)} BEADS_ACTOR={q(request.actor)} BD_ACTOR={q(request.actor)}
+cd {q(request.worktree)}
+{env}
 codex exec {command} --json -o {q(run_dir / "last-message.md")} - < {q(run_dir / "prompt.md")} > {q(run_dir / "codex.jsonl")} 2> {q(run_dir / "codex.stderr")}
-printf '{{"pstack":"{EXIT_MARKER}","code":%d}}\\n' $? >> {q(run_dir / "codex.jsonl")}
+{done("$?")}
 """
 
 

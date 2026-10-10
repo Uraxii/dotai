@@ -33,6 +33,17 @@ sys.exit(int(os.environ.get("STUB_EXIT", "0")))
 """
 
 
+BD_STUB = """#!/usr/bin/env python3
+import os, sys
+args = sys.argv[1:]
+if args[:1] == ["comment"]:
+    open(os.environ["STUB_COMMENT"], "w").write(open(args[args.index("--file") + 1]).read())
+elif args[:1] == ["show"]:
+    print("DONE-WHEN-TEXT")
+    sys.exit(int(os.environ.get("STUB_SHOW_EXIT", "0")))
+"""
+
+
 def git(*args: str, cwd: Path) -> str:
     return subprocess.run(
         ["git", "-c", "user.name=t", "-c", "user.email=t@example.com", *args],
@@ -53,14 +64,17 @@ class Env:
         bin_dir.mkdir()
         (bin_dir / "codex").write_text(STUB)
         (bin_dir / "codex").chmod(0o755)
+        (bin_dir / "bd").write_text(BD_STUB)
+        (bin_dir / "bd").chmod(0o755)
         git("init", "-q", "-b", "develop", str(self.main), cwd=root)
         git("commit", "-q", "--allow-empty", "-m", "root", cwd=self.main)
         git("worktree", "add", "-q", "-b", "task", str(self.worktree), cwd=self.main)
         self.environ = {
             **os.environ, "PATH": f"{bin_dir}:{os.environ['PATH']}",
             "BEADS_DIR": str(self.beads_dir), "XDG_STATE_HOME": str(self.state),
-            "STUB_RECORD": str(self.record),
+            "STUB_RECORD": str(self.record), "STUB_COMMENT": str(root / "comment.txt"),
         }
+        self.comment = root / "comment.txt"
 
     def prepare(self, prompt: str, **overrides: str | None) -> subprocess.CompletedProcess:
         environ = {**self.environ, **overrides}
@@ -70,6 +84,10 @@ class Env:
 
     def run_dir(self, bead: str, role: str) -> Path:
         return self.state / "pstack/codex-runs" / bead / role
+
+    @property
+    def head(self) -> str:
+        return git("rev-parse", "HEAD", cwd=self.worktree)
 
     def writer_prompt(self, suffix: str = "") -> str:
         return f"Claim bead t-1 as developer-t-1. Work in {self.worktree}.{suffix}"
@@ -135,25 +153,79 @@ def test_extra_grants_become_add_dirs(env: Env, tmp_path: Path) -> None:
     assert "git push origin HEAD" in (run_dir / "prompt.md").read_text()
 
 
-def test_reviewer_has_no_git_grants_and_no_network(env: Env) -> None:
-    result = env.prepare(f"Review bead t-1 at {SHA} in {env.worktree}.")
+def test_reviewer_runs_codex_review_and_records_its_output_as_the_comment(env: Env) -> None:
+    result = env.prepare(f"Review bead t-1 at {env.head} in {env.worktree}.")
     assert result.returncode == 0, result.stderr
     run_dir = Path(result.stdout.strip())
+    assert run_dir == env.run_dir("t-1", "reviewer")
+    codex_prints(env, "no findings")
+
     seen = env.run(run_dir)
 
-    assert run_dir == env.run_dir("t-1", "reviewer")
-    assert add_dirs(seen["argv"]) == [str(env.beads_dir.parent)]
-    assert "sandbox_workspace_write.network_access=true" not in seen["argv"]
-    assert "--skip-git-repo-check" in seen["argv"]
-    assert Path(seen["cwd"]) == run_dir / "cwd"
+    assert seen["argv"][0] == "review" and "exec" not in seen["argv"]
+    assert "sandbox_mode=read-only" in seen["argv"] and "--add-dir" not in seen["argv"]
+    assert seen["cwd"] == str(env.worktree)
     assert seen["env"]["BEADS_ACTOR"] == "reviewer-t-1"
+    assert env.comment.read_text() == f"verdict pass at {env.head}\n\nno findings\n"
+    assert seen["stdin"].startswith((run_dir / "prompt.md").read_text())
+    assert "DONE-WHEN-TEXT" in seen["stdin"]
     prompt = (run_dir / "prompt.md").read_text()
-    assert f"verdict pass at {SHA}" in prompt and "bd comment t-1 --file" in prompt
-    assert "bd comments t-1" in prompt and f"diff <old SHA>..{SHA}" in prompt
+    assert f"verdict pass at {env.head}" in prompt and f"verdict fail at {env.head}" in prompt
+    assert f"git diff <base>..{env.head}" in prompt and f"`{env.head}^`" in prompt
+    assert f"git diff <old SHA>..{env.head}" in prompt
     assert all(tier in prompt for tier in ("Must-fix", "Should-fix-or-explain", "Worth-noting"))
     assert "tests fail at <old SHA>" in prompt
-    assert "codex review --base" in prompt and f"{SHA}^" in prompt
     assert "--grep" not in prompt
+
+
+def codex_prints(env: Env, text: str) -> None:
+    (env.root / "bin/codex").write_text(STUB.replace("sys.exit(", f"print({text!r}); sys.exit("))
+
+
+def test_reviewer_verdict_fails_on_a_must_fix_finding(env: Env) -> None:
+    run_dir = Path(env.prepare(f"Review bead t-1 at {env.head} in {env.worktree}.").stdout.strip())
+    codex_prints(env, "  [P1] title\n  Must-fix. broken")
+
+    env.run(run_dir)
+
+    assert env.comment.read_text().startswith(f"verdict fail at {env.head}\n")
+
+
+def test_reviewer_accepts_an_abbreviated_sha(env: Env) -> None:
+    run_dir = Path(env.prepare(f"Review bead t-1 at {env.head[:8]} in {env.worktree}.").stdout.strip())
+    codex_prints(env, "ok")
+
+    env.run(run_dir)
+
+    assert env.comment.read_text().startswith(f"verdict pass at {env.head[:8]}\n")
+
+
+def test_reviewer_does_not_review_without_the_bead_text(env: Env) -> None:
+    run_dir = Path(env.prepare(f"Review bead t-1 at {env.head} in {env.worktree}.").stdout.strip())
+
+    subprocess.run(["bash", str(run_dir / "run.sh")], env={**env.environ, "STUB_SHOW_EXIT": "1"}, check=True)
+
+    assert env.comment.read_text().startswith("codex could not finish")
+    assert not env.record.exists()
+
+
+def test_reviewer_records_a_could_not_finish_comment_when_codex_fails(env: Env) -> None:
+    run_dir = Path(env.prepare(f"Review bead t-1 at {env.head} in {env.worktree}.").stdout.strip())
+
+    env.run(run_dir, exit_code=3)
+
+    assert env.comment.read_text().startswith("codex could not finish")
+    last = (run_dir / "codex.jsonl").read_text().splitlines()[-1]
+    assert json.loads(last) == {"pstack": "codex exited", "code": 3}
+
+
+def test_reviewer_refuses_to_review_a_head_other_than_the_named_sha(env: Env) -> None:
+    run_dir = Path(env.prepare(f"Review bead t-1 at {SHA} in {env.worktree}.").stdout.strip())
+
+    subprocess.run(["bash", str(run_dir / "run.sh")], env=env.environ, check=True)
+
+    assert env.comment.read_text().startswith("codex could not finish")
+    assert not env.record.exists()
 
 
 def test_reviewer_accepts_a_main_checkout_and_extra_grant(env: Env, tmp_path: Path) -> None:
@@ -161,8 +233,6 @@ def test_reviewer_accepts_a_main_checkout_and_extra_grant(env: Env, tmp_path: Pa
     extra.mkdir()
     result = env.prepare(f"Review bead t-1 at {SHA} in {env.main}. Grant: {extra}")
     assert result.returncode == 0, result.stderr
-    assert add_dirs(env.run(Path(result.stdout.strip()))["argv"]) == [
-        str(env.beads_dir.parent), str(extra)]
 
 
 def test_writer_prompt_orders_claim_heartbeat_commit_close(env: Env) -> None:
@@ -243,6 +313,12 @@ def test_per_worktree_config_layout_is_refused(env: Env) -> None:
 
     assert result.returncode == 2
     assert "worktreeConfig" in result.stderr
+
+
+def test_reviewer_runs_despite_per_worktree_config(env: Env) -> None:
+    git("config", "extensions.worktreeConfig", "true", cwd=env.main)
+
+    assert env.prepare(f"Review bead t-1 at {env.head} in {env.worktree}.").returncode == 0
 
 
 @pytest.mark.parametrize("grant", [".git", ".git/hooks", ".git/config"])
@@ -333,13 +409,13 @@ def test_watcher_commands_launch_detached_and_wait_for_the_exit(
 ) -> None:
     env = Env(tmp_path)
     prompt = (env.writer_prompt() if agent.stem == "developer-codex"
-              else f"Review bead t-1 at {SHA} in {env.worktree}.")
+              else f"Review bead t-1 at {env.head} in {env.worktree}.")
     run_dir = Path(env.prepare(prompt).stdout.strip())
     [launch] = [c for c in fenced_commands(agent) if "run.sh" in c and "setsid" in c]
     [wait] = [c for c in fenced_commands(agent) if "codex exited" in c]
     environ = {**env.environ, "STUB_EXIT": str(exit_code)}
     (env.root / "bin" / "codex").write_text(
-        STUB.replace("sys.exit(", "import time; time.sleep(1.5); sys.exit("))
+        STUB.replace("sys.exit(", "import time; print(\"out\"); time.sleep(1.5); sys.exit("))
 
     subprocess.run(["bash", "-c", launch.replace("<run dir>", shlex.quote(str(run_dir)))],
                    env=environ, check=True, timeout=10)

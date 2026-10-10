@@ -12,6 +12,7 @@ from appending trust entries to ~/.codex/config.toml.
 from __future__ import annotations
 
 import json
+import re
 import os
 import shutil
 import subprocess
@@ -108,11 +109,10 @@ def test_writer_claims_commits_and_closes(fixture: Fixture) -> None:
     bead = fixture.bead_json()
     assert bead["status"] == "closed", fixture.log
     subject = run("git", "log", "-1", "--format=%s", cwd=fixture.worktree)
-    assert subject.endswith(f"({fixture.bead})")
+    assert re.fullmatch(r"[a-z]+(\([^)]+\))?: .+", subject), subject
+    assert fixture.bead not in subject
     sha = run("git", "rev-parse", "HEAD", cwd=fixture.worktree)
     assert sha[:7] in bead["close_reason"]
-    trailer = run("git", "log", "-1", "--format=%(trailers:key=Executed-By,valueonly)", cwd=fixture.worktree)
-    assert trailer == f"developer-{fixture.bead}"
     assert run("git", "show", "HEAD:probe.txt", cwd=fixture.worktree) == "change"
     assert run("git", "status", "--porcelain", cwd=fixture.worktree) == ""
 
@@ -137,7 +137,7 @@ def test_reviewer_records_a_verdict_and_edits_nothing(fixture: Fixture) -> None:
     worktree_file.write_text("change\n")
     run("git", "add", "probe.txt", cwd=fixture.worktree)
     run("git", "-c", "user.name=t", "-c", "user.email=t@example.com", "commit", "-q",
-        "-m", f"append change ({fixture.bead})", cwd=fixture.worktree)
+        "-m", "feat: append change", cwd=fixture.worktree)
     sha = run("git", "rev-parse", "HEAD", cwd=fixture.worktree)
 
     fixture.launch(f"Review bead {fixture.bead} at {sha} in {fixture.worktree}.")

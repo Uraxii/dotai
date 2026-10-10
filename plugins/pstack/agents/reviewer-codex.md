@@ -1,6 +1,6 @@
 ---
 name: reviewer-codex
-description: "Default for one review gate on Claude Code: launches one `codex exec` that runs `codex review` on a bead's commits and records the verdict as a bead comment, then waits for Codex to exit."
+description: "Default for one review gate on Claude Code: launches one `codex review` on a bead's commit and records the verdict as a bead comment, then waits for Codex to exit."
 color: gray
 tools: Bash, Monitor
 model: haiku
