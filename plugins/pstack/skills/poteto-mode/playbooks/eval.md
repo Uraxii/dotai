@@ -22,6 +22,6 @@
 6. **Verify the chain from transcripts, not self-report.** Read each candidate's local transcript under Claude Code's per-project transcripts directory at `~/.claude/projects/<encoded-cwd>/` (one `*.jsonl` per session for this workspace). Do not glob across `~/.claude/projects/`; that crosses workspace boundaries and reads private chats from unrelated projects. Look at which files each candidate actually opened. Grade chain-following from the files it really read plus the shape of the code, never from the candidate's own claims.
 7. **Read every candidate output yourself** end to end. Compare to the judge's verdict. Disagreement means a model is biased or the rubric is ambiguous. Synthesize.
 
-Candidate output is an experiment, not production code, so it gets no skeptic review. To promote a variant, change the skill or the code through its own playbook. Code goes through the skeptic review there.
+Candidate output is an experiment, not production code, so it gets no skeptic review, per poteto-mode's [Skeptic review](../SKILL.md#skeptic-review). To promote a variant, change the skill or the code through its own playbook. Code goes through the skeptic review there.
 
 **Reply:** variant under test, rubric, per-candidate notes, judge's verdict, your synthesis, and a recommendation for whether to promote the variant.

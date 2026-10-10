@@ -27,7 +27,7 @@ To add, remove, or rename a part, or to change its trigger or description, also 
 
 **When a change goes here.** Add a principle when the change is "how to judge X well". A principle is not correct for "when to do X" (a playbook step) or for "who does X" (a role).
 
-Example: `principle-skeptically-review` tells how to examine a design or a diff, how to sort the findings, and when to fail the review. It does not say when the review runs.
+Example: `principle-skeptically-review` tells how to examine a design or a diff, which objections count, and when to fail the review. It does not say when the review runs.
 
 ## Playbooks
 
@@ -98,6 +98,7 @@ Run `scripts/check` from the repository root before you commit. It checks these 
 - The generated plugin manifests agree with `scripts/generate-plugin-manifests.py`.
 - No committed file has a machine-specific home path.
 - Each markdown link in a skill resolves, each skill named in bold or backticks exists in the same plugin, and each `SKILL.md` frontmatter names its own directory and has a description.
-- The bun tests and the pytest tests pass.
+- The pytest tests pass.
+- The bun tests pass, when bun is installed. Without bun, the stage is skipped locally. CI installs bun and always runs it.
 
 It does not check that the inventory agrees with the directories. [CONTRIBUTING.md](CONTRIBUTING.md) tells you to keep them in agreement.

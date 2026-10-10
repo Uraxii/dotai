@@ -152,7 +152,7 @@ You own every subagent's work. Review the diff and write your own summary, don't
 
 ## Skeptic review
 
-A skeptic review is necessary after `architect` makes a sketch and after new code is written, in every playbook that writes or lands code. It is the gate to the next step. Implementation starts only after the sketch passes. New code goes to the tester, to verification, to a PR, to merge-ready, and to landing only after it passes. A fix for a review objection, a tester failure, a verifier finding, a review-bot comment, or a failed check is new code too. No reason skips the review. A small diff, a cheap unit, time pressure, a passing suite, a verifier or swarm verdict, and your own review of the diff do not replace it.
+A skeptic review is necessary after `architect` makes a sketch and after new code is written, in every playbook that writes or lands code. It is the gate to the next step. Implementation starts only after the sketch passes. New code goes to the tester, to verification, to a PR, to merge-ready, and to landing only after it passes. A fix for a review objection, a tester failure, a verifier finding, a review-bot comment, or a failed check is new code too. No reason skips the review, except the two exemptions at the end of this section. A small diff, a cheap unit, time pressure, a passing suite, a verifier or swarm verdict, and your own review of the diff do not replace it.
 
 The agent that runs the playbook runs the gate. When a playbook gives a unit to an owner or a worker that holds the full lifecycle, that owner runs the gate for its unit.
 
@@ -164,7 +164,7 @@ The agent that runs the playbook runs the gate. When a playbook gives a unit to 
 
 After the skeptic review of new code passes, spawn `pstack:tester` with pointers to the diff and its done-when. Send a tester failure back to the author. The fix is new code, so it gets the skeptic review again before it goes back to the tester.
 
-The Prototype playbook has no skeptic review, because its code is throwaway. Prototype code that goes into production code gets the review at that point, as new code.
+Two playbooks are exempt, because their code is throwaway and is not production code. The Prototype playbook has no skeptic review. Prototype code that goes into production code gets the review at that point, as new code. The Eval playbook has no skeptic review of candidate output. A promoted variant goes through its own playbook, and code gets the review there.
 
 ## Writing the reply
 
