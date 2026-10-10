@@ -79,7 +79,7 @@ A bead that changes no code or tests, such as a docs-only or skill-prose bead, s
 
 The last failed round is the most recent `verdict fail at <SHA>` or `tests fail at <SHA>` comment. A tester failure counts as one must-fix item for each failing test.
 
-When a gate fails, send the bead back to the writer. Append `<gate> fail at <SHA>, see comments` to the notes, reopen the bead if it is closed (per Reopen a closed bead), and spawn the writer with its same prompt. The writer follows Fix a failed round. Then the reviewer runs at the new head, and after its pass the tester runs again. A gate fails at most 3 rounds on one bead. After a third fail from the same gate, stop and report the open findings to the user.
+When a gate fails, send the bead back to the writer. Append `<gate> fail at <SHA>, see comments` to the notes, reopen the bead if it is closed (per Reopen a closed bead), and spawn the writer with its same prompt. The writer follows Fix a failed round. Then the reviewer runs at the new head, and after its pass the tester runs again. On a sketch fail, the sketch's author revises the sketch and commits it, and the reviewer runs again at the new head. A gate fails at most 3 rounds on one bead. A sketch review and the code review after it count their fails apart, and the code review's rounds, including its last failed round, start after the sketch pass. After a third fail from the same gate, stop and report the open findings to the user.
 
 The coordinator does not review the diff again. It checks these facts instead:
 
