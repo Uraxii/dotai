@@ -171,7 +171,8 @@ def test_writer_prompt_orders_claim_heartbeat_commit_close(env: Env) -> None:
         "bd update t-1 --claim", "bd comments t-1", "bd heartbeat t-1", "git commit -m",
         "bd close t-1 --reason-file")]
     assert positions == sorted(positions)
-    assert 'Executed-By: ${BD_ACTOR:?}' in prompt
+    assert "Executed-By" not in prompt
+    assert '<type>(<scope>): <description>' in prompt
     assert "stage=built" not in prompt
     assert "skills/write-tests/SKILL.md" in prompt
 
