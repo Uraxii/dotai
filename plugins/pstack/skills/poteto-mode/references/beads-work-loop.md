@@ -39,10 +39,10 @@ bd records claims and history under `BEADS_ACTOR`. The beads `prepare-commit-msg
 1. Claim the bead (`bd update <id> --claim`). If another actor holds it, the claim exits 1 and changes nothing. Stop and report the holder.
 2. Read the scope (`bd show <id>`), including its NOTES section. A reopened bead holds the reason for the reopen there. If the comments end in a failed round, follow Fix a failed round.
 3. A claim carries a lease that expires 5 minutes after the claim or the last heartbeat. During long work, send a heartbeat (`bd heartbeat <id>`) more often than that. A heartbeat writes no Dolt commit.
-4. End each commit subject with `(<id>)` and put the why in the commit body. `git log --grep '(<id>)'` lists the bead's commits. Commit with this form, which fails when `BD_ACTOR` is unset, and put no trailer in the `-m` text:
+4. Put the why in the commit body. Commit with this form, which fails when `BD_ACTOR` is unset, and put no trailer in the `-m` text:
 
    ```sh
-   git commit -m "<subject> (<id>)" -m "<why>" --trailer "Co-Authored-By: <attribution>" --trailer "Executed-By: ${BD_ACTOR:?}"
+   git commit -m "<subject>" -m "<why>" --trailer "Co-Authored-By: <attribution>" --trailer "Executed-By: ${BD_ACTOR:?}"
    ```
 
    `git interpret-trailers --parse` on the resulting message lists both trailers.
