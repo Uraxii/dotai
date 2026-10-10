@@ -1,6 +1,6 @@
 {
   "name": "pstack",
-  "version": "2.0.9",
+  "version": "2.0.10",
   "description": "Skills and thin named agents: poteto-mode, principles, playbooks, tools. Requires the beads CLI (bd 1.3.1) and the beads plugin.",
   "author": {
     "name": "Uraxii",
