@@ -509,7 +509,7 @@ class CodexWatcherGuardTests(unittest.TestCase):
         self.assertIn("codex watcher guard", fake_stderr.getvalue())
 
     def test_manifest_wires_guard_without_removing_session_start(self) -> None:
-        config = json.loads((REPOSITORY_ROOT / "hooks" / "hooks.json").read_text())
+        config = json.loads((REPOSITORY_ROOT / "hooks" / "claude-hooks.json").read_text())
         hooks = config["hooks"]
 
         self.assertIn("SessionStart", hooks)
