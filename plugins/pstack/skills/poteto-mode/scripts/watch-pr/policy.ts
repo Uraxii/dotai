@@ -1,6 +1,4 @@
-import { sameLandingRevision } from "./landing.ts";
 import { WatcherQueryError, resolveChecks } from "./github.ts";
-import { DeadlineExceeded, WatchDeadline } from "./deadline.ts";
 import type * as T from "./types.ts";
 import { nonEmpty } from "./types.ts";
 export function assessGitHubMerge(args: {
@@ -30,20 +28,17 @@ export function assessGitHubMerge(args: {
 }
 async function mergeAssessment(
   reader: T.GitHubReader,
-  facts: T.PullRequestFacts,
+  facts: T.PullRequestFacts
 ) {
   const commits = await reader.commitRollups(facts.context);
-  const head = commits.find((commit) => commit.oid === facts.headRefOid);
-  if (head === undefined)
-    throw new WatcherQueryError({
-      kind: "snapshot-changed",
-      retryable: true,
-      detail: `commit response does not contain expected head ${facts.headRefOid}`,
-    });
-  const headRollupState = head.state;
+  const headRollupState =
+    facts.headRefOid === null
+      ? null
+      : (commits.find((commit) => commit.oid === facts.headRefOid)?.state ??
+        null);
   return {
     hadPreviousPassingCi: commits.some(
-      (commit) => commit.oid !== facts.headRefOid && commit.state === "SUCCESS",
+      (commit) => commit.oid !== facts.headRefOid && commit.state === "SUCCESS"
     ),
     github: assessGitHubMerge({
       mergeStateStatus: facts.mergeStateStatus,
@@ -68,26 +63,17 @@ export async function readSnapshot(args: {
     return { kind: "merged", context: args.context, facts };
   if (facts.state === "CLOSED")
     return { kind: "closed", context: args.context, facts };
-  const { headRefOid, baseRefOid } = facts;
-  if (!headRefOid || !baseRefOid)
-    throw new WatcherQueryError({
-      kind: "snapshot-changed",
-      retryable: true,
-      detail: "open PR has no head or base commit",
-    });
-  const [threads, checks] = await Promise.all([
-    args.reader.reviewThreads(args.context),
-    resolveChecks(args.reader, args.context),
-  ]);
+  const threads = await args.reader.reviewThreads(args.context);
+  const checks = await resolveChecks(args.reader, args.context);
   const failed = nonEmpty(
     checks.checks.filter(
-      (check): check is T.FailedCheck => check.kind === "failed",
-    ),
+      (check): check is T.FailedCheck => check.kind === "failed"
+    )
   );
   const pending = nonEmpty(
     checks.checks.filter(
-      (check): check is T.PendingCheck => check.kind === "pending",
-    ),
+      (check): check is T.PendingCheck => check.kind === "pending"
+    )
   );
   let ci: T.CiState;
   if (failed === null && pending !== null && args.pendingHistory === "omit")
@@ -133,25 +119,18 @@ export async function readSnapshot(args: {
         github: merge.github,
       };
   }
-  const revision = await args.reader.revision(args.context);
-  if (!sameLandingRevision({ ...facts, headRefOid, baseRefOid }, revision))
-    throw new WatcherQueryError({
-      kind: "snapshot-changed",
-      retryable: true,
-      detail: `PR head or destination changed while collecting ${headRefOid} against ${facts.baseRefName}`,
-    });
   return {
     kind: "open",
     context: args.context,
-    facts: { ...facts, headRefOid, baseRefOid },
+    facts,
     threads,
     ci,
     reviewAutomationRunning: checks.checks.some(
       (check) =>
         check.kind === "pending" &&
         AUTOMATION_TOKENS.some((token) =>
-          check.name.toLowerCase().includes(token),
-        ),
+          check.name.toLowerCase().includes(token)
+        )
     ),
   };
 }
@@ -176,7 +155,7 @@ const ciBlocker = (row: T.PrSnapshot): T.MergeBlocker | null =>
     : null;
 function gateReason(
   row: T.PrSnapshot,
-  allowDraft: boolean,
+  allowDraft: boolean
 ): T.MergeGateReason | null {
   if (row.kind === "merged") return null;
   if (row.kind === "closed") return "closed-without-merge";
@@ -187,7 +166,7 @@ function gateReason(
 }
 function gateBlocker(
   row: T.PrSnapshot,
-  allowDraft: boolean,
+  allowDraft: boolean
 ): T.MergeBlocker | null {
   const reason = gateReason(row, allowDraft);
   return reason === null ||
@@ -199,7 +178,7 @@ function gateBlocker(
 }
 function readyContribution(
   row: T.PrSnapshot,
-  allowDraft: boolean,
+  allowDraft: boolean
 ): T.ReadyPr | T.MergedPr | null {
   if (row.kind === "merged")
     return {
@@ -221,12 +200,6 @@ function readyContribution(
     kind: "ready-pr",
     context: row.context,
     proof: {
-      revision: {
-        context: row.context,
-        headRefOid: row.facts.headRefOid,
-        baseRefName: row.facts.baseRefName,
-        baseRefOid: row.facts.baseRefOid,
-      },
       mergeability: "clear",
       threads: [],
       ci: row.ci,
@@ -240,7 +213,7 @@ function readyContribution(
 }
 export function classifyPr(
   row: T.PrSnapshot,
-  allowDraft = false,
+  allowDraft = false
 ): T.PrDecision {
   for (const blocker of [
     conflictBlocker(row),
@@ -259,7 +232,7 @@ export function classifyPr(
 }
 export function selectTierMajorStackDecision(
   rows: T.NonEmpty<T.PrSnapshot>,
-  allowDraft = false,
+  allowDraft = false
 ): T.StackDecision {
   for (const tier of [conflictBlocker, threadBlocker, ciBlocker])
     for (const row of rows) {
@@ -280,7 +253,7 @@ export function selectTierMajorStackDecision(
   const prs = nonEmpty(
     rows
       .map((row) => readyContribution(row, allowDraft))
-      .filter((row): row is T.ReadyPr | T.MergedPr => row !== null),
+      .filter((row): row is T.ReadyPr | T.MergedPr => row !== null)
   );
   if (prs === null || prs.length !== rows.length)
     throw new Error("stack has no classified decision");
@@ -288,7 +261,7 @@ export function selectTierMajorStackDecision(
 }
 export const queryBackoffSeconds = (
   interval: number,
-  failures: number,
+  failures: number
 ): number => Math.min(Math.max(interval, 60) * 2 ** (failures - 1), 300);
 interface Envelope<M extends T.WatchMode> {
   readonly schemaVersion: 1;
@@ -304,22 +277,22 @@ export interface VerdictStamp<M extends T.WatchMode = T.WatchMode> {
   <const P extends VerdictPayload>(payload: P): Envelope<M> & P;
   <const P extends VerdictPayload, M2 extends T.WatchMode>(
     payload: P,
-    mode: M2,
+    mode: M2
   ): Envelope<M2> & P;
 }
 export function verdictFactory<M extends T.WatchMode>(
   clock: WatchClock,
-  mode: M,
+  mode: M
 ): VerdictStamp<M> {
   let sequence = 0;
   function stamp<const P extends VerdictPayload>(payload: P): Envelope<M> & P;
   function stamp<const P extends VerdictPayload, M2 extends T.WatchMode>(
     payload: P,
-    mode: M2,
+    mode: M2
   ): Envelope<M2> & P;
   function stamp<const P extends VerdictPayload>(
     payload: P,
-    override?: T.WatchMode,
+    override?: T.WatchMode
   ): Envelope<T.WatchMode> & P {
     return {
       schemaVersion: 1,
@@ -333,7 +306,7 @@ export function verdictFactory<M extends T.WatchMode>(
 }
 function blockerVerdict(
   stamp: VerdictStamp,
-  blocker: T.MergeBlocker,
+  blocker: T.MergeBlocker
 ): T.BlockerVerdict {
   switch (blocker.kind) {
     case "merge-conflicts":
@@ -353,7 +326,7 @@ function blockerVerdict(
 export function statusQueryVerdict(
   stamp: VerdictStamp,
   failures: number,
-  failure: T.QueryFailure,
+  failure: T.QueryFailure
 ): T.BlockerVerdict {
   return stamp({
     kind: "BLOCKER",
@@ -368,26 +341,15 @@ export interface WatchClock {
   sleep(seconds: number): Promise<void>;
 }
 export interface RunDependencies {
-  readonly deadline?: WatchDeadline;
   readonly reader: T.GitHubReader;
   readonly clock: WatchClock;
   readonly emit: (verdict: T.ProgressVerdict) => void;
 }
-export function deadlineVerdict(stamp: VerdictStamp): T.TimeoutVerdict {
-  return stamp({
-    kind: "TIMEOUT",
-    terminal: true,
-    exitCode: 5,
-    reason: {
-      kind: "status-unavailable",
-      failure: {
-        kind: "deadline",
-        retryable: false,
-        detail: "deadline reached before a complete observation",
-      },
-    },
-  });
-}
+const deadlinePassed = (
+  started: number,
+  options: T.PollingOptions,
+  now: number
+): boolean => options.timeout > 0 && now - started >= options.timeout;
 type StepResult<V> =
   | { readonly kind: "terminal"; readonly verdict: V }
   | {
@@ -403,36 +365,20 @@ async function pollUntilTerminal<V>(args: {
   readonly step: () => Promise<StepResult<V>>;
 }): Promise<V | T.BlockerVerdict | T.TimeoutVerdict> {
   let failures = 0;
-  const deadline =
-    args.dependencies.deadline ??
-    new WatchDeadline(args.options.timeout, () =>
-      args.dependencies.clock.now(),
-    );
-  let onDeadline: () => V | T.TimeoutVerdict = () =>
-    deadlineVerdict(args.stamp);
+  const started = args.dependencies.clock.now();
   while (true) {
-    if (deadline.remaining() === 0) return onDeadline();
     let result: StepResult<V>;
     try {
       result = await args.step();
       failures = 0;
     } catch (error) {
-      if (error instanceof DeadlineExceeded) return onDeadline();
       if (!(error instanceof WatcherQueryError)) throw error;
-      onDeadline = () =>
-        args.stamp({
-          kind: "TIMEOUT",
-          terminal: true,
-          exitCode: 5,
-          reason: { kind: "status-unavailable", failure: error.failure },
-        });
-      if (deadline.remaining() === 0) return onDeadline();
       failures += 1;
       if (!error.failure.retryable || failures >= args.options.maxQueryErrors)
         return statusQueryVerdict(args.stamp, failures, error.failure);
-      const retryInSeconds = Math.min(
-        deadline.remaining(),
-        queryBackoffSeconds(args.options.interval, failures),
+      const retryInSeconds = queryBackoffSeconds(
+        args.options.interval,
+        failures
       );
       args.dependencies.emit(
         args.stamp({
@@ -441,18 +387,26 @@ async function pollUntilTerminal<V>(args: {
           failure: error.failure,
           consecutiveFailures: failures,
           retryInSeconds,
-        }),
+        })
       );
+      if (deadlinePassed(started, args.options, args.dependencies.clock.now()))
+        return args.stamp({
+          kind: "TIMEOUT",
+          terminal: true,
+          exitCode: 5,
+          reason: { kind: "status-unavailable", failure: error.failure },
+        });
       await args.dependencies.clock.sleep(retryInSeconds);
       continue;
     }
-    if (deadline.remaining() === 0) return onDeadline();
     if (result.kind === "terminal") return result.verdict;
     if (result.kind === "sleep") {
-      onDeadline = result.onDeadline ?? (() => deadlineVerdict(args.stamp));
-      await args.dependencies.clock.sleep(
-        Math.min(result.seconds, deadline.remaining()),
-      );
+      if (
+        result.onDeadline !== undefined &&
+        deadlinePassed(started, args.options, args.dependencies.clock.now())
+      )
+        return result.onDeadline();
+      await args.dependencies.clock.sleep(result.seconds);
     }
   }
 }
@@ -473,7 +427,7 @@ export async function runSimple(args: {
           context,
           pendingHistory: "include",
           allowDraft: args.options.allowDraft,
-        }),
+        })
       );
     const complete = nonEmpty(rows);
     if (complete === null) throw new Error("watch context cannot be empty");
@@ -494,8 +448,8 @@ export async function runSimple(args: {
       args.dependencies.emit(
         stamp(
           { kind: "STATUS", terminal: false, reason: "poll", rows: complete },
-          args.mode,
-        ),
+          args.mode
+        )
       );
     const decision =
       args.mode === "single"
@@ -516,7 +470,7 @@ export async function runSimple(args: {
             exitCode: 0,
             scope: { kind: "single", pr: decision.pr },
           },
-          args.mode,
+          args.mode
         ),
       };
     if (decision.kind === "clear")
@@ -529,7 +483,7 @@ export async function runSimple(args: {
             exitCode: 0,
             scope: { kind: "stack", prs: decision.prs },
           },
-          args.mode,
+          args.mode
         ),
       };
     args.dependencies.emit(
@@ -538,7 +492,7 @@ export async function runSimple(args: {
         terminal: false,
         frontier: decision.frontier,
         reason: { kind: "pending-checks", pending: decision.pending },
-      }),
+      })
     );
     return {
       kind: "sleep",
@@ -572,10 +526,11 @@ export interface QueueState {
   readonly nextSweepAt: number;
   readonly frontier: T.PrContext | null;
   readonly lastWaitKey: string | null;
+  readonly startedAt: number;
 }
 export const createQueueState = (
   queue: T.NonEmpty<T.PrContext>,
-  now: number,
+  now: number
 ): QueueState => ({
   queue,
   snapshots: new Map(),
@@ -583,6 +538,7 @@ export const createQueueState = (
   nextSweepAt: now,
   frontier: null,
   lastWaitKey: null,
+  startedAt: now,
 });
 const orderedRows = (state: QueueState): T.PrSnapshot[] =>
   state.queue.flatMap((context) => {
@@ -596,8 +552,8 @@ export function planQueue(state: QueueState, now: number): QueueState {
   if (state.snapshots.size === 0 || now >= state.nextSweepAt) {
     const remaining = nonEmpty(
       state.queue.filter(
-        (context) => state.snapshots.get(context.number)?.kind !== "merged",
-      ),
+        (context) => state.snapshots.get(context.number)?.kind !== "merged"
+      )
     );
     if (remaining !== null)
       return { ...state, work: { kind: "whole-stack-sweep", remaining } };
@@ -615,7 +571,7 @@ export function applyQueueSnapshot(
   state: QueueState,
   snapshot: T.PrSnapshot,
   now: number,
-  options: T.PollingOptions,
+  options: T.PollingOptions
 ): QueueSnapshotResult {
   if (state.work === null) throw new Error("queue has no read in flight");
   const snapshots = new Map(state.snapshots);
@@ -636,7 +592,7 @@ export function applyQueueSnapshot(
     state.queue.flatMap((context) => {
       const row = snapshots.get(context.number);
       return row === undefined ? [] : [row];
-    }),
+    })
   );
   if (rows === null || rows.length !== state.queue.length)
     throw new Error("sweep completed without every snapshot");
@@ -664,6 +620,12 @@ export type QueueEvaluation =
       readonly remaining: number;
     }
   | {
+      readonly kind: "timeout";
+      readonly state: QueueState;
+      readonly frontier: T.PrContext;
+      readonly unmergedCount: number;
+    }
+  | {
       readonly kind: "waiting";
       readonly state: QueueState;
       readonly frontier: T.PrContext;
@@ -677,7 +639,8 @@ export type QueueEvaluation =
     };
 export function evaluateQueue(
   state: QueueState,
-  options: T.PollingOptions,
+  now: number,
+  options: T.PollingOptions
 ): QueueEvaluation {
   const active = activeRows(state);
   if (active.length === 0) {
@@ -691,8 +654,8 @@ export function evaluateQueue(
                 mergedAt: row.facts.mergedAt,
               },
             ]
-          : [],
-      ),
+          : []
+      )
     );
     if (merged === null) throw new Error("empty queue cannot complete");
     return { kind: "complete", state, merged };
@@ -710,6 +673,13 @@ export function evaluateQueue(
       merged: state.frontier,
       frontier,
       remaining: active.length,
+    };
+  if (deadlinePassed(state.startedAt, options, now))
+    return {
+      kind: "timeout",
+      state: { ...state, frontier },
+      frontier,
+      unmergedCount: active.length,
     };
   const row = rows[0];
   const pending =
@@ -738,12 +708,16 @@ export async function runQueued(args: {
   let state = createQueueState(args.contexts, args.dependencies.clock.now());
   const stamp = verdictFactory(args.dependencies.clock, "queued-stack");
   args.dependencies.emit(
-    stamp({ kind: "QUEUE", terminal: false, queue: args.contexts }),
+    stamp({ kind: "QUEUE", terminal: false, queue: args.contexts })
   );
   const step = async (): Promise<StepResult<T.QueueTerminalVerdict>> => {
     state = planQueue(state, args.dependencies.clock.now());
     if (state.work === null) {
-      const complete = evaluateQueue(state, args.options);
+      const complete = evaluateQueue(
+        state,
+        args.dependencies.clock.now(),
+        args.options
+      );
       if (complete.kind !== "complete")
         throw new Error("queue has no work while active");
       return {
@@ -771,7 +745,7 @@ export async function runQueued(args: {
       state,
       snapshot,
       args.dependencies.clock.now(),
-      args.options,
+      args.options
     );
     state = applied.state;
     if (applied.completedSweepRows !== null)
@@ -781,10 +755,14 @@ export async function runQueued(args: {
           terminal: false,
           reason: "whole-stack-sweep",
           rows: applied.completedSweepRows,
-        }),
+        })
       );
     if (state.work !== null) return { kind: "continue" };
-    const evaluation = evaluateQueue(state, args.options);
+    const evaluation = evaluateQueue(
+      state,
+      args.dependencies.clock.now(),
+      args.options
+    );
     state = evaluation.state;
     switch (evaluation.kind) {
       case "complete":
@@ -811,9 +789,23 @@ export async function runQueued(args: {
             merged: evaluation.merged,
             frontier: evaluation.frontier,
             remaining: evaluation.remaining,
-          }),
+          })
         );
         return { kind: "continue" };
+      case "timeout":
+        return {
+          kind: "terminal",
+          verdict: stamp({
+            kind: "TIMEOUT",
+            terminal: true,
+            exitCode: 5,
+            reason: {
+              kind: "queued-stack",
+              frontier: evaluation.frontier,
+              unmergedCount: evaluation.unmergedCount,
+            },
+          }),
+        };
       case "waiting":
         if (evaluation.emit)
           args.dependencies.emit(
@@ -822,23 +814,9 @@ export async function runQueued(args: {
               terminal: false,
               frontier: evaluation.frontier,
               reason: evaluation.reason,
-            }),
+            })
           );
-        return {
-          kind: "sleep",
-          seconds: args.options.interval,
-          onDeadline: () =>
-            stamp({
-              kind: "TIMEOUT",
-              terminal: true,
-              exitCode: 5,
-              reason: {
-                kind: "queued-stack",
-                frontier: evaluation.frontier,
-                unmergedCount: activeRows(state).length,
-              },
-            }),
-        };
+        return { kind: "sleep", seconds: args.options.interval };
       default: {
         const exhaustive: never = evaluation;
         return exhaustive;

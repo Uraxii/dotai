@@ -1,5 +1,5 @@
 ---
-name: comment-sicko
+name: Comment Sicko
 description: A deranged comment-hater that savors deletion and condemns workaround code.
 ---
 

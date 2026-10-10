@@ -1,11 +1,10 @@
 ---
 name: interrogate
 description: "Use for \"interrogate\", \"adversarial review\", \"multi-model review\", \"challenge this\", \"stress test this code\", \"find blind spots\", or \"tear this apart\". Multiple LLM reviewers challenge changes from independent angles."
+disable-model-invocation: true
 ---
 
 # Interrogate
-
-On Codex, read the [platform mapping](../poteto-mode/references/codex-tools.md), including its per-skill notes, before following this skill.
 
 Spawn one reviewer per configured model to adversarially review code changes. Each model gets the same prompt and rubric. The adversarial signal comes from model diversity, not assigned personas.
 
@@ -34,14 +33,19 @@ Write one clear paragraph. If you're unsure about the intent, ask the user befor
 
 ## Step 3, Spawn Reviewers
 
-Launch all reviewers in a single message using the `Agent` tool. Take the `interrogate reviewers` list from your harness's override sheet (see `setup-pstack`) when it has a row, otherwise from that role's entry for your harness in `plugins/pstack/models.json` (see [Models](#models)). Spawn one reviewer per entry, in order, labelling them Reviewer A, B, C, D as far as the list runs: the list length sets the reviewer count. The panel is only as adversarial as it is model-diverse, so keep the entries from different model families where the harness offers them.
+Launch all reviewers in a single message using the Task tool. Use the `interrogate reviewers` line in `~/.cursor/rules/pstack-models.mdc`, one reviewer per entry, extending or shrinking the Reviewer A/B labels below to the configured entry count. If the rule or that line is missing, use the table defaults.
+
+| Subagent | Default model |
+|----------|---------------|
+| Reviewer A | `claude-opus-5-5-xhigh` |
+| Reviewer B | `grok-4.7-xhigh-fast` |
 
 For each reviewer:
-- `subagent_type`: `general-purpose`
-- `model`: this reviewer's entry from that list
+- `subagent_type`: `generalPurpose`
+- `model`: the configured `interrogate reviewers` entry, or the table default with no configured line. For an `auto` or `inherit-parent` entry, omit `model` so that reviewer runs on the parent model.
 - `readonly`: `true`
 
-If a model slug is rejected as unresolvable when you try to spawn the subagent, check the valid slugs in the Agent tool's error message, pick the closest equivalent (prefer the highest-reasoning tier of the same family), spawn with the valid slug, and open a separate PR to update the configured value or default table. Do not block the review on the slug issue. If the configured value is `inherit-parent` or `auto`, omit `model` instead; never treat those aliases as broken slugs or enter this fallback for them.
+If the Task tool rejects a configured entry, run that reviewer on the table default of its family and say so. Families go by prefix: `claude-*` and `grok-*`. With no family match, use Reviewer A's default. If it rejects a table default, check the valid slugs in the Task tool's error message, pick the closest equivalent (prefer the same family and reasoning tier), spawn with it, and open a separate PR to update the default table. Do not block the review on the slug issue. Never treat an alias entry as a rejected slug or apply either fallback to it.
 
 Read `references/reviewer-prompt.md` and fill in the template with:
 1. The stated intent
@@ -103,18 +107,3 @@ Present the verdict in this structure:
 
 ### Agreement Map
 [Where did models agree, where did they diverge, and what does the pattern of agreement/disagreement tell us?]
-
-## Models
-
-Role picks live in the plugin's `models.json`, two directories up from this
-skill's own directory (`plugins/pstack/models.json` in the repo). Resolve it
-from that directory, not from your working directory. See the Models section
-of `poteto-mode` for how each harness learns that path. The file is keyed by
-role and then by harness (`claude`, `codex`, `copilot`), each value an
-ordered preference list. A spawner reads the entry for its own harness and
-pins the first name in it. A row for the same role in your own harness's
-override sheet (`~/.claude/pstack-models.md` on Claude Code,
-`~/.codex/pstack-models.md` on Codex) wins over it; the sheet's path is its
-harness key, so it can only override that harness. See `setup-pstack` to
-write one. A role with no override row and no entry for your harness spawns
-unpinned: the `Agent` call omits `model` and the child inherits yours.
