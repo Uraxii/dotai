@@ -23,7 +23,7 @@ Remaining triggers:
 - Any code → name the data shape first, and choose its organizing structure per **principle-model-the-domain**. Code written, changed, or reviewed also loads **principle-code-quality**. Code written or changed also loads the **write-tests** skill.
 - Any name chosen for a file, directory, document, or identifier, and any new file about to be written → **principle-naming**.
 - Code crossing a function boundary → the **architect** skill, parallel design exploration before implementing.
-- A sketch from `architect`, or new code written → the skeptic review, per [Skeptic review](#skeptic-review), before the next step.
+- A sketch from `architect`, or new code written → the skeptic review and then the tester, per [Skeptic review](#skeptic-review), before the next step.
 - Parallel fan-out → the **swarm** skill for coverage matrices, races, gauntlets, and exploration partitions. Use **arena** for design or code bakeoffs with base selection and grafting.
 - Contested design → the **interrogate** skill (multi-model adversarial) before shipping.
 - Nontrivial multi-step → write the throughput checkpoint (Feature step 3).
@@ -110,14 +110,17 @@ You own every subagent's work. Review the diff and write your own summary, don't
 
 ## Skeptic review
 
-A skeptic review is necessary after `architect` makes a sketch and after new code is written. It is the gate to the next step: implementation starts only after the sketch passes, and the code goes to verification and **Opening a PR** only after it passes. No reason skips it. A small diff, time pressure, a passing suite, and your own review of the diff do not replace it.
+A skeptic review is necessary after `architect` makes a sketch and after new code is written, in every playbook that writes or lands code. It is the gate to the next step. Implementation starts only after the sketch passes. New code goes to the tester, to verification, to a PR, to merge-ready, and to landing only after it passes. A fix for a review objection, a tester failure, a verifier finding, a review-bot comment, or a failed check is new code too. No reason skips the review. A small diff, a cheap unit, time pressure, a passing suite, a verifier or swarm verdict, and your own review of the diff do not replace it.
 
-The agent that picked the playbook runs the gate:
+The agent that runs the playbook runs the gate. When a playbook gives a unit to an owner or a worker that holds the full lifecycle, that owner runs the gate for its unit.
 
-1. Spawn `pstack:skeptic-reviewer` with pointers to the sketch or the diff and to its done-when. On Claude Code, `pstack:skeptic-reviewer-codex` can run the same review through Codex, per `playbooks/delegate-to-codex.md`. The reviewer is never the author of the work.
+1. Spawn the reviewer with pointers to the sketch or the diff and to its done-when. On Claude Code, the default reviewer is `pstack:skeptic-reviewer-codex`, per `playbooks/delegate-to-codex.md`. `pstack:skeptic-reviewer` is the fallback when Codex cannot run, and the reviewer on other harnesses. The reviewer is never the author of the work.
 2. Read the verdict. A pass moves the work to the next step. Keep the conditions of the pass in your todolist.
 3. Send a fail back to the author with each objection: with `SendMessage` to a live author, or else to a fresh author with the same scope and the objections. The author fixes the work, or goes back to the design when the verdict says that the approach is unsound.
-4. Send the new version to the same reviewer when it is live, or else to a fresh one with the last verdict. Repeat until the verdict is pass.
+4. Send the new version to the same reviewer when it is live, or else to a fresh one with the last verdict.
+5. After the third fail of the same review, stop. Report the open objections to the user and wait for a decision.
+
+After the skeptic review of new code passes, spawn `pstack:tester` with pointers to the diff and its done-when. Send a tester failure back to the author. The fix is new code, so it gets the skeptic review again before it goes back to the tester.
 
 The Prototype playbook has no skeptic review, because its code is throwaway. Prototype code that goes into production code gets the review at that point, as new code.
 

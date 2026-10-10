@@ -25,6 +25,7 @@ Present the framing and tradeoffs before committing to a long run. Reversible wo
 
 Decompose into atomic, independently-landable units. Sequence riskiest-unknown-first. Scaffold and verification come before features (the **principle-foundational-thinking** principle skill).
 
+- Every phase that writes code includes the skeptic review and the tester, per the Skeptic review section of the **poteto-mode** skill. No bespoke playbook removes them.
 - Build the verification harness before the work, with the baseline captured from the pre-change state, so the check reads as "old value vs new value".
 - For one-way-door design decisions, run the **architect** skill (it runs **arena**). Skip it for mechanical work whose shape is already concrete. A second arena over a settled design is over-engineering (the **principle-laziness-protocol** principle skill).
 - Decide what fans out. Parallelize only across seams, and give each worker its own worktree or branch (the **principle-separate-before-serializing-shared-state** principle skill). Don't over-fan.

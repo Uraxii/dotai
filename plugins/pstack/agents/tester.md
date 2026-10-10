@@ -1,6 +1,6 @@
 ---
 name: tester
-description: "Spawn after implementation or on a regression hunt to design, write, and run tests that try to break the change; changes no production code."
+description: "Spawn after the skeptic review of new code passes, or on a regression hunt, to design, write, and run tests that try to break the change; changes no production code."
 color: yellow
 skills:
   - pstack:poteto-mode

@@ -1,6 +1,6 @@
 ---
 name: skeptic-reviewer-codex
-description: "Default for one skeptic review gate on Claude Code: the skeptic-reviewer role run through Codex. Starts a read-only Codex run, replies with five lines pointing at the repo it read."
+description: "Default reviewer for one skeptic review gate on Claude Code, with `skeptic-reviewer` as the fallback: the skeptic-reviewer role run through Codex. Starts a read-only Codex run, replies with five lines pointing at the repo it read."
 color: gray
 tools: Bash, Write
 ---

@@ -1,6 +1,6 @@
 ---
 name: orchestrator
-description: "Spawn for work with more than one kind or unit; it delegates, reviews, and opens the PR, never writing the implementation itself."
+description: "Spawn for work with more than one kind or unit; it delegates, runs the skeptic review and tester gates, and opens the PR, never writing the implementation itself."
 color: purple
 skills:
   - pstack:poteto-mode

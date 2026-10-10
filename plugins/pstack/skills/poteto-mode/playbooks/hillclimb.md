@@ -11,7 +11,7 @@ Core discipline: one change, one measurement, keep or revert. Never stack untest
 5. Loop, one hypothesis per iteration:
    - Hand the change to a subagent using your configured hillclimb model (default in poteto-mode's Models section) with a tight scope; supervise it rather than typing the change (the **principle-guard-the-context-window** principle skill). When several independent hypotheses are live, fan them to parallel subagents, each in its own worktree (the **principle-separate-before-serializing-shared-state** principle skill).
    - Measure before and after with the frozen harness, and run the regression gate.
-   - Run the skeptic review on the diff (poteto-mode's [Skeptic review](../SKILL.md#skeptic-review)).
+   - Run the skeptic review on the diff and the tester after it passes (poteto-mode's [Skeptic review](../SKILL.md#skeptic-review)).
    - Accept only when the metric moves past noise, the gate stays green, and the skeptic review passes. Otherwise revert the change in full; a tweak that "might help" is not kept.
    - One commit per accepted fix, staging only the files you changed (`git add <files>`, never `-A`). Log the row either way, kept or reverted.
    Each iteration ends in a check before the next begins (the **principle-sequence-verifiable-units** principle skill). If the run is unattended, borrow only the wake mechanism from the Autonomous run playbook (`playbooks/autonomous-run.md`), not its stop rule.

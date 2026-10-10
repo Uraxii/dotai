@@ -40,6 +40,7 @@ Tests alone are not sufficient verification. A PR is verified only when its unit
   - [ ] `skills/swarm/SKILL.md`
   - [ ] `<driver skill path>`
   - [ ] `skills/poteto-mode/playbooks/opening-a-pr.md`
+  - [ ] `skills/poteto-mode/SKILL.md`, the Skeptic review section
   - [ ] `skills/<each other leaf skill the program uses>/SKILL.md`
 - [ ] Arm the 30-minute audit tick as a real `/loop` in dynamic mode, which schedules its own wake-up rather than blocking on a sleep. Never leave the cadence to memory.
 - [ ] Use this tick prompt, verbatim. "Re-read the execution playbook from the installed plugin and the standing objective. Audit the operation against both and fix drift in this tick. Probe every active lane and judge progress by side effects only. Stand down a stuck lane and dispatch its replacement now. Then send the operator a status message, whether or not anything changed, with the queue table of PR, owner, state, and head SHA, the verdicts since the last tick, what merged, open operator gates, and blockers."
@@ -58,6 +59,7 @@ Tests alone are not sufficient verification. A PR is verified only when its unit
 
 - [ ] Resolve the forge once. Default to `gh`; if `command -v origin` succeeds and Origin can resolve the repository, use `origin pr` for every PR operation. Record any fallback to `gh`. Never require `gt`.
 - [ ] Open the PR ready, never draft, with `origin pr create --status open --base <base-branch>` or `gh pr create --base <base-branch>` according to the resolved forge. A stack child targets its parent branch.
+- [ ] Run the skeptic review and then the tester on the PR's new code per the Skeptic review section of `skills/poteto-mode/SKILL.md`, before the PR opens. Each fix-forward gets the review again.
 - [ ] Run the repo's lint and typecheck once before the PR-facing push. Push with hooks on.
 - [ ] Run `/deslop` before each commit and `/no-comments` before review.
 - [ ] Triage every review-bot and security-reviewer comment per `../references/bugbot-triage.md`.
@@ -66,7 +68,7 @@ Tests alone are not sufficient verification. A PR is verified only when its unit
 ### Verdict and merge, for every PR
 
 - [ ] At the merge-ready head SHA, run the swarm per `skills/swarm/SKILL.md`. One gates lane. The ten live lanes from the PR's **Verify, live** block. The perf lane from its **Verify, perf** block. One audit lane that reads the diff and the receipts and distrusts the PR body.
-- [ ] Clean only when every lane is `PASS`. Findings go back to the owner. A new head gets a fresh swarm and a fresh verdict.
+- [ ] Clean only when every lane is `PASS` and the skeptic review of the head passed. Findings go back to the owner. A new head gets a fresh swarm and a fresh verdict.
 - [ ] <The merge or append rule from the execution playbook, with the patch-id rule from `playbooks/shipping.md`.>
 
 ### Boot recipe, for every live lane

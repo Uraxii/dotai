@@ -87,11 +87,16 @@ tiering.
 
 ## Skeptic review gate
 
-This tree diverges from upstream here. `poteto-mode`, `architect`, and the
-Feature, Bug fix, Perf issue, Refactoring, Hillclimb, Delegate to Codex,
-Opening a PR, and Prototype playbooks require a skeptic review after a sketch
-and after new code. The `reviewer` role is `skeptic-reviewer`. Re-syncing one
-of these files from upstream removes the gate.
+This tree diverges from upstream here. `poteto-mode` requires a skeptic
+review after each `architect` sketch and after all new code, then the
+`tester` role. `architect`, `figure-it-out`, and every playbook that writes or
+lands code cite that rule: Feature, Bug fix, Perf issue, Refactoring,
+Hillclimb, Autonomous run, Autopilot-full, Autopilot-stack, Orchestrate,
+Babysit, Visual parity, Multi-phase plan, Authoring a skill, Session pickup,
+Shipping, Delegate to Codex, and Opening a PR. Prototype and Eval state why
+their throwaway code has no review. The `reviewer` role is
+`skeptic-reviewer`, and `poteto-mode` lists every skill and role. Re-syncing
+one of these files from upstream removes the gate.
 
 ## Local to this plugin
 
