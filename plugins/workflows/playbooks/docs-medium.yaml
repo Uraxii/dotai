@@ -1,4 +1,5 @@
 kind: playbook
+schema_version: 1
 name: docs-medium
 summary: A docs change at 5 points, like write a how-to guide or runbook for one service.
 when: {task: docs, points: [5]}

@@ -1,4 +1,5 @@
 kind: playbook
+schema_version: 1
 name: spike-large
 summary: A spike at 8 points, like picking a queue system or checking if offline mode is feasible.
 when: {task: spike, points: [8]}

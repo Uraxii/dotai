@@ -1,4 +1,5 @@
 kind: playbook
+schema_version: 1
 name: bug-large
 summary: A bug at 8 points, like data corrupted on sync or random logouts.
 when: {task: bug, points: [8]}

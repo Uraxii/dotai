@@ -1,4 +1,5 @@
 kind: playbook
+schema_version: 1
 name: spike-medium
 summary: A spike at 5 points, like evaluate auth providers or profile a slow page.
 when: {task: spike, points: [5]}

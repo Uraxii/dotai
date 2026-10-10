@@ -1,4 +1,5 @@
 kind: playbook
+schema_version: 1
 name: ui-large
 summary: A UI change at 8 points, like design system components or full accessibility pass.
 when: {task: ui, points: [8]}

@@ -1,4 +1,5 @@
 kind: playbook
+schema_version: 1
 name: performance-small
 summary: A performance fix at 3 points, like fix an N+1 query or lazy-load big images.
 when: {task: performance, points: [3]}

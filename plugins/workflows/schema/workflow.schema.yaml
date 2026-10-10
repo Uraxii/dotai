@@ -4,9 +4,10 @@ title: Workflow
 description: One small reusable unit of work with an optional loop. Playbooks chain workflows.
 type: object
 additionalProperties: false
-required: [kind, name, phase, summary, roles, steps]
+required: [kind, schema_version, name, phase, summary, roles, steps]
 properties:
   kind: {const: workflow}
+  schema_version: {const: 1, description: Version of this schema the document follows. Bump it on a breaking schema change.}
   name: {$ref: "#/$defs/name"}
   phase:
     enum: [understand, prove, shape, make, check, finish, deliver, coordinate]

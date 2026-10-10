@@ -1,4 +1,5 @@
 kind: playbook
+schema_version: 1
 name: security-medium
 summary: A security fix at 5 points, like add CSRF protection or audit log for admins.
 when: {task: security, points: [5]}

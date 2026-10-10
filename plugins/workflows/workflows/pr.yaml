@@ -1,4 +1,5 @@
 kind: workflow
+schema_version: 1
 name: pr
 phase: deliver
 summary: Shape small ordered commits and open the pull request.

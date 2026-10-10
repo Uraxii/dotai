@@ -1,4 +1,5 @@
 kind: playbook
+schema_version: 1
 name: security-large
 summary: A security fix at 8 points, like add 2FA or encrypt data at rest.
 when: {task: security, points: [8]}

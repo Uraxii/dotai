@@ -1,4 +1,5 @@
 kind: workflow
+schema_version: 1
 name: state
 phase: coordinate
 summary: Save the work state so another session can pick it up.

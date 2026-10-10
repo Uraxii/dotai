@@ -1,4 +1,5 @@
 kind: playbook
+schema_version: 1
 name: refactor-large
 summary: A refactor at 8 points, like new data layer for a feature or make a module async.
 when: {task: refactor, points: [8]}

@@ -1,4 +1,5 @@
 kind: playbook
+schema_version: 1
 name: infra-tiny
 summary: An infra change at 1 or 2 points, like bump a dependency or add an env variable.
 when: {task: infra, points: [1, 2]}

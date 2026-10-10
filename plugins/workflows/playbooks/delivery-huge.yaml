@@ -1,4 +1,5 @@
 kind: playbook
+schema_version: 1
 name: delivery-huge
 summary: Open the PR, drive it to mergeable, then land it after an independent verdict.
 when: {task: delivery, points: [13]}

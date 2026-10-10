@@ -4,9 +4,10 @@ title: Playbook
 description: An ordered chain of workflows for one task type at a set of complexity points.
 type: object
 additionalProperties: false
-required: [kind, name, summary, when, chain]
+required: [kind, schema_version, name, summary, when, chain]
 properties:
   kind: {const: playbook}
+  schema_version: {const: 1, description: Version of this schema the document follows. Bump it on a breaking schema change.}
   name: {$ref: "#/$defs/name"}
   summary: {type: string, minLength: 1}
   when:

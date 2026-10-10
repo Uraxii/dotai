@@ -1,4 +1,5 @@
 kind: workflow
+schema_version: 1
 name: test
 phase: check
 summary: Run the suite against the change.

@@ -1,4 +1,5 @@
 kind: workflow
+schema_version: 1
 name: research
 phase: understand
 summary: Read the code and sources until the unknowns are answered, and write the findings down.

@@ -1,4 +1,5 @@
 kind: playbook
+schema_version: 1
 name: performance-large
 summary: Push one metric to a target by measured hypotheses, one accepted change at a time.
 when: {task: performance, points: [8]}

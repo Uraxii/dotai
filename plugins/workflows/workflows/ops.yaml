@@ -1,4 +1,5 @@
 kind: workflow
+schema_version: 1
 name: ops
 phase: make
 summary: Change the infrastructure with a dry run before the apply.

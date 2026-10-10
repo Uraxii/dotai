@@ -1,4 +1,5 @@
 kind: workflow
+schema_version: 1
 name: ship
 phase: deliver
 summary: Land verified PRs from the bottom of the stack up.

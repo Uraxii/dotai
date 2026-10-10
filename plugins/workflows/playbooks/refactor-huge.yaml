@@ -1,4 +1,5 @@
 kind: playbook
+schema_version: 1
 name: refactor-huge
 summary: A refactor at 13 points, like framework major upgrade or split a monolith module.
 when: {task: refactor, points: [13]}

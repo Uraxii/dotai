@@ -1,4 +1,5 @@
 kind: playbook
+schema_version: 1
 name: docs-large
 summary: A docs change at 8 points, like developer onboarding docs or user migration guide.
 when: {task: docs, points: [8]}

@@ -1,4 +1,5 @@
 kind: playbook
+schema_version: 1
 name: feature-large
 summary: A feature at 8 points, like OAuth sign-in or role-based permissions.
 when: {task: feature, points: [8]}

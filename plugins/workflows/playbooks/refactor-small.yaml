@@ -1,4 +1,5 @@
 kind: playbook
+schema_version: 1
 name: refactor-small
 summary: A refactor that moves in small steps under a pinned behavior.
 when: {task: refactor, points: [3]}

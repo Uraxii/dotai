@@ -1,4 +1,5 @@
 kind: workflow
+schema_version: 1
 name: review
 phase: check
 summary: Check code quality and the evidence behind the claim in one pass.

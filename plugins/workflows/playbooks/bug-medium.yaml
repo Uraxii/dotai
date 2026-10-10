@@ -1,4 +1,5 @@
 kind: playbook
+schema_version: 1
 name: bug-medium
 summary: A bug with a known surface and an unknown cause.
 when: {task: bug, points: [5]}

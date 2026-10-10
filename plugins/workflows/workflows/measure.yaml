@@ -1,4 +1,5 @@
 kind: workflow
+schema_version: 1
 name: measure
 phase: understand
 summary: Capture a trace or baseline number and compare it with the last one.

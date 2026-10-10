@@ -1,4 +1,5 @@
 kind: playbook
+schema_version: 1
 name: ui-huge
 summary: A UI change at 13 points, like app-wide dark mode or new navigation model.
 when: {task: ui, points: [13]}

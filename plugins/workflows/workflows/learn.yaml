@@ -1,4 +1,5 @@
 kind: workflow
+schema_version: 1
 name: learn
 phase: finish
 summary: Keep the lasting facts from a run for the next one.

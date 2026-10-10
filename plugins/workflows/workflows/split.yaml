@@ -1,4 +1,5 @@
 kind: workflow
+schema_version: 1
 name: split
 phase: coordinate
 summary: Split a goal that is too big into parts, each one a new ask.

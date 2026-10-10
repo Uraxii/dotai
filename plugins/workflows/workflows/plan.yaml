@@ -1,4 +1,5 @@
 kind: workflow
+schema_version: 1
 name: plan
 phase: shape
 summary: Break the task into ordered steps with acceptance criteria.
