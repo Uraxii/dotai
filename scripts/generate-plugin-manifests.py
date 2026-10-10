@@ -226,16 +226,15 @@ PLUGINS: list[dict[str, object]] = [
     },
     {
         "name": "codebase-memory",
-        "version": "1.2.2",
+        "version": "1.2.3",
         "hooks": ["claude", "codex"],
         "description": (
-            "Index the session's own checkout at session start and each new linked worktree after git worktree add, then query its code graph from a shell."
+            "Index the session's own checkout at session start, then query its code graph from a shell."
         ),
-        "short": "Shell queries over codebase-memory, indexed per checkout and new worktree.",
+        "short": "Shell queries over codebase-memory, indexed per session checkout.",
         "long": (
             "Starts a detached fast index for the session's own checkout "
-            "at Claude Code and Codex session start, and for any new linked "
-            "worktree created via Bash 'git worktree add'. Runs codebase-memory-mcp "
+            "at Claude Code and Codex session start. Runs codebase-memory-mcp "
             "cli against that indexed repository with no MCP server involved, "
             "so a shell script or an agent without the MCP tools can still "
             "ask structural questions: who calls a "

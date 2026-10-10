@@ -147,7 +147,7 @@ class AutoIndexTests(unittest.TestCase):
             self.assertEqual(["spawned", "spawned"], marker.read_text().splitlines())
 
 
-class WorktreeEventTests(unittest.TestCase):
+class WorktreeTests(unittest.TestCase):
     def setUp(self) -> None:
         self.directory = Path(self.enterContext(tempfile.TemporaryDirectory()))
         self.root = self.directory / "main-checkout"
@@ -210,66 +210,19 @@ class WorktreeEventTests(unittest.TestCase):
         )
         self.assertEqual(self.marker.read_text().splitlines(), ["spawned"])
 
-    def post_tool_event(self, command: str) -> dict:
-        return {
-            "hook_event_name": "PostToolUse",
-            "tool_name": "Bash",
-            "cwd": str(self.root),
-            "tool_input": {"command": command},
-        }
-
-    def test_worktree_add_indexes_new_worktree_without_waiting(self) -> None:
-        self.invoke_event(self.post_tool_event(
-            f'git worktree add -b agent "{self.worktree}"'
-        ))
-        self.assert_worktree_indexed()
-
-    def test_unrelated_bash_command_starts_nothing(self) -> None:
-        self.invoke_event(self.post_tool_event("git status --short"))
-        self.assertFalse(self.marker.exists())
-        self.assertEqual(list(self.cache.glob("*.index.lock")), [])
-
-    def test_existing_worktree_database_starts_nothing(self) -> None:
-        (self.cache / f"{HOOK.project_name(self.worktree.resolve())}.db").touch()
-        self.invoke_event(self.post_tool_event("git worktree add agent"))
-        self.assertFalse(self.marker.exists())
-        self.assertEqual(list(self.cache.glob("*.index.lock")), [])
-
     def test_session_start_inside_worktree_indexes_worktree(self) -> None:
         nested = self.worktree / "src"
         nested.mkdir()
         self.invoke_event({"hook_event_name": "SessionStart", "cwd": str(nested)})
         self.assert_worktree_indexed()
 
-    def test_invalid_tool_input_starts_nothing(self) -> None:
-        event = self.post_tool_event("git worktree add agent")
-        event["tool_input"] = None
-        self.invoke_event(event)
-        self.assertFalse(self.marker.exists())
-
-    def test_missing_git_exits_silently(self) -> None:
-        self.environment["PATH"] = str(self.directory / "bin")
-        self.invoke_event(self.post_tool_event("git worktree add agent"))
-        self.assertFalse(self.marker.exists())
-
-    def test_non_repository_exits_silently(self) -> None:
-        event = self.post_tool_event("git worktree add agent")
-        event["cwd"] = str(self.directory)
-        self.invoke_event(event)
-        self.assertFalse(self.marker.exists())
-
-    def test_both_harnesses_register_worktree_hook(self) -> None:
+    def test_both_harnesses_register_only_session_start(self) -> None:
         for harness in ("claude", "codex"):
             with self.subTest(harness=harness):
                 document = json.loads(
                     (HOOK_PATH.parent / f"{harness}-hooks.json").read_text()
                 )
-                registration, = document["hooks"]["PostToolUse"]
-                self.assertEqual(registration["matcher"], "Bash")
-                hook, = registration["hooks"]
-                self.assertEqual(hook["type"], "command")
-                self.assertEqual(hook["timeout"], 5)
-                self.assertTrue(hook["command"].endswith("/hooks/auto_index.py"))
+                self.assertEqual(list(document["hooks"]), ["SessionStart"])
 
 
 if __name__ == "__main__":

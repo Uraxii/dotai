@@ -22,7 +22,9 @@ Every tool but `list_projects`, `index_repository`, and `compare_graphs` require
 cbm list_projects   # each row pairs a name with its root_path
 ```
 
-Not listed -> index first: `cbm index_repository '{"repo_path":"/abs/path","mode":"fast"}'` (`full` adds similarity edges, slower). Re-index only when `detect_changes` shows changed files.
+Not listed -> index first: `cbm index_repository '{"repo_path":"/abs/path","mode":"fast"}'` (`full` adds similarity edges, slower). Nothing indexes a linked worktree for you, so index the one you work in on first use.
+
+Listed -> check freshness before trusting it. Run `cbm detect_changes '{"project":"P"}'`. If it reports changed files, or snippet line numbers disagree with the file, re-run `index_repository` for that repo, then query.
 
 ## Workflows (P = project name)
 
@@ -70,6 +72,7 @@ Cypher for anything else: `cbm query_graph '{"project":"P","query":"MATCH (f:Fun
 - Never run `codebase-memory-mcp install` to "fix" things: it rebuilds every index and writes hooks into user settings.
 - If a call fails with `command not found`, or the wrapper tests fail, follow `references/SETUP.md` to install or update to the latest release, then rerun `codebase-memory-mcp --version` before retrying.
 - Snippet line numbers not matching the file = stale index. `detect_changes` can still say 0 changed (observed on an indexed repo). Re-run `index_repository` on that repo.
+- Under `codex -s workspace-write` every call fails with `socket_bind failed with EPERM` or `could not accept this client`: the sandbox blocks the unix socket the CLI uses to reach its daemon, whatever the socket directory (`CBM_RUNTIME_DIR` does not help). Start Codex with `-c sandbox_workspace_write.network_access=true`, or set it under `[sandbox_workspace_write]` in `~/.codex/config.toml`.
 - `delete_project`, `index_repository`, and `manage_adr` `update`/`set_sections` write. Everything else is read-only; `ingest_traces` only validates and counts.
 
 Full arg table for all 17 tools: `references/tools.md`. Regenerate `references/tools.json` after a binary upgrade with `python3 scripts/dump_schemas.py`.
