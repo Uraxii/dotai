@@ -27,6 +27,7 @@ done
 
 generate_fixture() {
   local path="$1" lines="$2"
+  mkdir -p "$(dirname "$path")"
   if [ "$lines" -eq 0 ]; then
     touch "$path"
   else

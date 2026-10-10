@@ -35,6 +35,19 @@ Copilot `view_range`, including `[1, -1]`, is treated like Claude `offset` or
 `limit`, so it shares the existing offset/limit bypass. The eval fixtures cover
 the envelope shapes as well as routing decisions.
 
+Both read guards resolve relative paths from the session cwd before allowing
+files under an exact `.handoffs` or `handoffs` directory segment through,
+regardless of line count. Agents need the full handoff to resume work.
+This exception covers Read/view and `cat`, `head`, `tail`, `less`, and `more`
+on Claude Code, Codex, and Copilot CLI. A filename such as `handoffs.txt` or
+a directory such as `myhandoffs` still follows the size guard. The eval runner
+creates parent directories for nested fixtures to exercise these paths.
+
+Paths containing a `..` segment do not qualify for the handoff exception.
+Both guards check this after cwd resolution using portable shell patterns,
+so `.handoffs/../big.md` still follows the size guard without requiring
+GNU `realpath -m`. Each hook has an eval covering this traversal.
+
 The bulk-reader and code-writer skills named their scripts as
 `${CLAUDE_PLUGIN_ROOT}/scripts/...`. Copilot does not set that variable in
 the agent's shell, so the command exited 127 there. Both skills now name

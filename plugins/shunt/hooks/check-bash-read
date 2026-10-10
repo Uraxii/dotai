@@ -49,6 +49,10 @@ fi
   /*) ;;
   *) file_path="$cwd/$file_path" ;;
 esac
+case "/$file_path" in
+  */../*) ;;
+  */.handoffs/*|*/handoffs/*) exit 0 ;;
+esac
 [ ! -f "$file_path" ] && exit 0
 
 lines=$(wc -l < "$file_path" 2>/dev/null | tr -d ' ' || echo "0")

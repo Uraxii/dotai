@@ -14,6 +14,12 @@ Hooks deny full reads of files over 350 lines and lead with "delegate via the
 bulk-reader skill" for understanding or questions. The main agent gives the
 reader paths and a specific question, without loading the file first.
 
+Both read hooks allow full reads under an exact `.handoffs` or `handoffs`
+directory so agents can read the handoff needed to resume work. The exception
+runs before the size check, after resolving relative paths from the session
+cwd, and requires a path without any `..` segment. `.handoffs/../big.md`,
+`handoffs.txt`, and `myhandoffs/` still follow the size guard.
+
 - Claude Code uses Agent with `subagent_type: Explore` and `model: haiku`.
 - Copilot CLI uses task with `agent_type: explore` and `mode: sync`. Its built-in
   explore definition selects a fast model and read tools. Prefer

@@ -291,6 +291,7 @@ PLUGINS: list[dict[str, object]] = [
     {
         "name": "shunt",
         "version": "0.3.0",
+        "marketplace_version": True,
         "hooks": ["claude", "codex", "copilot"],
         "skills": False,
         "description": (
@@ -399,6 +400,10 @@ def claude_marketplace() -> dict[str, object]:
             {
                 "name": plugin["name"],
                 "source": f"./plugins/{plugin['name']}",
+                **(
+                    {"version": version_of(plugin)}
+                    if plugin.get("marketplace_version") else {}
+                ),
                 "description": plugin["description"],
             }
             for plugin in PLUGINS

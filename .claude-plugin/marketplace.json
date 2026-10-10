@@ -68,6 +68,7 @@
     {
       "name": "shunt",
       "source": "./plugins/shunt",
+      "version": "0.3.0",
       "description": "Shunts large reads to small subagents and boilerplate generation to Portal AiKA to save main-agent context tokens."
     },
     {

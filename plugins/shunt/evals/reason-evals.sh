@@ -5,11 +5,13 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 WORKDIR=$(mktemp -d)
 trap 'rm -rf "$WORKDIR"' EXIT
 mkdir "$WORKDIR/bin"
+mkdir "$WORKDIR/.handoffs"
 for tool in cat jq wc tr grep sed; do
   ln -s "$(command -v "$tool")" "$WORKDIR/bin/$tool"
 done
 BASH_BIN=$(command -v bash)
 seq 1 480 > "$WORKDIR/full.txt"
+seq 1 480 > "$WORKDIR/.handoffs/full.txt"
 PASSED=0
 FAILED=0
 
@@ -52,6 +54,23 @@ while read -r harness hook agent_id chunk; do
     check "$label/subagent-no-recursion" false "$(jq -n --arg r "$reason" \
       '$r | contains("Delegate via")')"
   fi
+  for path in .handoffs/full.txt .handoffs/../full.txt; do
+    handoff_args=$(jq -cn --arg path "$path" \
+      '{file_path: $path, path: $path, command: ("cat " + $path)}')
+    handoff_input=$(jq -cn --argjson args "$handoff_args" \
+      --arg cwd "$WORKDIR" --arg id "$agent_id" \
+      '{cwd: $cwd, tool_input: $args, toolArgs: $args} +
+       (if $id == "parent" then {} else {agent_id: $id} end)')
+    handoff_result=$(invoke "$handoff_input")
+    if [ "$path" = .handoffs/full.txt ]; then
+      check "$label/large-handoff-allowed" "" "$handoff_result"
+    else
+      check "$label/handoff-parent-traversal-blocked" deny \
+        "$(jq -r '.permissionDecision // .hookSpecificOutput.permissionDecision' <<< "$handoff_result")"
+      check "$label/traversal-preserves-deny-reason" "$reason" \
+        "$(jq -r '.permissionDecisionReason // .hookSpecificOutput.permissionDecisionReason' <<< "$handoff_result")"
+    fi
+  done
   if [ "$hook" = check-file-size ] && [ "$harness" != codex ]; then
     if [ "$harness" = copilot ]; then
       check "$label/view-guidance" true "$(jq -n --arg r "$reason" \
