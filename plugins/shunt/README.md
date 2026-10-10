@@ -118,7 +118,6 @@ The upstream 82–94% AiKA read benchmarks do not measure this subagent path.
 ```bash
 bash plugins/shunt/evals/run.sh
 python3 scripts/generate-plugin-manifests.py --check
-python3 plugins/shunt/evals/verify-live-reads.py
 ```
 
 The default suite checks hook routing, six deny-reason scenarios, chunk
@@ -126,5 +125,5 @@ continuation, and code-writer transport against a stub. No Portal access is
 needed. `--benchmark` also runs the retained code-writer estimate and requires
 Portal auth. [evals/evals.json](evals/evals.json) describes live skill checks.
 
-[Live evidence and bead close reason](evals/live-read-proof.md) retain the
-480-line Claude and Copilot checks, including subagent hook continuation.
+Bead dotai-4cy's close reason records the live Claude and Copilot checks,
+including subagent hook continuation.

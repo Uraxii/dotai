@@ -79,4 +79,4 @@ rubber-duck, code-review, research, and security-review. It also exposed
 selects explore and the small model when supported, falling back to explore's
 default on versions without that override. Live preToolUse inputs contained
 cwd, sessionId, timestamp, toolArgs, and toolName, without a subagent id.
-See [live transcript evidence and close reason](evals/live-read-proof.md).
+Bead dotai-4cy's close reason records the live-run evidence.
