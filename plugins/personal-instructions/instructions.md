@@ -28,7 +28,8 @@
 - Research goes in the project kb via `/llm-wiki:llm-wiki`, so later sessions can find it.
 
 ## Code Indexing and Search
-- Start session hook builds a `codebase-memory` index.
+- Start session hook builds a `codebase-memory` index of the checkout the session starts in.
+- Working in a worktree? Index that worktree with `/codebase-memory:cbm` before you query it.
 - Use `codebase-memory:cbm` For where-is, who-calls, or what-breaks questions.
 - Query code with the `/codebase-memory:cbm` skill before you grep or read files.
 - Keep grep for literal strings.

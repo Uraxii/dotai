@@ -36,7 +36,7 @@ Write one clear paragraph. If you're unsure about the intent, ask the user befor
 
 ## Step 3, Spawn Reviewers
 
-Launch all reviewers in a single message using the `Agent` tool. Take the `interrogate reviewers` list from your harness's override sheet (see `setup-pstack`) when it has a row, otherwise from that role's entry for your harness in `plugins/pstack/models.json` (see [Models](#models)). Spawn one reviewer per entry, in order, labelling them Reviewer A, B, C, D as far as the list runs: the list length sets the reviewer count. The panel is only as adversarial as it is model-diverse, so keep the entries from different model families where the harness offers them.
+Launch all reviewers in a single message using the `Agent` tool. Take the `interrogate reviewers` list from your harness's override sheet (see `setup-pstack`) when it has a row, otherwise from that role's entry for your harness in `plugins/pstack/models.json` (see [Models](#models)). A design review that a bead ordered (Step 6) spawns only the first entry, as Reviewer A. Every other run spawns one reviewer per entry, in order, labelling them Reviewer A, B, C, D as far as the list runs: the list length sets the reviewer count. The panel is only as adversarial as it is model-diverse, so keep the entries from different model families where the harness offers them.
 
 For each reviewer:
 - `subagent_type`: `general-purpose`
