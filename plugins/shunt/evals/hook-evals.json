@@ -211,6 +211,284 @@
       "fixture": { "lines": 1200 },
       "expected_decision": "allow",
       "reason": "An unknown harness passes through without blocking"
+    },
+    {
+      "id": 26,
+      "name": "claude-read-nested-hidden-handoff",
+      "harness": "claude",
+      "input": {"tool_input": {"file_path": "{{FIXTURES}}/.nikki-agents/.handoffs/work.md"}},
+      "fixture": {"lines": 800},
+      "expected_decision": "allow",
+      "reason": "Handoff directory permits a full read above the threshold"
+    },
+    {
+      "id": 27,
+      "name": "claude-read-hidden-handoff",
+      "harness": "claude",
+      "input": {"tool_input": {"file_path": "{{FIXTURES}}/.handoffs/work.md"}},
+      "fixture": {"lines": 800},
+      "expected_decision": "allow",
+      "reason": "Handoff directory permits a full read above the threshold"
+    },
+    {
+      "id": 28,
+      "name": "claude-read-handoff",
+      "harness": "claude",
+      "input": {"tool_input": {"file_path": "{{FIXTURES}}/handoffs/work.md"}},
+      "fixture": {"lines": 800},
+      "expected_decision": "allow",
+      "reason": "Handoff directory permits a full read above the threshold"
+    },
+    {
+      "id": 29,
+      "name": "claude-read-relative-hidden-handoff",
+      "harness": "claude",
+      "input": {"cwd": "{{FIXTURES}}", "tool_input": {"file_path": ".handoffs/work.md"}},
+      "fixture": {"lines": 800},
+      "expected_decision": "allow",
+      "reason": "Handoff directory permits a full read above the threshold"
+    },
+    {
+      "id": 30,
+      "name": "claude-read-relative-handoff",
+      "harness": "claude",
+      "input": {"cwd": "{{FIXTURES}}", "tool_input": {"file_path": "handoffs/work.md"}},
+      "fixture": {"lines": 800},
+      "expected_decision": "allow",
+      "reason": "Handoff directory permits a full read above the threshold"
+    },
+    {
+      "id": 31,
+      "name": "claude-read-hidden-handoff-cwd",
+      "harness": "claude",
+      "input": {"cwd": "{{FIXTURES}}/.handoffs", "tool_input": {"file_path": "work.md"}},
+      "fixture": {"lines": 800},
+      "expected_decision": "allow",
+      "reason": "Handoff directory permits a full read above the threshold"
+    },
+    {
+      "id": 32,
+      "name": "claude-read-handoff-cwd",
+      "harness": "claude",
+      "input": {"cwd": "{{FIXTURES}}/handoffs", "tool_input": {"file_path": "work.md"}},
+      "fixture": {"lines": 800},
+      "expected_decision": "allow",
+      "reason": "Handoff directory permits a full read above the threshold"
+    },
+    {
+      "id": 33,
+      "name": "claude-read-outside-handoff",
+      "harness": "claude",
+      "input": {"tool_input": {"file_path": "{{FIXTURES}}/work.md"}},
+      "fixture": {"lines": 800},
+      "expected_decision": "block",
+      "reason": "Only exact handoff directory segments bypass the threshold"
+    },
+    {
+      "id": 34,
+      "name": "claude-read-handoff-filename",
+      "harness": "claude",
+      "input": {"tool_input": {"file_path": "{{FIXTURES}}/handoffs.txt"}},
+      "fixture": {"lines": 800},
+      "expected_decision": "block",
+      "reason": "Only exact handoff directory segments bypass the threshold"
+    },
+    {
+      "id": 35,
+      "name": "claude-read-handoff-prefix-directory",
+      "harness": "claude",
+      "input": {"tool_input": {"file_path": "{{FIXTURES}}/myhandoffs/work.md"}},
+      "fixture": {"lines": 800},
+      "expected_decision": "block",
+      "reason": "Only exact handoff directory segments bypass the threshold"
+    },
+    {
+      "id": 36,
+      "name": "codex-read-nested-hidden-handoff",
+      "harness": "codex",
+      "input": {"tool_input": {"file_path": "{{FIXTURES}}/.nikki-agents/.handoffs/work.md"}},
+      "fixture": {"lines": 800},
+      "expected_decision": "allow",
+      "reason": "Handoff directory permits a full read above the threshold"
+    },
+    {
+      "id": 37,
+      "name": "codex-read-hidden-handoff",
+      "harness": "codex",
+      "input": {"tool_input": {"file_path": "{{FIXTURES}}/.handoffs/work.md"}},
+      "fixture": {"lines": 800},
+      "expected_decision": "allow",
+      "reason": "Handoff directory permits a full read above the threshold"
+    },
+    {
+      "id": 38,
+      "name": "codex-read-handoff",
+      "harness": "codex",
+      "input": {"tool_input": {"file_path": "{{FIXTURES}}/handoffs/work.md"}},
+      "fixture": {"lines": 800},
+      "expected_decision": "allow",
+      "reason": "Handoff directory permits a full read above the threshold"
+    },
+    {
+      "id": 39,
+      "name": "codex-read-relative-hidden-handoff",
+      "harness": "codex",
+      "input": {"cwd": "{{FIXTURES}}", "tool_input": {"file_path": ".handoffs/work.md"}},
+      "fixture": {"lines": 800},
+      "expected_decision": "allow",
+      "reason": "Handoff directory permits a full read above the threshold"
+    },
+    {
+      "id": 40,
+      "name": "codex-read-relative-handoff",
+      "harness": "codex",
+      "input": {"cwd": "{{FIXTURES}}", "tool_input": {"file_path": "handoffs/work.md"}},
+      "fixture": {"lines": 800},
+      "expected_decision": "allow",
+      "reason": "Handoff directory permits a full read above the threshold"
+    },
+    {
+      "id": 41,
+      "name": "codex-read-hidden-handoff-cwd",
+      "harness": "codex",
+      "input": {"cwd": "{{FIXTURES}}/.handoffs", "tool_input": {"file_path": "work.md"}},
+      "fixture": {"lines": 800},
+      "expected_decision": "allow",
+      "reason": "Handoff directory permits a full read above the threshold"
+    },
+    {
+      "id": 42,
+      "name": "codex-read-handoff-cwd",
+      "harness": "codex",
+      "input": {"cwd": "{{FIXTURES}}/handoffs", "tool_input": {"file_path": "work.md"}},
+      "fixture": {"lines": 800},
+      "expected_decision": "allow",
+      "reason": "Handoff directory permits a full read above the threshold"
+    },
+    {
+      "id": 43,
+      "name": "codex-read-outside-handoff",
+      "harness": "codex",
+      "input": {"tool_input": {"file_path": "{{FIXTURES}}/work.md"}},
+      "fixture": {"lines": 800},
+      "expected_decision": "block",
+      "reason": "Only exact handoff directory segments bypass the threshold"
+    },
+    {
+      "id": 44,
+      "name": "codex-read-handoff-filename",
+      "harness": "codex",
+      "input": {"tool_input": {"file_path": "{{FIXTURES}}/handoffs.txt"}},
+      "fixture": {"lines": 800},
+      "expected_decision": "block",
+      "reason": "Only exact handoff directory segments bypass the threshold"
+    },
+    {
+      "id": 45,
+      "name": "codex-read-handoff-prefix-directory",
+      "harness": "codex",
+      "input": {"tool_input": {"file_path": "{{FIXTURES}}/myhandoffs/work.md"}},
+      "fixture": {"lines": 800},
+      "expected_decision": "block",
+      "reason": "Only exact handoff directory segments bypass the threshold"
+    },
+    {
+      "id": 46,
+      "name": "copilot-read-nested-hidden-handoff",
+      "harness": "copilot",
+      "input": {"toolName": "view", "toolArgs": {"path": "{{FIXTURES}}/.nikki-agents/.handoffs/work.md"}},
+      "fixture": {"lines": 800},
+      "expected_decision": "allow",
+      "reason": "Handoff directory permits a full read above the threshold"
+    },
+    {
+      "id": 47,
+      "name": "copilot-read-hidden-handoff",
+      "harness": "copilot",
+      "input": {"toolName": "view", "toolArgs": {"path": "{{FIXTURES}}/.handoffs/work.md"}},
+      "fixture": {"lines": 800},
+      "expected_decision": "allow",
+      "reason": "Handoff directory permits a full read above the threshold"
+    },
+    {
+      "id": 48,
+      "name": "copilot-read-handoff",
+      "harness": "copilot",
+      "input": {"toolName": "view", "toolArgs": {"path": "{{FIXTURES}}/handoffs/work.md"}},
+      "fixture": {"lines": 800},
+      "expected_decision": "allow",
+      "reason": "Handoff directory permits a full read above the threshold"
+    },
+    {
+      "id": 49,
+      "name": "copilot-read-relative-hidden-handoff",
+      "harness": "copilot",
+      "input": {"cwd": "{{FIXTURES}}", "toolName": "view", "toolArgs": {"path": ".handoffs/work.md"}},
+      "fixture": {"lines": 800},
+      "expected_decision": "allow",
+      "reason": "Handoff directory permits a full read above the threshold"
+    },
+    {
+      "id": 50,
+      "name": "copilot-read-relative-handoff",
+      "harness": "copilot",
+      "input": {"cwd": "{{FIXTURES}}", "toolName": "view", "toolArgs": {"path": "handoffs/work.md"}},
+      "fixture": {"lines": 800},
+      "expected_decision": "allow",
+      "reason": "Handoff directory permits a full read above the threshold"
+    },
+    {
+      "id": 51,
+      "name": "copilot-read-hidden-handoff-cwd",
+      "harness": "copilot",
+      "input": {"cwd": "{{FIXTURES}}/.handoffs", "toolName": "view", "toolArgs": {"path": "work.md"}},
+      "fixture": {"lines": 800},
+      "expected_decision": "allow",
+      "reason": "Handoff directory permits a full read above the threshold"
+    },
+    {
+      "id": 52,
+      "name": "copilot-read-handoff-cwd",
+      "harness": "copilot",
+      "input": {"cwd": "{{FIXTURES}}/handoffs", "toolName": "view", "toolArgs": {"path": "work.md"}},
+      "fixture": {"lines": 800},
+      "expected_decision": "allow",
+      "reason": "Handoff directory permits a full read above the threshold"
+    },
+    {
+      "id": 53,
+      "name": "copilot-read-outside-handoff",
+      "harness": "copilot",
+      "input": {"toolName": "view", "toolArgs": {"path": "{{FIXTURES}}/work.md"}},
+      "fixture": {"lines": 800},
+      "expected_decision": "block",
+      "reason": "Only exact handoff directory segments bypass the threshold"
+    },
+    {
+      "id": 54,
+      "name": "copilot-read-handoff-filename",
+      "harness": "copilot",
+      "input": {"toolName": "view", "toolArgs": {"path": "{{FIXTURES}}/handoffs.txt"}},
+      "fixture": {"lines": 800},
+      "expected_decision": "block",
+      "reason": "Only exact handoff directory segments bypass the threshold"
+    },
+    {
+      "id": 55,
+      "name": "copilot-read-handoff-prefix-directory",
+      "harness": "copilot",
+      "input": {"toolName": "view", "toolArgs": {"path": "{{FIXTURES}}/myhandoffs/work.md"}},
+      "fixture": {"lines": 800},
+      "expected_decision": "block",
+      "reason": "Only exact handoff directory segments bypass the threshold"
+    },
+    {
+      "id": 56,
+      "name": "read-handoff-parent-traversal",
+      "input": {"cwd": "{{FIXTURES}}", "tool_input": {"file_path": ".handoffs/../big.md"}},
+      "fixture": {"lines": 800},
+      "expected_decision": "block",
+      "reason": "Parent traversal cannot grant the handoff exception"
     }
   ]
 }

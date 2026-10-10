@@ -1,6 +1,6 @@
 ---
 name: tester
-description: "Spawn after implementation or on a regression hunt to write and run tests that prove the change works."
+description: "Spawn as the gate after a reviewer pass to write regression tests for a bead, and on a regression hunt; changes no production code."
 color: yellow
 skills:
   - pstack:poteto-mode

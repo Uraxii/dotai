@@ -1,6 +1,6 @@
 ---
 name: reviewer
-description: "Spawn as the adversarial gate before ship, and as the Claude Code fallback when `reviewer-codex` cannot run; returns a verdict, never edits."
+description: "Spawn as the first gate after a writer, before the tester, and as the Claude Code fallback when `reviewer-codex` cannot run; returns a tiered verdict, never edits."
 color: red
 skills:
   - pstack:poteto-mode

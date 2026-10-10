@@ -1,25 +1,27 @@
-"""The real Codex watcher, run by a real `claude -p`, outlives a shrunk Bash timeout.
+"""The real Codex watcher, run by a real `claude -p`, launches Codex and ends with the bead done.
 
 Opt-in: set PSTACK_WATCHER_E2E=1. It spends model tokens and needs `claude`, `bd`,
-and a logged-in Claude Code. A stub `codex` sleeps past the shrunk Bash timeout,
-commits in a linked worktree, and exits 0. The watcher must still reply with
-that exit code and commit.
+and a logged-in Claude Code. A stub `codex` stands in for Codex: it sleeps past
+the shrunk Bash timeout, then does Codex's part with real `bd` and `git` (claim,
+commit, close). The watcher returns no reply, so the test asserts the bead
+outcome and the commit.
 
 BASH_DEFAULT_TIMEOUT_MS and BASH_MAX_TIMEOUT_MS shrink the foreground Bash
 timeout, so a Bash call that runs Codex inline moves to the background after a
-few seconds. No variable shrinks the background time limit itself (30 minutes,
-10 under `claude -p`; BASH_DEFAULT_TIMEOUT_MS can only raise it), so this test
-cannot prove survival past that limit. The watcher never keeps Codex in a shell
-that limit could kill, because it launches Codex detached.
+few seconds. The watcher never keeps Codex in a shell that limit could kill,
+because it launches Codex detached.
 
-PSTACK_WATCHER_E2E_PLUGIN_DIR points the run at another pstack tree, for
-example an extracted older release, to confirm the test fails on it.
+An empty ZDOTDIR keeps the user's .zshrc out of the first Bash call, and
+--strict-mcp-config skips MCP server startup. The parent runs on Haiku to speed up
+token processing.
+
+PSTACK_WATCHER_E2E_PLUGIN_DIR points the run at another pstack tree.
 """
 
 from __future__ import annotations
 
+import json
 import os
-import re
 import shutil
 import subprocess
 from pathlib import Path
@@ -29,9 +31,10 @@ import pytest
 
 PLUGIN_ROOT = Path(__file__).resolve().parents[1]
 PLUGIN_DIR = Path(os.environ.get("PSTACK_WATCHER_E2E_PLUGIN_DIR", PLUGIN_ROOT))
-BASH_LIMIT_MS = 3000
-STUB_SECONDS = 40
+BASH_LIMIT_MS = 1000
+STUB_SECONDS = 15
 CLAUDE_TIMEOUT_SECONDS = 150
+FAST_MODEL = "haiku"
 
 pytestmark = pytest.mark.skipif(
     os.environ.get("PSTACK_WATCHER_E2E") != "1"
@@ -41,19 +44,17 @@ pytestmark = pytest.mark.skipif(
 )
 
 STUB_CODEX = f"""#!/bin/bash
-case "$1" in
-  --version) echo "codex-cli stub"; exit 0 ;;
-  login) echo "Logged in using stub"; exit 0 ;;
-esac
 while [ $# -gt 0 ]; do
   case "$1" in -C) worktree=$2; shift ;; -o) last=$2; shift ;; esac
   shift
 done
-bead=$(sed -n 's/^Do the task in bead \\([^ .]*\\)\\..*/\\1/p' | head -1)
+bead=$(sed -n 's/^You are the writer for bead \\([^ ]*\\) *\\. .*/\\1/p' | head -1)
 sleep {STUB_SECONDS}
+bd update "$bead" --claim
 echo stub > "$worktree/stub-output"
-git -c core.hooksPath=/dev/null -C "$worktree" add stub-output
-git -c core.hooksPath=/dev/null -C "$worktree" commit -q -m "stub work ($bead)"
+git -C "$worktree" add stub-output
+git -C "$worktree" commit -q -m "stub work ($bead)" --trailer "Executed-By: $BD_ACTOR"
+bd close "$bead" --reason "stub done"
 echo "stub finished" > "$last"
 """
 
@@ -99,10 +100,13 @@ def test_watcher_survives_shrunk_bash_timeout(tmp_path: Path) -> None:
     ask = (
         "Call the Agent tool exactly once with subagent_type pstack:developer-codex and this "
         f"prompt, verbatim: {watcher_prompt}\n"
-        "Wait for the agent to finish. Then print its final reply verbatim and nothing else."
+        "Wait for the agent to finish, then reply with the word done."
     )
+    zdotdir = tmp_path / "zdotdir"
+    zdotdir.mkdir()
     env = {
         **os.environ,
+        "ZDOTDIR": str(zdotdir),
         "PATH": f"{bin_dir}:{os.environ['PATH']}",
         "BEADS_DIR": str(tmp_path / "store" / ".beads"),
         "BASH_DEFAULT_TIMEOUT_MS": str(BASH_LIMIT_MS),
@@ -110,15 +114,15 @@ def test_watcher_survives_shrunk_bash_timeout(tmp_path: Path) -> None:
     }
     result = subprocess.run(
         ["claude", "-p", ask, "--plugin-dir", str(PLUGIN_DIR), "--setting-sources", "project",
-         "--permission-mode", "bypassPermissions", "--model", "sonnet"],
+         "--permission-mode", "bypassPermissions", "--model", FAST_MODEL,
+         "--strict-mcp-config"],
         cwd=tmp_path, env=env, capture_output=True, text=True, timeout=CLAUDE_TIMEOUT_SECONDS,
     )
-    reply = result.stdout
+    assert result.returncode == 0, result.stderr
 
     commit = git("log", "-1", "--format=%H %s", cwd=worktree)
-    assert commit.endswith(f"stub work ({bead})"), f"stub never committed: {commit}\n{reply}"
-    sha = commit.split()[0]
-    assert sha != before
-    assert re.search(r"^fallback: none$", reply, re.M), reply
-    assert re.search(r"^exit code: 0$", reply, re.M), reply
-    assert re.search(rf"^commit: {sha}$", reply, re.M), reply
+    assert commit.endswith(f"stub work ({bead})"), f"stub never committed: {commit}\n{result.stdout}"
+    assert commit.split()[0] != before
+    shown = json.loads(subprocess.run(["bd", "show", bead, "--json"], env=env, capture_output=True,
+                                      text=True, check=True).stdout)
+    assert (shown[0] if isinstance(shown, list) else shown)["status"] == "closed"

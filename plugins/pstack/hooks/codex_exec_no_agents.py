@@ -1,15 +1,20 @@
 #!/usr/bin/env python3
-"""Add `-c agents.enabled=false` to every `codex exec` a Bash call runs.
+"""Put the `codex` shim first on PATH for every Bash call that mentions codex.
 
-Without the flag, Codex 0.154.0 exposes `collaboration.spawn_agent`,
-`followup_task`, and `send_message`, so a `codex exec` can hand the prompt
-to a helper agent instead of doing the work itself. This applies everywhere,
-main thread or any subagent, not only the `delegate-to-codex` watchers,
-because any Bash call can run `codex exec` by hand.
+Without `-c agents.enabled=false`, Codex 0.154.0 exposes
+`collaboration.spawn_agent`, `followup_task`, and `send_message`, so a
+`codex exec` can hand the prompt to a helper agent instead of doing the work
+itself. This applies everywhere, main thread or any subagent, because any
+Bash call can run `codex exec` by hand.
 
-This is not a security gate: an unparseable or non-matching command passes
-through untouched, and a command that already carries the flag is left
-alone. It only rewrites `command` via `hookSpecificOutput.updatedInput`
+The hook never edits the command text and never parses shell. It prepends
+`PATH=<plugin root>/shims:"$PATH";` to a command containing `codex`. The shim
+`shims/codex` adds the flag when it is actually run as `codex exec`, so
+heredocs, quotes, `$(...)`, and `bash -c` all behave as the shell decides.
+
+This is not a security gate: a command that already carries the prefix, or
+that never mentions codex, passes through untouched. It rewrites `command`
+via `hookSpecificOutput.updatedInput`
 (https://code.claude.com/docs/en/hooks, PreToolUse decision control table,
 fetched 2026-09-29: "`updatedInput` | Modifies the tool's input parameters
 before execution. ... Claude Code evaluates permission rules ... against the
@@ -21,84 +26,23 @@ flow instead of being auto-approved.
 from __future__ import annotations
 
 import json
-import re
+import shlex
 import sys
 from collections.abc import Mapping
+from pathlib import Path
 
 
 __all__ = ["rewrite_command", "main"]
 
-FLAG = "-c agents.enabled=false"
-FLAG_MARKER = "agents.enabled=false"
-
-# A `codex` invocation starts right after the string start or a shell
-# separator (`;`, `&`, `|`, a backtick, a newline, or an opening paren),
-# with optional whitespace in between, never mid-word. `echo codex exec`
-# (codex is an argument to echo, not a command) and `/tmp/codex/exec.sh`
-# (codex is a path segment) both fail this on purpose: neither has one of
-# those separators right before `codex`.
-#
-# ponytail: this is a regex heuristic, not a shell parser. A command
-# substitution, an alias, or a `codex` reached through a variable can still
-# slip past it either way. Upgrade to a real shell tokenizer if a live
-# command trips it.
-CODEX_INVOCATION = re.compile(r"(?:\A|[;&|`\n(])\s*codex\b")
-SEGMENT_END = re.compile(r"[;&|`\n)]")
-EXEC_WORD = re.compile(r"\bexec\b")
-TOKEN = re.compile(r"\S+")
-VALUE_OPTIONS = frozenset({
-    "-C", "--cd", "-c", "--config", "-m", "--model", "-p", "--profile",
-    "-i", "--image", "-s", "--sandbox", "--add-dir", "--color",
-    "--output-schema", "-o", "--output-last-message", "--enable", "--disable",
-})
-
-
-def exec_end(segment: str) -> int | None:
-    """Offset just past `exec` when it is the subcommand, else None."""
-    skip_value = False
-    for token in TOKEN.finditer(segment):
-        word = token.group()
-        if skip_value:
-            skip_value = False
-        elif word.startswith("-"):
-            skip_value = word in VALUE_OPTIONS
-        else:
-            return token.end() if word == "exec" else None
-    return None
+SHIMS_DIR = Path(__file__).resolve().parents[1] / "shims"
 
 
 def rewrite_command(command: str) -> str:
-    """Add the no-helper-agents flag to every `codex exec` in `command`.
-
-    Each `codex ...` invocation, up to the next shell separator or the end
-    of the string, is one segment. A segment that contains `exec` as its
-    own word gets `-c agents.enabled=false` right after `exec` when `exec`
-    is the subcommand, else right after `codex`, unless the segment already
-    carries the flag. `codex login status` or
-    `codex --version`, with no `exec` in their own segment, are untouched.
-
-    The flag goes after `exec`, not after `codex`, so the rewritten argv
-    still reads `codex exec`, which the delegate-to-codex collision check
-    `codex exec.*-C <worktree>` matches.
-    """
-    pieces: list[str] = []
-    cursor = 0
-    for match in CODEX_INVOCATION.finditer(command):
-        codex_end = match.end()
-        if codex_end < cursor:
-            continue  # inside a segment this loop already rewrote
-        boundary = SEGMENT_END.search(command, codex_end)
-        segment_end = boundary.start() if boundary else len(command)
-        segment = command[codex_end:segment_end]
-        exec_word = EXEC_WORD.search(segment)
-        if exec_word and FLAG_MARKER not in segment:
-            subcommand_end = exec_end(segment)
-            insert_at = codex_end + (subcommand_end or 0)
-            pieces.append(command[cursor:insert_at])
-            pieces.append(f" {FLAG}")
-            cursor = insert_at
-    pieces.append(command[cursor:])
-    return "".join(pieces)
+    """Prepend the shim dir to PATH when `command` mentions codex."""
+    prefix = f"PATH={shlex.quote(str(SHIMS_DIR))}:\"$PATH\"; "
+    if "codex" not in command or command.startswith(prefix):
+        return command
+    return prefix + command
 
 
 def main() -> None:

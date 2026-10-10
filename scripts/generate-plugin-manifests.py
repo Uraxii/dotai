@@ -41,7 +41,7 @@ HOOK_WIRING_PATHS = {
 PLUGINS: list[dict[str, object]] = [
     {
         "name": "pstack",
-        "version": "2.0.6",
+        "version": "2.0.8",
         "hooks": ["claude", "codex", "copilot"],
         "description": (
             "Skills and thin named agents: poteto-mode, principles, "
@@ -226,16 +226,16 @@ PLUGINS: list[dict[str, object]] = [
     },
     {
         "name": "codebase-memory",
-        "version": "1.2.1",
+        "version": "1.2.2",
         "hooks": ["claude", "codex"],
         "description": (
-            "Keep codebase-memory indexed at session start, then query its "
-            "code graph from a shell."
+            "Index the session's own checkout at session start and each new linked worktree after git worktree add, then query its code graph from a shell."
         ),
-        "short": "Shell queries over the codebase-memory code graph.",
+        "short": "Shell queries over codebase-memory, indexed per checkout and new worktree.",
         "long": (
-            "Starts a detached fast index for the current Git main checkout "
-            "at Claude Code and Codex session start. Runs codebase-memory-mcp "
+            "Starts a detached fast index for the session's own checkout "
+            "at Claude Code and Codex session start, and for any new linked "
+            "worktree created via Bash 'git worktree add'. Runs codebase-memory-mcp "
             "cli against that indexed repository with no MCP server involved, "
             "so a shell script or an agent without the MCP tools can still "
             "ask structural questions: who calls a "
@@ -290,24 +290,23 @@ PLUGINS: list[dict[str, object]] = [
     },
     {
         "name": "shunt",
-        "version": "0.2.3",
+        "version": "0.3.0",
+        "marketplace_version": True,
         "hooks": ["claude", "codex", "copilot"],
         "skills": False,
         "description": (
-            "Spotify's shunt, vendored and patched to the current PreToolUse "
-            "hook output schema: shunts large reads and boilerplate "
-            "generation to AiKA modes to save tokens."
+            "Shunts large reads to small subagents and boilerplate generation "
+            "to Portal AiKA to save main-agent context tokens."
         ),
-        "short": "Delegate large reads and boilerplate to AiKA, token-cheap.",
+        "short": "Delegate large reads to subagents; generate boilerplate with AiKA.",
         "long": (
             "A vendored, patched fork of Spotify's shunt plugin from "
             "portal-ai-plugins. Hooks block full large-file reads on Claude "
             "Code and Copilot CLI, and large Bash reads on Codex, then "
-            "redirect agents to the bulk-reader skill; a code-writer "
-            "skill delegates boilerplate generation the same way. Both "
-            "route through the Portal CLI's AiKA modes. See "
-            "plugins/shunt/upstream-source.md for the source revision and "
-            "what this fork changed."
+            "redirect agents to the bulk-reader skill. Small reader subagents "
+            "return concise answers with line citations; chunked reads handle "
+            "exact content and edits. Only code-writer needs Portal AiKA. See "
+            "plugins/shunt/upstream-source.md for source and patch details."
         ),
         "keywords": ["token-optimization", "delegation", "aika"],
         "prompts": [
@@ -401,6 +400,10 @@ def claude_marketplace() -> dict[str, object]:
             {
                 "name": plugin["name"],
                 "source": f"./plugins/{plugin['name']}",
+                **(
+                    {"version": version_of(plugin)}
+                    if plugin.get("marketplace_version") else {}
+                ),
                 "description": plugin["description"],
             }
             for plugin in PLUGINS
