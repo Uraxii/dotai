@@ -28,24 +28,22 @@ pstack requires the beads plugin. Run these operations with your harness's beads
 
 The worker inherits `BEADS_DIR` from the session environment as an absolute path. A linked worktree has no `.claude/settings.local.json`, so the inherited variable is the only way bd finds the store from inside it.
 
-Each shell call starts fresh. Set both actor variables on every call that runs a bd command or `git commit`.
+Each shell call starts fresh. Set the actor variable on every call that runs a bd command.
 
 ```sh
-export BEADS_ACTOR=<actor> BD_ACTOR=<actor>
+export BEADS_ACTOR=<actor>
 ```
 
-bd records claims and history under `BEADS_ACTOR`. The beads `prepare-commit-msg` hook reads only `BD_ACTOR`. It appends `Executed-By: <actor>` after a blank line, which splits the trailer block, unless the message already has an `Executed-By:` trailer. Every commit therefore writes both trailers with `git commit --trailer`, so they form one block and the hook skips.
+bd records claims and history under `BEADS_ACTOR`.
 
 1. Claim the bead (`bd update <id> --claim`). If another actor holds it, the claim exits 1 and changes nothing. Stop and report the holder.
 2. Read the scope (`bd show <id>`), including its NOTES section. A reopened bead holds the reason for the reopen there. If the comments end in a failed round, follow Fix a failed round.
 3. A claim carries a lease that expires 5 minutes after the claim or the last heartbeat. During long work, send a heartbeat (`bd heartbeat <id>`) more often than that. A heartbeat writes no Dolt commit.
-4. Write the commit message to the [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) standard, and put the why in the commit body. Commit with this form, which fails when `BD_ACTOR` is unset, and put no trailer in the `-m` text:
+4. Write the commit message to the [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) standard, and put the why in the commit body. Commit with this form:
 
    ```sh
-   git commit -m "<type>(<scope>): <description>" -m "<why>" --trailer "Co-Authored-By: <attribution>" --trailer "Executed-By: ${BD_ACTOR:?}"
+   git commit -m "<type>(<scope>): <description>" -m "<why>" --trailer "Co-Authored-By: <attribution>"
    ```
-
-   `git interpret-trailers --parse` on the resulting message lists both trailers.
 5. If your spawn prompt ends with `Stop at stage=built.`, leave the bead open. Push the branch (`git push origin HEAD`; a Codex sandbox cannot write the repository config, so leave out `-u`). Then run these, then end with a final message that names the branch and the SHA. Clearing the assignee hands the bead back to the coordinator, which closes it after the PR lands.
 
    - Set the stage label (`bd set-state <id> stage=built --reason "ready at <SHA>"`).
@@ -113,7 +111,7 @@ Set `BEADS_ACTOR` to the reviewer's actor name.
 
 ## Tester records the result
 
-Set `BEADS_ACTOR` and `BD_ACTOR` to the tester's actor name, because the tester commits.
+Set `BEADS_ACTOR` to the tester's actor name.
 
 1. Read the done-when (`bd show <id>`), the last verdict, and your own last result if there is one (`bd comments <id>`). Check that each earlier failure now passes. If the reviewer accepted that one of your tests is wrong, fix that test.
 2. Start from the writer's tests and add what they miss. Write tests that fail if the reviewed behavior regresses. Cover the done-when, the edge cases, and the failure paths, per the **principle-test-behavior-not-implementation** principle skill. Change only test files. If a test needs a production change, do not make it. Report it as a failure, and the bead goes back to the developer.
