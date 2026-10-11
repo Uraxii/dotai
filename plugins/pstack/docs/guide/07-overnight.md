@@ -99,7 +99,7 @@ Run beyond the active session only when a verified runner provides that capabili
 A few habits help:
 
 - Give each body of work its own project scope, such as a feature, a migration, a perf push, or a tech-debt cleanup. Several can run side by side.
-- Drag related chats into the project scope, finished ones included. They become context for every agent in it.
+- Include explicit paths to the relevant project transcripts or a supplied digest in each worker brief. State the project scope for each source.
 - Give each PR a verification swarm before it merges, and let Autopilot-stack or Autopilot-full carry the queue.
 - Ask the coordinator for a plan backed by data, and have it answer open questions with prototypes before it asks you.
 
