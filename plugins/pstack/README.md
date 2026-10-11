@@ -66,7 +66,6 @@ morning.
 | [trace forensics](./skills/poteto-mode/playbooks/trace-forensics.md) | diagnose a captured profiling artifact (cpuprofile, trace, spindump, heap snapshot). |
 | [feature ideas](./skills/poteto-mode/playbooks/feature-ideas.md) | grounded proposals at multiple scales, with user value and duplicate checks. Stops before design or implementation. |
 | [architecture change](./skills/poteto-mode/playbooks/architecture-change.md) | a direct architecture request, from design through verification. |
-| [custom run](./skills/poteto-mode/playbooks/custom-run.md) | a task without a narrower playbook, with a workflow from figure-it-out. |
 | [feature](./skills/poteto-mode/playbooks/feature.md) | new or changed behavior, built from a named data shape. |
 | [refactoring](./skills/poteto-mode/playbooks/refactoring.md) | a behavior-preserving change to structure or shape. |
 | [prototype](./skills/poteto-mode/playbooks/prototype.md) | a throwaway sketch to make a design or behavioral decision cheaply, or to settle an empirical fork by observing it. |

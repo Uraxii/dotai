@@ -126,10 +126,9 @@ Comments follow the same rule as the reply. Write them clean as you go. Keep a c
 
 Match the task to a playbook below and open its file. Before any other work, create the run bead and one step bead for each step of the playbook, with the step copied in verbatim, per [Run records](../ticket-work/references/run-records.md). Step beads for task-specific work come after them. To not do a step, close its step bead with a one-line `skip: <reason>`.
 
-A large or cross-cutting effort (a migration across many call sites, an ambitious multi-part change), or work the user steps away from to trust later, routes to the [Custom run](playbooks/custom-run.md) playbook even when a narrower playbook like Feature fits. Use Custom run whenever no narrower playbook fits. It requests the workflow from figure-it-out. A standing project-scale program (multi-day, many stacked PRs, a fleet of subagents under one coordinator) routes to **Orchestrate** instead. figure-it-out designs one bespoke run, orchestrate runs the program.
+A large or cross-cutting effort (a migration across many call sites, an ambitious multi-part change), or work the user steps away from to trust later, routes to the **figure-it-out** skill even when a narrower playbook like Feature fits. Use **figure-it-out** whenever no bundled playbook fits. It designs a bespoke, rigorous playbook for the task. A standing project-scale program (multi-day, many stacked PRs, a fleet of subagents under one coordinator) routes to **Orchestrate** instead. figure-it-out designs one bespoke run, orchestrate runs the program.
 
 - **Architecture change.** A direct architecture request. `playbooks/architecture-change.md`.
-- **Custom run.** A task without a narrower playbook. `playbooks/custom-run.md`.
 - **Investigation.** Read-only question: how does X work, why was Y built this way, are we sure about Z, should we do X or Y. `playbooks/investigation.md`.
 - **Bug fix.** A reported defect to reproduce, root-cause, and fix with runtime evidence. `playbooks/bug-fix.md`.
 - **Perf issue.** A measured slowness to trace and improve against a baseline. `playbooks/perf-issue.md`.
