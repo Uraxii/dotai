@@ -3,7 +3,7 @@
 **You own the design. Plan, review, verify.** Delegate implementation. Stay in the lead.
 
 1. `how` over the affected subsystem.
-2. `architect` for parallel design exploration. Its sketch passes the sketch review per [Production checks](production-checks.md).
+2. Run `architect` for parallel design exploration. Request a design-only return from Phases A through C. Tell the design agent to stop after synthesis and return the sketch and rationale. For production work, commit the sketch and rationale. Obtain the sketch pass per [Production checks](production-checks.md) before implementation.
 3. Write the throughput checkpoint into the design field of the run bead, one line for each dimension below. A dimension that genuinely does not apply (single file, no fan-out) keeps its line with `n/a: <reason>` rather than being dropped:
    - **Blocking first steps.** Gates run before fan-out.
    - **Independent workstreams.** Disjoint files, services, or layers parallelize. Shared writes serialize.

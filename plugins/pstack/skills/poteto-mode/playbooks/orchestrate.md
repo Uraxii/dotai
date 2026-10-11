@@ -59,7 +59,7 @@ STANDING     <titles of the open decision beads under the epic, pasted verbatim>
 
 Each brief tells the worker to run the **index-the-codebase** skill on its worktree before any other work.
 
-Each worker brief says that the coordinator runs the diff review and the dedicated test gate for production code. Writers choose whether to add tests. The worker runs only the sketch review when it runs `architect`.
+Each worker brief says that the coordinator runs the diff review and the dedicated test gate for production code. Writers choose whether to add tests. For each `architect` call, the worker brief requests a design-only return from Phases A through C. Tell the design agent to stop after synthesis and return the sketch and rationale. The worker commits the sketch and rationale. The worker obtains the sketch pass per [Production checks](production-checks.md) before implementation. The coordinator retains the diff review and test gate.
 
 Size the brief to the unit. A one-command unit gets the template collapsed to a paragraph that still names goal, scope, the verify command, the report shape, the stage write, and the instruction to run **index-the-codebase** first. A 4KB scaffold around a two-line edit costs more to write and obey than the edit. A local spawn may name the epic ID instead of pasting the standing orders, because a local worker can run `bd list --parent <epic> -t decision` itself. Verbatim paste is for cloud spawns and every resume.
 
