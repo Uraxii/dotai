@@ -10,7 +10,7 @@ Fan out N parallel attempts at the same task. Read every candidate end to end. P
 
 ## Start
 
-Open a todolist with one entry per phase before launching anything.
+Before launching anything, create one step bead for each phase, per the Phases of a skill section of [`../poteto-mode/references/beads-work-loop.md`](../poteto-mode/references/beads-work-loop.md).
 
 1. Frame
 2. Fan out

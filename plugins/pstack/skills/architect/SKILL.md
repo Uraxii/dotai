@@ -10,7 +10,7 @@ Design before implementing. Sketch types, function signatures, class shapes, and
 
 ## Start
 
-Open a todolist with one entry per phase before starting.
+Before you start, create one step bead for each phase, per the Phases of a skill section of [`../poteto-mode/references/beads-work-loop.md`](../poteto-mode/references/beads-work-loop.md).
 
 1. Ground
 2. Sketch
