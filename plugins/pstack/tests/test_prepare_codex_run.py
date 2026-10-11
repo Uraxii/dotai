@@ -135,6 +135,60 @@ else:
         self.assertFalse((self.root / "argv.json").exists())
         self.assertEqual(self.prepare().returncode, 0)
 
+    def test_concurrent_launches_start_only_one_run(self):
+        release = self.root / "release"
+        self.env["STUB_RELEASE_FILE"] = str(release)
+        self.addCleanup(release.touch)
+        self.stub("pgrep", """#!/usr/bin/env python3
+import os, pathlib, subprocess, sys, time
+result = subprocess.run(['/usr/bin/pgrep', *sys.argv[1:]])
+pathlib.Path(os.environ['PGREP_STARTED']).touch()
+time.sleep(0.5)
+sys.exit(result.returncode)
+""")
+        started = self.root / "pgrep-started"
+        self.env["PGREP_STARTED"] = str(started)
+        command = ["python3", str(self.builder), "--launch"]
+        processes = []
+        try:
+            first = subprocess.Popen(command, stdin=subprocess.PIPE,
+                                     stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                     text=True, env=self.env)
+            processes.append(first)
+            first.stdin.write(self.request())
+            first.stdin.close()
+            first.stdin = None
+            deadline = time.monotonic() + 5
+            while not started.exists() and time.monotonic() < deadline:
+                time.sleep(0.01)
+            self.assertTrue(started.exists())
+            second = subprocess.Popen(command, stdin=subprocess.PIPE,
+                                      stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                      text=True, env=self.env)
+            processes.append(second)
+            second_output = second.communicate(self.request(), timeout=10)
+            first_output = first.communicate(timeout=10)
+            self.assertEqual(sorted(p.returncode for p in processes), [0, 2],
+                             (first_output, second_output))
+            successful = first_output if first.returncode == 0 else second_output
+            run = Path(successful[0].strip())
+            self.assertTrue((run / "prompt.md").exists())
+            self.assertFalse((run / "refused.txt").exists())
+            release.touch()
+            deadline = time.monotonic() + 5
+            while time.monotonic() < deadline:
+                log = run / "codex.jsonl"
+                if log.exists() and '"codex exited"' in log.read_text():
+                    break
+                time.sleep(0.02)
+            self.assertEqual(log.read_text().count('"codex exited"'), 1)
+        finally:
+            release.touch()
+            for process in processes:
+                if process.poll() is None:
+                    process.kill()
+                process.communicate()
+
     def test_nonzero_exit_reaches_caller(self):
         self.env["STUB_CODE"] = "7"
         result, _ = self.execute()

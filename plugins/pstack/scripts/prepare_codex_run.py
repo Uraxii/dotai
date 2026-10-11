@@ -27,6 +27,7 @@ the sandbox in that repo), or a run is already live in this run dir.
 from __future__ import annotations
 
 import argparse
+import fcntl
 import json
 import os
 import re
@@ -276,8 +277,7 @@ def run_dir_for(request: Request) -> Path:
     return state / "pstack/codex-runs" / request.bead / request.role
 
 
-def prepare(text: str, beads_env: str | None) -> Path:
-    request = parse_request(text)
+def prepare_request(request: Request, beads_env: str | None) -> Path:
     run_dir = run_dir_for(request)
     live = is_live(run_dir)
     if live:
@@ -309,6 +309,24 @@ def prepare(text: str, beads_env: str | None) -> Path:
     return run_dir
 
 
+def prepare(text: str, beads_env: str | None, launch: bool = False) -> Path:
+    request = parse_request(text)
+    run_dir = run_dir_for(request)
+    run_dir.parent.mkdir(parents=True, exist_ok=True)
+    lock_path = run_dir.parent / f".{request.role}.lock"
+    with lock_path.open("a") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        run_dir = prepare_request(request, beads_env)
+        if launch:
+            with (run_dir / "launch.stderr").open("w") as stderr:
+                subprocess.Popen(
+                    ["bash", str(run_dir / "run.sh")],
+                    stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                    stderr=stderr, start_new_session=True,
+                )
+    return run_dir
+
+
 def main() -> int:
     parser = RunArgumentParser(description=__doc__)
     parser.add_argument("--launch", action="store_true")
@@ -316,14 +334,7 @@ def main() -> int:
         args = parser.parse_args()
         if args.launch and not shutil.which("codex"):
             raise Refusal("codex is not on PATH")
-        run_dir = prepare(sys.stdin.read(), os.environ.get("BEADS_DIR"))
-        if args.launch:
-            with (run_dir / "launch.stderr").open("w") as stderr:
-                subprocess.Popen(
-                    ["bash", str(run_dir / "run.sh")],
-                    stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
-                    stderr=stderr, start_new_session=True,
-                )
+        run_dir = prepare(sys.stdin.read(), os.environ.get("BEADS_DIR"), args.launch)
         print(run_dir)
     except Exception as refusal:
         print(STOP_LINE)
