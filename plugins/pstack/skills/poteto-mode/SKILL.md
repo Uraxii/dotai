@@ -1,5 +1,5 @@
 ---
-name: Poteto Mode
+name: poteto-mode
 description: poteto's agent style for concise, detailed responses, deliberate subagents, unslopped prose, simple code, and verified work. Use for poteto, /poteto-mode, or requests to work in this style.
 disable-model-invocation: true
 mode: true
@@ -91,7 +91,7 @@ Read the leaf skill in full for any principle you apply. Each entry names when i
 
 ## Subagents
 
-**Use `subagent_type: "poteto-agent"` for any subagent you spawn inside a playbook step** (code-writing delegates, ad-hoc helpers). `/poteto-mode` and `poteto-agent` route through the same wrapper. Routed workflow skills (`how`, `why`, `interrogate`, `reflect`, `swarm`) set their own `subagent_type` for diverse-model review. Respect what the skill prescribes, don't override to `poteto-agent`.
+**Use `subagent_type: "poteto-agent"` for any subagent you spawn inside a playbook step** (code-writing delegates, ad-hoc helpers). `/poteto-mode` and poteto-agent route through the same wrapper. Routed workflow skills (`how`, `why`, `interrogate`, `reflect`, `swarm`) set their own `subagent_type` for diverse-model review. Respect what the skill prescribes, don't override to poteto-agent.
 
 **Defaults for every `Task` call.** `run_in_background: true`, agent mode (readonly strips MCP), file pointers not inlined context, explicit model per role from `models.json` (see [Models](#models)). Code delegates tier by difficulty. The hardest changes (cross-cutting design, gnarly concurrency, subtle algorithms) go to the `hardest tasks` role, whether the task needs judgment on vague intent or is a precisely specified sequence of steps to execute to the letter. Trivial mechanical edits go to your fast code model. Rows in this harness's override sheet (written by `/configure-pstack`) override `models.json` for every role, the routed skills (`how`, `why`, `arena`, `swarm`, `architect`, `interrogate`, `reflect`) too. A role with no row keeps its `models.json` list, and a row of `inherit-parent` or `auto` runs that role on the parent chat model (omit Task `model`). Each code playbook names its role (`feature, refactoring`, `bug-fix`, `perf-issue`, or `hillclimb`). Prose and judgment read `judgment and prose`.
 
