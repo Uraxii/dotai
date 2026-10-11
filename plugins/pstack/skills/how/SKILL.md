@@ -23,29 +23,29 @@ When in doubt, take the simple path.
 
 Decompose the question into 2 to 4 exploration angles, each a distinct slice of the subsystem. Spawn all explorers in a single message:
 
-- `subagent_type`: `generalPurpose`
+- Worker type: the supported general agent API
 - `model`: the `how explorer` role
-- `readonly`: `true`
+- Access scope: read-only files with the required lookup tools
 
 Each explorer gets the prompt in `references/explorer-prompt.md` with its angle filled in. Then go to Step 3.
 
 ## Step 2b. Direct Explain (simple questions)
 
-Spawn one Task subagent that explores and explains in one pass:
+Spawn one subagent that explores and explains in one pass:
 
-- `subagent_type`: `generalPurpose`
+- Worker type: the supported general agent API
 - `model`: the `how explainer` role
-- `readonly`: `true`
+- Access scope: read-only files with the required lookup tools
 
 Build its prompt from `references/explainer-prompt.md` without the explorer-findings section. Go to Step 4.
 
 ## Step 3. Synthesize (complex questions only)
 
-Once all explorers have returned, spawn one Task subagent to synthesize their findings into one explanation:
+Once all explorers have returned, spawn one subagent to synthesize their findings into one explanation:
 
-- `subagent_type`: `generalPurpose`
+- Worker type: the supported general agent API
 - `model`: the `how explainer` role
-- `readonly`: `true`
+- Access scope: read-only files with the required lookup tools
 
 Build its prompt from `references/explainer-prompt.md` with every explorer's findings filled in.
 
@@ -56,3 +56,5 @@ Present the explainer's output to the user. Light edits for clarity or context f
 ## Output Format
 
 The explanation uses the sections defined in `references/explainer-prompt.md`, dropping any that do not apply: Overview, Key Concepts, How It Works, Where Things Live, Gotchas.
+
+Use [Platform adaptation](../poteto-mode/references/platform-adaptation.md) for tool APIs, skill locations, and evidence limits.

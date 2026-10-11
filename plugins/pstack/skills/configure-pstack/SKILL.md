@@ -21,7 +21,7 @@ The defaults are this harness's lists in `models.json`, under `roles`. A role wh
 
 ### 3. Map and confirm
 
-Show every role with its list for this harness, with the sheet rows applied. Mark any real slug that step 1 did not detect or confirm as needing a choice. Also list each row that step 2 dropped. Ask whether to accept as-is or change specific roles, offering the detected and confirmed models plus `inherit-parent` and `auto` as the options. Prefer AskQuestion over free text.
+Show every role with its list for this harness, with the sheet rows applied. Mark any real slug that step 1 did not detect or confirm as needing a choice. Also list each row that step 2 dropped. Ask whether to accept as-is or change specific roles, offering the detected and confirmed models plus `inherit-parent` and `auto` as the options. Prefer the structured question API over free text.
 
 Every value is a list in order of preference. A single-model role uses the first name. The [Models section of `poteto-mode`](../poteto-mode/SKILL.md#models) names the panel roles (arena runners, architect runners, interrogate reviewers). For a panel role, one subagent runs per entry, alias entries included, so the list length sets the count. `arena cross-judge pool` is also a list, but it is a single-model role. Arena selects one value from it whose model family differs from the parent's when possible. `swarm workers` is the default model for every worker unless a race or comparison assigns another model per arm.
 
@@ -91,3 +91,5 @@ The role rows are the same on every harness. The sheet path, the load method, an
 | Copilot CLI | `<config-dir>/pstack-models.md` | paste the rows into `<config-dir>/copilot-instructions.md`. `<config-dir>` is `COPILOT_HOME` when it is set, otherwise `~/.copilot` | the CLI's documented model list | the `copilot` lists |
 | opencode | `~/.config/opencode/pstack-models.md` | add the path to the `instructions` array in `opencode.json` | the `models` slash command in the session | none. `models.json` has no opencode key, so a role with no row spawns unpinned |
 | Gemini CLI | `~/.gemini/pstack-models.md` | `@~/.gemini/pstack-models.md` in `~/.gemini/GEMINI.md` | the `model` slash command in the session | none. `models.json` has no Gemini CLI key, so a role with no row spawns unpinned |
+
+Use [Platform adaptation](../poteto-mode/references/platform-adaptation.md) for tool APIs, skill locations, and evidence limits.

@@ -33,14 +33,14 @@ Write one clear paragraph. If you're unsure about the intent, ask the user befor
 
 ## Step 3, Spawn Reviewers
 
-Launch all reviewers in a single message using the Task tool. Use the `interrogate reviewers` role in `models.json`, two directories up from this skill's directory. Spawn one reviewer for each entry in your harness's list, labeled Reviewer A, Reviewer B, Reviewer C, and so on as far as the list goes. The [Models section of `poteto-mode`](../poteto-mode/SKILL.md#models) tells how to find the file, how the override sheet changes a role, and what to do when the harness rejects a name.
+Launch all reviewers in a single message using the active agent API. Use the `interrogate reviewers` role in `models.json`, two directories up from this skill's directory. Spawn one reviewer for each entry in your harness's list, labeled Reviewer A, Reviewer B, Reviewer C, and so on as far as the list goes. The [Models section of `poteto-mode`](../poteto-mode/SKILL.md#models) tells how to find the file, how the override sheet changes a role, and what to do when the harness rejects a name.
 
 For each reviewer:
-- `subagent_type`: `generalPurpose`
+- Worker type: the supported general agent API
 - `model`: this reviewer's entry from the list. For an `auto` or `inherit-parent` entry, omit `model` so that reviewer runs on the parent model.
-- `readonly`: `true`
+- Access scope: read-only files with the required lookup tools
 
-If the Task tool rejects an entry, use the fallback in the Models section of `poteto-mode`, and open a separate PR to update `models.json`. Do not block the review on the slug issue. Never treat an alias entry as a rejected slug or apply the fallback to it.
+If the active agent API rejects an entry, use the fallback in the Models section of `poteto-mode`, and open a separate PR to update `models.json`. Do not block the review on the slug issue. Never treat an alias entry as a rejected slug or apply the fallback to it.
 
 Read `references/reviewer-prompt.md` and fill in the template with:
 1. The stated intent
@@ -48,7 +48,7 @@ Read `references/reviewer-prompt.md` and fill in the template with:
 3. The review rubric from `references/rubric.md`
 4. The code-quality lens from `references/code-quality-review.md`
 
-The same filled template goes to all reviewers, so every model applies the code-quality lens. When the reviewers read code in a checkout, add the checkout path and tell each reviewer to query a code indexer first if it can reach one, per the **index-the-codebase** skill. A read-only reviewer can lack the tools that an MCP server gives, so it uses file search when it cannot reach an indexer.
+The same filled template goes to all reviewers, so every model applies the code-quality lens. When the reviewers read code in a checkout, add the checkout path and tell each reviewer to query a code indexer first if it can reach one, per the **index-the-codebase** skill. Check the reviewer's actual tool set. Use file search if no indexer is available.
 
 ## Step 4, Synthesize
 
@@ -102,3 +102,5 @@ Present the verdict in this structure:
 
 ### Agreement Map
 [Where did models agree, where did they diverge, and what does the pattern of agreement/disagreement tell us?]
+
+Use [Platform adaptation](../poteto-mode/references/platform-adaptation.md) for tool APIs, skill locations, and evidence limits.

@@ -9,7 +9,7 @@ Run this skill before you work in a checkout. A git worktree is a separate check
 
 ## Steps
 
-1. Find a code indexer. Look for an indexer tool, skill, MCP server, or CLI in this session, for example codebase-memory (`codebase-memory-mcp`) or graphify. A read-only agent can lack the tools that an MCP server gives. If no indexer is available, say so once and use grep and file reads. Stop here.
+1. Find a code indexer. Look for an indexer tool, skill, MCP server, or CLI in this session, for example codebase-memory (`codebase-memory-mcp`) or graphify. Check which connectors the active worker can reach. If no indexer is available, say so once and use grep and file reads. Stop here.
 2. Get the root of the checkout you work in (`git rev-parse --show-toplevel`). An index belongs to one root. An index of the main checkout does not cover a worktree of it.
 3. Get the indexer's list of indexed roots. Compare each root with the root from step 2.
 4. Index the root if one of these conditions is true:

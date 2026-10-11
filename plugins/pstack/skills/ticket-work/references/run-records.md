@@ -115,7 +115,7 @@ Close all steps before you close the run, set its stage, or end your turn with a
 
 ## Agents that cannot reach the database
 
-A cloud agent cannot reach the beads database. It keeps no step beads.
+A worker without database access returns its report to the coordinator. It keeps no step beads.
 Its final message lists each step with its result or `skip: <reason>`.
 The spawner writes that list to a file and records it with `bd comment <id> --file <file>`.
 Use the bead assigned to the cloud agent.
