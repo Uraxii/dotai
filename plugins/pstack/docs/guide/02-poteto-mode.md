@@ -1,6 +1,6 @@
 # Route work through `/poteto-mode`
 
-`/poteto-mode` is the front door. You give it a goal, it matches one of twenty-three playbooks, creates a step bead for each of that playbook's steps, and calls the other skills as the steps need them. In this page you learn what a good prompt looks like, and how little of one you actually need.
+`/poteto-mode` is the front door. You give it a goal, it matches one of twenty-four playbooks, creates a step bead for each of that playbook's steps, and calls the other skills as the steps need them. In this page you learn what a good prompt looks like, and how little of one you actually need.
 
 ![A dispatcher pulls a switch lever to route robots on rail handcars toward lit gates, under a /poteto-mode departure board listing BUG FIX, FEATURE, and INVESTIGATION.](./images/router.jpg)
 
@@ -13,7 +13,9 @@ flowchart TD
     C --> D{Match the task}
     D -->|Read-only question| E[Investigation]
     D -->|Defect| F[Bug fix]
-    D -->|New behavior| G[Feature]
+    D -->|Feature possibilities| L[Feature ideas]
+    L --> M[Present brief and stop]
+    D -->|Selected behavior to build| G[Feature]
     D -->|Structure only| H[Refactoring]
     D -->|Measured slowness| I[Perf issue]
     D -->|Large work or no match| J[figure-it-out]
@@ -26,6 +28,8 @@ flowchart TD
 ```
 
 The diagram shows the common routes. There are also playbooks for hillclimbing a metric, diagnosing runtime symptoms and captured traces, prototypes, visual parity, authoring and evaluating skills, autonomous runs, babysitting a PR or stack to merge-ready, shipping a verified stack, running a PR queue on autopilot, orchestrating project-scale programs, session pickup, pausing safely, multi-phase plans, and worktree cleanup. The [playbook directory](../../skills/poteto-mode/playbooks/) has the full set.
+
+Open requests for possibilities use the [Feature ideas playbook](../../skills/poteto-mode/playbooks/feature-ideas.md). It checks current behavior and active work, then presents proposals with user value. It stops before design or implementation. A request to build a selected behavior uses Feature.
 
 ## Say the goal, not the ceremony
 
