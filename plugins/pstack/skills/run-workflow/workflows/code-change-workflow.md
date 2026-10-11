@@ -111,8 +111,12 @@ Return unresolved product requirements to the planner and technical choices to t
 
 Give the writer the requirements, acceptance, mode, permitted paths, and evidence.
 When architecture applies, include the sketch paths, committed sketch SHA, and passed sketch gate.
-The writer follows its task playbook within that scope.
-It returns the committed implementation head, complete base-to-head diff, and check evidence.
+Follow the task playbook within that scope through implementation and the writer's build and test checks.
+Commit the implementation before the writer handoff.
+Stop before the task playbook's runtime verification and PR steps.
+Return the committed implementation head, complete base-to-head diff, and check evidence.
+The owner resumes the remaining task-playbook steps only after the required diff review and test gates have current passes.
+Those remaining steps include runtime verification and PR work.
 New scope returns to [Requirements planning](#requirements-planning) before dependent work resumes.
 
 ## Diff review
