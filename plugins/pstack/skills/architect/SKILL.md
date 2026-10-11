@@ -44,6 +44,8 @@ Arena returns one synthesized design package. The synthesis decision populates t
 
 Default: proceed directly to implementation with the synthesized design. No human checkpoint.
 
+When the work is for production, commit the synthesized design. It passes the sketch review in the Gates section of [`../poteto-mode/references/beads-work-loop.md`](../poteto-mode/references/beads-work-loop.md) before Phase D starts.
+
 Opt in to a checkpoint when the invoker explicitly asks: "/architect with checkpoint," "stop and show me before implementing," or similar. Then surface the synthesized design and pause for sign-off.
 
 The synthesis can ship as its own commit either way, as the "scaffold first" mode of the **foundational-thinking** principle skill. Planned and scoped breakage during fill-in is fine, per the **outcome-oriented-execution** principle skill. For adversarial pressure on the design before implementing, run the **interrogate** skill on the synthesized sketch.
@@ -55,6 +57,8 @@ If the human pushes back on the shape (in a checkpoint or after the fact), treat
 Replace `not implemented` bodies with code, pseudocode with logic. The synthesized sketch is the contract.
 
 Deviations from the sketch are signal worth surfacing, not friction to absorb silently. If a function needs a parameter the sketch didn't anticipate, ask whether the sketch was wrong, the requirement was missed, or the implementation is overreaching.
+
+When the work is for production, the code passes the diff review in the same Gates section before it ships.
 
 ## Phase E: Scrap when the architecture is wrong
 
