@@ -10,7 +10,7 @@ Design before implementing. Sketch types, function signatures, class shapes, and
 
 ## Start
 
-Before you start, create one step bead for each phase, per the Phases of a skill section of [`../poteto-mode/references/beads-work-loop.md`](../poteto-mode/references/beads-work-loop.md).
+Before you start, create one step bead for each phase, per the Phases of a skill section of [Run records](../ticket-work/references/run-records.md#phases-of-a-skill).
 
 1. Ground
 2. Sketch
@@ -42,9 +42,10 @@ Arena returns one synthesized design package. The synthesis decision populates t
 
 ## Phase C: Agree (opt-in)
 
-Default: proceed directly to implementation with the synthesized design. No human checkpoint.
+The caller brief chooses the handoff. If the brief requests the design only, return the synthesized sketch and rationale.
+Otherwise, proceed to implementation.
 
-When the work is for production, commit the synthesized design. It passes the sketch review in the Gates section of [`../poteto-mode/references/beads-work-loop.md`](../poteto-mode/references/beads-work-loop.md) before Phase D starts.
+A human checkpoint applies only when the user requests it.
 
 Opt in to a checkpoint when the invoker explicitly asks: "/architect with checkpoint," "stop and show me before implementing," or similar. Then surface the synthesized design and pause for sign-off.
 
@@ -57,8 +58,6 @@ If the human pushes back on the shape (in a checkpoint or after the fact), treat
 Replace `not implemented` bodies with code, pseudocode with logic. The synthesized sketch is the contract.
 
 Deviations from the sketch are signal worth surfacing, not friction to absorb silently. If a function needs a parameter the sketch didn't anticipate, ask whether the sketch was wrong, the requirement was missed, or the implementation is overreaching.
-
-When the work is for production, the code passes the diff review, then the dedicated test gate in the same Gates section. Runtime verification follows both passes before shipping.
 
 ## Phase E: Scrap when the architecture is wrong
 

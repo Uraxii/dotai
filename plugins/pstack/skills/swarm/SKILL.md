@@ -10,7 +10,7 @@ Fan out N parallel cloud workers. They may cover separate slices, race the same 
 
 ## Start
 
-Before launching anything, create one step bead for each phase, per the Phases of a skill section of [`../poteto-mode/references/beads-work-loop.md`](../poteto-mode/references/beads-work-loop.md).
+Before launching anything, create one step bead for each phase, per the Phases of a skill section of [Run records](../ticket-work/references/run-records.md#phases-of-a-skill).
 
 1. Frame
 2. Fan out

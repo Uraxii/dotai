@@ -2,7 +2,7 @@
 
 You own the proposals. Produce an idea brief and stop before implementation.
 
-Use the [beads work loop](../references/beads-work-loop.md) to create the run bead and five ordered chore step beads before work. Close completed steps with evidence. Record an unavailable step with its reason. Close the idea run after the brief. A future build does not hold it open.
+Use the [Run records](../../ticket-work/references/run-records.md) to create the run bead and five ordered chore step beads before work. Close completed steps with evidence. Record an unavailable step with its reason. Close the idea run after the brief. A future build does not hold it open.
 
 1. Ground the project. Read current design documents, implementation, prior decisions, prior idea briefs, and relevant open beads. Inspect the user workflow when available. Record each access gap. Use the project's code index when available, per [index-the-codebase](../../index-the-codebase/SKILL.md).
 2. Give one fresh `poteto-agent` subagent the grounded context and the user's constraints, using your configured judgment and prose model. See [Models in poteto-mode](../SKILL.md#models) for overrides and fallback. Ask it to read `poteto-mode` and [principle-feature-ideas](../../principle-feature-ideas/SKILL.md). Its brief permits read-only inspection and forbids implementation design, task planning, and implementation. If spawning is unavailable or forbidden, produce the same brief yourself. State that limitation.

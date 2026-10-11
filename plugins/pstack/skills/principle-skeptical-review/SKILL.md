@@ -20,7 +20,9 @@ Read all of the submission and the done-when before you judge. Do not skim. Read
 
 On a design sketch, `not implemented` bodies are correct. Judge the shape. Check that the types and contracts hold each case in the done-when, that each interface hides its complexity, that the sketch names what it breaks elsewhere, and that the plan is realistic.
 
-On a code diff, check correctness, side effects on callers, and stale assumptions: comments, docs, and tests that the change made wrong. Review available tests with the code. Use the **principle-test-behavior-not-implementation** skill to check that assertions detect defects in required behavior. Identify missing coverage, including when the writer adds no tests. Treat missing required coverage and assertions that prove no behavior as findings. Edit no tests during the review.
+On a code diff, check correctness, side effects on callers, and stale assumptions: comments, docs, and tests that the change made wrong.
+
+Review available tests with the code. Use the **principle-test-behavior-not-implementation** skill to check that assertions detect defects in required behavior. Identify missing coverage, including when the writer adds no tests. Treat missing required coverage and assertions that prove no behavior as findings. Edit no tests during the review.
 
 Every objection must be substantive. Name the evidence (a `file:line` or a sketch section) and the case that breaks. Raise the problem. Do not write an alternative design. Do not write the fix. Do not pass the work because of time pressure, and do not fail it to look strict.
 

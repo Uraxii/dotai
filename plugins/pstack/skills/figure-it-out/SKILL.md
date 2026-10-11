@@ -10,7 +10,7 @@ When the task matches no playbook, design one. The deliverable before any code i
 
 ## Start
 
-Find or create the run bead per [`../poteto-mode/references/beads-work-loop.md`](../poteto-mode/references/beads-work-loop.md), and create the phase beads per its Phases of a skill section. The first phase bead reads the Principles section of the **poteto-mode** skill. Then create one phase bead for each phase below.
+Find or create the run bead per [Run records](../ticket-work/references/run-records.md), and create the phase beads per its Phases of a skill section. The first phase bead reads the Principles section of the **poteto-mode** skill. Then create one phase bead for each phase below.
 
 ## Phase A: Frame
 
@@ -28,11 +28,12 @@ Decompose into atomic, independently-landable units. Sequence riskiest-unknown-f
 
 - Build the verification harness before the work, with the baseline captured from the pre-change state, so the check reads as "old value vs new value".
 - For one-way-door design decisions, run the **architect** skill (it runs **arena**). Skip it for mechanical work whose shape is already concrete. A second arena over a settled design is over-engineering (the **laziness-protocol** principle skill).
-- When the run ships production work, the designed list includes the gates in the Gates section of [`../poteto-mode/references/beads-work-loop.md`](../poteto-mode/references/beads-work-loop.md): a sketch review after each `architect` run and a diff review after each writer. For production-code changes, include the dedicated test gate after each relevant diff pass and before runtime verification.
 - Decide what fans out. Parallelize only across seams, and give each worker its own worktree or branch (the **separate-before-serializing-shared-state** principle skill). Don't over-fan.
 - Write the designed phase list down. That list is what the human reviews.
 
-Then execute the design. Create each of its steps as a child bead of the Phase C phase bead. Run each under the Phase C loop discipline, and weave the Phase D log through them, a row as each step lands, rather than saving the whole trail for the end.
+Return the workflow before execution when the caller brief requests that handoff. Otherwise, execute the design.
+
+Create each of its steps as a child bead of the Phase C phase bead. Run each under the Phase C loop discipline, and weave the Phase D log through them, a row as each step lands, rather than saving the whole trail for the end.
 
 ## Phase C: Run the loop
 
