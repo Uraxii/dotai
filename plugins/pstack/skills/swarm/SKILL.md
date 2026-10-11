@@ -31,7 +31,7 @@ Spawn all N workers in one message with `subagent_type: generalPurpose`, `enviro
 
 When a worker must start from a non-default pushed branch, pass `cloud_base_branch`.
 
-Every brief stands alone. Include the goal, scope, exact slice or race arm, how to verify, and what to report. Reports use `PASS`, `ISSUES`, or `BLOCKED` with evidence. A worker that can prove a defect reports `ISSUES` and lists every issue it can prove, not only the first.
+Every brief stands alone. Include the goal, scope, exact slice or race arm, how to verify, and what to report. When the worker works in a checkout, the brief tells it to run the **index-the-codebase** skill first. Reports use `PASS`, `ISSUES`, or `BLOCKED` with evidence. A worker that can prove a defect reports `ISSUES` and lists every issue it can prove, not only the first.
 
 If a worker drops out, proceed with N-1 and note it.
 

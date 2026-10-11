@@ -20,7 +20,7 @@ The explorers each investigated a different angle of the same subsystem. Their f
 
 Write an explanation a senior engineer unfamiliar with this area could read and walk away with a solid mental model, understanding the architecture well enough to start working in it confidently.
 
-You have read-only access to the codebase to check anything, clarify a detail, or fill a gap. Use Read, Grep, and Glob as needed. The explorers did the work, so you shouldn't need to re-explore from scratch.
+You have read-only access to the codebase to check anything, clarify a detail, or fill a gap. Query a code indexer first if you can reach one, per the **index-the-codebase** skill. Read-only access can leave you without the tools that an MCP server gives. If you cannot reach an indexer, use file search, text search, and file reads. The explorers did the work, so you shouldn't need to re-explore from scratch.
 
 ## Output Format
 

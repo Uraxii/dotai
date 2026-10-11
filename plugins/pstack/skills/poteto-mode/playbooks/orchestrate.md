@@ -51,7 +51,9 @@ REPORT       status, branch, head SHA, PRs, verdict, what you actually ran, devi
 STANDING     <titles of the open decision beads under the epic, pasted verbatim>
 ```
 
-Size the brief to the unit. A one-command unit gets the template collapsed to a paragraph that still names goal, scope, the verify command, the report shape, and the stage write. A 4KB scaffold around a two-line edit costs more to write and obey than the edit. A local spawn may name the epic ID instead of pasting the standing orders, because a local worker can run `bd list --parent <epic> -t decision` itself. Verbatim paste is for cloud spawns and every resume.
+Each brief tells the worker to run the **index-the-codebase** skill on its worktree before any other work.
+
+Size the brief to the unit. A one-command unit gets the template collapsed to a paragraph that still names goal, scope, the verify command, the report shape, the stage write, and the instruction to run **index-the-codebase** first. A 4KB scaffold around a two-line edit costs more to write and obey than the edit. A local spawn may name the epic ID instead of pasting the standing orders, because a local worker can run `bd list --parent <epic> -t decision` itself. Verbatim paste is for cloud spawns and every resume.
 
 A sub-coordinator brief adds its track boundary and unit list, its spawn budget with the cloud default and the local exception list, the drain protocol from Queue and drain, and the rollup format (per child: unit bead ID, status, PR, head SHA, verdict, one line, plus track status and frontier delta).
 

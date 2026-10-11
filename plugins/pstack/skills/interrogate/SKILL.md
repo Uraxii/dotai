@@ -53,7 +53,7 @@ Read `references/reviewer-prompt.md` and fill in the template with:
 3. The review rubric from `references/rubric.md`
 4. The code-quality lens from `references/code-quality-review.md`
 
-The same filled template goes to all reviewers, so every model applies the code-quality lens.
+The same filled template goes to all reviewers, so every model applies the code-quality lens. When the reviewers read code in a checkout, add the checkout path and tell each reviewer to query a code indexer first if it can reach one, per the **index-the-codebase** skill. A read-only reviewer can lack the tools that an MCP server gives, so it uses file search when it cannot reach an indexer.
 
 ## Step 4, Synthesize
 

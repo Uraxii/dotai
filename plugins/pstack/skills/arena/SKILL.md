@@ -30,7 +30,7 @@ The N candidates will receive the same prompt, so the prompt is the contract.
 
 ## Phase B: Fan out
 
-Spawn all N subagents in one message with `run_in_background: true`, each with the task, the path to the shared grounding, its own output path, and instructions to produce both the artifact and a short rationale.
+Spawn all N subagents in one message with `run_in_background: true`, each with the task, the path to the shared grounding, its own output path, and instructions to produce both the artifact and a short rationale. A candidate that works in a checkout gets an instruction to run the **index-the-codebase** skill on its checkout first.
 
 Each rationale names the alternatives the candidate considered and what it rejected.
 
