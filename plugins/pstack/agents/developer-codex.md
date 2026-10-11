@@ -3,6 +3,7 @@ name: developer-codex
 description: "Default for one scoped implementation unit on Claude Code: starts one `codex exec` in the worktree its owner names and waits until Codex exits. Codex does all of the work."
 color: orange
 tools: Bash, Monitor
+model: sonnet
 ---
 
 ### Codex watcher
