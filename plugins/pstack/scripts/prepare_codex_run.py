@@ -283,6 +283,9 @@ def prepare(text: str, beads_env: str | None) -> Path:
     if live:
         raise Refusal(f"a Codex run is already live in {run_dir}")
     try:
+        review_skill = PLUGIN_ROOT / "skills/principle-skeptical-review/SKILL.md"
+        if request.role == "reviewer" and not review_skill.is_file():
+            raise Refusal(f"required review skill is missing: {review_skill}")
         if not beads_env or not os.path.isabs(beads_env):
             raise Refusal("BEADS_DIR must be set to an absolute path")
         beads_dir = Path(beads_env)

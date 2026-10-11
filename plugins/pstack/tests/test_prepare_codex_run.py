@@ -125,6 +125,16 @@ else:
                 self.assertTrue(result.stderr)
                 self.assertFalse((self.root / "argv.json").exists())
 
+    def test_missing_review_skill_refuses_without_launch(self):
+        skill = self.plugin / "skills/principle-skeptical-review/SKILL.md"
+        skill.unlink()
+        result = self.prepare(self.request("reviewer"), launch=True)
+        self.assertEqual(result.returncode, 2, result.stderr)
+        self.assertEqual(result.stdout.strip(), "PSTACK_CODEX_STOP")
+        self.assertIn("principle-skeptical-review", result.stderr)
+        self.assertFalse((self.root / "argv.json").exists())
+        self.assertEqual(self.prepare().returncode, 0)
+
     def test_nonzero_exit_reaches_caller(self):
         self.env["STUB_CODE"] = "7"
         result, _ = self.execute()
