@@ -43,20 +43,27 @@ class SessionReminderTests(unittest.TestCase):
         )
 
     def test_wired_commands_deliver_context(self) -> None:
+        with tempfile.TemporaryDirectory(prefix='plugin path ') as directory:
+            plugin_path = Path(directory) / 'pstack'
+            plugin_path.symlink_to(PLUGIN, target_is_directory=True)
+            self.check_wired_commands(plugin_path)
+
+    def check_wired_commands(self, plugin_path: Path) -> None:
         for target, filename, variable in (
             ('claude', 'hooks/claude-hooks.json', 'CLAUDE_PLUGIN_ROOT'),
             ('codex', 'hooks/codex-hooks.json', 'PLUGIN_ROOT'),
             ('copilot', 'hooks.json', 'PLUGIN_ROOT'),
         ):
             with self.subTest(target=target):
-                config = json.loads((PLUGIN / filename).read_text())
+                config = json.loads((plugin_path / filename).read_text())
                 event = 'sessionStart' if target == 'copilot' else 'SessionStart'
                 self.assertEqual({event}, set(config['hooks']))
                 entry = config['hooks'][event][0]
-                command = entry['bash'] if target == 'copilot' else entry['hooks'][0]['command']
+                command = (entry['bash'] if target == 'copilot'
+                           else entry['hooks'][0]['command'])
                 result = subprocess.run(
                     command, shell=True, text=True, capture_output=True,
-                    env={**os.environ, variable: str(PLUGIN)},
+                    env={**os.environ, variable: str(plugin_path)},
                     input='{}', check=True,
                 )
                 self.assertEqual(self.run_hook(target), result.stdout.strip())

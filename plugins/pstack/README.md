@@ -107,6 +107,7 @@ Use an available watcher or scheduler for event checks.
 If none exists, use a bounded loop in the active session.
 That loop ends when the session ends.
 [Platform adaptation](./skills/poteto-mode/references/platform-adaptation.md) lists tool mappings and load limits.
+[Check plugin loading](./docs/plugin-load-checks.md) gives the candidate validation procedure.
 
 ## skills
 
@@ -150,6 +151,7 @@ That loop ends when the session ends.
 | [`/show-me-your-work`](./skills/show-me-your-work/SKILL.md) | you want a reviewable decision trail. logs decisions to a tsv you can commit. |
 | [`/create-verification-skill`](./skills/create-verification-skill/SKILL.md) | your project has no scripted way to prove app behavior. generates a project-local verify skill with a feature map, for any language or platform. |
 | [`/maintain-verification-skill`](./skills/maintain-verification-skill/SKILL.md) | your verify skill's feature map has drifted from the app. source wave + one live pass, at most one PR of proven corrections. |
+| [the deslop skill](./skills/deslop/SKILL.md) | remove code slop before a commit. |
 | [`/unslop`](./skills/unslop/SKILL.md) | you're cleaning up writing. removes AI tells. |
 | [`/bro`](./skills/bro/SKILL.md) | you want the last message restated in plain human language, no jargon. |
 | [`/technical-writing`](./skills/technical-writing/SKILL.md) | layered doc standard (Diátaxis + Google developer style + STE + Global English) for docs, RFCs, readmes, PR descriptions, commit messages. |

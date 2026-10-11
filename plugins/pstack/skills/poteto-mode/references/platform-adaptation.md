@@ -29,6 +29,18 @@ Copilot CLI supports plugin agents in `agents/*.agent.md`.
 Use the agent's existing ID and duties. Select background execution only
 when the exposed API supports it. Give each writer its own checkout.
 
+Shared agent files keep their existing IDs and duties.
+Resolve the ID through the active tool before you spawn.
+
+| Definition | Claude Code ID | Copilot CLI ID |
+|---|---|---|
+| `poteto-agent.agent.md` | `pstack:poteto-agent` | `pstack:poteto-agent` |
+| `comment-sicko.agent.md` | `pstack:Comment Sicko` | `pstack:comment-sicko` |
+| `zakia.agent.md` | `pstack:zakia` | `pstack:zakia` |
+
+Claude Code uses the frontmatter name. Copilot CLI uses the file ID.
+Do not change the persona name to make the two naming rules look identical.
+
 Codex uses its exposed agent API with a complete skill brief.
 Do not assume Codex discovers Claude-format agent definitions.
 When a named agent cannot load, pass its existing instructions to a supported
