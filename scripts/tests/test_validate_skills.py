@@ -100,20 +100,28 @@ class ValidateSkillsTests(unittest.TestCase):
 
             self.assertEqual(0, result.returncode, result.stderr)
 
-    def test_fails_when_a_link_escapes_the_skills_tree(self) -> None:
+    def test_passes_a_link_to_a_file_beside_the_skills_tree(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
-            skills_dir = Path(directory)
-            skill_dir = skills_dir / "sample"
-            skill_dir.mkdir()
-            (skill_dir / "SKILL.md").write_text(
-                "---\nname: sample\ndescription: A sample skill.\n---\n\n"
-                "See [outside](../../outside.md).\n"
-            )
+            plugin = Path(directory) / "plugin"
+            skills_dir = plugin / "skills"
+            write_skill(skills_dir, "sample", "See [readme](../../README.md).\n")
+            (plugin / "README.md").write_text("# Plugin\n")
+
+            result = run_validator(skills_dir)
+
+            self.assertEqual(0, result.returncode, result.stderr)
+
+    def test_fails_when_a_link_escapes_the_plugin(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            plugin = Path(directory) / "plugin"
+            skills_dir = plugin / "skills"
+            write_skill(skills_dir, "sample", "See [outside](../../../outside.md).\n")
+            (Path(directory) / "outside.md").write_text("# Outside\n")
 
             result = run_validator(skills_dir)
 
             self.assertNotEqual(0, result.returncode)
-            self.assertIn("escapes skills tree", result.stderr)
+            self.assertIn("../../../outside.md (escapes the plugin)", result.stderr)
 
     def test_ignores_links_inside_fenced_code(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

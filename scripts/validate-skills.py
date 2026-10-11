@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Validate one or more plugin skills trees in a single run: links resolve
-inside their own tree, skill names cited in bold or backticks resolve to a
+inside the plugin that holds the tree, skill names cited in bold or backticks resolve to a
 skill directory in the same plugin, and every SKILL.md frontmatter names its
 own directory and carries a description.
 
@@ -119,7 +119,10 @@ def markdown_files(root: Path) -> list[Path]:
 
 
 def link_problems(skills_dir: Path) -> list[str]:
+    # A plugin installs whole, so a link may reach any file beside skills/,
+    # such as the plugin README, but nothing outside the plugin.
     root = skills_dir.resolve()
+    plugin = root.parent
     problems = []
     for path in markdown_files(root):
         for target in link_targets(path.read_text()):
@@ -133,8 +136,8 @@ def link_problems(skills_dir: Path) -> list[str]:
                 continue
             decoded = unquote(encoded)
             resolved = (path.parent / decoded).resolve()
-            if Path(decoded).is_absolute() or not path_is_inside(root, resolved):
-                problems.append(f"{path.relative_to(root)} -> {target} (escapes skills tree)")
+            if Path(decoded).is_absolute() or not path_is_inside(plugin, resolved):
+                problems.append(f"{path.relative_to(root)} -> {target} (escapes the plugin)")
             elif not resolved.exists():
                 problems.append(f"{path.relative_to(root)} -> {target} (missing)")
     return problems
