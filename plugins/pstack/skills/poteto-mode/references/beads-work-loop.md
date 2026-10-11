@@ -90,12 +90,17 @@ A cloud agent cannot reach the beads database, so it keeps no step beads. Its fi
 
 ## Gates
 
-A gate is a skeptic review by a fresh agent that did not write the work. Work for production passes its gates before it ships. Work is for production when a PR will carry its commits. A Prototype, an Investigation, and an Eval run have no gate, and neither does a plan. An `interrogate` panel is not a gate. A gated step has no `skip:` when the work is for production.
+A gate is a production check by an independent agent. A skeptic reviews the work. A dedicated tester checks production code after the skeptic diff pass. Work for production passes its gates before it ships. Work is for production when a PR will carry its commits. A Prototype, an Investigation, and an Eval run have no gate, and neither does a plan. An `interrogate` panel is not a gate. A gated step has no `skip:` when the work is for production.
 
 | Gate | Reviews | Runs | Fixer |
 | --- | --- | --- | --- |
 | Sketch review | The committed `architect` sketch and its rationale | After the synthesis, before implementation | The agent that ran `architect` |
-| Diff review | The writer's commits from the base to the head | After the writer reports its head SHA | The writer, or a fresh writer with consolidated scope when the writer has ended |
+| Diff review | The writer's commits from the base to the head, including tests | After the writer reports its head SHA | The writer, or a fresh writer with consolidated scope when the writer has ended |
+| Test gate | Available test quality, missing coverage, and all applicable tests | After the skeptic diff pass for production code | Tester for test defects, writer for production defects |
+
+Sketches and prose-only changes need no test gate. Writers choose whether to add tests. Production-code changes need both a current skeptic pass and a current tester pass before runtime verification and shipping. `tdd` is the bug-test workflow. It does not replace the dedicated tester.
+
+The following steps apply to skeptic review gates.
 
 1. Before the spawn, create the gate bead as a child of the bead that holds the work. Its description names the base SHA, the scope, and the done-when.
 
@@ -114,7 +119,23 @@ A gate is a skeptic review by a fresh agent that did not write the work. Work fo
 
    Then close the gate bead (`bd close <gate> --reason "pass at <SHA>"`). Read the diff only when a check fails.
 
-A delegate that ran a gate on its own diff reports the gate bead, and its spawner checks that gate instead of running a second review. An agent that cannot spawn returns its head SHA, and its spawner runs the gate. When your brief says that your spawner runs the diff review, run only the sketch review. Orchestrate, Autopilot-full, Autopilot-stack, and Shipping run the diff review for the work of their workers and owners.
+### Own the test gate
+
+After the skeptic diff pass, create a `test gate: <subject>` bead of type `chore`. Use the same parent as the diff gate, not the closed diff gate. Before the spawn, put the base SHA, scope, done-when, suite commands, and allowed test paths in its description. Name the preceding diff gate and its pass SHA.
+
+```sh
+bd create "test gate: <subject>" -t chore --parent <bead> --body-file <file> --silent
+```
+
+Pause the writer while the tester runs. Give the tester exclusive write access to the allowed test paths. Spawn a fresh `poteto-agent` using your configured test model. Apply the override and fallback rules in Models in `poteto-mode`. Its prompt is exactly `Test bead <gate> at <SHA> in <worktree>.` Its actor is `tester-<gate>`. The tester must have written none of the production code.
+
+On `tests fail`, give the writer its full brief, the test findings, and `Fix bead <gate> at <SHA> in <worktree>.` Keep the same unit and test gate for retries. After the writer reports its new head, obtain a fresh skeptic diff pass, then spawn a fresh tester. A test gate takes at most three `tests fail` comments. After the third, leave it open, stop dependent work, and report the remaining failures and blockers. Independent work can continue.
+
+Before closure, check the last test verdict, its author, and its final committed SHA with `bd comments <gate> --json`. The last verdict must pass. Its author must have written no production code. Each prior failed item must be fixed or answered. The pass must cover the final patch. Also check a current skeptic pass that includes every tester edit. Then close the test gate with `bd close <gate> --reason "pass at <SHA>"`.
+
+Test-only commits change the reviewed diff. Obtain a fresh skeptic pass on that final patch before accepting the tester pass. If that review changes nothing, retain the tester's suite results. If the review requests a change, repeat the applicable gates at the new head. A production fix invalidates both passes. Pure restacks retain evidence only under the stable patch-id rule in `playbooks/shipping.md` step 3. A changed assertion requires fresh review and test evidence. Build equivalence cannot prove assertion quality.
+
+A delegate reports both gate IDs and the final SHA. Its spawner checks those passes instead of repeating valid gates. An agent that cannot spawn returns its head and pending gates to its spawner. When the brief assigns diff review and testing to the spawner, the worker runs only its sketch review. Orchestrate, Autopilot-full, Autopilot-stack, and Shipping own the diff and test gates for their workers and owners.
 
 ## Run a skeptic review
 
@@ -125,14 +146,29 @@ This section is for the agent whose prompt is `Review bead <gate> at <SHA> in <w
 3. Review `git diff <base>..<SHA>` in the worktree. For a sketch, also read the rationale it names. Judge the work by the **principle-skeptical-review** skill. If there is a last failed round at `<old SHA>`, read `git diff <old SHA>..<SHA>` first, because those commits are the fixes.
 4. Write the verdict to a file outside the worktree. The first line is `verdict pass at <SHA>` or `verdict fail at <SHA>`. Then list the findings under the three tiers, and mark each item of the last failed round `fixed`, `answered: <reason>`, or `still open`. Add the file as a comment (`bd comment <gate> --file <file>`).
 
+## Run a tester gate
+
+This section is for the agent whose prompt is `Test bead <gate> at <SHA> in <worktree>.`
+
+1. Set `BEADS_ACTOR=tester-<gate>` on each `bd` call. Create and claim your own run bead, per The run bead. Do not claim the writer's bead or the gate. Read the named gate, prior rounds, and passing skeptic gate. Confirm the input head and exclusive test-write scope before edits.
+2. Read the full base-to-head diff, done-when, and all available tests. Identify absent coverage when the writer supplies no tests. Read the **principle-test-behavior-not-implementation** skill. Check meaningful assertions and real subject execution. Check errors, empty inputs, boundaries, and regressions relevant to the change. Derive incidental structure from actual state instead of assuming order or counts.
+3. Design the missing cases. Choose unit, integration, or browser tests that fit the contract. Load required real fixtures. A missing fixture or test prerequisite is a blocker. Do not fabricate success.
+4. Add or correct tests in the existing harness within the allowed paths. Edit no production code. Do not change a frozen parity or measurement baseline. Correct a proven stale writer test only with contract evidence and equivalent behavior coverage. Never remove a valid requirement to obtain green output. Commit test changes with a Conventional Commit subject and a body that states the reason.
+5. Run all applicable tests, including new cases and adjacent regressions. Record each command, exit code, result, coverage gap, and environment blocker. A known failure still fails the all-tests-pass condition.
+6. For a production defect, report the reproduction and failing assertion to the owner. Keep the failing test committed for the writer. Do not fix production code.
+7. Write the verdict to a temporary file. Add it with `bd comment <gate> --file <file>`. The first line is `tests pass at <final SHA>` or `tests fail at <final SHA>`. Use the actual committed head after tester edits. Name unresolved quality findings, missed coverage, and suite failures. Mark prior failed items fixed, answered, or still open.
+8. Report the final head and test commits. If tests changed the patch, request the final skeptic review. Close your own step and run beads before return. The owner closes the gate.
+
+A pass requires complete quality checks, required coverage, and successful suite execution. A green count alone is insufficient. An unavailable environment yields `tests fail` with a blocker description. It cannot count as a pass.
+
 ## Fix a failed round
 
 This section is for the agent whose prompt has `Fix bead <gate> at <SHA> in <worktree>.`
 
-1. Read the last failed round (`bd comments <gate>`).
-2. Fix each must-fix item.
+1. Read the review and test comments that apply to the current head (`bd comments <gate>`). Read the gate description for related gate IDs.
+2. Fix each must-fix item and each failing test in the responsible code. Preserve tester-committed tests. If a tester test has a wrong contract, explain why in a comment and leave the test for the fresh reviewer.
 3. Fix each should-fix-or-explain item, or answer it with a comment on the gate bead (`bd comment <gate> --file <file>`) that holds the line `answered: <item>: <reason>`.
-4. Commit, and report the new head SHA.
+4. Commit, and report the new head SHA. The owner obtains a fresh skeptic diff review before the next tester round.
 
 ## Text with quotes or several lines
 

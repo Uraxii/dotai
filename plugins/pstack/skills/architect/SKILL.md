@@ -58,7 +58,7 @@ Replace `not implemented` bodies with code, pseudocode with logic. The synthesiz
 
 Deviations from the sketch are signal worth surfacing, not friction to absorb silently. If a function needs a parameter the sketch didn't anticipate, ask whether the sketch was wrong, the requirement was missed, or the implementation is overreaching.
 
-When the work is for production, the code passes the diff review in the same Gates section before it ships.
+When the work is for production, the code passes the diff review, then the dedicated test gate in the same Gates section. Runtime verification follows both passes before shipping.
 
 ## Phase E: Scrap when the architecture is wrong
 
