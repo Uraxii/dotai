@@ -27,7 +27,7 @@ Present the framing and tradeoffs before committing to a long run. Reversible wo
 Decompose into atomic, independently-landable units. Sequence riskiest-unknown-first. Scaffold and verification come before features (the **foundational-thinking** principle skill).
 
 - Build the verification harness before the work, with the baseline captured from the pre-change state, so the check reads as "old value vs new value".
-- For one-way-door design decisions, run the **architect** skill (it runs **arena**). Skip it for mechanical work whose shape is already concrete. A second arena over a settled design is over-engineering (the **laziness-protocol** principle skill).
+- For each code-changing unit, include architect planning before implementation. The owner may skip it for a very small change. Follow [Architect planning](../poteto-mode/references/beads-work-loop.md#architect-planning). Reuse a settled plan only within its scope.
 - When the run ships production work, the designed list includes the gates in the Gates section of [`../poteto-mode/references/beads-work-loop.md`](../poteto-mode/references/beads-work-loop.md): a sketch review after each `architect` run and a diff review after each writer. For production-code changes, include the dedicated test gate after each relevant diff pass and before runtime verification.
 - Decide what fans out. Parallelize only across seams, and give each worker its own worktree or branch (the **separate-before-serializing-shared-state** principle skill). Don't over-fan.
 - Write the designed phase list down. That list is what the human reviews.

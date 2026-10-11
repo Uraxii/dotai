@@ -69,7 +69,7 @@ The default answer is `/poteto-mode`, which runs most of the others when its ste
 | Catch up on their own recent work on a topic | [`/recall`](../recall/SKILL.md) |
 | Know what a small diff could break outside itself | [`/blast-radius`](../blast-radius/SKILL.md) |
 | Index a checkout or worktree, and answer where-is, who-calls, and what-breaks questions from the index | [`/index-the-codebase`](../index-the-codebase/SKILL.md) |
-| Settle types and module shape before code that crosses a function boundary | [`/architect`](../architect/SKILL.md) |
+| Plan each code change before implementation, with the owner's very-small-change skip | [`/architect`](../architect/SKILL.md) |
 | Get several attempts at one brief, merged into the best one | [`/arena`](../arena/SKILL.md) |
 | Run parallel checks over slices, or race workers, as cloud agents | [`/swarm`](../swarm/SKILL.md) |
 | Have different models review a diff and try to break it | [`/interrogate`](../interrogate/SKILL.md) |
@@ -98,7 +98,7 @@ Close calls:
 
 - `/how` explains what the code does. `/why` explains the reasons. `/teach` runs one or both and explains the result plainly.
 - `/arena` gives every worker the same brief and merges the best parts. `/swarm` splits work into slices or a race and returns one report.
-- `/architect` implements right after it settles the design. Add "with checkpoint" to review the design before it writes code.
+- A direct `/architect` call implements after the design passes its required sketch review. A planning-only brief ends after Phase C and hands the design to the writer. Add "with checkpoint" for a human review before code. See [Architect planning](../poteto-mode/references/beads-work-loop.md#architect-planning).
 - `/interrogate` reviews the diff. `/blast-radius` looks for breakage outside the diff and proves the one fact that makes the change safe.
 - `/recall` rebuilds context across recent chats. Resuming one specific chat or branch is the Session pickup playbook.
 - `/figure-it-out` designs one rigorous run. The Orchestrate playbook runs a program that spans days and many PRs. The Autonomous run playbook drives one task to a finish condition.

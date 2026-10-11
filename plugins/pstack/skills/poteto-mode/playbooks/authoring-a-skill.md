@@ -2,7 +2,7 @@
 
 **You own the skill's voice.**
 
-1. Use the **create-skill** skill (Cursor's built-in for authoring SKILL.md files).
+1. Use the **create-skill** skill (Cursor's built-in for authoring SKILL.md files). If the work also changes code, follow [Architect planning](../references/beads-work-loop.md#architect-planning) before that change. Prose-only edits need no architect plan.
 2. Validate the skill: frontmatter has `name` and `description`, referenced files exist, cross-skill links resolve.
 3. Test cases if structural. Skip if subjective.
 4. Run the diff review per the Gates section of `../references/beads-work-loop.md`, then run **Opening a PR**.

@@ -1,6 +1,6 @@
 ---
 name: architect
-description: "Sketch types, signatures, and module structure before code, then stay in the loop while implementation fills in. Use for /architect, 'architect this', 'design this', or non-trivial work where jumping to code would lock in the wrong shape."
+description: "Plan each code change with types, signatures, and module structure. Support planning-only briefs, or stay in the loop while implementation fills in. Use for /architect, 'architect this', 'design this', or non-trivial work where jumping to code would lock in the wrong shape."
 disable-model-invocation: true
 ---
 
@@ -9,6 +9,8 @@ disable-model-invocation: true
 Design before implementing. Sketch types, function signatures, class shapes, and module boundaries with `not implemented` bodies and pseudocode. Synthesize across multiple model perspectives, then fill in code against the chosen sketch. If implementation proves the sketch wrong, throw it out and redesign.
 
 ## Start
+
+A planning-only brief runs Phases A through C and hands the design to the writer. A direct `/architect` call also owns implementation unless its brief says otherwise. Preserve any requested human checkpoint.
 
 Before you start, create one step bead for each phase, per the Phases of a skill section of [`../poteto-mode/references/beads-work-loop.md`](../poteto-mode/references/beads-work-loop.md).
 
@@ -42,9 +44,11 @@ Arena returns one synthesized design package. The synthesis decision populates t
 
 ## Phase C: Agree (opt-in)
 
-Default: proceed directly to implementation with the synthesized design. No human checkpoint.
+Default for a direct call: proceed to implementation with the synthesized design after the required sketch review. A planning-only brief ends after this phase. No human checkpoint applies unless requested.
 
 When the work is for production, commit the synthesized design. It passes the sketch review in the Gates section of [`../poteto-mode/references/beads-work-loop.md`](../poteto-mode/references/beads-work-loop.md) before Phase D starts.
+
+When your brief requests planning only, return the synthesized design and rationale after the required sketch review. Return the artifact paths, sketch SHA, gate bead, implementation scope, and unresolved decisions. Hand implementation to the writer. Close unused phase beads per [Architect planning](../poteto-mode/references/beads-work-loop.md#architect-planning).
 
 Opt in to a checkpoint when the invoker explicitly asks: "/architect with checkpoint," "stop and show me before implementing," or similar. Then surface the synthesized design and pause for sign-off.
 
@@ -53,6 +57,8 @@ The synthesis can ship as its own commit either way, as the "scaffold first" mod
 If the human pushes back on the shape (in a checkpoint or after the fact), treat that as Phase A evidence. Re-ground and re-run Phase B before writing more code.
 
 ## Phase D: Implement against the sketch
+
+Implement only when this invocation owns implementation. A planning-only invocation ends after Phase C.
 
 Replace `not implemented` bodies with code, pseudocode with logic. The synthesized sketch is the contract.
 

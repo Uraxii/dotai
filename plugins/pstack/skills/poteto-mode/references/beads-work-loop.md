@@ -88,6 +88,22 @@ To rewrite the checkpoint, run the same command again. It replaces the field. `b
 
 A cloud agent cannot reach the beads database, so it keeps no step beads. Its final message lists each step with its result or `skip: <reason>`. The spawner writes that list to a file and adds it as a comment on the bead that it gave the agent (`bd comment <id> --file <file>`).
 
+## Architect planning
+
+Before each code change, obtain an architect plan. The owner may skip planning for a very small change.
+
+1. Use the step bead that runs planning. If the code-writing step has no planning bead, create a `chore` child under that step.
+2. For a very small change, the owner records the scope and reason before implementation. Close the planning bead with `skip: very small change: <reason>`. This skip applies only to architect planning. Implementation delegation, tests, the diff review, and the tester gate still apply.
+3. Otherwise, claim the planning bead under the planner's actor before the spawn. Spawn a fresh `poteto-agent` using your configured architect planning model. Follow the override and fallback rules in [Models](../SKILL.md#models).
+4. Give the planner a brief with the worktree, scope, constraints, done-when, output paths, and grounding evidence. Request [architect](../../architect/SKILL.md) Phases A through C only. The plan names the caller's usage, types, signatures, modules, and implementation step.
+5. For production work, the planner commits the synthesized sketch and rationale. Run the existing sketch review before the handoff. The planner implements no production logic.
+6. The planner returns the artifact paths, sketch SHA, gate bead, implementation scope, and unresolved decisions. Close its Phase D bead with `skip: implementation belongs to the writer`. Close unused Phase E with `skip: no architecture scrap needed`. If the sketch needs a scrap, use the existing redesign loop.
+7. The owner checks the passed sketch gate per Gates below. After three sketch failures, follow that procedure's stop and escalation. Close the planning step only after the handoff and gate checks pass. The planner does not close an Orchestrate unit.
+8. Give the writer the plan, sketch SHA, passed gate, and implementation scope. A plan can cover a defined batch of related edits. Do not run architect again for work that the plan already covers.
+9. A change outside the plan's scope needs a new plan or the owner's very-small-change skip. A new requirement, changed contract, or failed shape returns to architect planning.
+
+An agent that cannot reach beads follows Agents that cannot reach the database above. An agent that cannot spawn returns the planning need to its spawner before implementation. The spawner obtains the plan or records the owner skip. A writer's private task list does not replace the architect design package.
+
 ## Gates
 
 A gate is a production check by an independent agent. A skeptic reviews the work. A dedicated tester checks production code after the skeptic diff pass. Work for production passes its gates before it ships. Work is for production when a PR will carry its commits. A Prototype, an Investigation, and an Eval run have no gate, and neither does a plan. An `interrogate` panel is not a gate. A gated step has no `skip:` when the work is for production.

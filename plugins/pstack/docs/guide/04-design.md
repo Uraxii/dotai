@@ -16,7 +16,9 @@ The two most common design mistakes are taking the agent's first design and poli
 
 For production work, a fresh reviewer gives the design a skeptic review before code, and gives the code the same review before the PR.
 
-By default it proceeds straight from the synthesized design into implementation. If you want to see the design first, say so:
+An architect plans each code change before implementation. The owner may skip that step for a very small change. Follow [Architect planning](../../skills/poteto-mode/references/beads-work-loop.md#architect-planning). A planning-only brief returns the design, rationale, sketch SHA, passed gate, and scope to the writer after Phase C.
+
+A direct `/architect` call proceeds from the synthesized design into implementation after the required sketch review. If you want to see the design first, say so:
 
 ```text
 /architect with checkpoint. stop and show me before implementing.
@@ -120,16 +122,16 @@ For a migration, state the bar in the prompt:
 
 ## How much design work does a task deserve?
 
-You might be wondering whether every change needs this. No. Most changes need none of it. A rough ladder:
+An architect plan is the default for code changes. The owner may skip it for a very small change. Use this ladder to choose other design work:
 
 - A small, finished change you're unsure about needs `/interrogate` alone.
-- A change that crosses function boundaries or moves ownership earns `/architect`, which brings `/arena` with it.
+- Each code change gets `/architect`, which brings `/arena` with it, unless the owner records a very-small-change skip.
 - A standalone decision where independent attempts would help, like naming, formats, or an algorithm, is `/arena` directly.
 - A coverage matrix, set of parallel checks, or race with declared arms is `/swarm`.
 - An open question you could answer by running something, like a layout, a timing, or an approach, gets a prototype, not a debate.
 - A contested design that's expensive to reverse gets `/architect`, then `/interrogate` before shipping.
 - Work that spans several PRs gets a plan, written after the design settles.
 
-`/poteto-mode` already applies this ladder. Boundary-crossing work triggers `/architect` on its own, so you reach for these directly mainly when you want more or less scrutiny than the default.
+`/poteto-mode` applies architect planning before each code change, with the owner's very-small-change skip. Invoke the other design skills directly when you need more scrutiny.
 
 Next: [Build and clean the change](./05-build-and-clean.md).
