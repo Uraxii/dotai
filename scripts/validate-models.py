@@ -4,7 +4,7 @@
 models.json is the single source of model picks, and nothing copies it any
 more: skills point at it by path, and a user overrides a role for one harness
 in that harness's own sheet (`~/.claude/pstack-models.md` on Claude Code,
-`~/.codex/pstack-models.md` on Codex; see the `setup-pstack` skill).
+`~/.codex/pstack-models.md` on Codex; see the `configure-pstack` skill).
 
 A role's "models" is an object keyed by harness (`claude`, `codex`,
 `copilot`), each value an ordered preference list for that harness, or the

@@ -25,7 +25,8 @@ Remaining triggers:
 - Contested design → the **interrogate** skill (multi-model adversarial) before shipping.
 - Nontrivial multi-step → write the throughput checkpoint (Feature step 3).
 - Any prose surface → the **unslop** skill. Your reply is a prose surface. Write it per **Writing the reply**. Agent-facing prose also follows the **create-skill** skill (Cursor's built-in for authoring SKILL.md files).
-- Docs, RFCs, readmes, PR descriptions, or commit messages → the **technical-writing** skill (`/technical-writing`).
+- Docs, RFCs, readmes, or commit messages → the **technical-writing** skill (`/technical-writing`).
+- PR titles and descriptions → the **write-pr** skill (`/write-pr`).
 - Before commit → the `deslop` skill from the `cursor-team-kit` plugin (`/deslop`).
 - Before review → the **no-comments** skill (`/no-comments`).
 - Shipping UI / IDE / CLI → the matching control skill. `cursor-team-kit` publishes `control-cli` (CLIs and TUIs) and `control-ui` (browser / Electron / web UIs). For bug fixes, reproduce first on the same surface yourself. Hand to the user only under the narrow Bug fix step 1 exception.
@@ -93,7 +94,7 @@ Read the leaf skill in full for any principle you apply. Each entry names when i
 
 **Use `subagent_type: "poteto-agent"` for any subagent you spawn inside a playbook step** (code-writing delegates, ad-hoc helpers). `/poteto-mode` and `poteto-agent` route through the same wrapper. Routed workflow skills (`how`, `why`, `interrogate`, `reflect`, `swarm`) set their own `subagent_type` for diverse-model review. Respect what the skill prescribes, don't override to `poteto-agent`.
 
-**Defaults for every `Task` call.** `run_in_background: true`, agent mode (readonly strips MCP), file pointers not inlined context, explicit model per role (configurable via `/setup-pstack`. Defaults `grok-4.7-xhigh-fast` for code, `claude-opus-5-5-xhigh` for prose and judgment). Code delegates tier by difficulty. The hardest changes (cross-cutting design, gnarly concurrency, subtle algorithms) go to your strongest judgment model (`claude-opus-5-5-xhigh`), whether the task needs judgment on vague intent or is a precisely specified sequence of steps to execute to the letter. Trivial mechanical edits go to your fast code model. Per-role lines in the `/setup-pstack` rule override these defaults and the model choices in the routed skills (`how`, `why`, `arena`, `swarm`, `architect`, `interrogate`, `reflect`). A role with no line keeps its default, and a role line of `inherit-parent` or `auto` runs that role on the parent chat model (omit Task `model`). Each code playbook's configured model comes from its line (`feature, refactoring`, `bug-fix`, `perf-issue`, or `hillclimb`), and the hardest changes read `hardest tasks`. Prose and judgment read `judgment and prose`.
+**Defaults for every `Task` call.** `run_in_background: true`, agent mode (readonly strips MCP), file pointers not inlined context, explicit model per role from `models.json` (see [Models](#models)). Code delegates tier by difficulty. The hardest changes (cross-cutting design, gnarly concurrency, subtle algorithms) go to the `hardest tasks` role, whether the task needs judgment on vague intent or is a precisely specified sequence of steps to execute to the letter. Trivial mechanical edits go to your fast code model. Rows in this harness's override sheet (written by `/configure-pstack`) override `models.json` for every role, the routed skills (`how`, `why`, `arena`, `swarm`, `architect`, `interrogate`, `reflect`) too. A role with no row keeps its `models.json` list, and a row of `inherit-parent` or `auto` runs that role on the parent chat model (omit Task `model`). Each code playbook names its role (`feature, refactoring`, `bug-fix`, `perf-issue`, or `hillclimb`). Prose and judgment read `judgment and prose`.
 
 You own every subagent's work. Review the diff and write your own summary, don't pass through what it said. A second opinion is the same prompt against a different model. Agreement is high-signal.
 
@@ -146,3 +147,28 @@ A large or cross-cutting effort (a migration across many call sites, an ambitiou
 - **Multi-phase or multi-PR plan.** Work that spans phases or stacked PRs. `playbooks/multi-phase-plan.md`.
 - **Worktree and simulator cleanup.** Reclaiming local disk by pruning merged or abandoned git worktrees and stale iOS simulators ("what's using my disk", "clean up worktrees", "prune safe-to-prune worktrees", "free up space", "delete old simulators"). `playbooks/worktree-cleanup.md`.
 - **Opening a PR.** Invoked at the end of every other playbook. `playbooks/opening-a-pr.md`.
+
+## Models
+
+`models.json` holds the model picks for every pstack role. It is keyed by role and then by harness (`claude`, `codex`, `copilot`). Each value is a list in order of preference, or the name of a shared list under `panels`.
+
+**Find the file.** A skill is at `<plugin root>/skills/<skill name>/`, and `models.json` is at `<plugin root>/models.json`, two directories up. Resolve it from the skill's own directory, not from the working directory. An installed copy of the plugin has no `plugins/pstack/` path.
+
+- On Claude Code, each skill that the harness loads starts with the line `Base directory for this skill:` and the skill's absolute directory. Count up two levels from that directory.
+- On Codex and Copilot CLI, the agent opens the skill's `SKILL.md` directly. Count up two levels from the directory of that `SKILL.md`, not from the directory of another file in the skill.
+
+**Pick a model.** Read the list for your own harness and use the first name.
+
+**Panel roles.** The panel roles are `arena runners`, `architect runners`, and `interrogate reviewers`. A panel role spawns one subagent for each name in its list, so the list length sets the panel size. Every other role is a single-model role and uses one name. `arena cross-judge pool` takes its list from `panels`, but it is a single-model role. Arena selects one name from that list. The `panels` key holds shared lists only. It does not make a role a panel role.
+
+**Apply the override sheet.** A row in this harness's override sheet replaces that role's list for this harness only. The path of the sheet is its harness key, so a row cannot change another harness. `configure-pstack` writes the sheet:
+
+- Claude Code reads `~/.claude/pstack-models.md`. The line `@~/.claude/pstack-models.md` in `~/.claude/CLAUDE.md` or in the project `CLAUDE.md` loads it.
+- Codex reads `~/.codex/pstack-models.md`. Codex has no `@` include, so the rows go into `~/.codex/AGENTS.md`.
+- Copilot CLI reads `<config-dir>/pstack-models.md`. The rows go into `<config-dir>/copilot-instructions.md`. `<config-dir>` is `COPILOT_HOME` when it is set, otherwise `~/.copilot`.
+
+**Aliases.** A sheet value of `inherit-parent` or `auto` runs that role on the parent session's model, and the spawn call leaves out `model`. In a panel list, each alias entry still spawns one subagent. `models.json` holds no alias, because each name in it must be in that harness's `available` list.
+
+**No entry.** A role with no sheet row and no list for your harness spawns unpinned. The spawn call leaves out `model`, and the child runs on the parent's model.
+
+**Fallback.** For a single-model role, if the harness rejects a name, use the next name in the list and say so. If the harness rejects every name, leave out `model` and say so. For a panel role, drop a rejected seat and say so. Do not replace it with the next name, because the next name already has its own seat. If the harness rejects every seat, spawn one subagent without `model` and say so. Never apply the fallback to an alias entry.

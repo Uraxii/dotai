@@ -63,13 +63,15 @@ One special case has its own generator. A skill that must drive your app and pro
 
 ## Write docs to a standard with `/technical-writing`
 
-Skills aren't the only prose you ship. For docs, RFCs, readmes, PR descriptions, and commit messages:
+Skills aren't the only prose you ship. For docs, RFCs, readmes, and commit messages:
 
 ```text
 /technical-writing review the readme changes
 ```
 
 [`/technical-writing`](../../skills/technical-writing/SKILL.md) applies a layered standard with one goal, prose a tired engineer understands on the first read. It picks the document's mode first (tutorial, how-to, reference, or explanation), then works sentence by sentence: who does what, one thought per sentence, nothing readable two ways. Use it to review what you or an agent just wrote, or name it up front when you ask for a doc.
+
+For PR titles and descriptions, use [`/write-pr`](../../skills/write-pr/SKILL.md). It applies `/technical-writing` and `/unslop` to the PR text and fills the repo's PR template.
 
 ## Test a skill change blind
 

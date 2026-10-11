@@ -506,19 +506,19 @@ class RemovedSkillReferenceTests(unittest.TestCase):
         self.assert_reference_is_flagged("Load the `caveman` skill now.\n")
 
     def test_fails_on_a_removed_skill_whose_prefix_family_has_one_member(self) -> None:
-        # Deleting setup-dotai left setup-pstack alone in the setup- family, and the
-        # family threshold of two then hid every remaining setup-dotai reference.
+        # One live skill is not a prefix family, so the removed name has to be
+        # flagged from history alone.
         with tempfile.TemporaryDirectory() as directory:
             repository = Path(directory)
             skills_dir = repository / "skills"
-            write_removed_skill(repository, skills_dir, "setup-dotai")
-            write_skill(skills_dir, "setup-pstack")
-            write_skill(skills_dir, "sample", "Run `setup-dotai` first.\n")
+            write_removed_skill(repository, skills_dir, "family-removed")
+            write_skill(skills_dir, "family-kept")
+            write_skill(skills_dir, "sample", "Run `family-removed` first.\n")
 
             result = run_validator(skills_dir)
 
             self.assertNotEqual(0, result.returncode, result.stdout)
-            self.assertIn("setup-dotai", result.stderr)
+            self.assertIn("family-removed", result.stderr)
 
     def test_accepts_a_skill_that_history_removed_and_a_later_commit_restored(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

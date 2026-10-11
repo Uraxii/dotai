@@ -55,7 +55,7 @@ Install `bd` and the beads plugin before you install or use `pstack`.
 | Path      | What                                                    |
 |-----------|---------------------------------------------------------|
 | `plugins/<plugin>/skills/` | Every skill, `skills/<name>/SKILL.md`. Source of truth. |
-| `plugins/pstack/models.json` | Model picks per role and harness. The only copy in the repository. The nine skills that spawn agents all ship in `pstack` and point at it by path. A per-harness override sheet in the user's config directory replaces a role for one harness without touching this repo (see the `setup-pstack` skill). |
+| `plugins/pstack/models.json` | Model picks per role and harness. The only copy in the repository. Every skill that picks a model by role ships in `pstack` and points at it by path. A per-harness override sheet in the user's config directory replaces a role for one harness without touching this repo (see the `configure-pstack` skill). |
 | `plugins/pstack/agents/` | Claude and Copilot agent files. |
 | `scripts/` | CI checks: `validate-models.py` checks `models.json` only names models it can back, `validate-skills.py` checks skill links, cross-plugin citations, and frontmatter, and `generate-plugin-manifests.py` writes all 33 plugin manifests, both marketplace files, and the plugin table above from one list. Tests in `scripts/tests/`. |
 | `themes/` | Editor themes. Source of truth only. Nothing installs them, so copy one into `~/.claude/themes/` yourself. |
@@ -123,12 +123,12 @@ agent files, so a spawner on Codex reads the role preferences in
 `plugins/<plugin>/skills/` only.
 
 `plugins/pstack/models.json` is the only copy of the model picks. No skill
-repeats it. The nine skills that spawn agents all ship in `pstack`, and each
-points at the file by path and tells the reader to resolve it two directories
-up from the skill's own directory, so a spawner working outside this repo
-still finds it. A per-harness override sheet in the user's own config
+repeats it. Every skill that picks a model by role ships in `pstack`, and
+each one points at the file by path and tells the reader to resolve it two
+directories up from the skill's own directory, so a spawner working outside
+this repo still finds it. A per-harness override sheet in the user's own config
 directory can replace a role for one harness without touching this repo (see
-the `setup-pstack` skill). After changing `models.json`, check that it only
+the `configure-pstack` skill). After changing `models.json`, check that it only
 names models it can back, then check every plugin for broken links, citations
 that cross a plugin boundary, and malformed skill frontmatter:
 
