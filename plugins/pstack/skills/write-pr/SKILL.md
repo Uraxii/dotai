@@ -39,7 +39,7 @@ skill.
 
 ## Core Rules
 
-- Run `/deslop` from the `cursor-team-kit` plugin over the diff before commit.
+- Run the **deslop** skill (`/deslop`) over the diff before commit.
 - Run `/no-comments` before review.
 - Write every PR title, PR description, and commit body with `/technical-writing`, then apply `/unslop`.
 - Apply every technical-writing layer except Diátaxis. Use one word for each action, keep articles, and avoid `-ing` when a plain verb works.
