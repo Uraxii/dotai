@@ -100,7 +100,7 @@ Read the leaf skill in full for any principle you apply. Each entry names when i
 
 You own every subagent's work. Use the selected playbook to check its evidence and write your own summary. Use a fresh reviewer for a diff that needs review. A second opinion is the same prompt against a different model. Agreement is high-signal.
 
-**Ticket operations.** Use [ticket-work](../ticket-work/SKILL.md) for record commands. A prompt `Review bead <id> at <SHA> in <worktree>.` routes to [Review records](../ticket-work/references/review-records.md). A prompt `Test bead <id> at <SHA> in <worktree>.` routes to [Test records](../ticket-work/references/test-records.md). A prompt `Fix bead <id> at <SHA> in <worktree>.` routes to [Fix rounds](../ticket-work/references/fix-rounds.md). The selected playbook owns the production checks.
+**Ticket operations.** Beads record runs and steps. Use [ticket-work](../ticket-work/SKILL.md) for record commands. A prompt `Review bead <id> at <SHA> in <worktree>.` routes to [Review records](../ticket-work/references/review-records.md). A prompt `Test bead <id> at <SHA> in <worktree>.` routes to [Test records](../ticket-work/references/test-records.md). A prompt `Fix bead <id> at <SHA> in <worktree>.` routes to [Fix rounds](../ticket-work/references/fix-rounds.md). The saved [Code-change workflow](../run-workflow/workflows/code-change-workflow.md) owns the production checks.
 
 **Fresh subagents by default.** Give new work to a fresh subagent with consolidated scope, meaning the original brief, every later directive, and the prior agent's report and branch. This holds for a fix round, a follow-up, a retry, and the next queue item. Resume, message, or queue a follow-up on an existing subagent only when the new work strictly needs state that lives in that agent and is costly to move: its local checkout, its uncommitted changes, or a process it still runs, such as a dev server, a simulator, or a babysit watcher. A stop or hold order to a running agent is not reuse. A role such as a PR owner outlives its agent. Once that agent returns, a fresh agent takes the role's next round. Interrupt-chained resumes silently drop directives, so fire a fresh subagent with consolidated scope rather than trusting a "done" summary.
 
@@ -126,7 +126,7 @@ Comments follow the same rule as the reply. Write them clean as you go. Keep a c
 
 A direct architecture request routes through [Architect planning](playbooks/architect-planning.md) for a design-only handoff. The owner selects the implementation playbook after that handoff. For other tasks, match the task to a playbook below and open its file. Before any other work, create the run bead and one step bead for each step of the playbook, with the step copied in verbatim, per [Run records](../ticket-work/references/run-records.md). Step beads for task-specific work come after them. To not do a step, close its step bead with a one-line `skip: <reason>`.
 
-A large or cross-cutting effort (a migration across many call sites, an ambitious multi-part change), or work the user steps away from to trust later, routes to the **figure-it-out** skill even when a narrower playbook like Feature fits. Use **figure-it-out** whenever no bundled playbook fits. It designs a bespoke, rigorous playbook for the task. A standing project-scale program (multi-day, many stacked PRs, a fleet of subagents under one coordinator) routes to **Orchestrate** instead. figure-it-out designs one bespoke run, orchestrate runs the program.
+A large or cross-cutting effort (a migration across many call sites, an ambitious multi-part change), or work the user steps away from to trust later, routes to the **run-workflow** skill even when a narrower playbook like Feature fits. Use **run-workflow** whenever no bundled playbook fits. It designs a bespoke, rigorous playbook for the task. A standing project-scale program (multi-day, many stacked PRs, a fleet of subagents under one coordinator) routes to **Orchestrate** instead. run-workflow designs one bespoke run, orchestrate runs the program.
 
 - **Investigation.** Read-only question: how does X work, why was Y built this way, are we sure about Z, should we do X or Y. `playbooks/investigation.md`.
 - **Bug fix.** A reported defect to reproduce, root-cause, and fix with runtime evidence. `playbooks/bug-fix.md`.
@@ -156,7 +156,7 @@ A large or cross-cutting effort (a migration across many call sites, an ambitiou
 ### Shared procedures
 
 - [Architect planning](playbooks/architect-planning.md). The owner procedure for a design-only handoff before code changes.
-- [Production checks](references/production-checks.md). The owner procedure for production review and test assignments.
+- [Code-change workflow](../run-workflow/workflows/code-change-workflow.md). The owner procedure for production review and test assignments.
 
 ## Models
 

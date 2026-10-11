@@ -27,7 +27,7 @@ two steps:
 
 new here? the [pstack guide](./docs/guide/README.md) walks you through a first real task, from setup and prompting through verification and overnight runs. stuck, or unsure which skill fits? ask [`/poteto-help`](./skills/poteto-help/SKILL.md).
 
-Writers choose whether to add tests. A fresh skeptic reviews the diff, checks available tests, and identifies missing coverage. For production code, a dedicated tester then checks test quality, adds needed cases, and runs all applicable tests. A current skeptic pass must include tester edits. Both passes cover the final patch before runtime verification and shipping. Prose-only changes keep the skeptic gate without a tester gate. [Production checks](./skills/poteto-mode/references/production-checks.md) defines both gates. `/tdd` is the bug-test workflow, not the dedicated tester.
+Writers choose whether to add tests. A fresh skeptic reviews the diff, checks available tests, and identifies missing coverage. For production code, a dedicated tester then checks test quality, adds needed cases, and runs all applicable tests. A current skeptic pass must include tester edits. Both passes cover the final patch before runtime verification and shipping. Prose-only changes keep the skeptic gate without a tester gate. [Code-change workflow](./skills/run-workflow/workflows/code-change-workflow.md) defines both gates. `/tdd` is the bug-test workflow, not the dedicated tester.
 
 that's it. the other skills are situational; the mode skill uses them for you as needed. out of the box the mode splits work by model strength: code delegates (feature, refactoring, bug fix, perf, hillclimb) and research go to a fast model, while the hardest changes, prose, and judgment go to a strong one. [`models.json`](./models.json) lists the models for each role on each harness. [`/configure-pstack`](./skills/configure-pstack/SKILL.md) changes any of it.
 
@@ -139,7 +139,7 @@ to keep [`/poteto-mode`](./skills/poteto-mode/SKILL.md) on across turns, pick it
 | [`/benchmark-checklist`](./skills/benchmark-checklist/SKILL.md) | you ran a benchmark or measured a speedup or regression. vets the number (limiter, tuning, errors, repeat runs, end-to-end relevance) before you report or act on it. |
 | [`/no-comments`](./skills/no-comments/SKILL.md) | strip comments before review; spawns Comment Sicko, fixes accepted findings, offers encodings for claimed constraints. |
 | [`/typescript-best-practices`](./skills/typescript-best-practices/SKILL.md) | you're reading or editing typescript. grounds the type-system-discipline principle in syntax. |
-| [`/figure-it-out`](./skills/figure-it-out/SKILL.md) | no bundled playbook fits. designs a rigorous, auditable playbook for the task. |
+| [`/run-workflow`](./skills/run-workflow/SKILL.md) | no bundled playbook fits. designs a rigorous, auditable playbook for the task. |
 | [`/show-me-your-work`](./skills/show-me-your-work/SKILL.md) | you want a reviewable decision trail. logs decisions to a tsv you can commit. |
 | [`/create-verification-skill`](./skills/create-verification-skill/SKILL.md) | your project has no scripted way to prove app behavior. generates a project-local verify skill with a feature map, for any language or platform. |
 | [`/maintain-verification-skill`](./skills/maintain-verification-skill/SKILL.md) | your verify skill's feature map has drifted from the app. source wave + one live pass, at most one PR of proven corrections. |

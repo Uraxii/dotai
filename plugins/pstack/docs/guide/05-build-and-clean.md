@@ -32,7 +32,7 @@ Each of these routes to its playbook ([Bug fix](../../skills/poteto-mode/playboo
 
 An architect plans each code change before implementation. The owner may skip that step for a very small change. The writer receives the plan and scope through [Architect planning](../../skills/poteto-mode/playbooks/architect-planning.md). For production work, the owner also supplies the sketch SHA and passed gate.
 
-Writers choose whether to add tests. The skeptic reviews available tests with the diff and identifies missing coverage. After the skeptic pass for production code, a dedicated tester checks quality, adds needed cases, and runs all applicable tests. The writer fixes production defects and preserves tester-committed tests. A final skeptic pass includes tester edits. Both gates cover the final patch before runtime verification. [Production checks](../../skills/poteto-mode/references/production-checks.md) defines this sequence.
+Writers choose whether to add tests. The skeptic reviews available tests with the diff and identifies missing coverage. After the skeptic pass for production code, a dedicated tester checks quality, adds needed cases, and runs all applicable tests. The writer fixes production defects and preserves tester-committed tests. A final skeptic pass includes tester edits. Both gates cover the final patch before runtime verification. [Code-change workflow](../../skills/run-workflow/workflows/code-change-workflow.md) defines this sequence.
 
 For sustained improvement of one number, there's the [Hillclimb playbook](../../skills/poteto-mode/playbooks/hillclimb.md). Give it the metric, a target, and a floor on attempts, and it loops one hypothesis at a time with a frozen measurement harness. It keeps wins and reverts everything else.
 

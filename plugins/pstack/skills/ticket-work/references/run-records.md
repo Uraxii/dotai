@@ -87,7 +87,7 @@ The coordinator closes the open Orchestrate steps and adds the Autonomous run st
 ## Phases of a skill
 
 Before the first phase, create one `chore` child bead for each phase.
-The architect, arena, swarm, and figure-it-out skills are phased.
+The architect, arena, swarm, and run-workflow skills are phased.
 Use the step that runs the skill as the parent. If no step runs it, use the run bead.
 If no run exists, first create one per The run bead.
 

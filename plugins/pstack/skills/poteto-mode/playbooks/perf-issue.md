@@ -14,7 +14,7 @@
    7. Do it cheaper.
 
    When an earlier mantra meets the target, stop.
-3. Plan the fix from the trace. Obtain the architect plan per [Architect planning](architect-planning.md). The owner may skip planning for a very small change. Delegate implementation to a subagent on the `perf-issue` role in `models.json` (see Models in `poteto-mode`). When the writer reports its head SHA, its diff passes the diff review per [Production checks](../references/production-checks.md). For production code, run the dedicated test gate after the diff pass. Capture a post-fix trace after both gates pass.
+3. Plan the fix from the trace. If the fix crosses a function boundary, obtain the design per [Architect planning](architect-planning.md). Delegate implementation to a subagent on the `perf-issue` role in `models.json` (see Models in `poteto-mode`). Review the diff. Capture a post-fix trace.
    Apply the **sequence-verifiable-units** principle skill, verifying each attempt before trying the next.
 4. Parse and compare the artifacts (JSON to sqlite, diff). "Inconclusive" or wrong-surface is not a pass. Flag it.
 5. Cite the measurement in the PR.
