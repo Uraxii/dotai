@@ -6,7 +6,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/codex_watcher_commands.py\""
+            "command": "input=$(cat); agent=$(printf '%s' \"$input\" | jq -r '.agent_type // \"\"') || exit 0; case \"$agent\" in developer-codex|pstack:developer-codex|reviewer-codex|pstack:reviewer-codex) printf '%s' \"$input\" | timeout -k 1s 5s python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/codex_watcher_commands.py\" || exit 2 ;; *) exit 0 ;; esac",
+            "timeout": 10
           }
         ]
       }

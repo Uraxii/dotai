@@ -3,6 +3,8 @@ import os
 from pathlib import Path
 import shlex
 import subprocess
+import shutil
+import tempfile
 import unittest
 
 
@@ -19,6 +21,81 @@ WAIT = (f"until grep -qs '\"pstack\":\"codex exited\"' {shlex.quote(str(RUN / 'c
 
 
 class GuardTests(unittest.TestCase):
+    def test_registered_hook_preserves_command_decisions(self):
+        config = json.loads((PLUGIN / "hooks/hooks.json").read_text())
+        hook = config["hooks"]["PreToolUse"][0]["hooks"][0]
+        env = dict(os.environ, CLAUDE_PLUGIN_ROOT=str(PLUGIN))
+        for tool, command, decision in (("Bash", LAUNCH, "allow"),
+                                        ("Monitor", WAIT, "allow"),
+                                        ("Bash", "git status", "deny")):
+            result = subprocess.run(
+                ["sh", "-c", hook["command"]], env=env,
+                input=json.dumps({"agent_type": "pstack:developer-codex",
+                                  "tool_name": tool,
+                                  "tool_input": {"command": command}}),
+                text=True, capture_output=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            output = json.loads(result.stdout)["hookSpecificOutput"]
+            self.assertEqual(output["permissionDecision"], decision)
+
+    def test_registered_hook_failure_blocks_only_watchers(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            plugin = root / "plugin"
+            shutil.copytree(PLUGIN, plugin)
+            config = json.loads((plugin / "hooks/hooks.json").read_text())
+            hook = config["hooks"]["PreToolUse"][0]["hooks"][0]
+            guard = plugin / "hooks/codex_watcher_commands.py"
+            failures = {
+                "crash": "raise RuntimeError('guard crashed')\n",
+                "import": GUARD.read_text(),
+                "missing": None,
+                "timeout": "import time\ntime.sleep(30)\n",
+            }
+            (plugin / "scripts/prepare_codex_run.py").write_text(
+                "raise RuntimeError('builder import failed')\n")
+            env = dict(os.environ, CLAUDE_PLUGIN_ROOT=str(plugin))
+            for failure, source in failures.items():
+                if source is None:
+                    guard.unlink()
+                else:
+                    guard.write_text(source)
+                for agent in ("developer-codex", "pstack:reviewer-codex",
+                              "poteto-agent", "", "other:developer-codex"):
+                    with self.subTest(failure=failure, agent=agent):
+                        payload = {"agent_type": agent, "tool_name": "Bash",
+                                   "tool_input": {"command": LAUNCH,
+                                                  "agent_type": "developer-codex"}}
+                        result = subprocess.run(
+                            ["sh", "-c", hook["command"]], env=env,
+                            input=json.dumps(payload), text=True,
+                            capture_output=True, timeout=15)
+                        watcher = agent in ("developer-codex", "pstack:reviewer-codex")
+                        if watcher and result.returncode == 0:
+                            output = json.loads(result.stdout)["hookSpecificOutput"]
+                            self.assertEqual(output["permissionDecision"], "deny")
+                        else:
+                            self.assertEqual(result.returncode, 2 if watcher else 0,
+                                             result.stderr)
+                            self.assertEqual(result.stdout, "")
+
+    def test_registered_hook_missing_python_blocks_only_watchers(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            python = root / "python3"
+            python.write_text("#!/bin/sh\nexit 127\n")
+            python.chmod(0o755)
+            config = json.loads((PLUGIN / "hooks/hooks.json").read_text())
+            hook = config["hooks"]["PreToolUse"][0]["hooks"][0]
+            env = dict(os.environ, CLAUDE_PLUGIN_ROOT=str(PLUGIN),
+                       PATH=f"{root}:{os.environ['PATH']}")
+            for agent, code in (("reviewer-codex", 2), ("poteto-agent", 0)):
+                result = subprocess.run(["sh", "-c", hook["command"]], env=env,
+                                        input=json.dumps({"agent_type": agent}),
+                                        text=True, capture_output=True)
+                self.assertEqual(result.returncode, code, result.stderr)
+                self.assertEqual(result.stdout, "")
+
     def check_call(self, tool, command, agent="pstack:developer-codex"):
         result = subprocess.run(["python3", str(GUARD)], input=json.dumps({
             "agent_type": agent, "tool_name": tool,

@@ -12,13 +12,6 @@ import sys
 PLUGIN_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PLUGIN_ROOT / "scripts"))
 
-try:
-    from prepare_codex_run import parse_request
-except Exception as error:
-    print(f"Codex watcher guard could not load: {error}", file=sys.stderr)
-    sys.exit(2)
-
-
 WATCHERS = {
     "developer-codex": "writer",
     "pstack:developer-codex": "writer",
@@ -28,6 +21,8 @@ WATCHERS = {
 
 
 def launch_allowed(command: str, role: str) -> bool:
+    from prepare_codex_run import parse_request
+
     builder = shlex.quote(str(PLUGIN_ROOT / "scripts/prepare_codex_run.py"))
     prefix = f"python3 {builder} --launch <<'PSTACK_REQUEST'\n"
     suffix = "\nPSTACK_REQUEST"
