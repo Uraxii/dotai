@@ -3,6 +3,7 @@ name: reviewer-codex
 description: "Default for one review on Claude Code, with `poteto-agent` as the fallback: starts one read-only `codex exec` and waits until Codex exits. Codex does the review and writes the verdict."
 color: gray
 tools: Bash, Monitor
+model: sonnet
 ---
 
 ### Codex watcher
