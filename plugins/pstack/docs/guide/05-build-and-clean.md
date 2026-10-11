@@ -60,7 +60,9 @@ In context, that's enough. [`/tdd`](../../skills/tdd/SKILL.md) writes the smalle
 
 ## Clean before you commit
 
-The [`/write-pr`](../../skills/write-pr/SKILL.md) skill runs `/deslop` on the diff before each commit and applies [`/unslop`](../../skills/unslop/SKILL.md) to the PR title, PR description, and commit bodies. `/deslop` ships in the `cursor-team-kit` plugin, not in pstack. If you don't have it, ask for the same outcome in plain words: remove narrating comments, unsupported guards, dead compatibility paths, and unrelated edits.
+The [`/write-pr`](../../skills/write-pr/SKILL.md) skill uses the deslop skill before each commit.
+It applies [`/unslop`](../../skills/unslop/SKILL.md) to the PR title, description, and commit bodies.
+The [deslop skill](../../skills/deslop/SKILL.md) is included in pstack.
 
 For prose, `/unslop` takes a target and any extra rules you have:
 

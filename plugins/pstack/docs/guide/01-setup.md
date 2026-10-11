@@ -4,13 +4,23 @@ In this page you install the plugin, pick which models pstack uses, and run your
 
 ## Install the plugin
 
-In a Cursor chat, run:
+Add this repository as a marketplace, then install pstack with your active tool.
+Check the installed CLI's help for the available flags.
 
-```text
-/add-plugin pstack
-```
+| Tool | Add marketplace | Install |
+|---|---|---|
+| Claude Code | `claude plugin marketplace add Uraxii/dotai` | `claude plugin install pstack@Uraxii` |
+| Codex | `codex plugin marketplace add Uraxii/dotai` | `codex plugin add pstack@uraxii` |
+| Copilot CLI | `copilot plugin marketplace add Uraxii/dotai` | `copilot plugin install pstack@Uraxii` |
 
-Cursor confirms the plugin is installed.
+Install the beads CLI (`bd 1.3.1`) and beads plugin from
+[beads](https://github.com/gastownhall/beads).
+Set `BEADS_DIR` to the project's store before task work.
+The package includes manifests for all three targets.
+A target load check must prove skill discovery, agent execution where supported,
+and actual session reminder delivery. Record unavailable authentication or runner cases.
+
+See [Platform adaptation](../../skills/poteto-mode/references/platform-adaptation.md) for tool mappings and load limits.
 
 ## Pick your models
 
@@ -30,7 +40,7 @@ You might be wondering what happens if you use Auto. Set a role to `inherit-pare
 
 At the end of setup, `/configure-pstack` looks for a way to prove app behavior in your project, either a `verify-*` skill or an existing harness. If it finds neither, it offers once to generate one with [`/create-verification-skill`](../../skills/create-verification-skill/SKILL.md).
 
-Say yes and it writes `.cursor/skills/verify-<app>/`, a project-local skill that teaches agents to drive your app the way a user does. It proves the skill works once before handing it over. Say no and setup moves on. You can run `/create-verification-skill` yourself any time. [Verify and ship](./06-verify-and-ship.md#create-a-project-verification-skill) covers it in depth.
+Say yes and it writes a project-local `verify-<app>/` in the active tool's discovered skill directory, a project-local skill that teaches agents to drive your app the way a user does. It proves the skill works once before handing it over. Say no and setup moves on. You can run `/create-verification-skill` yourself any time. [Verify and ship](./06-verify-and-ship.md#create-a-project-verification-skill) covers it in depth.
 
 If you're new to pstack, say yes. An agent that can check its own work keeps going until the check passes. An agent that can't hands every result back to you to check by hand. Of everything in this guide, the verification skill pays off the most.
 
@@ -55,6 +65,6 @@ Pick something real but small, and describe it the way you'd describe it to a co
 
 Watch the step beads with `bd list --parent <run bead> --all`, with the run bead ID that `/poteto-mode` names in its reply. The first ones are the matched playbook's steps copied in, the Feature playbook for this prompt. If `/poteto-mode` skips a step, the step bead closes with the reason `skip: <reason>` and stays in the list, so you can see what it chose not to do.
 
-From here you can type normal follow-ups. To keep `/poteto-mode` on for the whole chat, pick it from the `/` menu with Option+Enter (Mac) or Alt+Enter (Windows) instead of Enter. That makes it a [Custom Mode](https://cursor.com/docs/skills), which stays in context on every turn until you exit it. Custom Modes are available in the Agents Window and the CLI. Plain Enter attaches the skill to one message, and it fades as the chat moves on.
+From here you can type normal follow-ups. Start each new task with `/poteto-mode`. The session reminder asks the agent to load it for work that needs engineering checks.
 
 Next: [Route work through `/poteto-mode`](./02-poteto-mode.md).

@@ -8,9 +8,9 @@ disable-model-invocation: true
 
 Answer the user's question about pstack, hand them a prompt they can send, and link the file the answer came from. For a help question, don't start the work. The user asked how, and a pstack run spends real tokens, so let them send the prompt.
 
-A message that asks for work, such as "use pstack to fix this bug", is not a help question. Read [`poteto-mode`](../poteto-mode/SKILL.md), do the work under it, and mention once that a Custom Mode keeps it on.
+A message that asks for work, such as "use pstack to fix this bug", is not a help question. Read [`poteto-mode`](../poteto-mode/SKILL.md), do the work under it, and start the requested task.
 
-This file maps questions to the skills and guide pages that hold the answers. Those files own the details. Read the file you route to before you quote it, and trust it when it disagrees with this map. The links here point into the installed plugin, which the user may not be able to open, so give the user the file's public copy: `https://github.com/cursor/plugins/blob/main/pstack/` followed by its path.
+This file maps questions to the skills and guide pages that hold the answers. Those files own the details. Read the file you route to before you quote it, and trust it when it disagrees with this map. The links here point into the installed plugin, which the user may not be able to open, so give the user the file's public copy: `https://github.com/Uraxii/dotai/blob/main/plugins/pstack/` followed by its path.
 
 ## Find out what they need
 
@@ -34,7 +34,7 @@ When the override sheet is missing and it matters, ask whether the user wants to
 
 ## Get set up
 
-1. Install with `/add-plugin pstack` in chat, or from Customize in the sidebar.
+1. Use the active tool's marketplace commands in [Set up pstack](../../docs/guide/01-setup.md#install-the-plugin). Verify candidate skill and hook loading before claiming target support.
 2. Run [`/configure-pstack`](../configure-pstack/SKILL.md). It shows each role, writes an override sheet for the roles the user changes, and wires it in. The sheet loads in new sessions.
 3. Start a real task with `/poteto-mode`, a goal, and a check that can pass or fail.
 
@@ -42,19 +42,14 @@ Installing changes nothing until a skill loads. `/configure-pstack` loads from t
 
 If cost is the worry, say where the tokens go and how to spend fewer. pstack spends extra tokens on subagents and review panels. Rerun `/configure-pstack` and pick cheaper models. A role set to `auto` or `inherit-parent` runs on the chat's model, which saves tokens when the chat runs on Auto or a cheaper model. A shorter panel list runs fewer subagents, one for each entry. Save `/poteto-mode` for work that needs rigor.
 
-pstack is built for Cursor. Its skills use the Agent Skills format, so other tools can read them. But most workflow skills, including `/poteto-mode`, `/how`, `/why`, and `/teach`, spawn Cursor subagents with per-role models, and Custom Modes and `/loop` are Cursor features, so those parts may not work there.
+pstack includes manifests for Claude Code, Codex, and Copilot CLI. Shared tasks use the active tool's APIs. [Platform adaptation](../poteto-mode/references/platform-adaptation.md) defines the mappings and evidence limits. A missing runner or login is an unverified case.
 
 ## Start a task with `/poteto-mode`
 
 `/poteto-mode` matches the task to a playbook, creates a step bead for each of the playbook's steps, and runs the other skills as the steps need them. A step it skips stays as a closed step bead with the reason `skip: <reason>`. A good prompt states the goal and how to tell it's done. It doesn't list skills, because a hand-written sequence tends to drop or reorder steps the playbook would keep. Read [`references/prompting.md`](references/prompting.md) before you help word one. [Guide page 2](../../docs/guide/02-poteto-mode.md) has examples.
 
-Whether `/poteto-mode` stays on depends on how the user starts it:
-
-- Enter on `/poteto-mode` attaches the skill to one message. It fades as the chat moves on.
-- Option+Enter on Mac or Alt+Enter on Windows, or Use as Mode from the skill entry, makes it a Custom Mode. It stays in context every turn until the user exits the mode, and it stays out of casual turns.
-- Cursor's docs list Custom Modes in the Agents Window and the CLI. Elsewhere, start each new task with `/poteto-mode`.
-
-Link [Cursor's skills docs](https://cursor.com/docs/skills) when this comes up. Mid-chat, "new task" makes the mode match a fresh playbook. `/poteto-mode` already uses `poteto-agent` for the subagents its playbook steps spawn. To get the same style from a subagent of your own, spawn it with `subagent_type: "poteto-agent"`.
+Start each new task with `/poteto-mode`. The session reminder asks the agent to load it for work that needs engineering checks.
+Say "new task" when the subject changes. Use the active agent API with the existing `poteto-agent` instructions for workers in that style.
 
 ## Pick a skill
 
@@ -71,7 +66,7 @@ The default answer is `/poteto-mode`, which runs most of the others when its ste
 | Index a checkout or worktree, and answer where-is, who-calls, and what-breaks questions from the index | [`/index-the-codebase`](../index-the-codebase/SKILL.md) |
 | Plan each code change before implementation, with the owner's very-small-change skip | [`/architect`](../architect/SKILL.md) |
 | Get several attempts at one brief, merged into the best one | [`/arena`](../arena/SKILL.md) |
-| Run parallel checks over slices, or race workers, as cloud agents | [`/swarm`](../swarm/SKILL.md) |
+| Run parallel checks over slices, or race workers, in isolated checkouts | [`/swarm`](../swarm/SKILL.md) |
 | Have different models review a diff and try to break it | [`/interrogate`](../interrogate/SKILL.md) |
 | Fix a bug test-first when a cheap local test exists | [`/tdd`](../tdd/SKILL.md) |
 | Apply TypeScript rules to `.ts` or `.tsx` work | [`/typescript-best-practices`](../typescript-best-practices/SKILL.md) |
@@ -102,11 +97,9 @@ Close calls:
 - `/recall` rebuilds context across recent chats. Resuming one specific chat or branch is the Session pickup playbook.
 - `/run-workflow` designs one rigorous run. The Orchestrate playbook runs a program that spans days and many PRs. The Autonomous run playbook drives one task to a finish condition.
 
-Not in pstack:
-
-- `/deslop`, `control-cli`, and `control-ui` ship in the `cursor-team-kit` plugin.
-- `/loop` and `/create-skill` are Cursor built-ins.
-- pstack has no `/orchestrate` skill. Orchestrate is a `/poteto-mode` playbook. If the slash menu shows `/orchestrate`, another plugin provides it.
+The deslop skill is included in pstack. Select an available app driver by interface.
+Use your harness's skill-authoring guidance. Use a supported watcher or a bounded active-session loop for event checks.
+pstack has no `/orchestrate` skill. Orchestrate is a `/poteto-mode` playbook.
 
 ## Playbooks and principles
 
@@ -120,7 +113,7 @@ Playbooks are step lists inside `/poteto-mode`, not skills, so they have no slas
 - "full autopilot on this queue" runs Autopilot-full. "stack them, don't ship" runs Autopilot-stack.
 - "run the eval playbook" runs Eval.
 
-Without `/poteto-mode`, a phrase such as "babysit this pr" can start Cursor's own skill for the same job instead. The Playbooks section of [`poteto-mode`](../poteto-mode/SKILL.md) lists every playbook and when it applies. [Guide page 6](../../docs/guide/06-verify-and-ship.md) covers opening, babysitting, and landing a PR.
+Use `/poteto-mode` to select the pstack Babysit playbook for PR status requests. The Playbooks section of [`poteto-mode`](../poteto-mode/SKILL.md) lists every playbook and when it applies. [Guide page 6](../../docs/guide/06-verify-and-ship.md) covers opening, babysitting, and landing a PR.
 
 pstack has no planning skill. Use your harness's own plan mode alongside it. Claude Code and Copilot CLI call it plan mode, and Codex opens it with `/plan`. For work that spans phases or stacked PRs, asking `/poteto-mode` for a plan runs the [Multi-phase plan playbook](../poteto-mode/playbooks/multi-phase-plan.md), which writes the plan and doesn't implement it. For a design question, the Prototype playbook or `/architect` settles it in code first.
 
@@ -132,13 +125,13 @@ Principles are one-rule skills that `/poteto-mode` reads and cites in its replie
 
 | Symptom | Fix |
 |---|---|
-| The mode stopped applying after a few turns | It was started with Enter. Start it as a Custom Mode, or start each task with `/poteto-mode`. |
+| The mode stopped applying after a few turns | Start each new task with `/poteto-mode`. Check actual session reminder delivery. |
 | A question got treated as the next step of the last task | Say "new task", or say the turn doesn't need the mode. |
 | A new model choice had no effect | The sheet from `/configure-pstack` loads in new sessions. Start one. |
 | Runs cost more than expected | See the cost paragraph under Get set up. |
 | A skill didn't load on its own | Only `/configure-pstack` and `/index-the-codebase` load on their own. The others load when the user types them or when `/poteto-mode` runs them, and it doesn't run every skill. |
-| Parallel agents overwrote each other | Give each agent its own worktree, or run them as cloud agents, which each get their own machine. |
-| An overnight run moved but finished nothing | `/loop` needs a check that can pass or fail, not a duration. See [guide page 7](../../docs/guide/07-overnight.md). |
+| Parallel agents overwrote each other | Give each agent its own worktree, with separate ports and build output. |
+| An overnight run moved but finished nothing | The loop needs a check that can pass or fail, not a duration. See [guide page 7](../../docs/guide/07-overnight.md). |
 | The reply claims success from a green build | Ask for the real command, flow, stored value, or profile. That's the prove-it-works principle. |
 
 For a run that drifts, [`references/prompting.md`](references/prompting.md) has one-line steers. [Guide page 10](../../docs/guide/10-recipes-and-pitfalls.md) has more pitfalls and the recipes worth copying.
@@ -155,3 +148,5 @@ For a run that drifts, [`references/prompting.md`](references/prompting.md) has 
 ## Reply
 
 Lead with the answer. Give at most one example prompt in a code block, adapted from [`references/recipes.md`](references/recipes.md) when one fits, then the link to that file. Keep it short unless the user asked for the whole map.
+
+Use [Platform adaptation](../poteto-mode/references/platform-adaptation.md) for tool APIs and evidence limits.
