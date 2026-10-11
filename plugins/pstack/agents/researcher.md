@@ -2,6 +2,7 @@
 name: researcher
 description: "Spawn for lookups, doc gathering, or reading legwork: answers one question from primary sources and writes the findings down."
 color: cyan
+model: sonnet
 skills:
   - pstack:poteto-mode
 ---
