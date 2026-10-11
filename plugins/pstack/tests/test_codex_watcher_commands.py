@@ -21,6 +21,73 @@ WAIT = (f"until grep -qs '\"pstack\":\"codex exited\"' {shlex.quote(str(RUN / 'c
 
 
 class GuardTests(unittest.TestCase):
+    def test_registered_hook_selects_root_watcher_after_tool_arguments(self) -> None:
+        config = json.loads((PLUGIN / "hooks/hooks.json").read_text())
+        hook = config["hooks"]["PreToolUse"][0]["hooks"][0]
+        env = dict(os.environ, CLAUDE_PLUGIN_ROOT=str(PLUGIN))
+        for agent in ("developer-codex", "pstack:developer-codex",
+                      "reviewer-codex", "pstack:reviewer-codex"):
+            for indent in (None, 2):
+                with self.subTest(agent=agent, indent=indent):
+                    payload = {"tool_input": {
+                        "agent_type": "poteto-agent",
+                        "command": 'echo "agent_type"; touch task.md',
+                        "arguments": [{"agent_type": "other:developer-codex"}]},
+                        "tool_name": "Bash", "agent_type": agent}
+                    result = subprocess.run(
+                        ["sh", "-c", hook["command"]], env=env,
+                        input=json.dumps(payload, indent=indent),
+                        text=True, capture_output=True)
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    output = json.loads(result.stdout)["hookSpecificOutput"]
+                    self.assertEqual(output["permissionDecision"], "deny")
+
+    def test_registered_hook_selector_errors_block_watchers(self) -> None:
+        config = json.loads((PLUGIN / "hooks/hooks.json").read_text())
+        hook = config["hooks"]["PreToolUse"][0]["hooks"][0]
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for command in ("cat", "sh", "jq", "timeout", "python3"):
+                source = shutil.which(command)
+                if source:
+                    (root / command).symlink_to(source)
+            selector = root / "grep"
+            env = dict(os.environ, CLAUDE_PLUGIN_ROOT=str(PLUGIN), PATH=str(root))
+            for failure in (None, 2, 127):
+                if failure is not None:
+                    selector.write_text(f"#!/bin/sh\nexit {failure}\n")
+                    selector.chmod(0o755)
+                for agent in ("developer-codex", "pstack:reviewer-codex"):
+                    with self.subTest(failure=failure, agent=agent):
+                        result = subprocess.run(
+                            ["/bin/sh", "-c", hook["command"]], env=env,
+                            input=json.dumps({"agent_type": agent,
+                                              "tool_name": "Bash",
+                                              "tool_input": {"command": "touch task.md"}}),
+                            text=True, capture_output=True)
+                        self.assertEqual(result.returncode, 2, result.stderr)
+                        self.assertEqual(result.stdout, "")
+
+    def test_registered_hook_allows_non_watchers_without_python(self) -> None:
+        config = json.loads((PLUGIN / "hooks/hooks.json").read_text())
+        hook = config["hooks"]["PreToolUse"][0]["hooks"][0]
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for command in ("cat", "sh", "jq", "grep"):
+                source = shutil.which(command)
+                if source:
+                    (root / command).symlink_to(source)
+            env = dict(os.environ, CLAUDE_PLUGIN_ROOT=str(PLUGIN), PATH=str(root))
+            for payload in ({}, {"agent_type": "poteto-agent"},
+                            {"tool_input": {"agent_type": "developer-codex"},
+                             "agent_type": "poteto-agent"}):
+                with self.subTest(payload=payload):
+                    result = subprocess.run(
+                        ["/bin/sh", "-c", hook["command"]], env=env,
+                        input=json.dumps(payload), text=True, capture_output=True)
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    self.assertEqual(result.stdout, "")
+
     def test_registered_hook_preserves_command_decisions(self):
         config = json.loads((PLUGIN / "hooks/hooks.json").read_text())
         hook = config["hooks"]["PreToolUse"][0]["hooks"][0]
