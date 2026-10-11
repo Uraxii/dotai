@@ -24,7 +24,7 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 REPOSITORY_URL = "https://github.com/Uraxii/dotai"
 AUTHOR = {"name": "Uraxii", "url": "https://github.com/Uraxii"}
 MARKETPLACE_DESCRIPTION = (
-    "Skills and thin named agents for software development work."
+    "Skills and agents for software development work."
 )
 
 # The version a plugin gets when its entry below carries no explicit one.
@@ -44,7 +44,7 @@ PLUGINS: list[dict[str, object]] = [
         "version": "2.0.10",
         "hooks": ["claude", "codex", "copilot"],
         "description": (
-            "Skills and thin named agents: poteto-mode, principles, "
+            "Skills and agents: poteto-mode, principles, "
             "playbooks, tools. Requires the beads CLI (bd 1.3.1) and the beads plugin."
         ),
         "short": "Reusable skills for software development work.",
