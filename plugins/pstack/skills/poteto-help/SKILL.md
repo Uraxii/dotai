@@ -105,7 +105,8 @@ Close calls:
 Not in pstack:
 
 - `control-cli` and `control-ui` ship in the `cursor-team-kit` plugin.
-- `/loop` and `/create-skill` are Cursor built-ins.
+- `/loop` is a Cursor built-in.
+- Skill authoring follows the harness's own guidance for authoring SKILL.md files.
 - pstack has no `/orchestrate` skill. Orchestrate is a `/poteto-mode` playbook. If the slash menu shows `/orchestrate`, another plugin provides it.
 
 ## Playbooks and principles
