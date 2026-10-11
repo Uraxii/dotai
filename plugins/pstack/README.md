@@ -27,7 +27,7 @@ two steps:
 
 new here? the [pstack guide](./docs/guide/README.md) walks you through a first real task, from setup and prompting through verification and overnight runs. stuck, or unsure which skill fits? ask [`/poteto-help`](./skills/poteto-help/SKILL.md).
 
-that's it. the other skills are situational; the mode skill uses them for you as needed. out of the box the mode splits work by model strength: code delegates (feature, refactoring, bug fix, perf, hillclimb) go to a fast model, while the hardest changes, prose, and judgment go to a strong one. [`models.json`](./models.json) lists the models for each role on each harness. [`/configure-pstack`](./skills/configure-pstack/SKILL.md) changes any of it.
+that's it. the other skills are situational; the mode skill uses them for you as needed. out of the box the mode splits work by model strength: code delegates (feature, refactoring, bug fix, perf, hillclimb) and research go to a fast model, while the hardest changes, prose, and judgment go to a strong one. [`models.json`](./models.json) lists the models for each role on each harness. [`/configure-pstack`](./skills/configure-pstack/SKILL.md) changes any of it.
 
 ## usage
 
