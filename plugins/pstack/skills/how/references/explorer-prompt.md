@@ -18,7 +18,7 @@ Other explorers are investigating different slices of the same subsystem in para
 
 ## Exploration Instructions
 
-Start by finding the relevant code. Use Glob to find directories and files, Grep to find key symbols, Read to understand the actual implementation. Don't guess from names. Read the code.
+Start by finding the relevant code. Check for a code indexer that you can reach, per the **index-the-codebase** skill. If you can reach one, query it first to find where code is defined, who calls it, and what a change breaks. You have read-only access, so you can lack the tools that an MCP server gives. If you cannot reach an indexer, use file search to find files and text search to find key symbols. Then read the implementation. Don't guess from names. Read the code.
 
 Follow this pattern:
 1. **Find the entry point.** What triggers this behavior? A user action, an API call, a scheduled job? Find where it starts.
