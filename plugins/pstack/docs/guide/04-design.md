@@ -6,6 +6,16 @@ The two most common design mistakes are taking the agent's first design and poli
 
 ![Three robots draft competing bridge models at their own tables under /architect, /arena, and /interrogate panels, while a judge robot with a clipboard inspects skeptically.](./images/design.jpg)
 
+## Choose an idea before architecture
+
+```text
+/poteto-mode suggest feature ideas for this project. Include small improvements and ambitious directions. Check what already exists. Stop at proposals.
+```
+
+The [Feature ideas playbook](../../skills/poteto-mode/playbooks/feature-ideas.md) studies the project before proposals. It covers small improvements, medium features, and ambitious directions. Each idea states user value and the evidence from its existence check. The brief stops before architecture, task scope, task order, or implementation.
+
+Selection alone does not start a build. Select an idea and request further work to use Feature, Prototype, or Multi-phase plan. The planning route first meets its design requirements.
+
 ## Settle the shape with `/architect`
 
 ```text

@@ -22,6 +22,8 @@ Swap in the real paths, skills, and done checks. Informal wording works.
 
 ## Design and plan
 
+- `/poteto-mode suggest feature ideas for this project. Include small improvements and ambitious directions. Check what already exists. Stop at proposals.`
+
 - `/poteto-mode prototype a few options for <feature>. take screenshots or videos for me to compare.`
 - `/poteto-mode we need <feature>. /architect it first, and answer open questions with prototypes. let me review before proceeding.`
 - `/poteto-mode write a tutorial for how i would use <new package> first. then /teach me why it beats the current one.`
