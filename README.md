@@ -32,8 +32,7 @@ needs `pstack` installed.
 
 Every plugin keeps its skills in `plugins/<plugin>/skills/<name>/SKILL.md`.
 No plugin cites a skill in another plugin, because a reader may have
-installed only one of them. `scripts/validate-skills.py` fails a build that
-breaks that rule.
+installed only one of them.
 
 ## pstack requires beads
 
@@ -41,9 +40,8 @@ breaks that rule.
 Agents claim, comment on, and close work through the beads plugin.
 Install `bd` and the beads plugin before you install or use `pstack`.
 
-- Requires `bd` 1.3.1 on `PATH`. CI tests that version.
+- Requires `bd` 1.3.1 on `PATH`.
 - Install `bd` from the [beads releases](https://github.com/gastownhall/beads).
-  `scripts/install-bd.sh` installs the pinned release on Linux amd64.
 - Set `BEADS_DIR` to the absolute path of the project's store, for example
   `<project>/.nikki-agents/.beads`. Put it in the `env` block of the
   project's `.claude/settings.local.json` so every session inherits it.
@@ -57,20 +55,13 @@ Install `bd` and the beads plugin before you install or use `pstack`.
 | `plugins/<plugin>/skills/` | Every skill, `skills/<name>/SKILL.md`. Source of truth. |
 | `plugins/pstack/models.json` | Model picks per role and harness. The only copy in the repository. Every skill that picks a model by role ships in `pstack` and points at it by path. A per-harness override sheet in the user's config directory replaces a role for one harness without touching this repo (see the `configure-pstack` skill). |
 | `plugins/pstack/agents/` | Claude and Copilot agent files. |
-| `scripts/` | CI checks: `validate-models.py` checks `models.json` only names models it can back, `validate-skills.py` checks skill links, cross-plugin citations, and frontmatter, and `generate-plugin-manifests.py` writes all 33 plugin manifests, both marketplace files, and the plugin table above from one list. Tests in `scripts/tests/`. |
+| `scripts/` | `generate-plugin-manifests.py` writes all 33 plugin manifests, both marketplace files, and the plugin table above from one list. |
 | `themes/` | Editor themes. Source of truth only. Nothing installs them, so copy one into `~/.claude/themes/` yourself. |
 | `output-styles/` | Output styles, `output-styles/<name>.md`. Nothing installs them, so copy one into `~/.claude/output-styles/` and select it with `/output-style` yourself. |
 | `statusline.sh` | Statusline command: usage bars and tokens per minute. Nothing installs it, so copy it to `~/.claude/statusline.sh` and set `statusLine` yourself. |
 | `plugins/mpocock/hooks/` | `handoff-token-flag.py` warns before context compaction and points the agent at the `handoff` skill, which ships in this same plugin. Plugin installation wires it for Claude Code and Codex. |
 | `plugins/pstack/hooks/` | Hook scripts tied to pstack skills and playbooks. `session_start_context.py` reminds the agent to load `poteto-mode` at session start; plugin installation wires it for Claude Code, Codex, and Copilot CLI. `codex_exec_no_agents.py` puts `plugins/pstack/shims/codex` first on `PATH` for any Bash call that mentions codex, and the shim adds `-c agents.enabled=false` to every `codex exec` it runs, so Codex never hands a delegated task to its own helper agents. `opencode-reminder-plugin.ts` (in the same directory) wires the session-start reminder into opencode. Wiring it into Hermes by hand is not covered by any skill here. See [Session-start reminder](#session-start-reminder) below for what each harness can and cannot do. Add `.nikki-agents/` to the exclude config of your editor, LSP, and any semantic index: `.git/info/exclude` covers git, ripgrep, and fd, but an indexer that keeps its own ignore list walks the worktrees and ends up crawling six figures of files in a repo with a few hundred tracked ones. |
 | `plugins/steer/hooks/` | `opus_5_reduce_output.py` is a Claude Code `Stop` hook that asks for a plain-English recap at the end of a turn on Opus 5 or Fable 5 that changed something. A turn that mutated nothing has nothing to recap, so it ends silently. Spawning a subagent counts as a mutation, because a delegate's own edits never reach this transcript. Plugin installation wires it, and no other harness gets it. |
-
-## Run the checks
-
-```
-scripts/check                          # everything CI runs
-scripts/check path/to/test_file.py     # pytest only, for the fast inner loop
-```
 
 ## Install
 
@@ -128,14 +119,7 @@ each one points at the file by path and tells the reader to resolve it two
 directories up from the skill's own directory, so a spawner working outside
 this repo still finds it. A per-harness override sheet in the user's own config
 directory can replace a role for one harness without touching this repo (see
-the `configure-pstack` skill). After changing `models.json`, check that it only
-names models it can back, then check every plugin for broken links, citations
-that cross a plugin boundary, and malformed skill frontmatter:
-
-```
-python3 scripts/validate-models.py
-python3 scripts/validate-skills.py plugins/*/skills
-```
+the `configure-pstack` skill).
 
 After changing the plugin list in `scripts/generate-plugin-manifests.py`,
 rerun it and commit what it writes:

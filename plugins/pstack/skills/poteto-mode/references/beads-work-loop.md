@@ -104,7 +104,7 @@ Use `-` in place of `<file>` to read the text from stdin. `bd comment` takes `--
 
 The loop depends on two bd behaviors. When several actors claim one bead at once, exactly one wins. When several processes close different beads at once, every close lands.
 
-[`scripts/check_bd_concurrency.py`](../scripts/check_bd_concurrency.py) races both on a throwaway store in a temp dir, 10 rounds each, and exits 1 on the first failure. It needs bd on PATH. CI installs bd, and `scripts/check` runs the script with `--rounds 2` in its `bd-concurrency` stage. Rerun it after a bd upgrade.
+[`scripts/check_bd_concurrency.py`](../scripts/check_bd_concurrency.py) races both on a throwaway store in a temp dir, 10 rounds each, and exits 1 on the first failure. It needs bd on PATH, so nothing runs it automatically. Rerun it after a bd upgrade.
 
 ```sh
 python3 scripts/check_bd_concurrency.py
