@@ -48,7 +48,7 @@ Default for a direct call: proceed to implementation with the synthesized design
 
 When the work is for production, commit the synthesized design. It passes the sketch review in the Gates section of [`../poteto-mode/references/beads-work-loop.md`](../poteto-mode/references/beads-work-loop.md) before Phase D starts.
 
-When your brief requests planning only, return the synthesized design and rationale after the required sketch review. Return the artifact paths, sketch SHA, gate bead, implementation scope, and unresolved decisions. Hand implementation to the writer. Close unused phase beads per [Architect planning](../poteto-mode/references/beads-work-loop.md#architect-planning).
+When your brief requests planning only, return the synthesized design and rationale after any required sketch review. Return the artifact paths, implementation scope, and unresolved decisions. For production work, also return the sketch SHA and gate bead. For work outside production, no commit or gate receipt is required. Hand implementation to the writer. Close unused phase beads per [Architect planning](../poteto-mode/references/beads-work-loop.md#architect-planning).
 
 Opt in to a checkpoint when the invoker explicitly asks: "/architect with checkpoint," "stop and show me before implementing," or similar. Then surface the synthesized design and pause for sign-off.
 
