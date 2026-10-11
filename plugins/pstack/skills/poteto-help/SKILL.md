@@ -98,7 +98,7 @@ Close calls:
 
 - `/how` explains what the code does. `/why` explains the reasons. `/teach` runs one or both and explains the result plainly.
 - `/arena` gives every worker the same brief and merges the best parts. `/swarm` splits work into slices or a race and returns one report.
-- A direct `/architect` call implements after the design passes its required sketch review. A planning-only brief ends after Phase C and hands the design to the writer. Add "with checkpoint" for a human review before code. See [Architect planning](../poteto-mode/references/beads-work-loop.md#architect-planning).
+- For a direct architecture request, the owner uses [Architect planning](../poteto-mode/playbooks/architect-planning.md) for a design-only handoff before implementation. A planning-only brief ends after Phase C. Add "with checkpoint" for a human review before code. [Production checks](../poteto-mode/references/production-checks.md) describes the production review order.
 - `/interrogate` reviews the diff. `/blast-radius` looks for breakage outside the diff and proves the one fact that makes the change safe.
 - `/recall` rebuilds context across recent chats. Resuming one specific chat or branch is the Session pickup playbook.
 - `/figure-it-out` designs one rigorous run. The Orchestrate playbook runs a program that spans days and many PRs. The Autonomous run playbook drives one task to a finish condition.

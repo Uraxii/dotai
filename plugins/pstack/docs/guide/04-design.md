@@ -26,9 +26,9 @@ Selection alone does not start a build. Select an idea and request further work 
 
 For production work, a fresh reviewer gives the design a skeptic review before code, and gives the code the same review before the PR.
 
-An architect plans each code change before implementation. The owner may skip that step for a very small change. Follow [Architect planning](../../skills/poteto-mode/references/beads-work-loop.md#architect-planning). A planning-only brief returns the design, rationale, sketch SHA, passed gate, and scope to the writer after Phase C.
+An architect plans each code change before implementation. The owner may skip that step for a very small change. Follow [Architect planning](../../skills/poteto-mode/playbooks/architect-planning.md). A planning-only brief returns the design, rationale, artifact paths, scope, and unresolved decisions after Phase C. The owner commits production sketches and checks the sketch pass per [Production checks](../../skills/poteto-mode/references/production-checks.md).
 
-A direct `/architect` call proceeds from the synthesized design into implementation after the required sketch review. If you want to see the design first, say so:
+For a direct architecture request, the owner uses [Architect planning](../../skills/poteto-mode/playbooks/architect-planning.md) for the design handoff. The owner then gives the design to the writer and follows Production checks. If you want to see the design first, say so:
 
 ```text
 /architect with checkpoint. stop and show me before implementing.
