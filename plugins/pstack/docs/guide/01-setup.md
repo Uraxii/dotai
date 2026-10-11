@@ -17,18 +17,18 @@ Cursor confirms the plugin is installed.
 Run:
 
 ```text
-/setup-pstack
+/configure-pstack
 ```
 
-[`/setup-pstack`](../../skills/setup-pstack/SKILL.md) detects the models you have access to, shows you each role (code delegates, judgment, the review panels), and asks what you want. Answer the questions. It writes an override sheet for your harness, such as `~/.claude/pstack-models.md` on Claude Code, and wires it into the harness's instructions. Every pstack skill reads its role picks from the plugin's `models.json`, and a row in your sheet replaces one role's list.
+[`/configure-pstack`](../../skills/configure-pstack/SKILL.md) detects the models you have access to, shows you each role (code delegates, judgment, the review panels), and asks what you want. Answer the questions. It writes an override sheet for your harness, such as `~/.claude/pstack-models.md` on Claude Code, and wires it into the harness's instructions. Every pstack skill reads its role picks from the plugin's `models.json`, and a row in your sheet replaces one role's list.
 
-You only override what you care about. A role with no row in the sheet keeps its `models.json` list. To use the `models.json` list again, delete that role's row. A rerun of `/setup-pstack` keeps every row in the sheet.
+You only override what you care about. A role with no row in the sheet keeps its `models.json` list. To use the `models.json` list again, delete that role's row. A rerun of `/configure-pstack` keeps every row in the sheet.
 
 You might be wondering what happens if you use Auto. Set a role to `inherit-parent` or `auto` and pstack omits the subagent `model` field, so the subagent inherits your parent chat model. Both values mean the same thing, and neither is a model slug. For a panel role the value is a list, and one subagent runs per entry, so the list length sets the panel size. Setup also configures `swarm workers`, the default model for every `/swarm` worker unless a race names a model for each arm.
 
 ## Accept the verification offer, or don't
 
-At the end of setup, `/setup-pstack` looks for a way to prove app behavior in your project, either a `verify-*` skill or an existing harness. If it finds neither, it offers once to generate one with [`/create-verification-skill`](../../skills/create-verification-skill/SKILL.md).
+At the end of setup, `/configure-pstack` looks for a way to prove app behavior in your project, either a `verify-*` skill or an existing harness. If it finds neither, it offers once to generate one with [`/create-verification-skill`](../../skills/create-verification-skill/SKILL.md).
 
 Say yes and it writes `.cursor/skills/verify-<app>/`, a project-local skill that teaches agents to drive your app the way a user does. It proves the skill works once before handing it over. Say no and setup moves on. You can run `/create-verification-skill` yourself any time. [Verify and ship](./06-verify-and-ship.md#create-a-project-verification-skill) covers it in depth.
 
@@ -40,7 +40,7 @@ After setup, start a new chat. The sheet loads in new sessions.
 
 pstack spends extra tokens on subagents and review panels. That's the price of the rigor. To spend fewer:
 
-- Rerun `/setup-pstack` and pick cheaper models. A strong model in the main chat with cheaper, faster models in the code roles is a good split.
+- Rerun `/configure-pstack` and pick cheaper models. A strong model in the main chat with cheaper, faster models in the code roles is a good split.
 - Set a role to `auto` or `inherit-parent` so it runs on the chat's own model.
 - Shorten a panel list. Each entry runs one subagent.
 - Save `/poteto-mode` for work that needs rigor. A small, obvious edit doesn't.

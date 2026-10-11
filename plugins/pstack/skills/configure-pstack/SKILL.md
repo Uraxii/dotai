@@ -1,9 +1,9 @@
 ---
-name: setup-pstack
-description: Change which model a pstack role runs on without editing the repo. Writes the current harness's model override sheet in the user's home config directory, and wires it into the harness's global instructions. Use for /setup-pstack, "configure pstack models", or changing a role's model for this machine only.
+name: configure-pstack
+description: Change which model a pstack role runs on without editing the repo. Writes the current harness's model override sheet in the user's home config directory, and wires it into the harness's global instructions. Use for /configure-pstack, "configure pstack models", or changing a role's model for this machine only.
 ---
 
-# Setup pstack
+# Configure pstack
 
 The plugin's `models.json` holds the model picks for every pstack role. It is two directories up from this skill's directory. The [Models section of `poteto-mode`](../poteto-mode/SKILL.md#models) tells how each harness finds it. This skill writes an override sheet for the current harness. A row in the sheet replaces one role's list for this harness only. A role with no row keeps its `models.json` list.
 

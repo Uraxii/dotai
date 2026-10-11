@@ -506,13 +506,13 @@ class RemovedSkillReferenceTests(unittest.TestCase):
         self.assert_reference_is_flagged("Load the `caveman` skill now.\n")
 
     def test_fails_on_a_removed_skill_whose_prefix_family_has_one_member(self) -> None:
-        # Deleting setup-dotai left setup-pstack alone in the setup- family, and the
-        # family threshold of two then hid every remaining setup-dotai reference.
+        # Deleting setup-dotai leaves setup-machine alone in the setup- family, and a
+        # family threshold of two would hide every remaining setup-dotai reference.
         with tempfile.TemporaryDirectory() as directory:
             repository = Path(directory)
             skills_dir = repository / "skills"
             write_removed_skill(repository, skills_dir, "setup-dotai")
-            write_skill(skills_dir, "setup-pstack")
+            write_skill(skills_dir, "setup-machine")
             write_skill(skills_dir, "sample", "Run `setup-dotai` first.\n")
 
             result = run_validator(skills_dir)
