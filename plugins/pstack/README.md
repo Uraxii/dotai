@@ -27,7 +27,7 @@ two steps:
 
 new here? the [pstack guide](./docs/guide/README.md) walks you through a first real task, from setup and prompting through verification and overnight runs. stuck, or unsure which skill fits? ask [`/poteto-help`](./skills/poteto-help/SKILL.md).
 
-Writers choose whether to add tests. A fresh skeptic reviews the diff, checks available tests, and identifies missing coverage. For production code, a dedicated tester then checks test quality, adds needed cases, and runs all applicable tests. A current skeptic pass must include tester edits. Both passes cover the final patch before runtime verification and shipping. Prose-only changes keep the skeptic gate without a tester gate. [Production checks](./skills/poteto-mode/playbooks/production-checks.md) defines both gates. `/tdd` is the bug-test workflow, not the dedicated tester.
+Writers choose whether to add tests. A fresh skeptic reviews the diff, checks available tests, and identifies missing coverage. For production code, a dedicated tester then checks test quality, adds needed cases, and runs all applicable tests. A current skeptic pass must include tester edits. Both passes cover the final patch before runtime verification and shipping. Prose-only changes keep the skeptic gate without a tester gate. [Production checks](./skills/poteto-mode/references/production-checks.md) defines both gates. `/tdd` is the bug-test workflow, not the dedicated tester.
 
 that's it. the other skills are situational; the mode skill uses them for you as needed. out of the box the mode splits work by model strength: code delegates (feature, refactoring, bug fix, perf, hillclimb) and research go to a fast model, while the hardest changes, prose, and judgment go to a strong one. [`models.json`](./models.json) lists the models for each role on each harness. [`/configure-pstack`](./skills/configure-pstack/SKILL.md) changes any of it.
 
@@ -65,7 +65,6 @@ morning.
 | [runtime forensics](./skills/poteto-mode/playbooks/runtime-forensics.md) | diagnose a live symptom (leak, idle-cpu spin, glitch) from instrumentation. |
 | [trace forensics](./skills/poteto-mode/playbooks/trace-forensics.md) | diagnose a captured profiling artifact (cpuprofile, trace, spindump, heap snapshot). |
 | [feature ideas](./skills/poteto-mode/playbooks/feature-ideas.md) | grounded proposals at multiple scales, with user value and duplicate checks. Stops before design or implementation. |
-| [architecture change](./skills/poteto-mode/playbooks/architecture-change.md) | a direct architecture request, from design through verification. |
 | [feature](./skills/poteto-mode/playbooks/feature.md) | new or changed behavior, built from a named data shape. |
 | [refactoring](./skills/poteto-mode/playbooks/refactoring.md) | a behavior-preserving change to structure or shape. |
 | [prototype](./skills/poteto-mode/playbooks/prototype.md) | a throwaway sketch to make a design or behavioral decision cheaply, or to settle an empirical fork by observing it. |

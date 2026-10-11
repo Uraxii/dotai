@@ -18,7 +18,7 @@ The tdd skill is the bug-test workflow. It does not replace the dedicated tester
 
 Use [Run records](../../ticket-work/references/run-records.md) for claims and run steps.
 Use [Text files](../../ticket-work/references/text-files.md) for descriptions and verdict files.
-Use [Shipping step 3](shipping.md) as the sole definition of patch equivalence.
+Use [Shipping step 3](../playbooks/shipping.md) as the sole definition of patch equivalence.
 
 ## Own the skeptic review
 
