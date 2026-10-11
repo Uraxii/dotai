@@ -92,7 +92,12 @@ class ValidatorCommandTests(unittest.TestCase):
 
     def test_nonzero_when_a_gpt_slug_is_planted_under_claude(self) -> None:
         planted = json.loads((PLUGIN_ROOT / "models.json").read_text())
-        planted["roles"][0]["models"]["claude"].append("gpt-5.5")
+        claude_list = next(
+            row["models"]["claude"]
+            for row in planted["roles"]
+            if isinstance(row["models"], dict) and "claude" in row["models"]
+        )
+        claude_list.append("gpt-5.5")
         with tempfile.TemporaryDirectory() as scratch:
             path = Path(scratch) / "models.json"
             path.write_text(json.dumps(planted, indent=2))
