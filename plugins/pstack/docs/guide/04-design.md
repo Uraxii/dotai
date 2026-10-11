@@ -14,6 +14,8 @@ The two most common design mistakes are taking the agent's first design and poli
 
 [`/architect`](../../skills/architect/SKILL.md) grounds itself first, running `/how` over the code the design touches and `/why` when it moves ownership or layers. Then it runs `/arena` to produce competing design sketches, with the caller's usage written first in each, followed by types, signatures, and a module map.
 
+For production work, a fresh reviewer gives the design a skeptic review before code, and gives the code the same review before the PR.
+
 By default it proceeds straight from the synthesized design into implementation. If you want to see the design first, say so:
 
 ```text
