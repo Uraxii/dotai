@@ -114,7 +114,7 @@ The following steps apply to skeptic review gates.
 5. After `verdict pass at <SHA>`, do not review the diff again. `bd comments <gate> --json` gives the author and the text of each verdict. Check these facts:
    - The pass is the last verdict on the gate bead.
    - Its author wrote none of the work.
-   - Each item of the last failed round is marked `fixed` or `answered`.
+   - Each item of the last failed round and any linked test failure is marked `fixed` or `answered` by the reviewer.
    - For a diff review, the patch is still the one reviewed, per the patch-id rule in `playbooks/shipping.md` step 3.
 
    Then close the gate bead (`bd close <gate> --reason "pass at <SHA>"`). Read the diff only when a check fails.
@@ -131,6 +131,8 @@ Pause the writer while the tester runs. Give the tester exclusive write access t
 
 On `tests fail`, give the writer its full brief, the test findings, and `Fix bead <gate> at <SHA> in <worktree>.` Keep the same unit and test gate for retries. After the writer reports its new head, obtain a fresh skeptic diff pass, then spawn a fresh tester. A test gate takes at most three `tests fail` comments. After the third, leave it open, stop dependent work, and report the remaining failures and blockers. Independent work can continue.
 
+Before the fresh skeptic spawn, name the test gate in the diff gate's description. Include the latest test failure and the writer's answers, especially disputed test contracts. Require the reviewer to assess each item and the preserved tester assertions. An unresolved contract dispute blocks the skeptic pass. If the reviewer confirms a wrong test contract, give that finding to the next tester to correct the test.
+
 Before closure, check the last test verdict, its author, and its final committed SHA with `bd comments <gate> --json`. The last verdict must pass. Its author must have written no production code. Each prior failed item must be fixed or answered. The pass must cover the final patch. Also check a current skeptic pass that includes every tester edit. Then close the test gate with `bd close <gate> --reason "pass at <SHA>"`.
 
 Test-only commits change the reviewed diff. Obtain a fresh skeptic pass on that final patch before accepting the tester pass. If that review changes nothing, retain the tester's suite results. If the review requests a change, repeat the applicable gates at the new head. A production fix invalidates both passes. Pure restacks retain evidence only under the stable patch-id rule in `playbooks/shipping.md` step 3. A changed assertion requires fresh review and test evidence. Build equivalence cannot prove assertion quality.
@@ -142,9 +144,9 @@ A delegate reports both gate IDs and the final SHA. Its spawner checks those pas
 This section is for the agent whose prompt is `Review bead <gate> at <SHA> in <worktree>.`
 
 1. Set `BEADS_ACTOR=skeptic-<gate>` on each `bd` call. Create your own run bead, per The run bead item 1. Edit no file in the worktree and commit nothing.
-2. Read the base, the scope, and the done-when (`bd show <gate>`), and the earlier rounds (`bd comments <gate>`). The last failed round is the most recent `verdict fail at <SHA>` comment.
+2. Read the base, the scope, and the done-when (`bd show <gate>`), and the earlier rounds (`bd comments <gate>`). The last failed round is the most recent `verdict fail at <SHA>` comment. For a linked test gate, read its description and comments too. Read the latest `tests fail at <SHA>` findings and the writer's answers.
 3. Review `git diff <base>..<SHA>` in the worktree. For a sketch, also read the rationale it names. Judge the work by the **principle-skeptical-review** skill. If there is a last failed round at `<old SHA>`, read `git diff <old SHA>..<SHA>` first, because those commits are the fixes.
-4. Write the verdict to a file outside the worktree. The first line is `verdict pass at <SHA>` or `verdict fail at <SHA>`. Then list the findings under the three tiers, and mark each item of the last failed round `fixed`, `answered: <reason>`, or `still open`. Add the file as a comment (`bd comment <gate> --file <file>`).
+4. Assess each linked test finding and answer against the done-when and the preserved tester assertions. Resolve each disputed contract before passing. Edit no tests. Write the verdict to a file outside the worktree. The first line is `verdict pass at <SHA>` or `verdict fail at <SHA>`. Then list the findings under the three tiers. Mark each item of the last failed review round and linked test failure `fixed`, `answered: <reason>`, or `still open`. Add the file as a comment (`bd comment <gate> --file <file>`).
 
 ## Run a tester gate
 
