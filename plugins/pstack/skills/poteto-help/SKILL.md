@@ -114,6 +114,7 @@ Not in pstack:
 Playbooks are step lists inside `/poteto-mode`, not skills, so they have no slash command. Inside `/poteto-mode`, describing the task picks one, and these phrases name one directly:
 
 - "babysit this pr" or "check on pr 123" runs Babysit. It drives the PR to merge-ready and stops there. It doesn't merge unless the user asks to merge, land, or ship.
+- "brainstorm features", "feature ideas", or "what could this project become" runs [Feature ideas](../poteto-mode/playbooks/feature-ideas.md). It checks current behavior and active work, then presents proposals. It stops before design or implementation. An explicit request to build a selected behavior runs Feature.
 - "land the stack" runs Shipping.
 - "take over this branch" runs Session pickup.
 - "pause safely" runs Pause safely.
@@ -123,6 +124,8 @@ Playbooks are step lists inside `/poteto-mode`, not skills, so they have no slas
 Without `/poteto-mode`, a phrase such as "babysit this pr" can start Cursor's own skill for the same job instead. The Playbooks section of [`poteto-mode`](../poteto-mode/SKILL.md) lists every playbook and when it applies. [Guide page 6](../../docs/guide/06-verify-and-ship.md) covers opening, babysitting, and landing a PR.
 
 pstack has no planning skill. Use your harness's own plan mode alongside it. Claude Code and Copilot CLI call it plan mode, and Codex opens it with `/plan`. For work that spans phases or stacked PRs, asking `/poteto-mode` for a plan runs the [Multi-phase plan playbook](../poteto-mode/playbooks/multi-phase-plan.md), which writes the plan and doesn't implement it. For a design question, the Prototype playbook or `/architect` settles it in code first.
+
+The [Feature ideas principle](../principle-feature-ideas/SKILL.md) requires user value, multiple scales, and duplicate checks for proposals.
 
 Principles are one-rule skills that `/poteto-mode` reads and cites in its replies. The user rarely invokes one. They steer with the names instead, as in "apply prove it works. show me the real output." Typing `/principle-<name>` still loads one on demand. [Guide page 8](../../docs/guide/08-principles.md) lists them.
 
