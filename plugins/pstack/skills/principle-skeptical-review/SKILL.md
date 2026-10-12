@@ -22,6 +22,8 @@ On a design sketch, `not implemented` bodies are correct. Judge the shape. Check
 
 On a code diff, check correctness, side effects on callers, and stale assumptions: comments, docs, and tests that the change made wrong.
 
+Review available tests with the code. Use the **principle-test-behavior-not-implementation** skill to check that assertions detect defects in required behavior. Identify missing coverage, including when the writer adds no tests. Treat missing required coverage and assertions that prove no behavior as findings. Edit no tests during the review.
+
 Every objection must be substantive. Name the evidence (a `file:line` or a sketch section) and the case that breaks. Raise the problem. Do not write an alternative design. Do not write the fix. Do not pass the work because of time pressure, and do not fail it to look strict.
 
 ## Tiers

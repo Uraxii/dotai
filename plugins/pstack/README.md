@@ -27,6 +27,8 @@ two steps:
 
 new here? the [pstack guide](./docs/guide/README.md) walks you through a first real task, from setup and prompting through verification and overnight runs. stuck, or unsure which skill fits? ask [`/poteto-help`](./skills/poteto-help/SKILL.md).
 
+Writers choose whether to add tests. A fresh skeptic reviews the diff, checks available tests, and identifies missing coverage. For production code, a dedicated tester then checks test quality, adds needed cases, and runs all applicable tests. A current skeptic pass must include tester edits. Both passes cover the final patch before runtime verification and shipping. Prose-only changes keep the skeptic gate without a tester gate. [Production checks](./skills/poteto-mode/references/production-checks.md) defines both gates. `/tdd` is the bug-test workflow, not the dedicated tester.
+
 that's it. the other skills are situational; the mode skill uses them for you as needed. out of the box the mode splits work by model strength: code delegates (feature, refactoring, bug fix, perf, hillclimb) and research go to a fast model, while the hardest changes, prose, and judgment go to a strong one. [`models.json`](./models.json) lists the models for each role on each harness. [`/configure-pstack`](./skills/configure-pstack/SKILL.md) changes any of it.
 
 ## usage
@@ -35,7 +37,7 @@ use [`/poteto-mode`](./skills/poteto-mode/SKILL.md) at the start of a task. it r
 
 ### just use [`/poteto-mode`](./skills/poteto-mode/SKILL.md)
 
-this skill is the main shortcut. i use it whenever i need the agent to do rigorous engineering work. it comes with twenty-four playbooks:
+This skill selects the playbook for the task. Use it when the work requires engineering checks.
 
 ```
 /poteto-mode this pr has a subtle bug where the scroll drifts every 750ms even when idle. repro
@@ -52,7 +54,7 @@ morning.
 ```
 
 <details>
-<summary>the twenty-four playbooks</summary>
+<summary>the playbooks</summary>
 
 | playbook | for |
 |---|---|
@@ -121,6 +123,7 @@ to keep [`/poteto-mode`](./skills/poteto-mode/SKILL.md) on across turns, pick it
 | [`/recall`](./skills/recall/SKILL.md) | you're starting or resuming work and want your recent context on a topic rebuilt from your own chat history and the shared record, handed back as a tight current-state brief. |
 | [`/blast-radius`](./skills/blast-radius/SKILL.md) | you have a small-looking change and want to know what else it could break, with the one fact it's safe because of proven by running code, not asserted. |
 | [`/index-the-codebase`](./skills/index-the-codebase/SKILL.md) | you start work in a checkout or worktree, or ask where code lives, who calls it, or what a change breaks. indexes the checkout with an available code indexer and queries the index before grep. loads on its own. |
+| [`/ticket-work`](./skills/ticket-work/SKILL.md) | bead claims, run steps, review records, test records, and fix rounds. |
 | [`/architect`](./skills/architect/SKILL.md) | you're about to write code that crosses a function boundary and want the caller's usage, types, and module shape settled first. |
 | [`/arena`](./skills/arena/SKILL.md) | you want N parallel attempts at the same thing, then to grab the best parts of each. |
 | [`/swarm`](./skills/swarm/SKILL.md) | you want N parallel workers across different slices or races, then one aggregated report. |
