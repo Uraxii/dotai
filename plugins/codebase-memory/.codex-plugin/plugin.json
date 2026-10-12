@@ -1,7 +1,7 @@
 {
   "name": "codebase-memory",
-  "version": "1.2.3",
-  "description": "Index the session's own checkout at session start, then query its code graph from a shell.",
+  "version": "2.0.0",
+  "description": "Query a code graph through the codebase-memory-mcp server, skill, and graph-verification agents.",
   "author": {
     "name": "Uraxii",
     "url": "https://github.com/Uraxii"
@@ -12,19 +12,18 @@
     "codex",
     "skills",
     "code-intelligence",
-    "static-analysis"
+    "static-analysis",
+    "mcp"
   ],
   "skills": "./skills/",
-  "hooks": "./hooks/codex-hooks.json",
   "interface": {
     "displayName": "codebase-memory",
-    "shortDescription": "Shell queries over codebase-memory, indexed per session checkout.",
-    "longDescription": "Starts a detached fast index for the session's own checkout at Claude Code and Codex session start. Runs codebase-memory-mcp cli against that indexed repository with no MCP server involved, so a shell script or an agent without the MCP tools can still ask structural questions: who calls a function, how a change propagates, which modules cluster together, which functions have no callers, and what a symbol's source says.",
+    "shortDescription": "Code-graph MCP tools, skill, and agents for Claude Code and Copilot CLI.",
+    "longDescription": "Registers the codebase-memory-mcp server and ships upstream's codebase-memory skill, its scout, verify, and auditor agents, and its hooks. A session-start and subagent-start hook injects the graph-first instructions and any graph context into the session and every subagent. Needs the codebase-memory-mcp binary on PATH. Claude Code and Copilot CLI only for now.",
     "developerName": "Uraxii",
     "category": "Developer Tools",
     "capabilities": [
-      "Skills",
-      "Hooks"
+      "Skills"
     ],
     "defaultPrompt": [
       "Who calls this function?",

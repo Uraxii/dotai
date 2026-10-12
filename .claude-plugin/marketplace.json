@@ -53,7 +53,7 @@
     {
       "name": "codebase-memory",
       "source": "./plugins/codebase-memory",
-      "description": "Index the session's own checkout at session start, then query its code graph from a shell."
+      "description": "Query a code graph through the codebase-memory-mcp server, skill, and graph-verification agents."
     },
     {
       "name": "caveman",
