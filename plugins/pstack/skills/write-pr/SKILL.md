@@ -1,6 +1,6 @@
 ---
 name: write-pr
-description: "Create or refresh reviewer-facing PR titles and descriptions. Use when opening a PR, updating its title or body, or preparing branch changes for review."
+description: "Create or refresh reviewer-facing PR titles and descriptions. Use when opening a PR or updating its title or body. Cleaning history or splitting a PR belongs to make-pr-easy-to-review."
 ---
 
 # Write PR

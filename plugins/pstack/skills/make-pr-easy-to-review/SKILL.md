@@ -1,6 +1,6 @@
 ---
 name: make-pr-easy-to-review
-description: Prepare PRs for review by cleaning noisy history, improving PR descriptions, and adding reviewer guidance without changing code behavior. Use for "make this easy to review", "tidy this PR", "clean up commits", or "annotate the diff".
+description: Restructure a PR so it is reviewable: clean noisy history, separate mechanical from logic changes, order commits, and recommend splits, without changing code behavior. Does not write the PR title or description; use write-pr for those. Use for "make this easy to review", "tidy this PR", "clean up commits", or "split this PR".
 ---
 
 # Make PR Easy to Review
@@ -10,8 +10,8 @@ Prepare a PR so a reviewer can quickly understand the intent, important files, a
 ## Workflow
 
 1. Resolve the target PR from the user-provided URL or current branch.
-2. Inspect commits, diff size, changed paths, generated files, and PR description.
-3. Identify reviewability issues: noisy commits, stale description, unrelated changes, mixed mechanical and logic changes, missing tests, or unclear reviewer entry points.
+2. Inspect commits, diff size, changed paths, and generated files.
+3. Identify reviewability issues: noisy commits, unrelated changes, mixed mechanical and logic changes, missing tests, or unclear reviewer entry points.
 4. Propose a plan before rewriting history or force-pushing.
 5. Apply safe improvements, then verify the tree or diff still matches the intended code.
 
@@ -45,9 +45,8 @@ Do not push if the tree changed unintentionally.
 
 ## Reviewer Guidance
 
-When code behavior should stay untouched, prefer PR description and review notes:
+When code behavior should stay untouched, prefer review notes. Write or refresh the PR title and description with the `write-pr` skill. Notes to add:
 
-- Add a TL;DR that matches the actual diff.
 - Separate core files from generated or mechanical files.
 - Call out risky behavior changes, migration order, rollout plan, and test coverage.
 - Link issue trackers, dashboards, or design docs when they explain intent.
