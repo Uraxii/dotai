@@ -39,7 +39,7 @@ The default role-to-model mapping is the rule shape shown in the Write the overr
 
 Show every role with its current model, marking any real slug not in the detected set as needing a choice. Also list each line step 2 dropped or rewrote. Ask whether to accept as-is or change specific roles, offering the detected models plus `inherit-parent` and `auto` as the options. Prefer `AskUserQuestion` over free text. For panel roles (arena runners, architect runners, interrogate reviewers) the value is a list, and one subagent runs per entry, alias entries included, so the list length sets the count. `arena cross-judge pool` is also a list, but Arena selects one value from it whose model family differs from the parent's when possible. `swarm workers` is the default model for every worker unless a race or comparison assigns another model per arm.
 
-Then ask for the default reasoning effort, the `default effort` line. It is one of the levels in [Models](#models), or `session`, which keeps the parent session's effort. Start from the default listed there, `medium`. Every role value without a suffix runs at it. Then ask whether any role should run at another level. On Claude Code a role value may carry one after its slug, as in `<slug> @xhigh`; panel entries take their own, as in `<slug> @xhigh, <slug> @max`. Each level dispatches through the plugin's effort agent of that level, so the choice holds without changing the session. Leave the suffix off for the default effort.
+Then ask for the default reasoning effort, the `default effort` line. It is `session`, which keeps the parent session's effort, or one of the levels in [Models](#models). Start from the default listed there. Every role value without a suffix runs at it. Then ask whether any role should run at another level. On Claude Code a role value may carry one after its slug, as in `<slug> @xhigh`; panel entries take their own, as in `<slug> @xhigh, <slug> @max`. Each level dispatches through the plugin's effort agent of that level, so the choice holds without changing the session. Leave the suffix off for the default effort.
 
 ### 4. Choose whether the session hook routes tasks
 
@@ -58,12 +58,12 @@ Write the current runtime's sheet with the shape below. Overwrite the whole file
 
 Per-role model overrides for pstack skills. Each pstack SKILL.md names its defaults in a Models section; the values here override those defaults. Delete a line to fall back to the skill default. A value of `inherit-parent` or `auto` runs that role on the parent session's model (the `Agent` call omits `model`); an alias entry in a panel list still counts toward that panel's fan-out. A model may carry a reasoning effort, as in `opus @xhigh` (levels: low, medium, high, xhigh, max); the role then runs through the pstack effort agent of that level, each entry of a panel list on its own. `default effort` sets the level for a value without one; `session` keeps the parent session's effort. `session hook: off` stops the Claude Code or Codex SessionStart hook, or the pstack Pi extension, from injecting the poteto-mode mandate; any other value, or no line, leaves it on.
 
-feature, refactoring: sonnet
-bug-fix: opus
-perf-issue: opus
-hillclimb: sonnet
+feature, refactoring: opus
+bug-fix: fable
+perf-issue: fable
+hillclimb: fable
 judgment and prose: opus
-strongest judgment: opus
+strongest judgment: fable
 how explorer: opus
 how explainer: opus
 why investigators: opus
@@ -76,7 +76,7 @@ swarm workers: opus
 architect runners: opus, fable, sonnet, haiku
 interrogate reviewers: opus, fable, sonnet, haiku
 
-default effort: medium
+default effort: session
 session hook: on
 ```
 
@@ -110,10 +110,10 @@ The role lines are the same everywhere. What differs is the sheet path, how the 
 
 ## Models
 
-Stamped from `plugins/pstack/models.json` (edit `models.json`, then edit this section by hand to match it).
+Stamped from `plugins/pstack/models.json` (edit there, rerun `tools/generate.mjs`).
 
 - Available Claude models: `opus`, `fable`, `sonnet`, `haiku`
 - Default panel: `opus`, `fable`, `sonnet`, `haiku`
 - Reasoning effort levels: `low`, `medium`, `high`, `xhigh`, `max`
-- Default reasoning effort: `medium`
+- Default reasoning effort: `session`
 - Single-role default: `opus`

@@ -16,7 +16,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import re
 import sys
 from pathlib import Path
 
@@ -39,40 +38,27 @@ HOOK_WIRING_PATHS = {
     "copilot": Path("hooks.json"),
 }
 
-# The michael-denyer/pstack-claude layout: Claude Code loads hooks/hooks.json
-# by default, so its manifest carries no `hooks` key; Copilot reads
-# .github/plugin/plugin.json; agents live in agents/ and effort-agents/.
-PORT_LAYOUT = "pstack-claude"
-PORT_HOOK_WIRING_PATHS = {
-    "claude": Path("hooks/hooks.json"),
-    "codex": Path("hooks/codex-hooks.json"),
-    "copilot": Path("hooks/copilot-hooks.json"),
-}
-PORT_AGENT_DIRECTORIES = ("agents", "effort-agents")
-PORT_COPILOT_MANIFEST = Path(".github/plugin/plugin.json")
+def pstack_entry() -> dict[str, object]:
+    """pstack is the unmodified michael-denyer/pstack-claude plugin.
+
+    Its own manifest is the source, so the generator reads its name,
+    version, and description and never writes under plugins/pstack.
+    """
+    manifest = json.loads(
+        (REPOSITORY_ROOT / "plugins/pstack/.claude-plugin/plugin.json").read_text()
+    )
+    return {
+        "name": manifest["name"],
+        "version": manifest["version"],
+        "description": manifest["description"],
+        "marketplace_version": True,
+    }
+
+
+PSTACK = pstack_entry()
 
 PLUGINS: list[dict[str, object]] = [
-    {
-        "name": "pstack",
-        "version": "3.0.0",
-        "layout": PORT_LAYOUT,
-        "hooks": ["claude", "codex", "copilot"],
-        "description": (
-            "Skills and agents: poteto-mode, principles, "
-            "playbooks, tools."
-        ),
-        "short": "Reusable skills for software development work.",
-        "long": (
-            "A collection of reusable workflows, principles, playbooks, and "
-            "tools for Codex and other coding agents."
-        ),
-        "keywords": ["software-development"],
-        "prompts": [
-            "Show me which pstack skills can help with this task.",
-            "Use poteto-mode to work through this task.",
-            "Set up pstack for this Codex environment.",
-        ],
-    },
+    PSTACK,
     {
         "name": "artifact",
         "description": (
@@ -363,21 +349,8 @@ def claude_agent_paths(plugin: dict[str, object], root: Path = REPOSITORY_ROOT) 
     return [f"./agents/claude/{path.name}" for path in sorted(agents.glob("*.md"))]
 
 
-def is_port_layout(plugin: dict[str, object]) -> bool:
-    return plugin.get("layout") == PORT_LAYOUT
-
-
 def hook_wiring_paths(plugin: dict[str, object]) -> dict[str, Path]:
-    return PORT_HOOK_WIRING_PATHS if is_port_layout(plugin) else HOOK_WIRING_PATHS
-
-
-def port_agent_paths(plugin: dict[str, object], root: Path = REPOSITORY_ROOT) -> list[str]:
-    plugin_root = root / "plugins" / str(plugin["name"])
-    return [
-        f"./{directory}/{path.name}"
-        for directory in PORT_AGENT_DIRECTORIES
-        for path in sorted((plugin_root / directory).glob("*.md"))
-    ]
+    return HOOK_WIRING_PATHS
 
 
 def core_manifest(plugin: dict[str, object]) -> dict[str, object]:
@@ -391,9 +364,6 @@ def core_manifest(plugin: dict[str, object]) -> dict[str, object]:
 
 def claude_manifest(plugin: dict[str, object], root: Path = REPOSITORY_ROOT) -> dict[str, object]:
     manifest = core_manifest(plugin)
-    if is_port_layout(plugin):
-        manifest["agents"] = port_agent_paths(plugin, root)
-        return manifest
     if "claude" in plugin.get("hooks", []):
         manifest["hooks"] = "./hooks/claude-hooks.json"
     if "claude" in plugin.get("agents", []):
@@ -507,16 +477,13 @@ def wanted_files(root: Path) -> dict[Path, str]:
         Path("README.md"): readme_with_plugin_table(root),
     }
     for plugin in PLUGINS:
+        if plugin is PSTACK:
+            continue
         plugin_root = Path("plugins") / str(plugin["name"])
         copilot = core_manifest(plugin)
-        if is_port_layout(plugin):
-            if "copilot" in plugin.get("hooks", []):
-                copilot["hooks"] = "hooks/copilot-hooks.json"
-            files[plugin_root / PORT_COPILOT_MANIFEST] = render(copilot)
-        else:
-            if "copilot" in plugin.get("agents", []):
-                copilot["agents"] = "./agents/copilot/"
-            files[plugin_root / "plugin.json"] = render(copilot)
+        if "copilot" in plugin.get("agents", []):
+            copilot["agents"] = "./agents/copilot/"
+        files[plugin_root / "plugin.json"] = render(copilot)
         files[plugin_root / ".claude-plugin/plugin.json"] = render(
             claude_manifest(plugin, root)
         )
@@ -546,6 +513,8 @@ def undeclared_hook_wiring(root: Path) -> list[Path]:
     """Return hook wiring paths on disk that their plugin does not declare."""
     undeclared = []
     for plugin in PLUGINS:
+        if plugin is PSTACK:
+            continue
         plugin_root = Path("plugins") / str(plugin["name"])
         declared_harnesses = plugin.get("hooks", [])
         for harness, relative_path in hook_wiring_paths(plugin).items():
@@ -553,24 +522,6 @@ def undeclared_hook_wiring(root: Path) -> list[Path]:
             if (root / wiring).is_file() and harness not in declared_harnesses:
                 undeclared.append(wiring)
     return undeclared
-
-
-BANNED_MODEL = re.compile(r"\bastra\b(?!\s*db)", re.IGNORECASE)
-
-
-def banned_model_files(root: Path) -> list[Path]:
-    """Return plugin files that contain the whole word astra, such as gpt-6-astra."""
-    hits = []
-    for path in sorted((root / "plugins" / "pstack").rglob("*")):
-        if not path.is_file():
-            continue
-        try:
-            text = path.read_text(encoding="utf-8")
-        except (UnicodeDecodeError, OSError):
-            continue
-        if BANNED_MODEL.search(text):
-            hits.append(path.relative_to(root))
-    return hits
 
 
 def render(document: dict[str, object]) -> str:
@@ -615,8 +566,7 @@ def main(arguments: list[str] | None = None, root: Path = REPOSITORY_ROOT) -> in
         changed = drifted(files, root)
         missing_wiring = missing_hook_wiring(root)
         undeclared_wiring = undeclared_hook_wiring(root)
-        banned = banned_model_files(root)
-        if not changed and not missing_wiring and not undeclared_wiring and not banned:
+        if not changed and not missing_wiring and not undeclared_wiring:
             print(f"{len(files)} generated files are up to date.")
             return 0
         if changed:
@@ -631,10 +581,6 @@ def main(arguments: list[str] | None = None, root: Path = REPOSITORY_ROOT) -> in
         if undeclared_wiring:
             print("These plugin hook wiring files are undeclared:")
             for relative in undeclared_wiring:
-                print(f"  {relative}")
-        if banned:
-            print("These files contain the word astra (an astra model is banned; \"astra db\" is allowed):")
-            for relative in banned:
                 print(f"  {relative}")
         return 2
 

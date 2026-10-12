@@ -42,7 +42,7 @@ poteto-mode's Subagents section applies on Pi through the `agent` tool:
 - An agent's status follows its process. `completed` means the child exited, and `stop_agent` reports `stopped` only once the child has exited, so the Claude Code caveat about a `completed` agent that keeps running does not apply to the agent itself. Stopping an agent, like the session shutdown that stops every agent, ends the child pi and the `bash` command it still has running, because Pi kills that command's process tree on SIGTERM. A process that a finished `bash` command left in the background (`cmd &`, `nohup cmd`) runs in its own process group and outlives the agent; stop it yourself. A stopped agent's notice joins the conversation without starting a turn, since `stop_agent` already returned.
 - Agents belong to the session that started them. Quitting, reloading, and starting, resuming, or forking a session all stop every running agent, and a parent process that exits signals its agents to stop. On restore, an agent still running under its launching Pi process is left alone. An orphan whose process identity matches the saved record is signalled to stop, and remains unavailable to `send_message` and `stop_agent` until its process exits. Without enough identity data to signal it safely, its process is left alone and continuation is refused until its exit is confirmed. Only then is the restored agent marked `stopped` and allowed to resume.
 - `send_message` to a running agent is an RPC `steer` on the child's stdin. The agent reads it after its current tool calls, as on Claude Code, carries on in the same run, and sends one completion notice. A message the child rejects returns an error, and the agent keeps running. A message to a finished agent resumes its session in the background with the context of its earlier runs. A message that arrives after the agent settled but before its process exited resumes the agent once the process has exited.
-- A role value's `@<level>` picks the same effort agent as on Claude Code, and the extension passes its level to the child as `--thinking`. With no `default effort` line the default is `medium`. `session`, or an agent with no effort, runs the child at the parent's current thinking level.
+- A role value's `@<level>` picks the same effort agent as on Claude Code, and the extension passes its level to the child as `--thinking`. `session`, or an agent with no effort, runs the child at the parent's current thinking level.
 - Keep the rest of the policy unchanged. Pass file pointers not inlined context, give each worker its own worktree when they write, review every subagent's diff yourself.
 
 ## Model names
@@ -52,7 +52,7 @@ Skills name models by the Claude aliases in their Models sections. On Pi, pass t
 | Alias | `anthropic` | `openai` | `openai-codex` |
 | --- | --- | --- | --- |
 | `opus` | `anthropic/claude-opus-5-5` | `openai/gpt-6.1-sol` | `openai-codex/gpt-6.1-sol` |
-| `fable` | `anthropic/claude-fable-5-1` | `openai/gpt-6.1-sol` | `openai-codex/gpt-6.1-sol` |
+| `fable` | `anthropic/claude-fable-5-1` | `openai/gpt-6-astra` | `openai-codex/gpt-6-astra` |
 | `sonnet` | `anthropic/claude-sonnet-5-5` | `openai/gpt-6-sol` | `openai-codex/gpt-6-sol` |
 | `haiku` | `anthropic/claude-haiku-5-5` | `openai/gpt-6-luna` | `openai-codex/gpt-6-luna` |
 

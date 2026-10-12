@@ -19,15 +19,13 @@ Remaining triggers:
 
 - Nontrivial change, architecture decision, or "are we sure?" → the **how** skill.
 - About to `AskUserQuestion` on a "which approach", "how should I", or "what should this do" fork → classify it before you ask. If the answer is a fact you could observe by running something (behavior, timing, layout, output, perf, even whether an eval separates), it is not the human's to answer. Sketch it via the Prototype playbook (`playbooks/prototype.md`) and let the result decide. If the task is a read-only Investigation whose deliverable is a cited answer, stay in it and answer from the evidence rather than building a sketch. Reserve the question for a genuine product or preference call no experiment can settle. Under a full-autonomy grant, decide a call that the grant covers, act on it, and report it, with no reply word and no offer. Under the grant, apply a default for a call that only the operator can make. Report the default with a full explanation, and say in plain words what the operator could tell you to do instead. The operator answers in their own words. Never give a shorthand token to type back. Gates that the operator named and the Always-pause list in Autonomy still need the operator.
-- Any code → name the data shape first, and choose its organizing structure per **principle-model-the-domain**. Code written, changed, or reviewed also loads **principle-code-quality**.
-- Any name chosen for a file, directory, document, or identifier, and any new file about to be written → **principle-naming**.
+- Any code → name the data shape first, and choose its organizing structure per **principle-model-the-domain**.
 - Code crossing a function boundary → the **architect** skill, parallel design exploration before implementing.
 - Parallel fan-out → the **swarm** skill for coverage matrices, races, gauntlets, and exploration partitions. Use **arena** for design or code bakeoffs with base selection and grafting.
 - Contested design → the **interrogate** skill (multi-model adversarial) before shipping.
 - Nontrivial multi-step → write the throughput checkpoint (Feature step 3).
 - Any prose surface → the **unslop** skill. Your reply is a prose surface. Write it per **Writing the reply**. Agent-facing prose also follows the **plugin-dev:skill-development** skill (Claude Code's authoring guidance for SKILL.md files).
 - Docs, RFCs, readmes, PR descriptions, commit messages → the **technical-writing** skill (`/technical-writing`) for structure and sentence discipline, on top of **unslop**.
-- Opening a PR or refreshing a PR title or description → the **write-pr** skill.
 - Before commit → the **deslop** skill (`/deslop`).
 - Before review → the **no-comments** skill (`/no-comments`).
 - Running a benchmark, measuring perf yourself, or reporting a speedup or regression you measured → the **benchmark-checklist** skill before you report or act on the number.
@@ -52,7 +50,6 @@ Read the leaf skill in full for any principle you apply. Each entry names when i
 - **Attack the Premise** (**principle-attack-the-premise**). Two or more fixes that share one premise have failed the same gate. Take a census of which actors hold the imbalance before the next fix, then question the premise instead of writing another fix that assumes it.
 - **Subtract Before You Add** (**principle-subtract-before-you-add**). Sequencing an addition, refactor, or rewrite. Remove dead weight first, then build on the simpler base.
 - **Minimize Reader Load** (**principle-minimize-reader-load**). Reviewing or shaping code that's hard to trace. Count layers and hidden state, collapse one-caller wrappers, shrink mutable scope.
-- **Naming** (**principle-naming**). Naming or renaming anything a later reader meets: a file, directory, document, scratch artifact, identifier, branch, or commit subject. Filesystem name shape, banned generic stems, and dates.
 - **Outcome-Oriented Execution** (**principle-outcome-oriented-execution**). Planned rewrites and migrations with explicit phase boundaries. Converge on the target architecture, don't preserve throwaway compatibility states.
 - **Experience First** (**principle-experience-first**). Product, UX, or feature-scope tradeoffs. Choose user delight over implementation convenience.
 - **Exhaust the Design Space** (**principle-exhaust-the-design-space**). A novel interaction or architectural decision with no precedent. Build 2-3 competing prototypes and compare before committing.
@@ -60,7 +57,6 @@ Read the leaf skill in full for any principle you apply. Each entry names when i
 
 **Architecture**
 
-- **Code Quality** (**principle-code-quality**). Writing or changing code in any language, and before reviewing a diff, designing types or interfaces, refactoring, or debugging. Cross-language limits, naming, code smells, type and boundary discipline, domain modelling, reader load, deletion-first sequencing, and scope rules, plus on-demand references for Python, TypeScript, C#, GDScript, and Godot.
 - **Model the Domain** (**principle-model-the-domain**). Writing stateful logic, or code that branches a lot or repeats a shape assumption across files. Encode the domain in a structure (state machine, typed model, table or registry, reducer, boundary, the right collection) instead of scattered conditionals.
 - **Boundary Discipline** (**principle-boundary-discipline**). Wiring validation, error handling, or framework adapters. Guards at system boundaries, trust internal types, keep business logic pure.
 - **Type System Discipline** (**principle-type-system-discipline**). Designing types or a signature in any typed language. Make illegal states unrepresentable, brand primitives, parse external data at boundaries.
@@ -99,7 +95,7 @@ Read the leaf skill in full for any principle you apply. Each entry names when i
 
 **Use `subagent_type: "pstack:poteto-agent"` for any subagent you spawn inside a playbook step** (code-writing delegates, ad-hoc helpers). Plugin agents register under the plugin namespace. The bare name `poteto-agent` errors. `/poteto-mode` and `poteto-agent` route through the same wrapper. Routed workflow skills (`how`, `why`, `interrogate`, `reflect`, `swarm`) set their own `subagent_type` for diverse-model review. Respect what the skill prescribes, don't override to `poteto-agent`.
 
-**Defaults for every `Agent` call.** `run_in_background: true`, full tool access (do not pick a subagent_type that strips MCP), file pointers not inlined context, explicit model per role (configurable via `/setup-pstack`. Role defaults in [Models](#models), with "judgment and prose" covering prose and judgment). Code delegates use the model of the role the playbook names, from [Models](#models): feature, refactoring, and hillclimb use `sonnet`, and bug-fix and perf-issue use the strongest-judgment model, `opus`. No other tier applies, however hard or trivial the change. Multi-model panels run the configured panel for diversity, with defaults enumerated in each panel skill's Models section (`arena`, `architect`, `interrogate`). Per-role `/setup-pstack` lines override these defaults and the model choices in the routed skills (`how`, `why`, `arena`, `swarm`, `architect`, `interrogate`, `reflect`). A role with no line keeps its default, and a role line of `inherit-parent` or `auto` runs that role on the parent session's model (omit `model` on the `Agent` call).
+**Defaults for every `Agent` call.** `run_in_background: true`, full tool access (do not pick a subagent_type that strips MCP), file pointers not inlined context, explicit model per role (configurable via `/setup-pstack`. Role defaults in [Models](#models), with "judgment and prose" covering prose and judgment). Code delegates tier by difficulty. The hardest changes (cross-cutting design, gnarly concurrency, subtle algorithms) go to your strongest-judgment model (default in [Models](#models)), whether the task needs judgment on vague intent or is a precisely specified sequence of steps to execute to the letter. Trivial mechanical edits go to your fast code model. Everything else uses the single-role default. Multi-model panels run the configured panel for diversity, with defaults enumerated in each panel skill's Models section (`arena`, `architect`, `interrogate`). Per-role `/setup-pstack` lines override these defaults and the model choices in the routed skills (`how`, `why`, `arena`, `swarm`, `architect`, `interrogate`, `reflect`). A role with no line keeps its default, and a role line of `inherit-parent` or `auto` runs that role on the parent session's model (omit `model` on the `Agent` call).
 
 You own every subagent's work. Review the diff and write your own summary, don't pass through what it said. A second opinion is the same prompt against a different model. Agreement is high-signal.
 
@@ -132,7 +128,6 @@ Open a todolist whose first items are the matched playbook's steps, copied in ve
 A large or cross-cutting effort (a migration across many call sites, an ambitious multi-part change), or work the user steps away from to trust later, routes to the **figure-it-out** skill even when a narrower playbook like Feature fits. Use **figure-it-out** whenever no bundled playbook fits. It designs a bespoke, rigorous playbook for the task. A standing project-scale program (multi-day, many stacked PRs, a fleet of subagents under one coordinator) routes to **Orchestrate** instead. figure-it-out designs one bespoke run, orchestrate runs the program.
 
 - **Investigation.** Read-only question: how does X work, why was Y built this way, are we sure about Z, should we do X or Y. `playbooks/investigation.md`.
-- **Suggest improvements.** Explore an existing product and propose improvements, new features, and larger directions as an Improvement Brief, with no implementation or task plan ("suggest improvements", "brainstorm features", "what could we add", "how could this product be better"). `playbooks/suggest-improvements.md`.
 - **Bug fix.** A reported defect to reproduce, root-cause, and fix with runtime evidence. `playbooks/bug-fix.md`.
 - **Perf issue.** A measured slowness to trace and improve against a baseline. `playbooks/perf-issue.md`.
 - **Hillclimb.** Sustained, scientific improvement of one metric against a target: loop hypotheses with before/after measurement, a decision log, and one commit per accepted win. Distinct from Perf issue, which is a one-off fix. `playbooks/hillclimb.md`.
@@ -160,15 +155,15 @@ A large or cross-cutting effort (a migration across many call sites, an ambitiou
 
 ## Models
 
-Role defaults, stamped from `plugins/pstack/models.json` (edit `models.json`, then edit this section by hand to match it). A matching role line in the `pstack-models.md` override sheet overrides each at runtime; `/setup-pstack` writes it and lists its path per runtime.
+Role defaults, stamped from `plugins/pstack/models.json` (edit there, rerun `tools/generate.mjs`). A matching role line in the `pstack-models.md` override sheet overrides each at runtime; `/setup-pstack` writes it and lists its path per runtime.
 
-- feature, refactoring: `sonnet`
-- bug-fix: `opus`
-- perf-issue: `opus`
-- hillclimb: `sonnet`
+- feature, refactoring: `opus`
+- bug-fix: `fable`
+- perf-issue: `fable`
+- hillclimb: `fable`
 - judgment and prose: `opus`
-- strongest judgment: `opus`
+- strongest judgment: `fable`
 
 ## Reasoning effort
 
-A role value in the override sheet may name a reasoning effort after its model, as in `opus @xhigh`. Levels on Claude Code: `low`, `medium`, `high`, `xhigh`, `max`. Which ones apply depends on the model. A value without `@` takes the sheet's `default effort` line, a level or `session`, and `medium` when the sheet has no such line. `session` sets no effort, so the dispatch is the usual one. Strip the suffix before reading the model: `inherit-parent` or `auto` still omits `model` at every level, and a model name is passed as `model`. On Claude Code, a level picks the effort agent from the `subagent_type` you would otherwise use. `pstack:poteto-agent` becomes `subagent_type: "pstack:poteto-agent-<level>"`. `general-purpose`, or no `subagent_type`, becomes `subagent_type: "pstack:effort-<level>"`. The effort agents set only `effort`, so the model you pass still decides the model. On Codex, pass the level as `spawn_agent`'s `reasoning_effort` and keep the usual instructions.
+A role value in the override sheet may name a reasoning effort after its model, as in `opus @xhigh`. Levels on Claude Code: `low`, `medium`, `high`, `xhigh`, `max`. Which ones apply depends on the model. A value without `@` takes the sheet's `default effort` line, a level or `session`, and `session` when the sheet has no such line. `session` sets no effort, so the dispatch is the usual one. Strip the suffix before reading the model: `inherit-parent` or `auto` still omits `model` at every level, and a model name is passed as `model`. On Claude Code, a level picks the effort agent from the `subagent_type` you would otherwise use. `pstack:poteto-agent` becomes `subagent_type: "pstack:poteto-agent-<level>"`. `general-purpose`, or no `subagent_type`, becomes `subagent_type: "pstack:effort-<level>"`. The effort agents set only `effort`, so the model you pass still decides the model. On Codex, pass the level as `spawn_agent`'s `reasoning_effort` and keep the usual instructions.

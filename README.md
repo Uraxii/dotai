@@ -13,7 +13,7 @@ needs `pstack` installed.
 
 | Plugin | What it does |
 |---|---|
-| `pstack` | Skills and agents: poteto-mode, principles, playbooks, tools. |
+| `pstack` | If you want to go fast, go deep first. pstack helps you write less, but higher quality code. rigorous agent workflows you can parallelize with confidence. Ported from cursor/plugins/pstack to Claude Code. Original pstack by Lauren Tan (poteto). |
 | `artifact` | Explain a code change as a self-contained interactive HTML page. |
 | `notion` | Reach Notion from the command line, and publish a code-change explainer as a Notion page. |
 | `azure` | Read Azure DevOps projects, repos, pipelines, releases, and work items over the REST API. |

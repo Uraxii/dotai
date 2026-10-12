@@ -10,7 +10,7 @@ function sheet_roles(roles, panel,    n) {
   split("", roles)
   split("", panel)
   n = 0
-  # Stamped from plugins/pstack/models.json; edit models.json, then edit this section by hand to match it.
+  # Stamped from plugins/pstack/models.json; edit there and rerun tools/generate.mjs.
   roles[++n] = "feature, refactoring"
   roles[++n] = "bug-fix"
   roles[++n] = "perf-issue"
