@@ -555,11 +555,11 @@ def undeclared_hook_wiring(root: Path) -> list[Path]:
     return undeclared
 
 
-BANNED_MODEL = re.compile(r"astra", re.IGNORECASE)
+BANNED_MODEL = re.compile(r"\bastra\b(?!\s*db)", re.IGNORECASE)
 
 
 def banned_model_files(root: Path) -> list[Path]:
-    """Return plugin files that name an astra model, which exhausts usage."""
+    """Return plugin files that contain the whole word astra, such as gpt-6-astra."""
     hits = []
     for path in sorted((root / "plugins" / "pstack").rglob("*")):
         if not path.is_file():
@@ -633,7 +633,7 @@ def main(arguments: list[str] | None = None, root: Path = REPOSITORY_ROOT) -> in
             for relative in undeclared_wiring:
                 print(f"  {relative}")
         if banned:
-            print("These files name an astra model, which is banned:")
+            print("These files contain the word astra (an astra model is banned; \"astra db\" is allowed):")
             for relative in banned:
                 print(f"  {relative}")
         return 2
