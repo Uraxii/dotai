@@ -1,7 +1,7 @@
 ---
 name: principle-test-behavior-not-implementation
 description: "Apply when you write, change, or keep a test. Call the code the way its users do and assert the result they observe against a literal expected value. If the test would still pass when every imported function returns undefined, rewrite the assertion or delete the test."
-disable-model-invocation: true
+user-invocable: false
 ---
 
 # Test Behavior, Not Implementation
@@ -22,4 +22,4 @@ The check: before you keep a test, ask whether it would still pass if every func
 
 **The fix:** call the subject inside the test body with one concrete input and assert the literal output or the observable effect, `expect(slugify("Hello, World!")).toBe("hello-world")`. For an absence, assert the presence on the other input in the same test. For a constant, test the mechanism that reads it with one input instead of restating the value. For a mock, assert the payload it received or the state after the call, not that it was called. When no such assertion exists, delete the test.
 
-**Keep** a test of a relation across a table's rows (a key present in two tables, a parent that exists), and a compile-time check in a `*.test-d.ts` file.
+**Keep** a test of a relation across a table's rows (a key present in two tables, a parent that exists), and a compile-time check in a `*.test-d.ts` file. Keep an absence-only test when the contract requires the absence and making the subject produce it fails the test: a denied operation must send no email, so temporarily make the denied path send one and watch the test fail. Keep a constant pin when the value is a promise to users, such as a documented default, and name that promise.

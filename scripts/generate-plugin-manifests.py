@@ -38,27 +38,27 @@ HOOK_WIRING_PATHS = {
     "copilot": Path("hooks.json"),
 }
 
+def pstack_entry() -> dict[str, object]:
+    """pstack is the unmodified michael-denyer/pstack-claude plugin.
+
+    Its own manifest is the source, so the generator reads its name,
+    version, and description and never writes under plugins/pstack.
+    """
+    manifest = json.loads(
+        (REPOSITORY_ROOT / "plugins/pstack/.claude-plugin/plugin.json").read_text()
+    )
+    return {
+        "name": manifest["name"],
+        "version": manifest["version"],
+        "description": manifest["description"],
+        "marketplace_version": True,
+    }
+
+
+PSTACK = pstack_entry()
+
 PLUGINS: list[dict[str, object]] = [
-    {
-        "name": "pstack",
-        "version": "2.0.10",
-        "hooks": ["claude", "codex", "copilot"],
-        "description": (
-            "Skills and agents: poteto-mode, principles, "
-            "playbooks, tools."
-        ),
-        "short": "Reusable skills for software development work.",
-        "long": (
-            "A collection of reusable workflows, principles, playbooks, and "
-            "tools for Codex and other coding agents."
-        ),
-        "keywords": ["software-development"],
-        "prompts": [
-            "Show me which pstack skills can help with this task.",
-            "Use poteto-mode to work through this task.",
-            "Set up pstack for this Codex environment.",
-        ],
-    },
+    PSTACK,
     {
         "name": "artifact",
         "description": (
@@ -349,6 +349,10 @@ def claude_agent_paths(plugin: dict[str, object], root: Path = REPOSITORY_ROOT) 
     return [f"./agents/claude/{path.name}" for path in sorted(agents.glob("*.md"))]
 
 
+def hook_wiring_paths(plugin: dict[str, object]) -> dict[str, Path]:
+    return HOOK_WIRING_PATHS
+
+
 def core_manifest(plugin: dict[str, object]) -> dict[str, object]:
     return {
         "name": plugin["name"],
@@ -473,6 +477,8 @@ def wanted_files(root: Path) -> dict[Path, str]:
         Path("README.md"): readme_with_plugin_table(root),
     }
     for plugin in PLUGINS:
+        if plugin is PSTACK:
+            continue
         plugin_root = Path("plugins") / str(plugin["name"])
         copilot = core_manifest(plugin)
         if "copilot" in plugin.get("agents", []):
@@ -497,7 +503,7 @@ def missing_hook_wiring(root: Path) -> list[Path]:
     for plugin in PLUGINS:
         plugin_root = Path("plugins") / str(plugin["name"])
         for harness in plugin.get("hooks", []):
-            wiring = plugin_root / HOOK_WIRING_PATHS[str(harness)]
+            wiring = plugin_root / hook_wiring_paths(plugin)[str(harness)]
             if not (root / wiring).is_file():
                 missing.append(wiring)
     return missing
@@ -507,9 +513,11 @@ def undeclared_hook_wiring(root: Path) -> list[Path]:
     """Return hook wiring paths on disk that their plugin does not declare."""
     undeclared = []
     for plugin in PLUGINS:
+        if plugin is PSTACK:
+            continue
         plugin_root = Path("plugins") / str(plugin["name"])
         declared_harnesses = plugin.get("hooks", [])
-        for harness, relative_path in HOOK_WIRING_PATHS.items():
+        for harness, relative_path in hook_wiring_paths(plugin).items():
             wiring = plugin_root / relative_path
             if (root / wiring).is_file() and harness not in declared_harnesses:
                 undeclared.append(wiring)
