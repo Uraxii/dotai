@@ -38,10 +38,23 @@ HOOK_WIRING_PATHS = {
     "copilot": Path("hooks.json"),
 }
 
+# The michael-denyer/pstack-claude layout: Claude Code loads hooks/hooks.json
+# by default, so its manifest carries no `hooks` key; Copilot reads
+# .github/plugin/plugin.json; agents live in agents/ and effort-agents/.
+PORT_LAYOUT = "pstack-claude"
+PORT_HOOK_WIRING_PATHS = {
+    "claude": Path("hooks/hooks.json"),
+    "codex": Path("hooks/codex-hooks.json"),
+    "copilot": Path("hooks/copilot-hooks.json"),
+}
+PORT_AGENT_DIRECTORIES = ("agents", "effort-agents")
+PORT_COPILOT_MANIFEST = Path(".github/plugin/plugin.json")
+
 PLUGINS: list[dict[str, object]] = [
     {
         "name": "pstack",
-        "version": "2.0.10",
+        "version": "3.0.0",
+        "layout": PORT_LAYOUT,
         "hooks": ["claude", "codex", "copilot"],
         "description": (
             "Skills and agents: poteto-mode, principles, "
@@ -349,6 +362,23 @@ def claude_agent_paths(plugin: dict[str, object], root: Path = REPOSITORY_ROOT) 
     return [f"./agents/claude/{path.name}" for path in sorted(agents.glob("*.md"))]
 
 
+def is_port_layout(plugin: dict[str, object]) -> bool:
+    return plugin.get("layout") == PORT_LAYOUT
+
+
+def hook_wiring_paths(plugin: dict[str, object]) -> dict[str, Path]:
+    return PORT_HOOK_WIRING_PATHS if is_port_layout(plugin) else HOOK_WIRING_PATHS
+
+
+def port_agent_paths(plugin: dict[str, object], root: Path = REPOSITORY_ROOT) -> list[str]:
+    plugin_root = root / "plugins" / str(plugin["name"])
+    return [
+        f"./{directory}/{path.name}"
+        for directory in PORT_AGENT_DIRECTORIES
+        for path in sorted((plugin_root / directory).glob("*.md"))
+    ]
+
+
 def core_manifest(plugin: dict[str, object]) -> dict[str, object]:
     return {
         "name": plugin["name"],
@@ -360,6 +390,9 @@ def core_manifest(plugin: dict[str, object]) -> dict[str, object]:
 
 def claude_manifest(plugin: dict[str, object], root: Path = REPOSITORY_ROOT) -> dict[str, object]:
     manifest = core_manifest(plugin)
+    if is_port_layout(plugin):
+        manifest["agents"] = port_agent_paths(plugin, root)
+        return manifest
     if "claude" in plugin.get("hooks", []):
         manifest["hooks"] = "./hooks/claude-hooks.json"
     if "claude" in plugin.get("agents", []):
@@ -475,9 +508,14 @@ def wanted_files(root: Path) -> dict[Path, str]:
     for plugin in PLUGINS:
         plugin_root = Path("plugins") / str(plugin["name"])
         copilot = core_manifest(plugin)
-        if "copilot" in plugin.get("agents", []):
-            copilot["agents"] = "./agents/copilot/"
-        files[plugin_root / "plugin.json"] = render(copilot)
+        if is_port_layout(plugin):
+            if "copilot" in plugin.get("hooks", []):
+                copilot["hooks"] = "hooks/copilot-hooks.json"
+            files[plugin_root / PORT_COPILOT_MANIFEST] = render(copilot)
+        else:
+            if "copilot" in plugin.get("agents", []):
+                copilot["agents"] = "./agents/copilot/"
+            files[plugin_root / "plugin.json"] = render(copilot)
         files[plugin_root / ".claude-plugin/plugin.json"] = render(
             claude_manifest(plugin, root)
         )
@@ -497,7 +535,7 @@ def missing_hook_wiring(root: Path) -> list[Path]:
     for plugin in PLUGINS:
         plugin_root = Path("plugins") / str(plugin["name"])
         for harness in plugin.get("hooks", []):
-            wiring = plugin_root / HOOK_WIRING_PATHS[str(harness)]
+            wiring = plugin_root / hook_wiring_paths(plugin)[str(harness)]
             if not (root / wiring).is_file():
                 missing.append(wiring)
     return missing
@@ -509,7 +547,7 @@ def undeclared_hook_wiring(root: Path) -> list[Path]:
     for plugin in PLUGINS:
         plugin_root = Path("plugins") / str(plugin["name"])
         declared_harnesses = plugin.get("hooks", [])
-        for harness, relative_path in HOOK_WIRING_PATHS.items():
+        for harness, relative_path in hook_wiring_paths(plugin).items():
             wiring = plugin_root / relative_path
             if (root / wiring).is_file() and harness not in declared_harnesses:
                 undeclared.append(wiring)
