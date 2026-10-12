@@ -1,10 +1,15 @@
 {
   "name": "codebase-memory",
-  "version": "1.2.3",
-  "description": "Index the session's own checkout at session start, then query its code graph from a shell.",
+  "version": "2.0.0",
+  "description": "Query a code graph through the codebase-memory-mcp server, skill, and graph-verification agents.",
   "author": {
     "name": "Uraxii",
     "url": "https://github.com/Uraxii"
   },
-  "hooks": "./hooks/claude-hooks.json"
+  "hooks": "./hooks/claude-hooks.json",
+  "agents": [
+    "./agents/claude/codebase-memory-auditor.md",
+    "./agents/claude/codebase-memory-scout.md",
+    "./agents/claude/codebase-memory.md"
+  ]
 }

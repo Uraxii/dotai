@@ -223,23 +223,26 @@ PLUGINS: list[dict[str, object]] = [
     },
     {
         "name": "codebase-memory",
-        "version": "1.2.3",
-        "hooks": ["claude", "codex"],
+        "version": "2.0.0",
+        "hooks": ["claude", "copilot"],
+        "agents": ["claude", "copilot"],
+        "mcp_servers": {
+            "codebase-memory-mcp": {"command": "codebase-memory-mcp", "args": []}
+        },
         "description": (
-            "Index the session's own checkout at session start, then query its code graph from a shell."
+            "Query a code graph through the codebase-memory-mcp server, "
+            "skill, and graph-verification agents."
         ),
-        "short": "Shell queries over codebase-memory, indexed per session checkout.",
+        "short": "Code-graph MCP tools, skill, and agents for Claude Code and Copilot CLI.",
         "long": (
-            "Starts a detached fast index for the session's own checkout "
-            "at Claude Code and Codex session start. Runs codebase-memory-mcp "
-            "cli against that indexed repository with no MCP server involved, "
-            "so a shell script or an agent without the MCP tools can still "
-            "ask structural questions: who calls a "
-            "function, how a change propagates, which modules cluster "
-            "together, which functions have no callers, and what a symbol's "
-            "source says."
+            "Registers the codebase-memory-mcp server and ships upstream's "
+            "codebase-memory skill, its scout, verify, and auditor agents, "
+            "and its hooks. A session-start and subagent-start hook injects "
+            "the graph-first instructions and any graph context into the "
+            "session and every subagent. Needs the codebase-memory-mcp "
+            "binary on PATH. Claude Code and Copilot CLI only for now."
         ),
-        "keywords": ["code-intelligence", "static-analysis"],
+        "keywords": ["code-intelligence", "static-analysis", "mcp"],
         "prompts": [
             "Who calls this function?",
             "What breaks if I change this symbol?",
@@ -341,6 +344,11 @@ def version_of(plugin: dict[str, object]) -> str:
     return str(plugin.get("version", FIRST_RELEASE))
 
 
+def claude_agent_paths(plugin: dict[str, object], root: Path = REPOSITORY_ROOT) -> list[str]:
+    agents = root / "plugins" / str(plugin["name"]) / "agents" / "claude"
+    return [f"./agents/claude/{path.name}" for path in sorted(agents.glob("*.md"))]
+
+
 def core_manifest(plugin: dict[str, object]) -> dict[str, object]:
     return {
         "name": plugin["name"],
@@ -350,10 +358,12 @@ def core_manifest(plugin: dict[str, object]) -> dict[str, object]:
     }
 
 
-def claude_manifest(plugin: dict[str, object]) -> dict[str, object]:
+def claude_manifest(plugin: dict[str, object], root: Path = REPOSITORY_ROOT) -> dict[str, object]:
     manifest = core_manifest(plugin)
     if "claude" in plugin.get("hooks", []):
         manifest["hooks"] = "./hooks/claude-hooks.json"
+    if "claude" in plugin.get("agents", []):
+        manifest["agents"] = claude_agent_paths(plugin, root)
     return manifest
 
 
@@ -464,10 +474,17 @@ def wanted_files(root: Path) -> dict[Path, str]:
     }
     for plugin in PLUGINS:
         plugin_root = Path("plugins") / str(plugin["name"])
-        files[plugin_root / "plugin.json"] = render(core_manifest(plugin))
+        copilot = core_manifest(plugin)
+        if "copilot" in plugin.get("agents", []):
+            copilot["agents"] = "./agents/copilot/"
+        files[plugin_root / "plugin.json"] = render(copilot)
         files[plugin_root / ".claude-plugin/plugin.json"] = render(
-            claude_manifest(plugin)
+            claude_manifest(plugin, root)
         )
+        if "mcp_servers" in plugin:
+            files[plugin_root / ".mcp.json"] = render(
+                {"mcpServers": plugin["mcp_servers"]}
+            )
         files[plugin_root / ".codex-plugin/plugin.json"] = render(
             codex_manifest(plugin)
         )

@@ -1,9 +1,10 @@
 {
   "name": "codebase-memory",
-  "version": "1.2.3",
-  "description": "Index the session's own checkout at session start, then query its code graph from a shell.",
+  "version": "2.0.0",
+  "description": "Query a code graph through the codebase-memory-mcp server, skill, and graph-verification agents.",
   "author": {
     "name": "Uraxii",
     "url": "https://github.com/Uraxii"
-  }
+  },
+  "agents": "./agents/copilot/"
 }
