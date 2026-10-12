@@ -10,10 +10,7 @@ Design before implementing. Sketch types, function signatures, class shapes, and
 
 ## Start
 
-A planning-only brief runs Phases A through C and hands the design to the writer.
-The caller brief chooses whether implementation starts. Preserve any requested human checkpoint.
-
-Before you start, create one step bead for each phase, per the Phases of a skill section of [Run records](../ticket-work/references/run-records.md#phases-of-a-skill).
+Open a todolist with one entry per phase before starting.
 
 1. Ground
 2. Sketch
@@ -33,7 +30,7 @@ Skip Phase A only when the work is genuinely greenfield with no surrounding syst
 
 Run the **arena** skill with the design-sketch task and the Phase A grounding artifacts. Pass `references/runner-prompt.md` as each runner's prompt. Each candidate produces a design package shaped per `references/rationale-template.md`.
 
-Take the runners from the `architect runners` role in `models.json`, two directories up from this skill's directory, in place of the `arena runners` role. The [Models section of `poteto-mode`](../poteto-mode/SKILL.md#models) tells how to find the file, how the override sheet changes a role, and what to do when the harness rejects a name. Alias and rejected entries follow the runner rules in the **arena** skill's Phase A.
+Take the runners from the `architect runners` line in the `pstack-models.mdc` rule, in place of the `arena runners` line. If the rule or that line is missing, use `claude-opus-5-5-xhigh` and `grok-4.7-xhigh-fast`. Alias and rejected entries follow the runner rules in the **arena** skill's Phase A.
 
 Design it twice. Require at least two structurally distinct candidates before synthesis, even when the first looks sufficient. This is the **exhaust-the-design-space** principle skill made concrete. Whole-shape alternatives, not point fixes inside one shape.
 
@@ -45,11 +42,7 @@ Arena returns one synthesized design package. The synthesis decision populates t
 
 ## Phase C: Agree (opt-in)
 
-The caller brief chooses the handoff. If the brief requests the design only, return the synthesized sketch and rationale.
-Return the artifact paths, implementation scope, and unresolved decisions.
-Otherwise, proceed to implementation.
-
-A human checkpoint applies only when the user requests it.
+Default: proceed directly to implementation with the synthesized design. No human checkpoint.
 
 Opt in to a checkpoint when the invoker explicitly asks: "/architect with checkpoint," "stop and show me before implementing," or similar. Then surface the synthesized design and pause for sign-off.
 

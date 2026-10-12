@@ -33,14 +33,19 @@ Write one clear paragraph. If you're unsure about the intent, ask the user befor
 
 ## Step 3, Spawn Reviewers
 
-Launch all reviewers in a single message using the active agent API. Use the `interrogate reviewers` role in `models.json`, two directories up from this skill's directory. Spawn one reviewer for each entry in your harness's list, labeled Reviewer A, Reviewer B, Reviewer C, and so on as far as the list goes. The [Models section of `poteto-mode`](../poteto-mode/SKILL.md#models) tells how to find the file, how the override sheet changes a role, and what to do when the harness rejects a name.
+Launch all reviewers in a single message using the Task tool. Use the `interrogate reviewers` line in `~/.cursor/rules/pstack-models.mdc`, one reviewer per entry, extending or shrinking the Reviewer A/B labels below to the configured entry count. If the rule or that line is missing, use the table defaults.
+
+| Subagent | Default model |
+|----------|---------------|
+| Reviewer A | `claude-opus-5-5-xhigh` |
+| Reviewer B | `grok-4.7-xhigh-fast` |
 
 For each reviewer:
-- Worker type: the supported general agent API
-- `model`: this reviewer's entry from the list. For an `auto` or `inherit-parent` entry, omit `model` so that reviewer runs on the parent model.
-- Access scope: read-only files with the required lookup tools
+- `subagent_type`: `generalPurpose`
+- `model`: the configured `interrogate reviewers` entry, or the table default with no configured line. For an `auto` or `inherit-parent` entry, omit `model` so that reviewer runs on the parent model.
+- `readonly`: `true`
 
-If the active agent API rejects an entry, use the fallback in the Models section of `poteto-mode`, and open a separate PR to update `models.json`. Do not block the review on the slug issue. Never treat an alias entry as a rejected slug or apply the fallback to it.
+If the Task tool rejects a configured entry, run that reviewer on the table default of its family and say so. Families go by prefix: `claude-*` and `grok-*`. With no family match, use Reviewer A's default. If it rejects a table default, check the valid slugs in the Task tool's error message, pick the closest equivalent (prefer the same family and reasoning tier), spawn with it, and open a separate PR to update the default table. Do not block the review on the slug issue. Never treat an alias entry as a rejected slug or apply either fallback to it.
 
 Read `references/reviewer-prompt.md` and fill in the template with:
 1. The stated intent
@@ -48,7 +53,7 @@ Read `references/reviewer-prompt.md` and fill in the template with:
 3. The review rubric from `references/rubric.md`
 4. The code-quality lens from `references/code-quality-review.md`
 
-The same filled template goes to all reviewers, so every model applies the code-quality lens. When the reviewers read code in a checkout, add the checkout path and tell each reviewer to query a code indexer first if it can reach one, per the **index-the-codebase** skill. Check the reviewer's actual tool set. Use file search if no indexer is available.
+The same filled template goes to all reviewers, so every model applies the code-quality lens.
 
 ## Step 4, Synthesize
 
@@ -102,5 +107,3 @@ Present the verdict in this structure:
 
 ### Agreement Map
 [Where did models agree, where did they diverge, and what does the pattern of agreement/disagreement tell us?]
-
-Use [Platform adaptation](../poteto-mode/references/platform-adaptation.md) for tool APIs, skill locations, and evidence limits.

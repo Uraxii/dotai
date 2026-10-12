@@ -1,6 +1,6 @@
 # Route work through `/poteto-mode`
 
-`/poteto-mode` is the front door. You give it a goal, it matches one of twenty-four playbooks, creates a step bead for each of that playbook's steps, and calls the other skills as the steps need them. In this page you learn what a good prompt looks like, and how little of one you actually need.
+`/poteto-mode` is the front door. You give it a goal, it matches one of twenty-three playbooks, copies that playbook's steps into the todo list, and calls the other skills as the steps need them. In this page you learn what a good prompt looks like, and how little of one you actually need.
 
 ![A dispatcher pulls a switch lever to route robots on rail handcars toward lit gates, under a /poteto-mode departure board listing BUG FIX, FEATURE, and INVESTIGATION.](./images/router.jpg)
 
@@ -13,12 +13,10 @@ flowchart TD
     C --> D{Match the task}
     D -->|Read-only question| E[Investigation]
     D -->|Defect| F[Bug fix]
-    D -->|Feature possibilities| L[Feature ideas]
-    L --> M[Present brief and stop]
-    D -->|Selected behavior to build| G[Feature]
+    D -->|New behavior| G[Feature]
     D -->|Structure only| H[Refactoring]
     D -->|Measured slowness| I[Perf issue]
-    D -->|Large work or no match| J[run-workflow]
+    D -->|Large work or no match| J[figure-it-out]
     E --> K[Verify and report]
     F --> K
     G --> K
@@ -29,8 +27,6 @@ flowchart TD
 
 The diagram shows the common routes. There are also playbooks for hillclimbing a metric, diagnosing runtime symptoms and captured traces, prototypes, visual parity, authoring and evaluating skills, autonomous runs, babysitting a PR or stack to merge-ready, shipping a verified stack, running a PR queue on autopilot, orchestrating project-scale programs, session pickup, pausing safely, multi-phase plans, and worktree cleanup. The [playbook directory](../../skills/poteto-mode/playbooks/) has the full set.
 
-Open requests for possibilities use the [Feature ideas playbook](../../skills/poteto-mode/playbooks/feature-ideas.md). It checks current behavior and active work, then presents proposals with user value. It stops before design or implementation. A request to build a selected behavior uses Feature.
-
 ## Say the goal, not the ceremony
 
 You don't write a spec. You say what's wrong or what you want, plus anything you already know that saves the agent time:
@@ -39,7 +35,7 @@ You don't write a spec. You say what's wrong or what you want, plus anything you
 /poteto-mode users get two notifications after a retry. repro first, then fix and verify.
 ```
 
-That's a Bug fix prompt. "repro first" is a real constraint, not politeness, and the playbook honors it. Watch the step beads fill with the Bug fix steps (`bd list --parent <run bead> --all`, with the run bead ID that `/poteto-mode` names in its reply). A skipped step stays visible as a closed step bead with the reason `skip: <reason>`.
+That's a Bug fix prompt. "repro first" is a real constraint, not politeness, and the playbook honors it. Watch the todo list fill with the Bug fix steps. A skipped step stays visible with `skip: <reason>`.
 
 ## What goes in a prompt
 
@@ -86,7 +82,7 @@ continue
 keep going until done
 ```
 
-Short works because the playbook holds the structure, and the agent follows `/poteto-mode` for the active task. [Set up pstack](./01-setup.md#run-your-first-task) shows how to start one. Your words carry the intent, and the skill carries the rigor.
+Short works because the playbook holds the structure, and a Custom Mode keeps `/poteto-mode` in context on every turn. [Set up pstack](./01-setup.md#run-your-first-task) shows how to start one. Your words carry the intent, and the skill carries the rigor.
 
 ## Switch tasks with "new task"
 
@@ -98,12 +94,9 @@ A long chat accumulates context from the last task. When you change subjects, sa
 
 "new task" tells `/poteto-mode` to re-match rather than continue the prior playbook. "don't change any code yet" pins this one to Investigation. Without those two phrases, a mode mid-Feature tends to treat your question as the next feature step.
 
-## Give parallel work its own checkout
+## Give parallel work its own machine
 
-Give each writer its own worktree, ports, and build output.
-Use the active tool's supported worker API with the required access scope.
-A remote runner is optional when it can reach the inputs and verification tools.
-Do not assume work continues after the session ends.
+If you run several agents against one repository on one computer, they will fight over the working tree, the ports, and the build output. The cleanest isolation is a [cloud subagent](https://cursor.com/docs/subagents#cloud-subagents). Each one gets its own VM and branch, so it can install dependencies, run your app, and record video of the result without touching your machine. Type `/in-cloud` before the task, or ask the parent chat to hand work to cloud subagents.
 
 When the work has to stay local, ask for a worktree up front:
 
@@ -129,7 +122,7 @@ When you step away, say what done means and go:
 /poteto-mode im stepping away. keep going until the migration check reports zero old callers. log your decisions.
 ```
 
-Work you'll review later routes through [`/run-workflow`](../../skills/run-workflow/SKILL.md), which designs the run's phases and keeps a [`/show-me-your-work`](../../skills/show-me-your-work/SKILL.md) decision log. [Run work while you sleep](./07-overnight.md) covers the full overnight contract.
+Work you'll review later routes through [`/figure-it-out`](../../skills/figure-it-out/SKILL.md), which designs the run's phases and keeps a [`/show-me-your-work`](../../skills/show-me-your-work/SKILL.md) decision log. [Run work while you sleep](./07-overnight.md) covers the full overnight contract.
 
 **Pitfall:** don't enumerate skills in your prompt ("use /how, then /architect, then /arena..."). The playbook already sequences them, and a hand-written sequence usually reorders or drops steps the playbook would have kept. Name a skill only when you want to override a specific choice.
 
