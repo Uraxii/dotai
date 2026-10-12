@@ -45,7 +45,7 @@ When the detected set plus `inherit-parent` is 8 choices or fewer, skip the vend
 
 ## Roles by tier
 
-Each tier question below writes every role in its row. The panel row's roles each take the whole panel list.
+Copilot keeps its own grouping below, so `feature, refactoring` sit in the Default row and `hillclimb` in the Strongest row here, though `models.json` picks `sonnet` for both on Claude Code. Each tier question below writes every role in its row. The panel row's roles each take the whole panel list.
 
 | Tier | Roles |
 | --- | --- |

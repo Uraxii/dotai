@@ -34,7 +34,7 @@ Keep required sections. Fill optional sections only when they help the
 reviewer.
 
 Project instructions (CLAUDE.md, AGENTS.md, CONTRIBUTING.md) override this
-skill.
+skill, and so does a calling playbook that sets draft or ready.
 
 ## Core Rules
 
@@ -128,8 +128,8 @@ user.
 Create, mark ready, and edit the PR through the run's built-in PR tool when it
 has one. Otherwise use the forge. For `gh`, follow [gh.md](references/gh.md).
 
-Create new PRs as drafts. When the PR is ready for the user to view, convert it
-from a draft. Read the PR from the forge before you refer to its status.
+Create new PRs as drafts unless a calling playbook says to open them ready. When
+a draft PR is ready for the user to view, convert it from a draft. Read the PR from the forge before you refer to its status.
 
 Refresh the title and body when follow-up commits materially change scope,
 approach, breaking behavior, risk, migration, or review expectations. Skip

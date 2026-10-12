@@ -22,13 +22,13 @@ replaces the path with the uploaded URL.
 
 ## Create or Update
 
-Write the body to a temporary Markdown file, then create the PR as a draft:
+Write the body to a temporary Markdown file, then create the PR. Use `--draft` unless a calling playbook says to open it ready, and then omit it:
 
 ```bash
 gh pr create --draft --title '<title>' --body-file /tmp/pr-body.md --attach ./after.webp
 ```
 
-When the PR is ready for the user to view, convert it from a draft:
+When a draft PR is ready for the user to view, convert it from a draft:
 
 ```bash
 gh pr ready PR_NUMBER

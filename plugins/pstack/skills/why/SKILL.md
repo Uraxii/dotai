@@ -162,7 +162,7 @@ After the Sources Consulted block, if the user's `why` question is a precursor t
 
 ## Models
 
-Role defaults, stamped from `plugins/pstack/models.json` (edit there, rerun `tools/generate.mjs`). A matching role line in the `pstack-models.md` override sheet overrides each at runtime; `/setup-pstack` writes it and lists its path per runtime.
+Role defaults, stamped from `plugins/pstack/models.json` (edit `models.json`, then edit this section by hand to match it). A matching role line in the `pstack-models.md` override sheet overrides each at runtime; `/setup-pstack` writes it and lists its path per runtime.
 
 - why investigators: `opus`
 - why synthesizer: `opus`
