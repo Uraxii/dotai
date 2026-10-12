@@ -13,7 +13,7 @@ needs `pstack` installed.
 
 | Plugin | What it does |
 |---|---|
-| `pstack` | Skills and agents: poteto-mode, principles, playbooks, tools. Requires the beads CLI (bd 1.3.1) and the beads plugin. |
+| `pstack` | Skills and agents: poteto-mode, principles, playbooks, tools. |
 | `artifact` | Explain a code change as a self-contained interactive HTML page. |
 | `notion` | Reach Notion from the command line, and publish a code-change explainer as a Notion page. |
 | `azure` | Read Azure DevOps projects, repos, pipelines, releases, and work items over the REST API. |
@@ -33,20 +33,6 @@ needs `pstack` installed.
 Every plugin keeps its skills in `plugins/<plugin>/skills/<name>/SKILL.md`.
 No plugin cites a skill in another plugin, because a reader may have
 installed only one of them.
-
-## pstack requires beads
-
-`pstack` keeps all work state in [beads](https://github.com/gastownhall/beads).
-Agents claim, comment on, and close work through the beads plugin.
-Install `bd` and the beads plugin before you install or use `pstack`.
-
-- Requires `bd` 1.3.1 on `PATH`.
-- Install `bd` from the [beads releases](https://github.com/gastownhall/beads).
-- Set `BEADS_DIR` to the absolute path of the project's store, for example
-  `<project>/.nikki-agents/.beads`. Put it in the `env` block of the
-  project's `.claude/settings.local.json` so every session inherits it.
-- Requires the beads plugin. Install it for your harness from
-  [gastownhall/beads](https://github.com/gastownhall/beads).
 
 ## Layout
 
