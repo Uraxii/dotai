@@ -228,7 +228,7 @@ PLUGINS: list[dict[str, object]] = [
     },
     {
         "name": "codebase-memory",
-        "version": "2.0.0",
+        "version": "2.1.0",
         "hooks": ["claude", "copilot"],
         "agents": ["claude", "copilot"],
         "mcp_servers": {
