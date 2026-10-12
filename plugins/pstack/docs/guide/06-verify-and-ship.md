@@ -6,8 +6,6 @@ Verification is the slowest step in most agent work, because it's the step that 
 
 ![A prototype plane flies a real test course while she times it with a stopwatch and robots film and checklist the run; the terminal reads verify: pass, evidence: captured.](./images/verification.jpg)
 
-For production code, the skeptic checks the diff and tests first. A separate tester then checks test quality and missing coverage, adds needed tests, and runs all applicable tests. A green count alone is insufficient. Missing fixtures or an unavailable environment block the test pass. Both passes cover the final patch, including tester edits, before runtime proof. Prose-only changes need the skeptic gate but no test gate.
-
 ## State the finish condition up front
 
 Put what done means in the first prompt, in whatever words fit:
@@ -60,7 +58,7 @@ The UI bullet above hides a real requirement. The agent needs a scripted way to 
 
 [`/create-verification-skill`](../../skills/create-verification-skill/SKILL.md) interviews the repository, not you. It works out what a user touches, how the app launches locally, what can drive it (an existing harness first, otherwise browser and CDP, a PTY, or plain HTTP), what evidence proves behavior, and whether two instances can run side by side. It asks you only what the code can't answer.
 
-It writes a project-local `verify-<app>/` in the active tool's discovered skill directory, agent-facing instructions with exact Launch, Doctor, Drive, Evidence, and Cleanup sections, plus a feature map under `features/` that indexes what the app does and what result proves each feature works. The skill ships a [worked feature-map example](../../skills/create-verification-skill/references/feature-map-example/) with a README index and one file per feature using the four required H2s. Before handing it over, the generator proves the skill once end to end: launch, doctor check, drive one feature, capture evidence, clean up. If that proof fails, don't use the output.
+It writes `.cursor/skills/verify-<app>/`, agent-facing instructions with exact Launch, Doctor, Drive, Evidence, and Cleanup sections, plus a feature map under `features/` that indexes what the app does and what result proves each feature works. The skill ships a [worked feature-map example](../../skills/create-verification-skill/references/feature-map-example/) with a README index and one file per feature using the four required H2s. Before handing it over, the generator proves the skill once end to end: launch, doctor check, drive one feature, capture evidence, clean up. If that proof fails, don't use the output.
 
 From then on, "verify it in the app" is a step any agent can execute, in this repo, with no setup conversation. Name it in the prompt when you want the proof in a specific form:
 
@@ -127,6 +125,6 @@ Green is not the same as safe. When you're ready to land, say so:
 /poteto-mode land the stack.
 ```
 
-The [Shipping playbook](../../skills/poteto-mode/playbooks/shipping.md) requires current skeptic and tester passes for each production-code patch before runtime verification. It obtains missing passes in that order. A failed or blocked test gate stops that PR and its descendants. Shipping verifies each PR independently before it arms anything. One fresh agent per PR proves the behavior live, and the agent that judges a change is never the one that wrote it. Then Shipping lands only the contiguous verified run from the bottom, one PR at a time through GitHub by default or Origin when its CLI is available, and reports the first PR that breaks the chain. A verified PR sitting above an unverified one waits, because merging it would pull the gap in underneath.
+The [Shipping playbook](../../skills/poteto-mode/playbooks/shipping.md) verifies each PR independently before it arms anything. One fresh agent per PR proves the behavior live, and the agent that judges a change is never the one that wrote it. Then Shipping lands only the contiguous verified run from the bottom, one PR at a time through GitHub by default or Origin when its CLI is available, and reports the first PR that breaks the chain. A verified PR sitting above an unverified one waits, because merging it would pull the gap in underneath.
 
 Next: [Run work while you sleep](./07-overnight.md).

@@ -22,8 +22,6 @@ Swap in the real paths, skills, and done checks. Informal wording works.
 
 ## Design and plan
 
-- `/poteto-mode suggest feature ideas for this project. Include small improvements and ambitious directions. Check what already exists. Stop at proposals.`
-
 - `/poteto-mode prototype a few options for <feature>. take screenshots or videos for me to compare.`
 - `/poteto-mode we need <feature>. /architect it first, and answer open questions with prototypes. let me review before proceeding.`
 - `/poteto-mode write a tutorial for how i would use <new package> first. then /teach me why it beats the current one.`
@@ -41,7 +39,7 @@ Swap in the real paths, skills, and done checks. Informal wording works.
 
 ## Away and back
 
-- `/poteto-mode im going to bed. <goal> in a fresh worktree off <base>. done means <checks>. keep a decision log. don't ask me before committing. continue until done. if you're truly stuck after a few hours, stop and write up why.`
+- `/poteto-mode im going to bed. <goal> in a fresh worktree off <base>. done means <checks>. keep a decision log. don't ask me before committing. /loop until done. if you're truly stuck after a few hours, stop and write up why.`
 - `/show-me-your-work catch me up on what you did last night.` Read its Attention section first.
 - `/poteto-mode full autopilot on this queue. each item is independent.`
 - `/poteto-mode autopilot these changes but stack them, don't ship. i'll land the stack.`

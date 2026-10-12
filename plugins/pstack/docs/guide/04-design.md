@@ -6,16 +6,6 @@ The two most common design mistakes are taking the agent's first design and poli
 
 ![Three robots draft competing bridge models at their own tables under /architect, /arena, and /interrogate panels, while a judge robot with a clipboard inspects skeptically.](./images/design.jpg)
 
-## Choose an idea before architecture
-
-```text
-/poteto-mode suggest feature ideas for this project. Include small improvements and ambitious directions. Check what already exists. Stop at proposals.
-```
-
-The [Feature ideas playbook](../../skills/poteto-mode/playbooks/feature-ideas.md) studies the project before proposals. It covers small improvements, medium features, and ambitious directions. Each idea states user value and the evidence from its existence check. The brief stops before architecture, task scope, task order, or implementation.
-
-Selection alone does not start a build. Select an idea and request further work to use Feature, Prototype, or Multi-phase plan. The planning route first meets its design requirements.
-
 ## Settle the shape with `/architect`
 
 ```text
@@ -24,11 +14,7 @@ Selection alone does not start a build. Select an idea and request further work 
 
 [`/architect`](../../skills/architect/SKILL.md) grounds itself first, running `/how` over the code the design touches and `/why` when it moves ownership or layers. Then it runs `/arena` to produce competing design sketches, with the caller's usage written first in each, followed by types, signatures, and a module map.
 
-For production work, a fresh reviewer gives the design a skeptic review before code, and gives the code the same review before the PR.
-
-An architect plans each code change before implementation. The owner may skip that step for a very small change. Follow [Architect planning](../../skills/poteto-mode/playbooks/architect-planning.md). A planning-only brief returns the design, rationale, artifact paths, scope, and unresolved decisions after Phase C. The owner commits production sketches and checks the sketch pass per [Code-change workflow](../../skills/run-workflow/workflows/code-change-workflow.md).
-
-For a direct architecture request, the owner uses [Architect planning](../../skills/poteto-mode/playbooks/architect-planning.md) for the design handoff. The owner then gives the design to the writer and follows Code-change workflow. If you want to see the design first, say so:
+By default it proceeds straight from the synthesized design into implementation. If you want to see the design first, say so:
 
 ```text
 /architect with checkpoint. stop and show me before implementing.
@@ -58,7 +44,7 @@ flowchart LR
     H --> I[Verify]
 ```
 
-The panel comes from your [`/configure-pstack`](../../skills/configure-pstack/SKILL.md) configuration, and you can adjust it per task. Ask for more candidates when the decision matters, fewer when it doesn't:
+The panel comes from your [`/setup-pstack`](../../skills/setup-pstack/SKILL.md) configuration, and you can adjust it per task. Ask for more candidates when the decision matters, fewer when it doesn't:
 
 ```text
 /arena this, 5 candidates. the cache key format is expensive to change later.
@@ -132,16 +118,16 @@ For a migration, state the bar in the prompt:
 
 ## How much design work does a task deserve?
 
-An architect plan is the default for code changes. The owner may skip it for a very small change. Use this ladder to choose other design work:
+You might be wondering whether every change needs this. No. Most changes need none of it. A rough ladder:
 
 - A small, finished change you're unsure about needs `/interrogate` alone.
-- Each code change gets `/architect`, which brings `/arena` with it, unless the owner records a very-small-change skip.
+- A change that crosses function boundaries or moves ownership earns `/architect`, which brings `/arena` with it.
 - A standalone decision where independent attempts would help, like naming, formats, or an algorithm, is `/arena` directly.
 - A coverage matrix, set of parallel checks, or race with declared arms is `/swarm`.
 - An open question you could answer by running something, like a layout, a timing, or an approach, gets a prototype, not a debate.
 - A contested design that's expensive to reverse gets `/architect`, then `/interrogate` before shipping.
 - Work that spans several PRs gets a plan, written after the design settles.
 
-`/poteto-mode` applies architect planning before each code change, with the owner's very-small-change skip. Invoke the other design skills directly when you need more scrutiny.
+`/poteto-mode` already applies this ladder. Boundary-crossing work triggers `/architect` on its own, so you reach for these directly mainly when you want more or less scrutiny than the default.
 
 Next: [Build and clean the change](./05-build-and-clean.md).
