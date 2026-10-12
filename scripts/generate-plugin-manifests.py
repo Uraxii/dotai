@@ -61,6 +61,7 @@ PLUGINS: list[dict[str, object]] = [
     PSTACK,
     {
         "name": "artifact",
+        "version": "1.0.1",
         "description": (
             "Explain a code change as a self-contained interactive HTML page."
         ),
@@ -79,6 +80,7 @@ PLUGINS: list[dict[str, object]] = [
     },
     {
         "name": "notion",
+        "version": "1.0.1",
         "description": (
             "Reach Notion from the command line, and publish a code-change "
             "explainer as a Notion page."
@@ -98,6 +100,7 @@ PLUGINS: list[dict[str, object]] = [
     },
     {
         "name": "azure",
+        "version": "1.0.1",
         "description": (
             "Read Azure DevOps projects, repos, pipelines, releases, and "
             "work items over the REST API."
@@ -139,6 +142,7 @@ PLUGINS: list[dict[str, object]] = [
     },
     {
         "name": "proton",
+        "version": "1.0.1",
         "description": (
             "Read and store secrets in Proton Pass through pass-cli, so none "
             "lands in a repo or a shell history."
@@ -203,6 +207,7 @@ PLUGINS: list[dict[str, object]] = [
     },
     {
         "name": "skills",
+        "version": "1.0.1",
         "description": (
             "Review and author SKILL.md files, finding and repairing the "
             "smells that stop a skill triggering."
@@ -250,7 +255,7 @@ PLUGINS: list[dict[str, object]] = [
     },
     {
         "name": "caveman",
-        "version": "1.0.0",
+        "version": "1.0.1",
         "description": (
             "Answer in a compressed register that drops filler and keeps "
             "every technical fact."
@@ -271,7 +276,7 @@ PLUGINS: list[dict[str, object]] = [
     },
     {
         "name": "steer",
-        "version": "1.2.2",
+        "version": "1.2.3",
         "hooks": ["claude"],
         "skills": False,
         "description": (
@@ -315,7 +320,7 @@ PLUGINS: list[dict[str, object]] = [
     },
     {
         "name": "personal-instructions",
-        "version": "1.0.2",
+        "version": "1.0.3",
         "hooks": ["claude", "codex", "copilot"],
         "skills": False,
         "description": (

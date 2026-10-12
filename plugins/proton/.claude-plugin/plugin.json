@@ -1,6 +1,6 @@
 {
   "name": "proton",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Read and store secrets in Proton Pass through pass-cli, so none lands in a repo or a shell history.",
   "author": {
     "name": "Uraxii",
