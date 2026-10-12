@@ -3,7 +3,7 @@
 **You own the design. Plan, review, verify.** Delegate implementation. Stay in the lead.
 
 1. `how` over the affected subsystem.
-2. `architect` for parallel design exploration.
+2. `architect` for parallel design exploration. Design gate: when the change alters a contract between subsystems (a public interface, a stored or wire format, a migration, or module ownership), run `architect` with checkpoint so it stops after Phase C, then `interrogate` the sketch and rationale. Only Act on findings block. Treat each one as Phase A evidence, re-run Phase B, and `interrogate` the whole revised sketch. A revised sketch voids an earlier pass. The sketch passes when its latest verdict has no Act on finding. You decide the pass. Ask the human only when the task or the project asks for sign-off, or when two revisions still fail. The sketch can be committed. No body is filled and no existing logic changes before the pass. Step 4 implements against the passed sketch. When no contract between subsystems changes, write `design gate: n/a, <reason>`.
 3. Write the throughput checkpoint as four todo items. A dimension that genuinely does not apply (single file, no fan-out) keeps its item with `n/a: <reason>` rather than being dropped:
    - **Blocking first steps.** Gates run before fan-out.
    - **Independent workstreams.** Disjoint files, services, or layers parallelize. Shared writes serialize.
