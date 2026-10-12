@@ -28,12 +28,14 @@ def run_hook(
     fake_output: dict | None,
     config_script: str = "echo true",
     install_binary: bool = True,
+    augment_delay: int = 0,
 ) -> tuple[dict, list[str]]:
     """Run the hook against a fake binary; return its output and the argv of each call."""
     with tempfile.TemporaryDirectory() as bin_dir:
         calls = Path(bin_dir) / "calls.log"
         fake = Path(bin_dir) / "codebase-memory-mcp"
         augment = f"printf '%s' '{json.dumps(fake_output)}'" if fake_output else ":"
+        augment = f"sleep {augment_delay}; {augment}"
         if install_binary:
             fake.write_text(
                 "#!/bin/sh\n"
@@ -104,6 +106,15 @@ class LifecycleContextTest(unittest.TestCase):
                     output["hookSpecificOutput"]["additionalContext"], INSTRUCTIONS.strip()
                 )
                 self.assertIn(CONFIG_ARGV, argv)
+
+    def test_session_start_runs_the_check_concurrently_with_hook_augment(self):
+        output, _ = run_hook(
+            "claude", "SessionStart", CLAUDE_AUGMENT, "sleep 3; echo false", augment_delay=3
+        )
+        self.assertEqual(
+            output["hookSpecificOutput"]["additionalContext"],
+            f"{INSTRUCTIONS.strip()}\n\n{GRAPH_MARKER}\n\n{REMINDER}",
+        )
 
     def test_session_start_adds_nothing_when_the_binary_is_missing(self):
         output, argv = run_hook("claude", "SessionStart", None, install_binary=False)

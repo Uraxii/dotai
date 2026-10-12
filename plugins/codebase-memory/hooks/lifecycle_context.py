@@ -25,7 +25,7 @@ from pathlib import Path
 
 INSTRUCTIONS = Path(__file__).resolve().parent / "instructions.md"
 AUGMENT_TIMEOUT_SECONDS = 4
-HOOK_BUDGET_SECONDS = 4.5  # under the harnesses' 5 s hook timeout
+HOOK_BUDGET_SECONDS = 4.3  # under the harnesses' 5 s hook timeout
 AUTO_INDEX_COMMAND = ["codebase-memory-mcp", "config", "get", "auto_index"]
 AUTO_INDEX_REMINDER = (
     "codebase-memory auto-indexing is off, so new checkouts and worktrees have no "
