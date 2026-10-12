@@ -28,8 +28,8 @@
   ],
   "codex": {
     "default": "gpt-6-sol",
-    "strongest": "gpt-6-astra",
-    "panel": ["gpt-6-astra", "gpt-6-sol", "gpt-6-luna"]
+    "strongest": "gpt-6.1-sol",
+    "panel": ["gpt-6.1-sol", "gpt-6-sol", "gpt-6-luna"]
   },
   "pi": {
     "fallback": "anthropic",
@@ -42,13 +42,13 @@
       },
       "openai": {
         "opus": "openai/gpt-6.1-sol",
-        "fable": "openai/gpt-6-astra",
+        "fable": "openai/gpt-6.1-sol",
         "sonnet": "openai/gpt-6-sol",
         "haiku": "openai/gpt-6-luna"
       },
       "openai-codex": {
         "opus": "openai-codex/gpt-6.1-sol",
-        "fable": "openai-codex/gpt-6-astra",
+        "fable": "openai-codex/gpt-6.1-sol",
         "sonnet": "openai-codex/gpt-6-sol",
         "haiku": "openai-codex/gpt-6-luna"
       }

@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -554,6 +555,24 @@ def undeclared_hook_wiring(root: Path) -> list[Path]:
     return undeclared
 
 
+BANNED_MODEL = re.compile(r"astra", re.IGNORECASE)
+
+
+def banned_model_files(root: Path) -> list[Path]:
+    """Return plugin files that name an astra model, which exhausts usage."""
+    hits = []
+    for path in sorted((root / "plugins" / "pstack").rglob("*")):
+        if not path.is_file():
+            continue
+        try:
+            text = path.read_text(encoding="utf-8")
+        except (UnicodeDecodeError, OSError):
+            continue
+        if BANNED_MODEL.search(text):
+            hits.append(path.relative_to(root))
+    return hits
+
+
 def render(document: dict[str, object]) -> str:
     return json.dumps(document, indent=2, ensure_ascii=False) + "\n"
 
@@ -596,7 +615,8 @@ def main(arguments: list[str] | None = None, root: Path = REPOSITORY_ROOT) -> in
         changed = drifted(files, root)
         missing_wiring = missing_hook_wiring(root)
         undeclared_wiring = undeclared_hook_wiring(root)
-        if not changed and not missing_wiring and not undeclared_wiring:
+        banned = banned_model_files(root)
+        if not changed and not missing_wiring and not undeclared_wiring and not banned:
             print(f"{len(files)} generated files are up to date.")
             return 0
         if changed:
@@ -611,6 +631,10 @@ def main(arguments: list[str] | None = None, root: Path = REPOSITORY_ROOT) -> in
         if undeclared_wiring:
             print("These plugin hook wiring files are undeclared:")
             for relative in undeclared_wiring:
+                print(f"  {relative}")
+        if banned:
+            print("These files name an astra model, which is banned:")
+            for relative in banned:
                 print(f"  {relative}")
         return 2
 
