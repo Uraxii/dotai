@@ -45,15 +45,12 @@ PLUGINS: list[dict[str, object]] = [
         "hooks": ["claude", "codex", "copilot"],
         "description": (
             "Skills and agents: poteto-mode, principles, "
-            "playbooks, tools. Requires the beads CLI (bd 1.3.1) and the beads plugin."
+            "playbooks, tools."
         ),
         "short": "Reusable skills for software development work.",
         "long": (
             "A collection of reusable workflows, principles, playbooks, and "
-            "tools for Codex and other coding agents. Requires the beads CLI "
-            "(bd 1.3.1), the beads plugin, and a BEADS_DIR that names the "
-            "project's store. Install both from "
-            "https://github.com/gastownhall/beads."
+            "tools for Codex and other coding agents."
         ),
         "keywords": ["software-development"],
         "prompts": [
