@@ -2,11 +2,11 @@
   "tiers": {
     "default": "opus",
     "strongest": "opus",
-    "panel": ["opus"]
+    "panel": ["opus", "fable", "sonnet", "haiku"]
   },
   "efforts": ["low", "medium", "high", "xhigh", "max"],
   "defaultEffort": "medium",
-  "available": ["opus", "sonnet"],
+  "available": ["opus", "fable", "sonnet", "haiku"],
   "roles": [
     { "role": "feature, refactoring", "models": ["sonnet"], "skill": "poteto-mode" },
     { "role": "bug-fix", "models": "strongest", "skill": "poteto-mode" },
@@ -20,7 +20,7 @@
     { "role": "why synthesizer", "models": "default", "skill": "why" },
     { "role": "reflect tooling", "models": "default", "skill": "reflect" },
     { "role": "reflect judgment, divergent, synthesizer", "models": "default", "skill": "reflect" },
-    { "role": "arena runners", "models": ["sonnet"], "skill": "arena" },
+    { "role": "arena runners", "models": "panel", "skill": "arena" },
     { "role": "arena cross-judge pool", "models": "panel", "skill": "arena" },
     { "role": "swarm workers", "models": "default", "skill": "swarm" },
     { "role": "architect runners", "models": "panel", "skill": "architect" },
@@ -36,15 +36,21 @@
     "models": {
       "anthropic": {
         "opus": "anthropic/claude-opus-5-5",
-        "sonnet": "anthropic/claude-sonnet-5-5"
+        "fable": "anthropic/claude-fable-5-1",
+        "sonnet": "anthropic/claude-sonnet-5-5",
+        "haiku": "anthropic/claude-haiku-5-5"
       },
       "openai": {
         "opus": "openai/gpt-6.1-sol",
-        "sonnet": "openai/gpt-6-sol"
+        "fable": "openai/gpt-6.1-sol",
+        "sonnet": "openai/gpt-6-sol",
+        "haiku": "openai/gpt-6-luna"
       },
       "openai-codex": {
         "opus": "openai-codex/gpt-6.1-sol",
-        "sonnet": "openai-codex/gpt-6-sol"
+        "fable": "openai-codex/gpt-6.1-sol",
+        "sonnet": "openai-codex/gpt-6-sol",
+        "haiku": "openai-codex/gpt-6-luna"
       }
     }
   }

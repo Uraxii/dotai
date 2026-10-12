@@ -70,11 +70,11 @@ why investigators: opus
 why synthesizer: opus
 reflect tooling: opus
 reflect judgment, divergent, synthesizer: opus
-arena runners: sonnet
-arena cross-judge pool: opus
+arena runners: opus, fable, sonnet, haiku
+arena cross-judge pool: opus, fable, sonnet, haiku
 swarm workers: opus
-architect runners: opus
-interrogate reviewers: opus
+architect runners: opus, fable, sonnet, haiku
+interrogate reviewers: opus, fable, sonnet, haiku
 
 default effort: medium
 session hook: on
@@ -112,8 +112,8 @@ The role lines are the same everywhere. What differs is the sheet path, how the 
 
 Stamped from `plugins/pstack/models.json` (edit there, rerun `tools/generate.mjs`).
 
-- Available Claude models: `opus`, `sonnet`
-- Default panel: `opus`
+- Available Claude models: `opus`, `fable`, `sonnet`, `haiku`
+- Default panel: `opus`, `fable`, `sonnet`, `haiku`
 - Reasoning effort levels: `low`, `medium`, `high`, `xhigh`, `max`
 - Default reasoning effort: `medium`
 - Single-role default: `opus`
