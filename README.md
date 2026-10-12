@@ -34,20 +34,6 @@ Every plugin keeps its skills in `plugins/<plugin>/skills/<name>/SKILL.md`.
 No plugin cites a skill in another plugin, because a reader may have
 installed only one of them.
 
-## pstack requires beads
-
-`pstack` keeps all work state in [beads](https://github.com/gastownhall/beads).
-Agents claim, comment on, and close work through the beads plugin.
-Install `bd` and the beads plugin before you install or use `pstack`.
-
-- Requires `bd` 1.3.1 on `PATH`.
-- Install `bd` from the [beads releases](https://github.com/gastownhall/beads).
-- Set `BEADS_DIR` to the absolute path of the project's store, for example
-  `<project>/.nikki-agents/.beads`. Put it in the `env` block of the
-  project's `.claude/settings.local.json` so every session inherits it.
-- Requires the beads plugin. Install it for your harness from
-  [gastownhall/beads](https://github.com/gastownhall/beads).
-
 ## Layout
 
 | Path      | What                                                    |
