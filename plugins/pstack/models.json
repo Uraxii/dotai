@@ -5,7 +5,7 @@
     "panel": ["opus"]
   },
   "efforts": ["low", "medium", "high", "xhigh", "max"],
-  "defaultEffort": "session",
+  "defaultEffort": "medium",
   "available": ["opus", "sonnet"],
   "roles": [
     { "role": "feature, refactoring", "models": ["sonnet"], "skill": "poteto-mode" },
