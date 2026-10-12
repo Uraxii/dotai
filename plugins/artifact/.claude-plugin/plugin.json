@@ -1,6 +1,6 @@
 {
   "name": "artifact",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Explain a code change as a self-contained interactive HTML page.",
   "author": {
     "name": "Uraxii",
