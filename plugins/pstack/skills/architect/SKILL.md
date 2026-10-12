@@ -10,6 +10,9 @@ Design before implementing. Sketch types, function signatures, class shapes, and
 
 ## Start
 
+A planning-only brief runs Phases A through C and hands the design to the writer.
+The caller brief chooses whether implementation starts. Preserve any requested human checkpoint.
+
 Before you start, create one step bead for each phase, per the Phases of a skill section of [Run records](../ticket-work/references/run-records.md#phases-of-a-skill).
 
 1. Ground
@@ -43,6 +46,7 @@ Arena returns one synthesized design package. The synthesis decision populates t
 ## Phase C: Agree (opt-in)
 
 The caller brief chooses the handoff. If the brief requests the design only, return the synthesized sketch and rationale.
+Return the artifact paths, implementation scope, and unresolved decisions.
 Otherwise, proceed to implementation.
 
 A human checkpoint applies only when the user requests it.

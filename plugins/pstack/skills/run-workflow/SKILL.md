@@ -1,12 +1,17 @@
 ---
-name: figure-it-out
-description: "Design an auditable playbook when no narrower one fits: a large migration, an ambitious multi-part change, or work a human reviews after stepping away. Scales rigor to the task, runs a hypothesis loop, and logs decisions via show-me-your-work. Use for /figure-it-out, 'figure it out', a large migration, or when no narrower playbook applies."
+name: run-workflow
+description: "Run a saved workflow or design an auditable workflow for a large migration, a multi-part change, or work a human reviews later. Use for /run-workflow, 'run workflow', a large migration, or when no narrower playbook applies."
 disable-model-invocation: true
 ---
 
-# Figure it out
+# Run workflow
 
-When the task matches no playbook, design one. The deliverable before any code is the workflow itself: a sequence of phases that scales rigor to the task, runs the scientific method, and leaves a decision trail a human can audit after stepping away.
+Select a saved workflow before you design a custom workflow. The workflow defines phases, required checks, and a decision trail.
+For authorized production code changes, read and use the saved [Code-change workflow](workflows/code-change-workflow.md).
+Use that workflow for each production-code unit in a broader custom run.
+If no saved workflow fits a non-code task, design one with the phases below.
+Read-only investigations, proposals, plan runs, and throwaway prototypes keep their requested scope and stop point.
+If a prototype becomes authorized production work, start the saved code-change workflow before its production writer.
 
 ## Start
 
@@ -24,10 +29,13 @@ Present the framing and tradeoffs before committing to a long run. Reversible wo
 
 ## Phase B: Design the workflow
 
+Read the selected saved workflow before execution. For production code, [Requirements planning](workflows/code-change-workflow.md#requirements-planning) defines the mode decision.
+If no saved workflow fits, define the custom steps below.
+
 Decompose into atomic, independently-landable units. Sequence riskiest-unknown-first. Scaffold and verification come before features (the **foundational-thinking** principle skill).
 
 - Build the verification harness before the work, with the baseline captured from the pre-change state, so the check reads as "old value vs new value".
-- For one-way-door design decisions, run the **architect** skill (it runs **arena**). Skip it for mechanical work whose shape is already concrete. A second arena over a settled design is over-engineering (the **laziness-protocol** principle skill).
+- For production code, follow the recorded mode in [Requirements planning](workflows/code-change-workflow.md#requirements-planning). For non-code design decisions that are difficult to reverse, request **architect** Phases A through C for a design-only handoff. The caller owns implementation. A second arena over a settled design is over-engineering (the **laziness-protocol** principle skill).
 - Decide what fans out. Parallelize only across seams, and give each worker its own worktree or branch (the **separate-before-serializing-shared-state** principle skill). Don't over-fan.
 - Write the designed phase list down. That list is what the human reviews.
 
@@ -46,7 +54,7 @@ Apply the **sequence-verifiable-units** principle skill, verifying each unit bef
 
 ## Phase D: Keep the audit trail
 
-Log the run via the **show-me-your-work** skill. figure-it-out's work is usually ambitious enough to commit the trail so the reviewer can read it in the PR. The trail plus the diff is what lets the human come back and trust the work.
+Log the run via the **show-me-your-work** skill. run-workflow's work is usually ambitious enough to commit the trail so the reviewer can read it in the PR. The trail plus the diff is what lets the human come back and trust the work.
 
 ## Phase E: Verify and hand back
 
