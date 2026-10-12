@@ -39,14 +39,14 @@ installed only one of them.
 | Path      | What                                                    |
 |-----------|---------------------------------------------------------|
 | `plugins/<plugin>/skills/` | Every skill, `skills/<name>/SKILL.md`. Source of truth. |
-| `plugins/pstack/models.json` | Model picks per role and harness. The only copy in the repository. Every skill that picks a model by role ships in `pstack` and points at it by path. A per-harness override sheet in the user's config directory replaces a role for one harness without touching this repo (see the `configure-pstack` skill). |
+| `plugins/pstack/models.json` | Model picks per role and harness. The only copy in the repository. Every skill that picks a model by role ships in `pstack` and points at it by path. A per-harness override sheet in the user's config directory replaces a role for one harness without touching this repo (see the `setup-pstack` skill). |
 | `plugins/pstack/agents/` | Claude and Copilot agent files. |
 | `scripts/` | `generate-plugin-manifests.py` writes all 33 plugin manifests, both marketplace files, and the plugin table above from one list. |
 | `themes/` | Editor themes. Source of truth only. Nothing installs them, so copy one into `~/.claude/themes/` yourself. |
 | `output-styles/` | Output styles, `output-styles/<name>.md`. Nothing installs them, so copy one into `~/.claude/output-styles/` and select it with `/output-style` yourself. |
 | `statusline.sh` | Statusline command: usage bars and tokens per minute. Nothing installs it, so copy it to `~/.claude/statusline.sh` and set `statusLine` yourself. |
 | `plugins/mpocock/hooks/` | `handoff-token-flag.py` warns before context compaction and points the agent at the `handoff` skill, which ships in this same plugin. Plugin installation wires it for Claude Code and Codex. |
-| `plugins/pstack/hooks/` | Hook scripts tied to pstack skills and playbooks. `session_start_context.py` reminds the agent to load `poteto-mode` at session start; plugin installation wires it for Claude Code, Codex, and Copilot CLI. `codex_exec_no_agents.py` puts `plugins/pstack/shims/codex` first on `PATH` for any Bash call that mentions codex, and the shim adds `-c agents.enabled=false` to every `codex exec` it runs, so Codex never hands a delegated task to its own helper agents. `opencode-reminder-plugin.ts` (in the same directory) wires the session-start reminder into opencode. Wiring it into Hermes by hand is not covered by any skill here. See [Session-start reminder](#session-start-reminder) below for what each harness can and cannot do. Add `.nikki-agents/` to the exclude config of your editor, LSP, and any semantic index: `.git/info/exclude` covers git, ripgrep, and fd, but an indexer that keeps its own ignore list walks the worktrees and ends up crawling six figures of files in a repo with a few hundred tracked ones. |
+| `plugins/pstack/hooks/` | `session-start.sh` injects the poteto-mode routing mandate at session start, wired by `hooks.json` (Claude Code), `codex-hooks.json` (Codex), and `copilot-hooks.json` (Copilot CLI, which also gets `pre-tool-use.sh`). A `session hook: off` line in the user's `pstack-models.md` sheet turns it off. See [Session-start reminder](#session-start-reminder). Add `.nikki-agents/` to the exclude config of your editor, LSP, and any semantic index: `.git/info/exclude` covers git, ripgrep, and fd, but an indexer that keeps its own ignore list walks the worktrees and ends up crawling six figures of files in a repo with a few hundred tracked ones. |
 | `plugins/steer/hooks/` | `opus_5_reduce_output.py` is a Claude Code `Stop` hook that asks for a plain-English recap at the end of a turn on Opus 5 or Fable 5 that changed something. A turn that mutated nothing has nothing to recap, so it ends silently. Spawning a subagent counts as a mutation, because a delegate's own edits never reach this transcript. Plugin installation wires it, and no other harness gets it. |
 
 ## Install
@@ -87,10 +87,7 @@ npx skills@latest add Uraxii/dotai/plugins/<plugin>
 Hermes: `hermes skills tap add Uraxii/dotai/plugins/<plugin>`.
 
 opencode: clone the repo and point `~/.config/opencode/skills` at
-`plugins/<plugin>/skills/`. For the session-start reminder, also symlink
-`plugins/pstack/hooks/opencode-reminder-plugin.ts` into
-`~/.config/opencode/plugin/` (a copy breaks the plugin's lookup of its
-sibling script, so symlink it).
+`plugins/<plugin>/skills/`.
 
 Claude Code and Copilot CLI read the agent files in `plugins/pstack/agents/`
 from the `pstack` plugin. opencode and Hermes use their native delegation
@@ -105,7 +102,7 @@ each one points at the file by path and tells the reader to resolve it two
 directories up from the skill's own directory, so a spawner working outside
 this repo still finds it. A per-harness override sheet in the user's own config
 directory can replace a role for one harness without touching this repo (see
-the `configure-pstack` skill).
+the `setup-pstack` skill).
 
 After changing the plugin list in `scripts/generate-plugin-manifests.py`,
 rerun it and commit what it writes:
@@ -119,43 +116,15 @@ tracked here.
 
 ## Session-start reminder
 
-Every harness gets the same "load `poteto-mode`" nudge from
-`plugins/pstack/hooks/session_start_context.py`, through each harness's
-own hook system. Only Claude Code and Codex have been run live; the rest are
-**LIVE-UNVERIFIED**, proven by unit tests against the payload and output
-shapes their own docs or source describe, not by a real session (this dev
-machine cannot install Copilot CLI, opencode, or Hermes).
+The `pstack` plugin injects the "load `poteto-mode`" mandate at session start through `plugins/pstack/hooks/session-start.sh`. Each harness has its own hooks file, and each passes its name to the script.
 
-| Harness | Event | Fires | Injects into | Source |
-|---|---|---|---|---|
-| Claude Code | `SessionStart` (`startup\|clear\|compact`) | Once, at each named point | Context, automatically | Claude Code hooks docs |
-| Codex | `SessionStart` (no matcher, so it also fires on `compact` and `clear`) | Once, at each source | Context, via `hookSpecificOutput.additionalContext` | Codex hooks docs |
-| Copilot CLI | `sessionStart` | Once per job, new session only (not on resume) | Context, via `additionalContext` | docs.github.com Copilot CLI hooks reference, "Hook events" and "Hook event input payloads" / `sessionStart`; changelog 1.0.11 and 1.0.22; fetched 2026-09-14 |
-| opencode | none that fires once at session start and can inject; `experimental.chat.system.transform` runs before every LLM request instead | Every request | System prompt array | `anomalyco/opencode@228e9095`, `packages/plugin/src/index.ts:291-296`, `packages/opencode/src/plugin/index.ts:259`; cloned 2026-09-14 |
-| Hermes | `pre_llm_call`, gated on `extra.is_first_turn` | Once per session (script-side gate; the event itself fires every turn) | That turn's user message, via `{"context": ...}` | `NousResearch/hermes-agent@498abb6`, `website/docs/user-guide/features/hooks.md:458,677-696`, `agent/turn_context.py:663-690`; cloned 2026-09-14 |
+| Harness | Hooks file | Event |
+|---|---|---|
+| Claude Code | `plugins/pstack/hooks/hooks.json` | `SessionStart` (`startup\|resume\|clear\|compact`) |
+| Codex | `plugins/pstack/hooks/codex-hooks.json` | `SessionStart` (same matcher; Windows runs `session-start.ps1`) |
+| Copilot CLI | `plugins/pstack/hooks/copilot-hooks.json` | `sessionStart` (same matcher), plus a `PreToolUse` hook, `pre-tool-use.sh` |
+| Pi | `plugins/pstack/pi/` (extension) | Adds the mandate to the system prompt at every agent start |
 
-Copilot CLI's `sessionStart` `additionalContext` shipped in 1.0.11
-(2026-03-23) after being silently dropped
-([github/copilot-cli#2142](https://github.com/github/copilot-cli/issues/2142)).
-A later report
-([github/copilot-cli#4665](https://github.com/github/copilot-cli/issues/4665))
-says the CLI re-injects the same `additionalContext` on every turn instead of
-once, closed 2026-09-02 with no changelog line confirming the fix; that
-replay happens inside Copilot CLI, not from repeated hook invocations, so no
-guard on this script's side can prevent it. The documented fallback,
-`userPromptSubmitted`'s `modifiedPrompt`, is explicitly dropped for command
-hooks (hooks-reference.md line 342: "Command and HTTP config-file
-`userPromptSubmitted` hooks have their output dropped"), so `handoff-token-flag.py`'s
-docstring claim that Copilot's prompt hook cannot inject context still holds;
-this script does not implement that fallback.
+Plugin installation wires the hooks. Codex asks the user to trust plugin hooks through `/hooks` first. Setting `session hook: off` in the harness's `pstack-models.md` sheet (see `setup-pstack`) stops injection on every harness above.
 
-opencode has no per-session hook at all, so `opencode-reminder-plugin.ts`
-uses the one hook that can inject text and pushes the reminder onto the
-system prompt before every LLM request rather than once at start; a plugin
-can dedupe by `sessionID` if that granularity ever matters more than the
-extra array entry does.
-
-Hermes hooks require the user's consent on first use, recorded in
-`~/.hermes/shell-hooks-allowlist.json`
-(`website/docs/user-guide/features/hooks.md:1871`). Adding the hook by hand
-is not covered by any skill here.
+opencode, Hermes, Gemini CLI, and the other skills.sh targets read the skills only. They get no session-start reminder from this repo, so load `poteto-mode` by hand there.
