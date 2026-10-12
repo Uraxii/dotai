@@ -1,22 +1,27 @@
 # pstack
 
-i'm [poteto](https://x.com/poteto). i'm not a president or ceo, but i've worked with millions of lines of code at Meta, Netflix, and Cursor. i'm also on the react core team where i help build and maintain react compiler.
-
-there's a growing sense that ai writes too much slop code. i agree. i don't want to ship like a team of twenty slop artists. throughput without quality is not a goal i aspire to. if you want to go fast, go deep first. 
-
-**pstack is my answer.** these are the same skills i use everyday to ship high quality code at Cursor. this turns cursor into a real engineering team. the goal is not to maximize loc, in fact it's the opposite. pstack helps you write less, but higher quality code.
-
-**pstack gives you fearless parallelism.** when you can go deep on one agent and trust it to write good, verifiable code, you can truly parallelize with confidence. start multiple agents up with `poteto-mode` and trust that they'll apply rigorous engineering principles to their work.
-
-**cursor gives you the best of all worlds.** every frontier model has its strengths and weaknesses. use any model with pstack. in fact, many of my skills use multi-model workflows to take advantage of each model's unique strengths.
-
-fork it. improve it. make it yours. PRs are welcome! 
+pstack contains engineering skills, principles, playbooks, and agents for Claude Code, Codex, and Copilot CLI.
+Use poteto-mode to select the task, check the real result, and keep a reviewable diff.
+Shared instructions use the active tool's APIs and available models.
+Each writer has its own checkout. A fresh agent reviews the work.
 
 ## install
 
-```bash
-/add-plugin pstack
-```
+Add this repository as a marketplace, then install pstack with your active tool.
+Check the installed CLI's help for the available flags.
+
+| Tool | Add marketplace | Install |
+|---|---|---|
+| Claude Code | `claude plugin marketplace add Uraxii/dotai` | `claude plugin install pstack@Uraxii` |
+| Codex | `codex plugin marketplace add Uraxii/dotai` | `codex plugin add pstack@uraxii` |
+| Copilot CLI | `copilot plugin marketplace add Uraxii/dotai` | `copilot plugin install pstack@Uraxii` |
+
+Install the beads CLI (`bd 1.3.1`) and beads plugin from
+[beads](https://github.com/gastownhall/beads).
+Set `BEADS_DIR` to the project's store before task work.
+The package includes manifests for all three targets.
+A target load check must prove skill discovery, agent execution where supported,
+and actual session reminder delivery. Record unavailable authentication or runner cases.
 
 ## get started
 
@@ -96,9 +101,13 @@ when invoked it:
 
 the full rules and playbooks live in [`skills/poteto-mode/SKILL.md`](./skills/poteto-mode/SKILL.md).
 
-to keep [`/poteto-mode`](./skills/poteto-mode/SKILL.md) on across turns, pick it from the `/` menu and press option+enter (mac) or alt+enter (windows) instead of enter. that makes it a [custom mode](https://cursor.com/docs/skills), which cursor offers in the agents window and the cli. it stays in context every turn, applies itself when a playbook matches or the task needs rigor, and stays out of the way otherwise. plain enter attaches it to one message only. say so to opt out, or exit the mode to turn it off.
-
-[`/poteto-mode`](./skills/poteto-mode/SKILL.md) works extremely well with cursor's `/loop` command. you can make cursor work for many hours without sacrificing rigor.
+Start each new task with [`/poteto-mode`](./skills/poteto-mode/SKILL.md).
+The session reminder asks the agent to load it for work that needs engineering checks.
+Use an available watcher or scheduler for event checks.
+If none exists, use a bounded loop in the active session.
+That loop ends when the session ends.
+[Platform adaptation](./skills/poteto-mode/references/platform-adaptation.md) lists tool mappings and load limits.
+[Check plugin loading](./docs/plugin-load-checks.md) gives the candidate validation procedure.
 
 ## skills
 
@@ -130,7 +139,6 @@ to keep [`/poteto-mode`](./skills/poteto-mode/SKILL.md) on across turns, pick it
 | [`/swarm`](./skills/swarm/SKILL.md) | you want N parallel workers across different slices or races, then one aggregated report. |
 | [`/interrogate`](./skills/interrogate/SKILL.md) | you have a diff and want different models to try to break it, including a strict code-quality lens. |
 | [`/automate-me`](./skills/automate-me/SKILL.md) | you want your own `-mode` skill, drafted from how you've actually worked. |
-| [`/make-bot-ui`](./skills/make-bot-ui/SKILL.md) | you want a page or dashboard whose buttons wake a Grok Bot over a webhook, including the sender-key handoff and Tailscale. |
 | [`/configure-pstack`](./skills/configure-pstack/SKILL.md) | you want to pick which models pstack uses per role. detects your models and writes an override sheet for your harness. |
 | [`/reflect`](./skills/reflect/SKILL.md) | a long task landed and you want the recipe captured as a skill edit. |
 | [`/correct`](./skills/correct/SKILL.md) | you keep correcting agents for the same mistakes. mines history for mistake classes, fixes each at the highest level that works (architecture, then types, lint, and ci, then tests, with docs last), and keeps a table pairing each rule with what enforces it. |
@@ -143,6 +151,7 @@ to keep [`/poteto-mode`](./skills/poteto-mode/SKILL.md) on across turns, pick it
 | [`/show-me-your-work`](./skills/show-me-your-work/SKILL.md) | you want a reviewable decision trail. logs decisions to a tsv you can commit. |
 | [`/create-verification-skill`](./skills/create-verification-skill/SKILL.md) | your project has no scripted way to prove app behavior. generates a project-local verify skill with a feature map, for any language or platform. |
 | [`/maintain-verification-skill`](./skills/maintain-verification-skill/SKILL.md) | your verify skill's feature map has drifted from the app. source wave + one live pass, at most one PR of proven corrections. |
+| [the deslop skill](./skills/deslop/SKILL.md) | remove code slop before a commit. |
 | [`/unslop`](./skills/unslop/SKILL.md) | you're cleaning up writing. removes AI tells. |
 | [`/bro`](./skills/bro/SKILL.md) | you want the last message restated in plain human language, no jargon. |
 | [`/technical-writing`](./skills/technical-writing/SKILL.md) | layered doc standard (Diátaxis + Google developer style + STE + Global English) for docs, RFCs, readmes, PR descriptions, commit messages. |
@@ -201,11 +210,11 @@ help:              /poteto-help which skill should i use to review this branch?
 
 ## the `poteto-agent` and Comment Sicko subagents
 
-pstack also ships a subagent that runs my style end to end. spawn it from a parent agent via [`subagent_type: "poteto-agent"`](./agents/poteto-agent.md). it reads `poteto-mode` in full, including its inline principles index, before doing any work. substituting `generalPurpose` skips that read and drifts.
+pstack also ships a subagent that runs my style end to end. spawn it through the active agent API with the [poteto-agent definition](./agents/poteto-agent.agent.md). it reads `poteto-mode` in full, including its inline principles index, before doing any work. A general worker must receive the same skill brief.
 
-[`/poteto-mode`](./skills/poteto-mode/SKILL.md) and [`subagent_type: "poteto-agent"`](./agents/poteto-agent.md) route through the same wrapper.
+[`/poteto-mode`](./skills/poteto-mode/SKILL.md) and the [poteto-agent definition](./agents/poteto-agent.agent.md) route through the same wrapper.
 
-pstack also ships [Comment Sicko](./agents/comment-sicko.md), a read-only comment reviewer available as `subagent_type: "Comment Sicko"`. usually invoke it through [`/no-comments`](./skills/no-comments/SKILL.md), not directly.
+pstack also ships [Comment Sicko](./agents/comment-sicko.agent.md), a read-only comment reviewer available through the active agent API. usually invoke it through [`/no-comments`](./skills/no-comments/SKILL.md), not directly.
 
 ## principles
 
@@ -245,15 +254,13 @@ twenty-five short skills, one principle each. `poteto-mode` indexes them inline 
 
 </details>
 
-## not shipped here
+## App drivers and skill authoring
 
-a few things `poteto-mode` references but doesn't bundle:
-
-- `/deslop` and the `deslop` skill ship in the `cursor-team-kit` plugin.
-- `control-cli` (for CLIs and TUIs) and `control-ui` (for browser, Electron, web) ship in `cursor-team-kit` too.
-- `/create-skill` is a cursor built-in. cursor also ships a built-in `/babysit`; inside `poteto-mode`, the [babysit playbook](./skills/poteto-mode/playbooks/babysit.md) supersedes it for pr-status requests.
-
-install `cursor-team-kit` alongside pstack if you want the full set.
+Use the deslop skill for code cleanup and unslop for prose.
+Select an available project verification skill or driver by app interface.
+Report a missing driver before you claim runtime verification.
+Use your harness's skill-authoring guidance.
+[Platform adaptation](./skills/poteto-mode/references/platform-adaptation.md) maps tool-specific guidance and skill directories.
 
 ## why are there no planning skills?
 
@@ -268,12 +275,6 @@ type [`/automate-me`](./skills/automate-me/SKILL.md). it mines your recent trans
 models are configurable too. type [`/configure-pstack`](./skills/configure-pstack/SKILL.md). it detects the models you have access to and writes an override sheet for your harness that maps a role (code, judgment, the review panels) to a model. every skill reads its picks from [`models.json`](./models.json), and every role without a row in the sheet keeps its `models.json` list, so you override only what you want.
 
 the sheet holds only the roles you changed, so a change to `models.json` reaches every other role. delete a row to use the `models.json` list again. a rerun keeps every row in the sheet.
-
-## automations
-
-pstack also ships a dormant [benny automation pack](./automations/benny/). benny triages slack issue reports, then reproduces and fixes confirmed bugs with real ui evidence. its files are not registered as slash skills.
-
-to set it up, point cursor at [`FOR_AGENTS.md`](./automations/benny/FOR_AGENTS.md). setup copies the pack into the target repository at `.cursor/automations/benny/`, enables pstack there for shared skills, and keeps user configuration outside the copied pack.
 
 ## license
 
