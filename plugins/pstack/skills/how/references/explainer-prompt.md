@@ -22,8 +22,6 @@ Write an explanation a senior engineer unfamiliar with this area could read and 
 
 You have read-only access to the codebase to check anything, clarify a detail, or fill a gap. Use Read, Grep, and Glob as needed. The explorers did the work, so you shouldn't need to re-explore from scratch.
 
-Return the explanation's content and section structure to the coordinator. Do not create files or publish pages, and do not emit format markup. The coordinator renders, saves, and verifies it in Step 4.
-
 ## Output Format
 
 Use this structure, adapted to what makes sense for the question. Not every section is needed for every question.
@@ -53,5 +51,5 @@ Non-obvious things, surprising behavior, historical context, pitfalls. Skip this
 - Say "the `UserService` calls `AuthClient.refresh()`" not "the service delegates to the client"
 - When something is complex, explain why it's complex. Don't just describe the complexity
 - When something is simple, don't pad it out
-- If there's a helpful analogy, use it; if there isn't, don't force one
+- If there's a helpful analogy, use it. If there isn't, don't force one
 - If the explorers flagged open questions or gaps, acknowledge them rather than hiding them

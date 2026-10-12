@@ -17,15 +17,9 @@
 1. **Frame.** State what variant is under test and what behavior counts as success. Write the rubric (3-6 concrete criteria) for the judge only. Hold it back from candidates.
 2. **Set up sanitized environments.** Per-candidate working dir with the variant in place. Plant any context an organic task would have: a project skeleton, the skills the candidate would naturally read.
 3. **Author one organic prompt.** What a user would type. No leakage of what's being measured.
-4. **Spawn N parallel candidates** on different models per the **arena** skill's Phase B. Each works in its own sanitized dir; same prompt to each.
+4. **Spawn N parallel candidates** on different models per the **arena** skill's Phase B. Each works in its own sanitized dir. Same prompt to each.
 5. **Spawn one blinded judge** on a different model family per the **arena** skill's Phase C. Judge sees outputs by sanitized label and the rubric, never a model name.
-6. **Verify the chain from transcripts, not self-report.** Read each candidate's local transcript from the store of the harness it ran on. Open only sessions whose working directory is that candidate's sanitized dir. Other sessions are private chats from unrelated projects.
-   - Claude Code: `~/.claude/projects/<encoded-cwd>/*.jsonl`, where `<encoded-cwd>` is the dir with `/` → `-`. Do not glob across `~/.claude/projects/`.
-   - Codex: `~/.codex/sessions/<YYYY>/<MM>/<DD>/rollout-*.jsonl`. The first line is `session_meta`; keep the file only if `payload.cwd` is the candidate's dir.
-   - Copilot CLI: `~/.copilot/session-state/<session id>/events.jsonl`. Keep the session only if the `cwd:` line in its `workspace.yaml` is the candidate's dir.
-   - Any other harness: find its transcript store before you spawn candidates. If it keeps no transcripts, record that and grade from code shape alone.
-
-   Look at which files each candidate actually opened. Grade chain-following from the files it really read plus the shape of the code, never from the candidate's own claims.
+6. **Verify the chain from transcripts, not self-report.** Read each candidate's local transcript under the active workspace's `agent-transcripts/` directory (the system prompt names this path). Do not glob across `~/.cursor/projects/*/`. That crosses workspace boundaries and reads private chats from unrelated projects. Look at which files each candidate actually opened. Grade chain-following from the files it really read plus the shape of the code, never from the candidate's own claims.
 7. **Read every candidate output yourself** end to end. Compare to the judge's verdict. Disagreement means a model is biased or the rubric is ambiguous. Synthesize.
 
 **Reply:** variant under test, rubric, per-candidate notes, judge's verdict, your synthesis, and a recommendation for whether to promote the variant.

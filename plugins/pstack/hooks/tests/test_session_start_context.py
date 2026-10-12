@@ -1,98 +1,96 @@
 import importlib.util
 import json
+import os
+import shutil
+import subprocess
+import sys
+import tempfile
 import unittest
 from pathlib import Path
 
 
-HOOK_PATH = Path(__file__).resolve().parents[1] / "session_start_context.py"
-REPOSITORY_ROOT = HOOK_PATH.parents[1]
-SPEC = importlib.util.spec_from_file_location("session_start_context", HOOK_PATH)
-HOOK = importlib.util.module_from_spec(SPEC)
-assert SPEC.loader is not None
-SPEC.loader.exec_module(HOOK)
+ROOT = Path(__file__).resolve().parents[4]
+PLUGIN = ROOT / 'plugins/pstack'
+HOOK = PLUGIN / 'hooks/session_start_context.py'
+SPEC = importlib.util.spec_from_file_location(
+    'manifests', ROOT / 'scripts/generate-plugin-manifests.py'
+)
+GENERATOR = importlib.util.module_from_spec(SPEC)
+SPEC.loader.exec_module(GENERATOR)
 
 
-class SessionStartContextTests(unittest.TestCase):
-    def test_claude_output_is_plain_reminder_text(self) -> None:
-        output = HOOK.build_output("claude", None)
+class SessionReminderTests(unittest.TestCase):
+    def run_hook(self, target: str) -> str:
+        result = subprocess.run(
+            [sys.executable, str(HOOK), '--harness', target,
+             '--event', 'SessionStart'],
+            input='{}', text=True, capture_output=True, check=True,
+        )
+        self.assertEqual('', result.stderr)
+        return result.stdout.strip()
 
-        self.assertEqual(HOOK.REMINDER_TEXT, output)
-
-    def test_codex_output_is_one_json_line(self) -> None:
-        output = HOOK.build_output("codex", "SessionStart")
-
+    def test_target_context_contracts(self) -> None:
+        plain = self.run_hook('claude')
+        self.assertIn('You have poteto-mode.', plain)
+        self.assertIn('load the `poteto-mode` skill', plain)
         self.assertEqual(
-            {
-                "hookSpecificOutput": {
-                    "hookEventName": "SessionStart",
-                    "additionalContext": HOOK.REMINDER_TEXT,
-                }
-            },
-            json.loads(output),
+            {'hookSpecificOutput': {
+                'hookEventName': 'SessionStart', 'additionalContext': plain,
+            }}, json.loads(self.run_hook('codex')),
+        )
+        self.assertEqual(
+            {'additionalContext': plain}, json.loads(self.run_hook('copilot')),
         )
 
-    def test_claude_manifest_wires_session_start(self) -> None:
-        config = json.loads((REPOSITORY_ROOT / "hooks" / "claude-hooks.json").read_text())
+    def test_wired_commands_deliver_context(self) -> None:
+        with tempfile.TemporaryDirectory(prefix='plugin path ') as directory:
+            plugin_path = Path(directory) / 'pstack'
+            plugin_path.symlink_to(PLUGIN, target_is_directory=True)
+            self.check_wired_commands(plugin_path)
 
-        session_start = config["hooks"]["SessionStart"][0]
-        self.assertEqual("startup|clear|compact", session_start["matcher"])
-        session_command = session_start["hooks"][0]["command"]
-        self.assertIn("session_start_context.py --harness claude", session_command)
-
-    def test_copilot_output_is_additional_context_json(self) -> None:
-        output = HOOK.build_output("copilot", "SessionStart")
-        parsed = json.loads(output)
-
-        self.assertEqual({"additionalContext": HOOK.REMINDER_TEXT}, parsed)
-
-    def test_opencode_output_is_plain_reminder_text(self) -> None:
-        output = HOOK.build_output("opencode", None)
-
-        self.assertEqual(HOOK.REMINDER_TEXT, output)
-
-    def test_hermes_output_injects_context_on_first_turn(self) -> None:
-        output = HOOK.build_hermes_output({"extra": {"is_first_turn": True}})
-
-        self.assertEqual({"context": HOOK.REMINDER_TEXT}, json.loads(output))
-
-    def test_hermes_output_is_noop_on_later_turns(self) -> None:
-        output = HOOK.build_hermes_output({"extra": {"is_first_turn": False}})
-
-        self.assertEqual({}, json.loads(output))
-
-    def test_hermes_output_is_noop_when_extra_is_missing(self) -> None:
-        # A malformed or unexpected payload must never risk injecting the
-        # reminder on every turn; treat "unknown" the same as "not first".
-        output = HOOK.build_hermes_output({})
-
-        self.assertEqual({}, json.loads(output))
-
-    def test_copilot_manifest_wires_session_start(self) -> None:
-        config = json.loads((REPOSITORY_ROOT / "hooks.json").read_text())
-
-        session_start = config["hooks"]["sessionStart"][0]
-        self.assertIn(
-            "--harness copilot --event SessionStart",
-            session_start["bash"],
-        )
-        self.assertIn(
-            '"$PLUGIN_ROOT/hooks/session_start_context.py"',
-            session_start["bash"],
-        )
-
-    def test_codex_manifest_wires_session_start_only(self) -> None:
-        config = json.loads(
-            (REPOSITORY_ROOT / "hooks" / "codex-hooks.json").read_text()
-        )
-
-        entry = config["hooks"]["SessionStart"][0]
-        self.assertNotIn("matcher", entry)
-        self.assertIn(
-            "session_start_context.py --harness codex --event SessionStart",
-            entry["hooks"][0]["command"],
-        )
-        self.assertNotIn("PostCompact", config["hooks"])
+    def check_wired_commands(self, plugin_path: Path) -> None:
+        for target, filename, variable in (
+            ('claude', 'hooks/claude-hooks.json', 'CLAUDE_PLUGIN_ROOT'),
+            ('codex', 'hooks/codex-hooks.json', 'PLUGIN_ROOT'),
+            ('copilot', 'hooks.json', 'PLUGIN_ROOT'),
+        ):
+            with self.subTest(target=target):
+                config = json.loads((plugin_path / filename).read_text())
+                event = 'sessionStart' if target == 'copilot' else 'SessionStart'
+                self.assertEqual({event}, set(config['hooks']))
+                entry = config['hooks'][event][0]
+                command = (entry['bash'] if target == 'copilot'
+                           else entry['hooks'][0]['command'])
+                result = subprocess.run(
+                    command, shell=True, text=True, capture_output=True,
+                    env={**os.environ, variable: str(plugin_path)},
+                    input='{}', check=True,
+                )
+                self.assertEqual(self.run_hook(target), result.stdout.strip())
 
 
-if __name__ == "__main__":
+class ManifestDriftTests(unittest.TestCase):
+    def test_declared_wiring_and_metadata(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            shutil.copyfile(ROOT / 'README.md', root / 'README.md')
+            GENERATOR.main([], root=root)
+            self.assertEqual(2, GENERATOR.main(['--check'], root=root))
+            for plugin in GENERATOR.PLUGINS:
+                for target in plugin.get('hooks', []):
+                    path = root / 'plugins' / plugin['name'] / GENERATOR.HOOK_WIRING_PATHS[target]
+                    path.parent.mkdir(parents=True, exist_ok=True)
+                    source = ROOT / path.relative_to(root)
+                    shutil.copyfile(source, path)
+            self.assertEqual(0, GENERATOR.main(['--check'], root=root))
+            self.assertEqual([], GENERATOR.write(GENERATOR.wanted_files(root), root))
+            manifest = root / 'plugins/pstack/plugin.json'
+            manifest.write_text('{}\n')
+            self.assertEqual(2, GENERATOR.main(['--check'], root=root))
+            GENERATOR.main([], root=root)
+            (root / 'plugins/pstack/hooks.json').unlink()
+            self.assertEqual(2, GENERATOR.main(['--check'], root=root))
+
+
+if __name__ == '__main__':
     unittest.main()

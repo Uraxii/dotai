@@ -378,10 +378,10 @@ class Opus5ReduceOutputTests(unittest.TestCase):
             "grep -n foo /workspace/x | head -5",
             "ps aux | grep node",
             # Redirecting to /dev/null discards, it does not write.
-            "python3 scripts/validate-skills.py >/dev/null 2>&1",
-            "python3 scripts/validate-skills.py > /dev/null",
-            "python3 scripts/validate-skills.py >>/dev/null",
-            "python3 scripts/validate-skills.py >> /dev/null",
+            "python3 scripts/generate-plugin-manifests.py --check >/dev/null 2>&1",
+            "python3 scripts/generate-plugin-manifests.py --check > /dev/null",
+            "python3 scripts/generate-plugin-manifests.py --check >>/dev/null",
+            "python3 scripts/generate-plugin-manifests.py --check >> /dev/null",
             "git rev-parse HEAD 2>/dev/null",
             # A global option before the verb does not make a read verb write.
             "git -C /workspace/wt status",

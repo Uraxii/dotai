@@ -1,6 +1,7 @@
 ---
 name: write-pr
-description: Create or refresh reviewer-facing PR titles and descriptions. Use when opening a PR, updating its title or body, or preparing branch changes for review.
+description: "Create or refresh reviewer-facing PR titles and descriptions. Use when opening a PR, updating its title or body, or preparing branch changes for review."
+disable-model-invocation: true
 ---
 
 # Write PR
@@ -9,19 +10,12 @@ Write the PR body as a cover note for reviewers, not a changelog, validation log
 
 ## Inspect the Change
 
-Requires authenticated `gh` 2.99 or later. Inspect the current branch, working
-tree, PR, base branch, commits, and full diff:
+Inspect the current branch, working tree, PR, base branch, commits, and full
+diff through the forge. For `gh`, use the commands in [gh.md](references/gh.md).
 
-```bash
-git branch --show-current
-git status --porcelain
-gh pr view --json number,title,body,url,baseRefName,headRefName
-gh repo view --json defaultBranchRef
-```
-
-If `gh pr view` reports that no PR exists, continue with first-time PR
-creation. For an existing PR, use its `baseRefName`; otherwise use the
-repository default branch. Set `BASE`, then inspect:
+If no PR exists, continue with first-time PR creation. For an existing PR, use
+its base branch; otherwise use the repository default branch. Set `BASE`, then
+inspect:
 
 ```bash
 git log "$BASE"..HEAD --oneline
@@ -45,10 +39,10 @@ skill.
 
 ## Core Rules
 
-- Run `/deslop` over the diff before commit,
+- Run the deslop skill over the diff before commit.
 - Run `/no-comments` before review.
- - Write every PR title, PR description, and commit body with `/technical-writing`, then apply `/unslop`.
- - Apply every technical-writing layer except Diátaxis. Use one word for each action, keep articles, and avoid `-ing` when a plain verb works.
+- Write every PR title, PR description, and commit body with `/technical-writing`, then apply `/unslop`.
+- Apply every technical-writing layer except Diátaxis. Use one word for each action, keep articles, and avoid `-ing` when a plain verb works.
 - Describe concrete changed behavior, affected surfaces, and reviewer impact
   before implementation detail.
 - Explain motivation, risk, tradeoffs, migration, or review focus only when
@@ -61,12 +55,14 @@ skill.
 - Write "Done when" items a reviewer can see or run.
 - Cover every role and variant the change affects in "Try it", with what the
   reviewer should see.
+- For a performance change, report one primary number with its unit in
+  `before → after` form. Put the remaining evidence in a linked artifact.
 
 ## Titles
 
-Use `<type>(<scope>): <subject>` or `<type>: <subject>`.
+Use `<type>(<scope>): <subject>` or `<type>: <subject>`. Keep the subject short and imperative.
 
-Allowed types: `feat`, `fix`, `ref`, `perf`, `docs`, `test`, `build`,
+Allowed types: `feat`, `fix`, `refactor`, `perf`, `docs`, `test`, `build`,
 `ci`, `chore`, `style`, `meta`, `license`, and `revert`.
 
 - Describe the dominant full-branch change with the narrowest accurate type
@@ -105,10 +101,10 @@ Use an aid only when it reduces reviewer reconstruction work:
 Introduce an artifact with one sentence explaining what reviewers should
 notice. Omit it when prose is clearer.
 
-Attach media with `--attach` and reference it as `![alt](./file.webp)`; `gh`
-replaces the path with the uploaded URL. Put each video on its own line.
-Keep every attachment under 10 MB. Prefer WebP for images and WebM
-or MP4 for video. If an upload fails, stop and tell the user.
+Upload media through the forge. For `gh`, follow [gh.md](references/gh.md).
+Put each video on its own line. Keep every attachment under 10 MB. Prefer WebP
+for images and WebM or MP4 for video. If an upload fails, stop and tell the
+user.
 
 ## Boundaries
 
@@ -130,23 +126,11 @@ or MP4 for video. If an upload fails, stop and tell the user.
 
 ## Create or Update
 
-Create new PRs as drafts. Write the body to a temporary Markdown file, then run:
+Create, mark ready, and edit the PR through the run's built-in PR tool when it
+has one. Otherwise use the forge. For `gh`, follow [gh.md](references/gh.md).
 
-```bash
-gh pr create --draft --title '<title>' --body-file /tmp/pr-body.md --attach ./after.webp
-```
-
-When the PR is ready for the user to view, convert it from a draft:
-
-```bash
-gh pr ready PR_NUMBER
-```
-
-Update existing PRs:
-
-```bash
-gh pr edit PR_NUMBER --title '<title>' --body-file /tmp/pr-body.md --attach ./after.webp
-```
+Create new PRs as drafts. When the PR is ready for the user to view, convert it
+from a draft. Read the PR from the forge before you refer to its status.
 
 Refresh the title and body when follow-up commits materially change scope,
 approach, breaking behavior, risk, migration, or review expectations. Skip

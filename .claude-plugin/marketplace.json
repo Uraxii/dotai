@@ -3,12 +3,12 @@
   "owner": {
     "name": "Uraxii"
   },
-  "description": "Skills and thin named agents for software development work.",
+  "description": "Skills and agents for software development work.",
   "plugins": [
     {
       "name": "pstack",
       "source": "./plugins/pstack",
-      "description": "Skills and thin named agents: poteto-mode, principles, playbooks, tools. Requires the beads CLI (bd 1.3.1) and the beads plugin."
+      "description": "Skills and agents: poteto-mode, principles, playbooks, tools."
     },
     {
       "name": "artifact",
@@ -53,7 +53,7 @@
     {
       "name": "codebase-memory",
       "source": "./plugins/codebase-memory",
-      "description": "Index the session's own checkout at session start, then query its code graph from a shell."
+      "description": "Query a code graph through the codebase-memory-mcp server, skill, and graph-verification agents."
     },
     {
       "name": "caveman",

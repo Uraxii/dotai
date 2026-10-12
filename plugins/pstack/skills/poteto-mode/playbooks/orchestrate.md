@@ -1,7 +1,5 @@
 ### Orchestrate
 
-Resolve the driver skill through [poteto-mode's Non-negotiables](../SKILL.md#non-negotiables).
-
 **You own the program, never the code. Author briefs, drain the queue, keep the frontier green, decide.** For a whole project handed to one standing coordinator chat: multi-day, many stacked PRs, dozens to hundreds of subagents, the human checking in twice a day instead of every five minutes. One task driven to a predicate is Autonomous run. One ambitious run needing a bespoke workflow is figure-it-out. Route here when the work outlives any single agent. Work one agent could finish inside the session's budget is not a program.
 
 Ceremony must scale with the program. On cheap near-identical units, collapse it as each section directs.
@@ -9,196 +7,105 @@ Ceremony must scale with the program. On cheap near-identical units, collapse it
 Three rules carry the rest.
 
 - Completions are queue events, not interrupts.
-- Program state lives in beads, git, and GitHub. Read it from there at every drain, never from memory or the transcript.
+- Every spawn and every resume carries the standing orders verbatim.
 - The brief is the product. A vague brief fails quietly, because a worker cannot ask you a question.
 
 #### Roles and placement
 
-- **Coordinator (this chat).** Frames, authors briefs, drains the queue, owns the human report, makes judgment calls. It never authors or edits code: conflicted merges, restacks, and code changes are always tasks. Mechanically landing a verified unit (fast-forward or clean cherry-pick of a worker's commit, then push) is bookkeeping the coordinator may do itself on repos where local git is cheap; queueing finished work behind an idle stacker is how a deadline harvests nothing. The loop is agentic end to end. Agents are spawned, resumed, and drained only through the `Agent` tool. State reads and writes go through `bd`, `gh`, and `git` at drain points. None of them spawns, waits, or wakes anything.
-- **Sub-coordinator.** Durable, one per track, and only when the program exceeds what one coordinator's drains can manage. A track the coordinator can drain itself needs no middle layer: each nested layer re-pays a full orientation preamble, and a blocking sub-coordinator hides its children while the parent idles. Owns the units labelled with its track, authors its workers' briefs, spawns its own workers and verifiers where the runtime lets a subagent spawn one; where it does not, it owns its track's units directly with the same review separation. Rolls up aggregates at wave boundaries; never forwards raw child reports. Cap in-flight children at what one drain can process, roughly ten, as a rolling window; never as blocking batches, which cost the slowest child of every batch.
-- **Worker / verifier.** Background subagents (`run_in_background: true`), each claiming one bead per [the beads work loop](../references/beads-work-loop.md). Claude Code has no remote worker environment, so isolation is a worktree or branch per writer, not a separate machine. Runtime verification goes through the driver skill; the brief names its resolved skill path or exact commands. A subagent never sees this chat, so its bead inlines what it needs or points at repo paths, PRs, and other beads. Prefer fewer, broader workers; one writer per worktree or branch (principle-separate-before-serializing-shared-state). Run a unit's verifier on a different model family from its worker.
+- **Coordinator (this chat).** Local. Frames, authors briefs, drains the inbox, owns the human report, makes judgment calls. It never authors or edits code. Conflicted merges, restacks, and code changes are always tasks. Mechanically landing a verified unit (fast-forward or clean cherry-pick of a worker's commit, then push) is bookkeeping the coordinator may do itself on repos where local git is cheap. Queueing finished work behind an idle stacker is how a deadline harvests nothing. The loop is agentic end to end. Agents are spawned, resumed, and drained only through the Task tool. State reads and writes go through `scripts/orch/orch.ts` at drain points, one command in and one line out. The CLI never spawns, waits, or wakes anything.
+- **Sub-coordinator.** Always local, durable, one per track, and only when the program exceeds what one coordinator's drains can manage. A track the coordinator can drain itself needs no middle layer. Each nested layer re-pays a full orientation preamble, and a blocking sub-coordinator hides its children while the parent idles. Owns its track's units and boards, authors its workers' briefs, spawns its own workers and verifiers (nesting works to depth 3, and a nested spawn has the full Task schema including `environment`). Rolls up aggregates at wave boundaries. Never forwards raw child reports. Cap in-flight children at what one drain can process, roughly ten, as a rolling window. Never as blocking batches, which cost the slowest child of every batch.
+- **Worker / verifier.** Always `environment: "cloud"` unless the task needs this machine: `control-ui` or `control-cli` runtime verification (from `cursor-team-kit`). Reading local transcripts under `agent-transcripts/`. Simulators and local IDE state. Auth that exists only here. Cloud agents cannot read the local store, so their briefs inline what they need or point at repo paths. Prefer fewer, broader workers. One writer per worktree or branch (principle-separate-before-serializing-shared-state). Run a unit's verifier on a different model family from its worker.
 
-Depth stays at coordinator, track, worker. Author the track decomposition per project. Build, landing, and verification are common cuts, not a required shape.
+Depth stays at coordinator, track, worker. Author the track decomposition per project (build, landing, and verification are common cuts, not a required shape). Hard-coded swarm trees were tried and parked as too rigid.
 
-#### Program state
+#### Store layout
 
-The program lives in the beads store that the session's `BEADS_DIR` names, in git, and on GitHub. All three outlive this chat, so a session restart loses only in-flight subagents.
+Create `orchestrate/<project-slug>/` in the current agent's store (path in the system prompt). Every file has exactly one writer. Owners publish facts, readers aggregate at read time. Use `bun scripts/orch/orch.ts` for bookkeeping, written below as `orch`, while its canonical plain TSV and JSON stay readable without the CLI.
 
-- **Program.** One epic. Its description holds the goal and scope, and its acceptance holds the done predicate. Change them with `bd update <epic> --description "<text>"` or `--acceptance "<text>"`.
-
-  ```sh
-  bd create "<program>" -t epic --description "<goal and scope>" --acceptance "<done predicate>"
-  ```
-
-- **Tracks.** A track is a label, `track:<name>`, on each of its units. Keep every unit a direct child of the program epic, because `bd swarm status` counts only direct children. A sub-coordinator's own bead stays outside the epic: create it with `bd create "Track <name>" --label track:<name> --body-file <brief.md>`. It reads its units with `bd ready --parent <epic> --label track:<name>`.
-- **Units.** One child bead per unit, with its brief in the description and its done-when in the acceptance. Order units with `bd dep add <later> <earlier>`. `bd ready` lists a dependent unit only after every unit it depends on lands.
-
-  ```sh
-  bd create "<unit>" --parent <epic> --acceptance "<done-when>" --body-file <brief.md>
-  ```
-
-  To stack a dependent unit on upstream work that has not landed, read its blockers and their stages.
-
-  ```sh
-  bd blocked --parent <epic>     # each blocked unit and the beads that block it
-  bd state <blocker> stage       # built, verified, or stacked
-  ```
-
-  Spawn the dependent unit when every blocker is a unit at `built` or later. Set its base to the branch in the blocker's `ready at <SHA> on <branch>` comment, and name that branch and SHA in its brief. If the blockers sit on more than one unlanded branch, base the unit on the branch that contains the others, or wait until only one is unlanded. A gate has no stage, so a unit behind an open gate waits for the gate.
-
-- **Unit stage.** A unit bead stays open until its PR lands. The `stage:<value>` label records where an in-progress unit is, and `bd set-state` replaces the old value and records the change.
-
-  | Stage | Who sets it, and when |
-  |---|---|
-  | none, status `open` | Not started. `bd ready` lists it. |
-  | none, status `in_progress` | The worker claimed it and is building. |
-  | `stage=built` | The worker, after it pushes, per step 5 of [the beads work loop](../references/beads-work-loop.md). It comments `ready at <SHA> on <branch>`, clears its assignee, and leaves the bead open. |
-  | `stage=verified` | Whoever records a passing verdict, per Verification. |
-  | `stage=stacked` | The stacker, after the PR enters the stack. |
-  | `stage=landed`, status `closed` | The coordinator, after the merge. It sets the stage label (`bd set-state <id> stage=landed --reason "<merge SHA>"`), then closes the bead (`bd close <id> --reason "landed <merge SHA> PR <number>"`). |
-  | `stage=abandoned`, status `closed` | The coordinator, per Abandon a unit in Liveness and failure. |
-
-  A new head SHA sets the unit back to `stage=built`.
-
-- **Decisions.** Each constraint the program holds (model policy, stack shape and count, verification bar, forbidden paths, escalation policy, a human ruling) is one decision bead under the epic, created with `bd create "<decision>" -t decision --parent <epic>`. For a human ruling, quote the human's words with attribution in the description, per [Claims about human decisions](../../why/references/epistemics.md#claims-about-human-decisions), and label your own interpretation. To change a decision, create the new one and mark the old one superseded by it (`bd supersede <old> --with <new>`). `bd list --parent <epic> -t decision --status open` lists the decisions in force. When you catch yourself restating an instruction, record it as a decision bead before you act (principle-encode-lessons-in-structure).
-- **Verdicts.** A verdict is a comment on the unit bead, per Verification.
-- **Gates.** A unit that waits on the human, a PR merge, or a workflow run gets a gate. The gate keeps the unit out of `bd ready` until the gate closes.
-
-  ```sh
-  bd gate create --type human --blocks <id> --reason "<question; options; default on no answer>"
-  bd gate create --type gh:pr --await-id <pr number> --blocks <id>
-  bd gate create --type gh:run --await-id <run id> --blocks <id>
-  ```
-
-  Listing gates (`bd gate list`) shows every open gate, human and GitHub, and has no type filter. List only the open human gates with `bd gate list --json | jq -r '.[] | select(.await_type == "human") | .id'`. Resolve a human gate with `bd gate resolve <gate> --reason "<answer>"`. Quote the human's answer in the reason.
-
-  Check the GitHub gates (`bd gate check --type gh`) from the repo root, because it calls `gh` against the repo in the current directory. It closes each GitHub gate whose PR merged or whose run succeeded. It exits 0 even when a check fails, so read its output, not its exit code.
-
-  - `ESCALATE - workflow '<name>' failed`. Create a fix unit, make the gated unit depend on it (`bd dep add <gated unit> <fix unit>`), and resolve the gate (`bd gate resolve <gate> --reason "run <id> failed; fix in <fix unit>"`).
-  - `ESCALATE - PR '<title>' was closed without merging`. Open a human gate on the gated unit that asks whether to reopen, replace, or drop the PR, then resolve the PR gate with a reason that names the human gate.
-  - `error checking`. The command ran outside the repo, or `gh` failed. Fix the cause and run the check again.
-
-  Never pass `--escalate`. It runs `gt escalate`, which is not a Graphite command.
-- **PRs and stacks.** GitHub and the stacker's clone, read with `gh` and `gt` per Stack safety.
-- **Messages.** A spawn prompt goes down, a final message comes up as the completion notification, and a correction to a live agent goes down with `SendMessage`.
-- **The one-stacker rule.** The beads merge slot, per Stack safety.
-
-Read the program at each drain with these commands.
-
-```sh
-bd ready --parent <epic> --exclude-type decision            # units to spawn now
-bd list --parent <epic> --status in_progress --json          # assignee and stage of each unit in flight
-bd swarm status <epic>                                       # completed, active, ready, and blocked counts
-bd blocked --parent <epic>                                   # what blocks each unit, gates included
-bd gate list                                                 # open gates
-gh pr list --state open --json number,title,headRefName,baseRefName,headRefOid
-```
-
-Spawn only from `bd ready`. `bd swarm status` ignores gates, counts open decision beads as ready work, and counts abandoned units as completed, so read it for progress, not for what to spawn or for the predicate count. Count landed units with `bd list --parent <epic> --status closed --label stage:landed --json`. After you create or reorder units, validate the swarm (`bd swarm validate <epic>`). It rejects a dependency cycle and prints the waves of parallel work and the maximum parallelism, with decision beads in the first wave.
+- `preferences.md` is the standing-orders register: numbered lines, one constraint each (model policy, stack shape and count, verification bar, forbidden paths, escalation policy). Paste it verbatim into every spawn and every resume. Directives decay across resumes, and each dropped one costs a human turn. When you catch yourself restating an instruction, append the line before you act (principle-encode-lessons-in-structure).
+- `overview.md` is the durable PR and issue DB. Append. Never rewrite wholesale per event.
+- `units.tsv` has one row per unit: id, track, state, branch, PR, head SHA, brief path. Update rows in place.
+- `frontier.json` is the computed merge frontier, per Stack safety.
+- `ledger.tsv` is the verification ledger, per Verification.
+- `inbox/` holds completion pointers. `gates.md` parks human gates (question, options, default on no answer).
+- `decisions.tsv` is the trail via the show-me-your-work skill.
+- `status.md` is derived from `units.tsv` and `ledger.tsv` at each drain, never hand-maintained. Regenerate it from the tables instead of narrating events into it.
 
 #### The brief
 
-Your prompts to agents are your only product, and a sloppy brief compounds into slop across the whole tree. The brief is the unit bead's description, and the spawn prompt is the one line from [Agent runs](../SKILL.md#subagents) with `Stop at stage=built.` appended. A field you cannot fill is a unit you have not scoped yet.
+Your prompts to agents are your only product, and a sloppy brief compounds into slop across the whole tree. Every spawn carries all of it. A field you cannot fill is a unit you have not scoped yet.
 
 ```
 GOAL         one sentence, the outcome, executable by a stranger with no chat access
 SCOPE        paths this unit may write; paths it may not; its exclusive worktree or branch
-CONTEXT      pointers to files, PRs, and upstream beads; read each upstream bead with
-             bd show, because workers cannot see siblings
-ACCEPTANCE   the bead's acceptance, checkable criteria, one per line
-VERIFY       exact commands or the resolved driver skill path, plus known gotchas
+CONTEXT      pointers to files and PRs; upstream reports pasted in full when this unit
+             depends on them, because workers cannot see siblings
+ACCEPTANCE   checkable criteria, one per line
+VERIFY       exact commands or the control-skill path, plus known gotchas
 TIMEBOX      rough cap on runtime; on expiry, return partial findings and stop rather than run on
 FORBIDDEN    no gt, no rebase, no force-push, no fixes outside scope, plus unit-specific bans
-REPORT       what the final message carries: status, branch, head SHA, PRs, verdict,
-             what you actually ran, deviations, suggested follow-ups
-DECISIONS    the ids of the decision beads that bind this unit; read each with bd show
+REPORT       status, branch, head SHA, PRs, verdict, what you actually ran, deviations,
+             suggested follow-ups
+STANDING     <preferences.md pasted verbatim>
 ```
 
-Size the brief to the unit. A one-command unit gets the template collapsed to a paragraph that still names goal, scope, the verify command, and the report shape; a 4KB scaffold around a two-line edit costs more to write and obey than the edit.
+Size the brief to the unit. A one-command unit gets the template collapsed to a paragraph that still names goal, scope, the verify command, and the report shape. A 4KB scaffold around a two-line edit costs more to write and obey than the edit. Local spawns may reference the standing-orders file by store path. Verbatim paste is for cloud spawns and every resume.
 
-A sub-coordinator's brief is the description of its track bead. It adds its track boundary, its spawn budget, the drain protocol, and the rollup format (per child: bead id, status, PR, head SHA, verdict, one line; plus track status and frontier delta).
+A sub-coordinator brief adds its track boundary and unit list, its spawn budget with the cloud default and the local exception list, the drain protocol, and the rollup format (per child: name, status, PR, head SHA, verdict, one line, plus track status and frontier delta).
 
-A dependency is a context relay, not just ordering: undeclared upstream context makes the worker guess. Missing fields are a refuse-to-spawn condition. Audit one sampled worker brief per sub-coordinator per wave, concurrently with the wave it samples, never as a gate in front of it; a failing brief stops that track and fixes the sub-coordinator's instructions, not just the worker, because brief quality decays late in a run. Never resume-chain a brief. Update the bead with `bd update <id> --description "<text>"` and respawn fresh.
+A dependency is a context relay, not just ordering. Undeclared upstream context makes the worker guess. Missing fields are a refuse-to-spawn condition. Audit one sampled worker brief per sub-coordinator per wave, concurrently with the wave it samples, never as a gate in front of it. A failing brief stops that track and fixes the sub-coordinator's instructions, not just the worker, because brief quality decays late in a run. Never resume-chain a brief. Respawn fresh with consolidated scope.
 
 #### Steps
 
-1. **Frame.** State the done predicate as something countable ("all 126 units merged, each with a `unit-test-verified` or better verdict at its merged head"). Quantify scope: units, rough effort, expected stacks, and the wall-clock budget. If one agent could finish inside that budget, stop here and run Autonomous run instead. Collapsing must not depend on another document being present: it means do the work directly in this session, plain workers where they help, verification inline, landing as you go, and none of the epic, gate, or pilot machinery below. Schedule landing against the budget: by roughly 70% of it, stop spawning and land what is verified. Name the tracks per project. A contested decomposition or one-way door goes through the arena skill before the pilot. Present the framing once; reversible prep proceeds without waiting.
-2. **Create the program.** Create the epic, the decision beads, the unit beads, and their dependencies per Program state, then validate the swarm (`bd swarm validate <epic>`). If the program stacks PRs, create the merge slot once per store (`bd merge-slot create`). Read the open PRs the program inherits with `gh pr list`.
-3. **Pilot.** Push one unit through the whole path: brief, worker, verification, stack entry, verdict comment, merge. The pilot exists to falsify the brief template, the verify recipe, and the unit size while that costs one agent instead of fifty. Fix the contract from pilot evidence before any fan-out. Scale the pilot to the unit: on programs of near-identical cheap units, the first unit is the pilot, run as a normal unit with its verify command inline, and fan-out starts the moment it lands. The dedicated pilot pipeline (separate verifier agent, audit gate) is for expensive or novel unit shapes, not for clone-units where a serialized pilot has nothing to falsify.
-4. **Scale.** Spawn a rolling window of workers up to the in-flight cap, refilling as children finish; blocking batches pay the slowest child of every batch. Spawn track sub-coordinators only past the one-drain threshold in Roles. Read `bd ready --parent <epic> --exclude-type decision` after each drain; name upstream beads in downstream briefs; keep sibling communication upward only. The sampled brief audit runs alongside the wave it samples and stops the next refill on failure, not the current one.
+1. **Frame.** State the done predicate as something countable ("all 126 units merged, each ledger-verified `unit-test-verified` or better"). Quantify scope: units, rough effort, expected stacks, and the wall-clock budget. If one agent could finish inside that budget, stop here and run Autonomous run instead. Collapsing must not depend on another document being present. It means do the work directly in this session, plain workers where they help, verification inline, landing as you go, and none of the store, register, or pilot machinery below. Schedule landing against the budget. By roughly 70% of it, stop spawning and land what is verified. Name the tracks per project. A contested decomposition or one-way door goes through the arena skill before the pilot. Present the framing once. Reversible prep proceeds without waiting.
+2. **Install the runtime.** Run `orch init`. Open the trail via the show-me-your-work skill, write the standing orders before any spawn, and seed `frontier.json` from existing PRs with `orch frontier set --repo <repo-dir>`.
+3. **Pilot.** Push one unit through the whole path: brief, worker, verification, stack entry, ledger row, merge. The pilot exists to falsify the brief template, the verify recipe, and the unit size while that costs one agent instead of fifty. Fix the contract from pilot evidence before any fan-out. Scale the pilot to the unit. On programs of near-identical cheap units, the first unit is the pilot, run as a normal unit with its verify command inline, and fan-out starts the moment it lands. The dedicated pilot pipeline (separate verifier agent, audit gate) is for expensive or novel unit shapes, not for clone-units where a serialized pilot has nothing to falsify.
+4. **Scale.** Spawn a rolling window of workers up to the in-flight cap, refilling as children finish. Blocking batches pay the slowest child of every batch. Spawn track sub-coordinators only past the one-drain threshold in Roles. Recompute ready work after each drain. Relay upstream reports into downstream briefs. Keep sibling communication upward only. The sampled brief audit runs alongside the wave it samples and stops the next refill on failure, not the current one.
 5. **Drain.** Run the queue discipline below at every drain point.
-6. **Land.** Landing is continuous, never a terminal phase: integration starts with the first verified unit and runs alongside the remaining waves. On heavy repos the stacker is a standing role from wave one, integrating as units verify; on repos where local git is cheap, the coordinator lands verified units itself per Roles. Keep the frontier green before upper-stack work; Stack safety governs. Recompute the frontier after each merge or reported new head SHA.
-7. **Close.** Drain the final completions. Reconcile every unit bead to `stage=landed` or `stage=abandoned` and close it, with a reason that says landed, abandoned, or zombie-reconciled. Confirm the predicate on the real artifact, and confirm every landed PR has a verdict for its current head SHA. Record recurring corrections as decision beads or fold them into the brief template. Close the decision beads and the track beads, then close the epic with `bd close <epic> --reason "<the predicate count and the PR links>"`. The closed epic and its children are the postmortem.
+6. **Land.** Landing is continuous, never a terminal phase. Integration starts with the first verified unit and runs alongside the remaining waves. On heavy repos the stacker is a standing role from wave one, integrating as units verify. On repos where local git is cheap, the coordinator lands verified units itself per Roles. Keep the frontier green before upper-stack work. Stack safety governs. Advance `frontier.json` only on merge or reported new head SHAs.
+7. **Close.** Drain the final inbox, reconcile every spawned agent to a terminal row (done, abandoned, zombie-reconciled), confirm the predicate on the real artifact, confirm every landed PR has a verdict for its current head SHA, audit the trail per show-me-your-work including its cross-model review, encode recurring corrections into `preferences.md` or the brief template. Leave the store intact. It is the postmortem.
 
 #### Queue and drain
 
-- On a completion notification, note the bead id and return to what you were doing. Never deep-review inline; a completion that needs review becomes a verifier unit. Never review a diff inside a drain.
-- Drain in batches at four points: the end of a critical section, a track rollup, a frontier watcher wake (arm it via the loop skill, with a long heartbeat fallback), and before a human report. Begin each batch by reading every bead (`bd show <id>`) whose completion arrived since the last drain. Arrivals during a drain wait for the next one.
-- Critical sections you finish first: authoring a brief, a stack operation, a conflict decision, opening a gate, recording a verdict.
-- Each drain classifies every completion (landed, needs-verify, failed, zombie, noise) and records the result on its bead per the stage table in Program state, with a comment (`bd comment`), a stage label (`bd set-state`), or a close (`bd close`). Then it checks the GitHub gates (`bd gate check --type gh`), reads the program per Program state, and spawns the next wave in one message.
+- On a completion notification, run `orch inbox push <agent> <unit> <status> [--report PATH]` and return to what you were doing. Never deep-review inline. A completion that needs review becomes a verifier unit. Never review a diff inside a drain.
+- Drain in batches at four points: the end of a critical section, a track rollup, a frontier watcher wake (arm it via the loop skill, with a long heartbeat fallback), and before a human report. Begin each batch with `orch inbox drain`. Arrivals during a drain wait for the next one.
+- Critical sections you finish first: authoring a brief, a stack operation, a conflict decision, writing a gate, updating ledger or frontier.
+- Each drain classifies every pointer (landed, needs-verify, failed, zombie, noise), writes the resulting rows through `orch unit add`, `orch unit set`, and `orch ledger record`, runs `orch status`, then spawns the next wave in one message.
 - Account for every spawned child at its track's rollup: arrived, respawned, or its scope explicitly absorbed. Silently redoing a missing child's work hides both the wasted spend and the coverage gap its result existed to close.
-- A drain turn ends with three lines: the counts from `bd swarm status <epic>`, what changed, and the open gates from `bd gate list`. The full reply contract applies at checkpoints and close.
+- A drain turn ends with the three lines from `orch status`: counts against the states, what changed, gates open. Detail lives in `status.md`. The full reply contract applies at checkpoints and close.
 
 #### Stack safety
 
-- The frontier is a computed object, never narrative: the ordered PR list with branch names and head SHAs, and the lowest unmerged PR. Recompute it after every merge and stack mutation. Resolve it in the stacker's clone, because GitHub base refs drift mid-restack while gt tracking is authoritative.
-
-  ```sh
-  gt log short --stack --reverse                          # stack branches, trunk first
-  gh pr view <branch> --json number,state,headRefOid      # once per branch, bottom up
-  ```
-
-  The lowest unmerged PR is the first `OPEN` one. If `gh pr view` finds no PR for a branch, that branch has no PR on GitHub. Ask the stacker to submit it, and never guess a PR number. For a stack that gt does not track, follow `baseRefName` up from trunk in `gh pr list --state open --json number,headRefName,baseRefName,headRefOid`.
-- Exactly one stacker at a time may run `gt` or rewrite a stack, and the beads merge slot enforces it. The slot covers the whole beads store, not one program, so it serializes every stack of every program that shares the store. A restack at this scale is slow and blocks whoever runs it, so give it its own unit and keep the coordinator out of it.
-  - The stacker acquires the merge slot (`bd merge-slot acquire`) before its first stack command. If another actor holds the slot, the command exits 1. Stop and report the holder. Run `acquire` again after the holder releases. Nothing wakes a waiting stacker.
-  - After each PR enters the stack, the stacker sets the stage label on its unit (`bd set-state <id> stage=stacked --reason "PR <number> at <SHA>"`).
-  - The stacker that acquired the slot releases it (`bd merge-slot release --holder <actor>`) after its last push and before it reports, inside the same unit. Always pass `--holder`. A release without it frees the slot whoever holds it.
-  - The slot has no lease. If its holder dies, the coordinator confirms the holder has no live agent, then releases the slot on the holder's behalf (`bd merge-slot release --holder <dead actor>`). Checking the slot (`bd merge-slot check`) names the holder.
-- Workers never rebase and never run `gt`. Babysitters follow `playbooks/babysit.md`, one per stack, scoped to the PR numbers and head SHAs in their brief; a new head SHA ends that scope. They report conflicts to the stacker rather than restacking.
-- PR closes and retargets go through the stacker only; closing a base PR orphans every chain above it. Merges and stack surgery are units with briefs like any other.
+- The frontier is a computed object, never narrative. Recompute `frontier.json` from `gt` after every merge and stack mutation because GitHub base refs drift mid-restack while gt tracking is authoritative: ordered PR list, branch names, head SHAs, a generation number, the lowest unmerged PR. Resolve it where gt knows the stack, normally the stacker's clone. A checkout whose gt metadata never saw the submits reports no PRs and the command errors rather than guessing.
+- Exactly one stacker per stack may run `gt`, serialized within its stack. Record the holder in the standing orders. Restacks run in cloud. A local restack at this scale takes the laptop down.
+- Workers never rebase and never run `gt`. Babysitters follow `playbooks/babysit.md`, one per stack, scoped to one immutable frontier generation. They report conflicts to the stacker rather than restacking.
+- PR closes and retargets go through the stacker only. Closing a base PR orphans every chain above it. Merges and stack surgery are units with briefs like any other.
 - One retro watcher follows merged PRs for reverts, post-merge CI breaks, and orphaned follow-ups.
 
 #### Verification
 
-Scale verification to the unit. When VERIFY is a single cheap command, the worker runs it and reports the output, and the coordinator spot-checks receipts; a dedicated verifier agent (on a different model family than the worker) is for units whose verification is expensive, judgment-laden, or high-blast-radius. A verifier agent whose entire product would be rerunning one command is ceremony, not verification.
+Scale verification to the unit. When VERIFY is a single cheap command, the worker runs it and reports the output, and the coordinator spot-checks receipts. A dedicated verifier agent (on a different model family than the worker) is for units whose verification is expensive, judgment-laden, or high-blast-radius. A verifier agent whose entire product would be rerunning one command is ceremony, not verification.
 
-Record each verdict on the unit bead, keyed by PR number and head SHA. Add a comment with the verdict, then set the stage label.
+Write ledger rows with `orch ledger record`. Check the current PR and head SHA with `orch ledger check`. `ledger.tsv`, one row per verdict, keyed by PR number plus head SHA: `live-ui-verified | unit-test-verified | type-check-only | verifier-blocked | verifier-failed`. CI green is an input to a verdict, not a verdict. Behavioral work needs better than `type-check-only`. `verifier-blocked` is not a pass. Respawn when the environment heals. `verifier-failed` gets a fix unit, not a re-verify. A worker may self-report. A verifier overrides it on the same key. A new head SHA voids the row, so re-verify after restack. The ledger answers "was this verified", not memory and not the transcript.
 
-```sh
-bd comment <id> "verdict <verdict> at <SHA> on PR <number>"
-bd set-state <id> stage=verified --reason "<verdict> at <SHA>"   # passing verdicts only
-```
-
-The verdict is one of `live-ui-verified`, `unit-test-verified`, `type-check-only`, `verifier-blocked`, or `verifier-failed`. To check that a verdict is current, compare its SHA with `gh pr view <number> --json headRefOid`. CI green is an input to a verdict, not a verdict. Behavioral work needs better than `type-check-only`. `verifier-blocked` is not a pass; respawn when the environment heals. `verifier-failed` gets a fix unit, not a re-verify. A worker may self-report; a verifier's later comment on the same PR and SHA overrides it. A new head SHA voids the verdict. Set the unit back to `stage=built` and re-verify after restack. The bead's comments answer "was this verified", not memory and not the transcript.
-
-A unit is not done until its output is externalized the moment it lands, never batched to the end of the run: a worker pushes its branch and comments its ready SHA, a verifier comments its verdict, receipts land on the bead. Work that exists only on one VM when that VM dies was never done.
+A unit is not done until its output is externalized the moment it lands, never batched to the end of the run. A worker pushes its branch, a verifier writes its ledger row, receipts land in the store. Work that exists only on one VM when that VM dies was never done.
 
 #### Liveness and failure
 
-- Never resume an agent to check on it; a resume restarts an idle agent. Probe read-only: the bead and its lease (`bd show <id>`), `gh`, pushed branches, and the background task list. Transcript mtime is not liveness.
-- Record a silent death as a comment on its bead (`bd comment <id> "died: <failure mode>; last evidence <what>; options <what>"`), then recover the bead per [the beads work loop](../references/beads-work-loop.md). Replan on evidence as it arrives; never wait for full quiescence.
-- Retry by mode: cap-hit or oom, respawn with smaller scope; network-drop, retry as-is; tool-error, retry on a different model; unknown, retry once. Two retries, then abandon the unit and replan around it.
-- **Abandon a unit.** Keep the unit and its dependents out of `bd ready` from the first write to the replan. `bd unclaim` reopens a unit, so take the claim instead.
-  1. Run `skills/poteto-mode/scripts/abandon_unit.py` under the installed plugin, with `BEADS_ACTOR` set to your actor.
-
-     ```sh
-     abandon_unit.py <id> --reason "<why>"
-     ```
-
-     The script takes the unit's claim from whoever holds it and defers each open or in-progress dependent. A deferred dependent is out of `bd ready` and refuses every claim. Then the script resolves each open gate on the unit, removes the unit's dependency on each upstream unit, sets `stage=abandoned`, and closes the unit. It reads the store first and writes only what is missing. If it fails, fix the cause and run it again. A run on an abandoned unit prints `nothing to change`.
-  2. For each `paused <dependent>; stop worker <actor>` line, stop that worker's agent and confirm it stopped. Deferring the bead does not stop an agent that is already building.
-  3. Replan each dependent. List the deferred dependents that wait for a replan (`bd list --parent <epic> --status deferred`). If one needs a replacement upstream unit, add that dependency first (`bd dep add <dependent> <replacement>`). Then remove the dependency on the abandoned unit (`bd dep remove <dependent> <id>`), and last undefer the dependent (`bd undefer <dependent>`), which puts it back in `bd ready`.
-- A zombie that returns hours late reconciles against the current frontier and the bead's verdicts before anything is accepted. Salvage unique findings through a fresh unit, never a blind merge.
-- When continued spawning would produce garbage tree-wide (bad upstream output, broken acceptance, dead infra), create a decision bead `Hold: no spawns until <cause> is fixed` and send it to every sub-coordinator with `SendMessage`. Let in-flight work finish, fix the cause, then close the hold bead with the fix as its reason.
-- Bound your own infra retries the same way you bound a child's. After a few consecutive tool aborts, stop retrying: comment a terminal handoff on the epic (what is done, where it lives, the exact command to resume) and end the run.
-- After a session restart, in-flight subagents are dead. Pushed branches, open PRs, and the beads store are not. Read the epic and its open decisions. List the in-progress units (`bd list --parent <epic> --status in_progress --json`) and read each unit's stage label and assignee. A unit with no stage label was mid-build, so respawn its worker under the same actor. A unit at `stage=built` needs a verdict, `stage=verified` needs a stack entry, and `stage=stacked` needs a land. Check the merge slot (`bd merge-slot check`) and recompute the frontier. Reattach in-flight work by PR and branch rather than agent id. List the track beads with `bd list --label-pattern 'track:*' --no-parent --status open` and each track's open units with `bd list --parent <epic> --label track:<name> --json`. Respawn one sub-coordinator per track from its track bead, drain, and resume. A merge slot held by a dead agent stays held until you release it per Stack safety.
+- Never resume an agent to check on it. A resume restarts an idle agent. Probe read-only: the ledger, `units.tsv`, `gh`, pushed branches, the cloud agent's status in the Cursor dashboard. Transcript mtime is not liveness.
+- A silent death gets a synthetic postmortem row in the inbox (unit, failure mode, last evidence, options). Replan on evidence as it arrives. Never wait for full quiescence.
+- Retry by mode: cap-hit or oom, respawn with smaller scope. Network-drop, retry as-is. Tool-error, retry on a different model. Unknown, retry once. Two retries, then abandon the unit and replan around it.
+- A zombie that returns hours late reconciles against the current frontier and ledger before anything is accepted. Salvage unique findings through a fresh unit, never a blind merge.
+- When continued spawning would produce garbage tree-wide (bad upstream output, broken acceptance, dead infra), write a stop line at the top of the standing orders, let in-flight work finish, fix the cause, clear it.
+- Bound your own infra retries the same way you bound a child's. After a few consecutive tool aborts, stop retrying. Write a terminal handoff to durable state (what is done, where it lives, the exact command to resume) and end the run.
+- After a Cursor restart: local agents are dead, cloud work is not. Re-read the standing orders and `units.tsv`, recompute the frontier, reattach cloud work by PR and branch rather than agent id, respawn one sub-coordinator per track from its stored brief plus current state, drain, resume. The dead session's store lock clears itself on the next write. `orch` replaces a lock whose holder pid is gone.
 
 #### Escalation
 
-Reaches the human, batched into the next human report rather than per item: irreversible actions (force-push to shared branches, deploys, deletions, closing someone else's PR), genuine product or preference calls no experiment settles, a decision bead that contradicts observed reality, a program-level dead end that survived a replan. Before asking, park each as a human gate on the bead it blocks, and route work around it. When the human answers, resolve the gate with the answer quoted. A ruling that binds later units also becomes a decision bead.
+Reaches the human, batched into the status page rather than per item: irreversible actions (force-push to shared branches, deploys, deletions, closing someone else's PR), genuine product or preference calls no experiment settles, a standing order that contradicts observed reality, a program-level dead end that survived a replan. Park each as a `gates.md` entry before asking, and route work around it.
 
 Never reaches the human: frontier nudges, restack mechanics, retries, CI flake triage, review-thread triage, format fixes, scope the brief already forbids (refuse and continue), and "should I keep going". When in doubt, act and log.
 
-Mid-run discoveries fix only what blocks the frontier. Everything else parks in follow-up beads; at this fan-out a small scope leak multiplies into PRs nobody asked for.
+Mid-run discoveries fix only what blocks the frontier. Everything else parks in follow-ups. At this fan-out a small scope leak multiplies into PRs nobody asked for.
 
-**Reply:** at checkpoints and close: the predicate and the count of `stage:landed` units against it, tracks and what each landed, the frontier (PR list plus SHAs), verdicts summary from the bead comments, what was abandoned and why, the open human gates from the `jq` filter under Gates (the only asks), each open `gh:pr` or `gh:run` gate with the PR or run it waits on, and the epic id. Numbers from `bd` and `gh`, not narrative. Include PR links.
+**Reply:** at checkpoints and close: the predicate and the count against it from `units.tsv` and `ledger.tsv`, tracks and what each landed, the frontier (PR list plus SHAs), verdicts summary, what was abandoned and why, gates awaiting the human (the only asks), the store path, and the trail path. Numbers from the tables, not narrative. Include PR links.

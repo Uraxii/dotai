@@ -17,7 +17,7 @@
        CLI: the command and its output
        library: a usage snippet and its result
        refactor or infra: evidence that behaviour did not change
-     Attach media with `gh pr edit --attach`. Never relative paths or external hosts.
+     Upload media through the forge. Never relative paths or external hosts.
      Show that settings work, not what they happen to be set to today. -->
 
 ## Try it

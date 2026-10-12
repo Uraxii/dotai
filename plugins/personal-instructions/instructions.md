@@ -28,10 +28,8 @@
 - Research goes in the project kb via `/llm-wiki:llm-wiki`, so later sessions can find it.
 
 ## Code Indexing and Search
-- Start session hook builds a `codebase-memory` index of the checkout the session starts in.
-- Working in a worktree? Index that worktree with `/codebase-memory:cbm` before you query it.
-- Use `codebase-memory:cbm` For where-is, who-calls, or what-breaks questions.
-- Query code with the `/codebase-memory:cbm` skill before you grep or read files.
+- Use the `codebase-memory:codebase-memory` skill and its MCP tools for where-is, who-calls, or what-breaks questions, before you grep or read files.
+- Checkout not indexed yet, or working in a worktree? Index it with the `index_repository` tool before you query it.
 - Keep grep for literal strings.
 
 ## Review
