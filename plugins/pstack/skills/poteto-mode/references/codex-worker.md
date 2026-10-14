@@ -58,8 +58,19 @@ rm -f <run-dir>/exit-code; (cd <worktree> && codex exec resume --json <scope> -o
 
 ## Review
 
-The independent review is a fresh Claude subagent. Never count the Codex run's own report as the review.
+Review is a separate step after the work run ends. Any harness can run it. The reviewer must be a fresh agent that did not write the change. Use one of these:
+
+- A fresh Claude subagent, per [Subagents](../SKILL.md#subagents).
+- A separate read-only Codex review run from the worktree. Start it with `run_in_background: true`. It reads the diff and does not run checks. The findings are in `review.md`. It failed if `review-exit-code` is not `0`, or the last `turn.*` event in `review-events.jsonl` is not `turn.completed`.
+
+  ```bash
+  rm -f <run-dir>/review-exit-code; (cd <worktree> && codex exec review --json -c 'sandbox_mode="read-only"' --base <base-branch> -o <run-dir>/review.md > <run-dir>/review-events.jsonl; echo $? > <run-dir>/review-exit-code)
+  ```
+
+A Codex review of Codex work is allowed outside Orchestrate. Inside Orchestrate, the reviewer runs on a different model family from the worker. If no review completes, the gate stays closed per [Subagents](../SKILL.md#subagents).
+
+Never count the worker's own report as the review. The auto reviewer that approves a commit decides only sandbox access. It is not the code review.
 
 ## Orchestrate
 
-The Orchestrate drain loop reads `Agent` notifications. Inside that playbook, spawn a background `pstack:poteto-agent` whose brief is to run one Codex worker as above and return the run's result. The wrapper starts the run in the background. Then it blocks with a foreground Bash call, `until [ -s <run-dir>/exit-code ]; do sleep 10; done`, with `timeout: 600000`, and repeats that call until the file exists. It never ends its turn while the run is live. `Monitor` does not block, so the wrapper does not use it to wait. The review is the unit's verifier, not a diff read inside a drain. Outside Orchestrate, start the run with the Bash tool directly.
+The Orchestrate drain loop reads `Agent` notifications. Inside that playbook, spawn a background `pstack:poteto-agent` whose brief is to run one Codex worker as above and return the run's result. The wrapper starts the run in the background. Then it blocks with a foreground Bash call, `until [ -s <run-dir>/exit-code ]; do sleep 10; done`, with `timeout: 600000`, and repeats that call until the file exists. It never ends its turn while the run is live. `Monitor` does not block, so the wrapper does not use it to wait. The review is the unit's verifier, a separate unit on a different model family from the worker, not a diff read inside a drain. Outside Orchestrate, start the run with the Bash tool directly.
