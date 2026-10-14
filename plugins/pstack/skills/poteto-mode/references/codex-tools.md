@@ -2,7 +2,7 @@
 
 pstack skills are written in Claude Code tool language (the `Skill` tool, the `Agent` tool, `AskUserQuestion`, Claude model names). On Codex the skills are the same files; only the tool names resolve differently. Read this when a pstack skill names a Claude tool, a driver or bundled skill, or a Claude model. This file is Codex-specific. Gemini CLI, opencode, Prime Agent, and other runtimes must use their own concrete tools, model names, and configuration paths.
 
-This file is for pstack running inside Codex. When Claude Code is the harness and it hands a task to the Codex CLI, read [`codex-worker.md`](codex-worker.md) instead.
+Use this file only when pstack runs inside Codex. If Claude Code is the harness and Codex is an outside worker, read [`codex-worker.md`](codex-worker.md).
 
 ## Tool actions
 

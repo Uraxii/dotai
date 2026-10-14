@@ -1,76 +1,105 @@
 # Codex workers from Claude Code
 
-Use this file only when Claude Code is the harness and you hand a task to the Codex CLI as an outside worker. When pstack itself runs inside Codex, this file does not apply. Read [`codex-tools.md`](codex-tools.md) instead, and use `spawn_agent`.
+Use this file only when Claude Code is the harness and Codex is an outside worker. Do not use this file when pstack runs inside Codex. For that case, read [`codex-tools.md`](codex-tools.md) and use `spawn_agent`.
 
-A Codex worker is a delegate. It runs a brief and edits code itself, the same as a `pstack:poteto-agent` code delegate.
+A Codex worker is a delegate. It does the brief and edits the code. It is the same as a `pstack:poteto-agent` code delegate.
 
 ## Scope the access
 
-Before you write the brief, list what the worker needs:
+Before you write the brief, make a list of what the worker needs:
 
-- The folders it writes. Its worktree is always one. Add others only when the task needs them.
-- Whether it needs network access.
-- Whether its checks write temp files, as most test and build tools do.
+- The folders that the worker writes to. Its worktree is always on the list. Add other folders only when the task needs them.
+- Network access, if the task needs it.
+- Temp files, if the checks write them. Most test tools and build tools write temp files.
 
-Turn that list into sandbox flags. `<scope>` in the commands below stands for these flags:
+Put the list into sandbox flags. In the commands below, `<scope>` is these flags:
 
 ```bash
 -c 'sandbox_mode="workspace-write"' -c 'sandbox_workspace_write.writable_roots=["<other-folder>"]' -c 'sandbox_workspace_write.network_access=false' -c 'sandbox_workspace_write.exclude_slash_tmp=true' -c 'sandbox_workspace_write.exclude_tmpdir_env_var=true' -c 'approval_policy="on-request"' -c 'approvals_reviewer="auto_review"'
 ```
 
-- The worker can write only to its worktree and the folders in `writable_roots`. Use absolute paths, and `[]` when it writes only to its worktree. The sandbox does not limit reads.
-- Set `network_access` to `true` when it needs network access.
-- Set both `exclude_*` keys to `false` when its checks write temp files.
-- Codex keeps every `.git` folder read-only, so a commit asks to leave the sandbox. The Codex auto reviewer approves or refuses that request. Do not add a `.git` folder to `writable_roots`.
-- Use `sandbox_mode="danger-full-access"` only when the task cannot run in the sandbox. Tell the user in your reply that the run had full access.
+- The worker can write only to its worktree and to the folders in `writable_roots`. The sandbox does not limit reads.
+- Use absolute paths in `writable_roots`. If the worker writes only to its worktree, use `[]`.
+- If the worker needs network access, set `network_access` to `true`.
+- If the checks write temp files, set the two `exclude_*` keys to `false`.
+- Do not add a `.git` folder to `writable_roots`. Codex keeps all `.git` folders read-only.
+- A commit must go outside the sandbox. The Codex auto reviewer approves or refuses each commit.
+- Use `sandbox_mode="danger-full-access"` only when the task cannot run in the sandbox. If you use it, tell the user in your reply.
 
-Do not add guard hooks or wrapper scripts around the run.
+Do not add guard hooks or wrapper scripts to the run.
 
-## Spawn
+## Start the run
 
-1. Give each writer its own worktree or branch (**principle-separate-before-serializing-shared-state**).
-2. Write the brief to a file. Start it with "Load the poteto-mode skill." Include the goal, the done state, the checks to run, and the branch to commit on. The worker commits its own work.
-   Keep `<run-dir>` outside the worktree, so the run files stay out of the diff.
-3. Start the run with the Bash tool and `run_in_background: true`:
+1. Give each worker its own worktree or branch (**principle-separate-before-serializing-shared-state**).
+2. Make a `<run-dir>` outside the worktree. This keeps the run files out of the diff.
+3. Write the brief to `<run-dir>/brief.md`. Start the brief with "Load the poteto-mode skill."
+4. In the brief, give the goal, the done state, the checks, and the branch for the commit. The worker commits its own work.
+5. Start the run with the Bash tool and `run_in_background: true`:
 
    ```bash
    rm -f <run-dir>/exit-code; codex exec --json -C <worktree> <scope> -o <run-dir>/last-message.md - < <run-dir>/brief.md > <run-dir>/events.jsonl; echo $? > <run-dir>/exit-code
    ```
 
-Omit `-m` to use the Codex default model. Pass `-m` only when the task's difficulty needs a different Codex model.
+To use the Codex default model, do not use `-m`. Use `-m` only when the task needs a different Codex model.
 
-## Monitor
+## Monitor the run
 
-- Claude Code starts a new turn when the background command exits. Do not poll.
-- To watch a run while it works, point the `Monitor` tool at its events file. Each line is one JSON event. The first is `thread.started` with the `thread_id`. Each finished step is `item.completed`. The end of a turn is `turn.completed` or `turn.failed`.
-- The final answer is in `last-message.md`.
-- A run failed if `exit-code` is not `0`, the last `turn.*` event in its events file is not `turn.completed`, or the worktree has uncommitted changes or no commit since the base it branched from. A refused commit still ends with `turn.completed`. Tell the user in your next reply that Codex did not do the task, and why.
+- When the background command stops, Claude Code starts a new turn. Do not poll.
+- To see the run while it works, use the `Monitor` tool on the events file. Each line is one JSON event.
+- The first event is `thread.started`. It has the `thread_id`.
+- Each completed step is an `item.completed` event. The end of a turn is `turn.completed` or `turn.failed`.
+- The last message from the worker is in `last-message.md`.
 
-## Follow up
+The run failed if one or more of these conditions are true:
 
-The **Fresh subagents by default** rule in [Subagents](../SKILL.md#subagents) applies. A fresh run in the same worktree keeps its files and uncommitted changes. Resume only when the follow-up needs the thread's conversation and that context is too costly to put in a brief:
+- The value in `exit-code` is not `0`.
+- The last `turn.*` event in the events file is not `turn.completed`.
+- The worktree has changes that are not committed.
+- The branch has no commit after its base.
+
+A refused commit can also end with `turn.completed`, so do all four checks. If the run failed, tell the user in your next reply. Say that Codex did not do the task, and say why.
+
+## Send a follow-up
+
+The **Fresh subagents by default** rule in [Subagents](../SKILL.md#subagents) applies. A fresh run in the same worktree keeps the files and the changes that are not committed. Resume only when the follow-up needs the conversation of the thread. Also, that conversation must cost too much to put in a brief.
 
 ```bash
 rm -f <run-dir>/exit-code; (cd <worktree> && codex exec resume --json <scope> -o <run-dir>/last-message.md <thread_id> - < <run-dir>/follow-up.md > <run-dir>/events-resume-<n>.jsonl; echo $? > <run-dir>/exit-code)
 ```
 
-`resume` has no `-C` flag, so it uses the current directory as its workdir. It does not keep the original sandbox, so pass the same `<scope>` again.
+`resume` has no `-C` flag. It uses the current directory as its workdir. `resume` does not keep the sandbox of the first run, so give the same `<scope>` again.
 
-## Review
+## Review the work
 
-Review is a separate step after the work run ends. Any harness can run it. The reviewer must be a fresh agent that did not write the change. Use one of these:
+The review is a separate step. Start it after the work run stops. Any harness can do the review. The reviewer must be a fresh agent that did not write the change. Use one of these reviewers:
 
-- A fresh Claude subagent, per [Subagents](../SKILL.md#subagents).
-- A separate read-only Codex review run from the worktree. Start it with `run_in_background: true`. It reads the diff and does not run checks. The findings are in `review.md`. It failed if `review-exit-code` is not `0`, or the last `turn.*` event in `review-events.jsonl` is not `turn.completed`.
+- A fresh Claude subagent. Follow [Subagents](../SKILL.md#subagents).
+- A separate Codex review run that is read-only. Start it from the worktree with the Bash tool and `run_in_background: true`. This run reads the diff. It does not do the checks.
 
   ```bash
   rm -f <run-dir>/review-exit-code; (cd <worktree> && codex exec review --json -c 'sandbox_mode="read-only"' --base <base-branch> -o <run-dir>/review.md > <run-dir>/review-events.jsonl; echo $? > <run-dir>/review-exit-code)
   ```
 
-A Codex review of Codex work is allowed outside Orchestrate. Inside Orchestrate, the reviewer runs on a different model family from the worker. If no review completes, the gate stays closed per [Subagents](../SKILL.md#subagents).
+  The findings are in `review.md`. The review run failed if `review-exit-code` is not `0`. It also failed if the last `turn.*` event in `review-events.jsonl` is not `turn.completed`.
 
-Never count the worker's own report as the review. The auto reviewer that approves a commit decides only sandbox access. It is not the code review.
+Outside Orchestrate, Codex can review the work of Codex. Inside Orchestrate, the reviewer must use a different model family from the worker. If no review completes, keep the gate closed. Follow [Subagents](../SKILL.md#subagents).
 
-## Orchestrate
+Do not use the report of the worker as the review. The auto reviewer that approves a commit controls only sandbox access. It does not review the code.
 
-The Orchestrate drain loop reads `Agent` notifications. Inside that playbook, spawn a background `pstack:poteto-agent` whose brief is to run one Codex worker as above and return the run's result. The wrapper starts the run in the background. Then it blocks with a foreground Bash call, `until [ -s <run-dir>/exit-code ]; do sleep 10; done`, with `timeout: 600000`, and repeats that call until the file exists. It never ends its turn while the run is live. `Monitor` does not block, so the wrapper does not use it to wait. The review is the unit's verifier, a separate unit on a different model family from the worker, not a diff read inside a drain. Outside Orchestrate, start the run with the Bash tool directly.
+## Use a worker in Orchestrate
+
+The Orchestrate drain loop reads only `Agent` notifications. In that playbook, spawn a background `pstack:poteto-agent` as a wrapper. Give the wrapper this brief: start one Codex worker as this file tells you, and return the result of the run.
+
+1. The wrapper starts the run in the background.
+2. The wrapper waits with a foreground Bash call and `timeout: 600000`:
+
+   ```bash
+   until [ -s <run-dir>/exit-code ]; do sleep 10; done
+   ```
+
+3. If the call stops before `exit-code` exists, the wrapper does the call again.
+4. The wrapper does not end its turn while the run continues.
+
+Do not use the `Monitor` tool to wait. `Monitor` does not block. The review is the verifier of the unit. The verifier is a separate unit, and it uses a different model family from the worker. Do not read the diff inside a drain.
+
+Outside Orchestrate, start the run directly with the Bash tool.
