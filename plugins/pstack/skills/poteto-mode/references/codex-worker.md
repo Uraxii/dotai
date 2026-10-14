@@ -10,7 +10,7 @@ Before you write the brief, make a list of what the worker needs:
 
 - The folders that the worker writes to. Its worktree is always on the list. Add other folders only when the task needs them.
 - Network access, if the task needs it.
-- Temp files, if the checks write them. Most test tools and build tools write temp files.
+- Temp files outside the worktree, if the checks write them to `/tmp` or `$TMPDIR`. Many test tools and build tools do this.
 
 Put the list into sandbox flags. In the commands below, `<scope>` is these flags:
 
@@ -21,10 +21,11 @@ Put the list into sandbox flags. In the commands below, `<scope>` is these flags
 - The worker can write only to its worktree and to the folders in `writable_roots`. The sandbox does not limit reads.
 - Use absolute paths in `writable_roots`. If the worker writes only to its worktree, use `[]`.
 - If the worker needs network access, set `network_access` to `true`.
-- If the checks write temp files, set the two `exclude_*` keys to `false`.
+- If the checks write temp files to `/tmp` or `$TMPDIR`, set the two `exclude_*` keys to `false`.
 - Do not add a `.git` folder to `writable_roots`. Codex keeps all `.git` folders read-only.
 - A commit must go outside the sandbox. The Codex auto reviewer approves or refuses each commit.
-- Use `sandbox_mode="danger-full-access"` only when the task cannot run in the sandbox. If you use it, tell the user in your reply.
+- The events file has no approval event. A commit shows only as a `command_execution` item that completed or failed.
+- Use `sandbox_mode="danger-full-access"` only when the task cannot run in the sandbox. If you use it, tell the user that the run had full access.
 
 Do not add guard hooks or wrapper scripts to the run.
 
@@ -40,28 +41,29 @@ Do not add guard hooks or wrapper scripts to the run.
    rm -f <run-dir>/exit-code; codex exec --json -C <worktree> <scope> -o <run-dir>/last-message.md - < <run-dir>/brief.md > <run-dir>/events.jsonl; echo $? > <run-dir>/exit-code
    ```
 
-To use the Codex default model, do not use `-m`. Use `-m` only when the task needs a different Codex model.
+To use the Codex default model, do not use `-m`. Use `-m` only when the task is too difficult for the default model.
 
 ## Monitor the run
 
 - When the background command stops, Claude Code starts a new turn. Do not poll.
 - To see the run while it works, use the `Monitor` tool on the events file. Each line is one JSON event.
 - The first event is `thread.started`. It has the `thread_id`.
-- Each completed step is an `item.completed` event. The end of a turn is `turn.completed` or `turn.failed`.
+- Each completed step is an `item.completed` event. Its `item.type` can be `command_execution`, `file_change`, `agent_message`, or a different type. The end of a turn is `turn.completed` or `turn.failed`.
 - The last message from the worker is in `last-message.md`.
 
 The run failed if one or more of these conditions are true:
 
 - The value in `exit-code` is not `0`.
 - The last `turn.*` event in the events file is not `turn.completed`.
-- The worktree has changes that are not committed.
+- A tracked file in the worktree has changes that are not committed. Untracked caches and agent notes are not a failure.
 - The branch has no commit after its base.
+- An untracked file that git does not ignore is part of the task.
 
-A refused commit can also end with `turn.completed`, so do all four checks. If the run failed, tell the user in your next reply. Say that Codex did not do the task, and say why.
+A refused commit can also end with `turn.completed`, so do all the checks. If the run failed, tell the user in your next reply. Say that Codex did not do the task, and say why.
 
 ## Send a follow-up
 
-The **Fresh subagents by default** rule in [Subagents](../SKILL.md#subagents) applies. A fresh run in the same worktree keeps the files and the changes that are not committed. Resume only when the follow-up needs the conversation of the thread. Also, that conversation must cost too much to put in a brief.
+The **Fresh subagents by default** rule in [Subagents](../SKILL.md#subagents) applies. A fresh run in the same worktree keeps the files and the changes that are not committed. Resume only if the follow-up needs the conversation of the thread, and a brief cannot hold it at low cost.
 
 ```bash
 rm -f <run-dir>/exit-code; (cd <worktree> && codex exec resume --json <scope> -o <run-dir>/last-message.md <thread_id> - < <run-dir>/follow-up.md > <run-dir>/events-resume-<n>.jsonl; echo $? > <run-dir>/exit-code)
@@ -88,7 +90,7 @@ Do not use the report of the worker as the review. The auto reviewer that approv
 
 ## Use a worker in Orchestrate
 
-The Orchestrate drain loop reads only `Agent` notifications. In that playbook, spawn a background `pstack:poteto-agent` as a wrapper. Give the wrapper this brief: start one Codex worker as this file tells you, and return the result of the run.
+The Orchestrate drain loop reads only `Agent` notifications. In that playbook, spawn a background `pstack:poteto-agent` as a wrapper. In the brief, tell the wrapper to start one Codex worker as this file tells you. Also tell it to return the result of each failure check and the text of `last-message.md`.
 
 1. The wrapper starts the run in the background.
 2. The wrapper waits with a foreground Bash call and `timeout: 600000`:
