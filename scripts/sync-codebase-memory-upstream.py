@@ -53,6 +53,14 @@ int main(int argc, char **argv) {
 }
 """
 
+SKILL_ANCHOR = "## Exploration Workflow\n"
+SKILL_SETUP = """## Before the First Query
+1. If the graph tools are deferred, load them with ToolSearch. Use the query `+codebase-memory list_projects index_repository search_graph trace_path get_code_snippet` with `max_results` 5.
+2. Call `index_repository` with the path of the current checkout. The call is fast on an indexed checkout and returns the project name. A worktree is a separate checkout, so index it too.
+3. Pass that project name to every later graph tool call.
+
+"""
+
 ESCAPES = {"n": "\n", "t": "\t", "r": "\r", '"': '"', "'": "'", "\\": "\\", "?": "?"}
 
 
@@ -126,10 +134,19 @@ def as_claude_plugin_agent(text: str) -> str:
     )
 
 
+def with_local_setup(skill: str) -> str:
+    """Add the session setup steps that upstream's skill lacks."""
+    if SKILL_ANCHOR not in skill:
+        raise SystemExit(f"upstream skill no longer has {SKILL_ANCHOR.strip()!r}")
+    return skill.replace(SKILL_ANCHOR, SKILL_SETUP + SKILL_ANCHOR, 1)
+
+
 def wanted_files(upstream: Path) -> dict[Path, str]:
     cli_source = (upstream / "src/cli/cli.c").read_text(encoding="utf-8")
     files = {
-        Path("skills/codebase-memory/SKILL.md"): c_string_constant(cli_source, "skill_content"),
+        Path("skills/codebase-memory/SKILL.md"): with_local_setup(
+            c_string_constant(cli_source, "skill_content")
+        ),
         Path("hooks/instructions.md"): c_string_constant(
             cli_source, "agent_instructions_content"
         ),

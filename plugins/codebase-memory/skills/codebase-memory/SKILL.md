@@ -21,6 +21,11 @@ Graph tools return precise structural results in ~500 tokens vs ~80K for grep.
 | Risk-classified trace | `trace_path(risk_labels=true)` |
 | Text search | `search_code` or Grep |
 
+## Before the First Query
+1. If the graph tools are deferred, load them with ToolSearch. Use the query `+codebase-memory list_projects index_repository search_graph trace_path get_code_snippet` with `max_results` 5.
+2. Call `index_repository` with the path of the current checkout. The call is fast on an indexed checkout and returns the project name. A worktree is a separate checkout, so index it too.
+3. Pass that project name to every later graph tool call.
+
 ## Exploration Workflow
 1. `list_projects` — check if project is indexed
 2. `get_graph_schema` — understand node/edge types
