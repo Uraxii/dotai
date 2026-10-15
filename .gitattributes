@@ -1,0 +1,5 @@
+# Check out every text file with LF line endings, on every platform. With
+# core.autocrlf=true, Git for Windows would write CRLF, and a hook whose first
+# line is "#!/bin/bash\r" cannot start. Windows PowerShell 5.1 reads LF .ps1
+# files without trouble.
+* text=auto eol=lf
