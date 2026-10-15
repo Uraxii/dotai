@@ -8,7 +8,7 @@
     {
       "name": "pstack",
       "source": "./plugins/pstack",
-      "version": "3.1.0",
+      "version": "3.1.2",
       "description": "If you want to go fast, go deep first. pstack helps you write less, but higher quality code. rigorous agent workflows you can parallelize with confidence. Ported from cursor/plugins/pstack to Claude Code. Original pstack by Lauren Tan (poteto)."
     },
     {
@@ -40,6 +40,11 @@
       "name": "sandbox",
       "source": "./plugins/sandbox",
       "description": "Give an agent a throwaway podman container with its own clone of the repo, ports, and a virtual display."
+    },
+    {
+      "name": "codex-worker",
+      "source": "./plugins/codex-worker",
+      "description": "Delegate a code change from Claude Code to an outside Codex CLI worker."
     },
     {
       "name": "mpocock",
