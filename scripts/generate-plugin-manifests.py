@@ -166,7 +166,7 @@ PLUGINS: list[dict[str, object]] = [
     },
     {
         "name": "sandbox",
-        "version": "1.0.2",
+        "version": "1.0.3",
         "description": (
             "Give an agent a throwaway podman container with its own clone "
             "of the repo, ports, and a virtual display."
