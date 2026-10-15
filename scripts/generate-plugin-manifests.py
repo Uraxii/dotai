@@ -8,6 +8,9 @@ must appear in `.claude-plugin/marketplace.json`, in
 That is three manifests, two marketplace entries, and one table row per
 plugin, whose names, versions, and descriptions all have to agree.
 
+A plugin that only suits some harnesses lists them in `harnesses`; it then
+gets no manifest or marketplace entry for the others.
+
 Edit PLUGINS below and rerun this script. Never hand-edit a generated
 file: `--check` exits 2 when one has drifted.
 """
@@ -184,6 +187,26 @@ PLUGINS: list[dict[str, object]] = [
         ],
     },
     {
+        "name": "codex-worker",
+        "harnesses": ["claude"],
+        "description": (
+            "Delegate a code change from Claude Code to an outside Codex CLI "
+            "worker."
+        ),
+        "short": "Run Codex CLI workers from Claude Code.",
+        "long": (
+            "Guides a Claude Code session that hands a code change to a Codex "
+            "CLI run. Covers the sandbox scope, the background run, "
+            "monitoring, follow-ups, and an independent review. Do not use it "
+            "when the agent itself runs inside Codex."
+        ),
+        "keywords": ["delegation", "cli-worker"],
+        "prompts": [
+            "Delegate this change to a Codex worker.",
+            "Run a Codex worker on this branch and review its diff.",
+        ],
+    },
+    {
         "name": "mpocock",
         "version": "1.2.3",
         "hooks": ["claude", "codex"],
@@ -345,6 +368,14 @@ PLUGINS: list[dict[str, object]] = [
 ]
 
 
+ALL_HARNESSES = ["claude", "codex", "copilot"]
+
+
+def on_harness(plugin: dict[str, object], harness: str) -> bool:
+    """A plugin is on every harness unless its entry lists `harnesses`."""
+    return harness in plugin.get("harnesses", ALL_HARNESSES)
+
+
 def version_of(plugin: dict[str, object]) -> str:
     return str(plugin.get("version", FIRST_RELEASE))
 
@@ -446,6 +477,7 @@ def agents_marketplace() -> dict[str, object]:
                 "category": "Productivity",
             }
             for plugin in PLUGINS
+            if on_harness(plugin, "codex")
         ],
     }
 
@@ -488,7 +520,8 @@ def wanted_files(root: Path) -> dict[Path, str]:
         copilot = core_manifest(plugin)
         if "copilot" in plugin.get("agents", []):
             copilot["agents"] = "./agents/copilot/"
-        files[plugin_root / "plugin.json"] = render(copilot)
+        if on_harness(plugin, "copilot"):
+            files[plugin_root / "plugin.json"] = render(copilot)
         files[plugin_root / ".claude-plugin/plugin.json"] = render(
             claude_manifest(plugin, root)
         )
@@ -496,10 +529,25 @@ def wanted_files(root: Path) -> dict[Path, str]:
             files[plugin_root / ".mcp.json"] = render(
                 {"mcpServers": plugin["mcp_servers"]}
             )
-        files[plugin_root / ".codex-plugin/plugin.json"] = render(
-            codex_manifest(plugin)
-        )
+        if on_harness(plugin, "codex"):
+            files[plugin_root / ".codex-plugin/plugin.json"] = render(
+                codex_manifest(plugin)
+            )
     return files
+
+
+def stale_manifests(root: Path) -> list[Path]:
+    """Return manifests on disk for a harness the plugin opted out of."""
+    stale = []
+    for plugin in PLUGINS:
+        plugin_root = Path("plugins") / str(plugin["name"])
+        for harness, manifest in (
+            ("codex", ".codex-plugin/plugin.json"),
+            ("copilot", "plugin.json"),
+        ):
+            if not on_harness(plugin, harness) and (root / plugin_root / manifest).is_file():
+                stale.append(plugin_root / manifest)
+    return stale
 
 
 def missing_hook_wiring(root: Path) -> list[Path]:
@@ -571,7 +619,8 @@ def main(arguments: list[str] | None = None, root: Path = REPOSITORY_ROOT) -> in
         changed = drifted(files, root)
         missing_wiring = missing_hook_wiring(root)
         undeclared_wiring = undeclared_hook_wiring(root)
-        if not changed and not missing_wiring and not undeclared_wiring:
+        stale = stale_manifests(root)
+        if not changed and not missing_wiring and not undeclared_wiring and not stale:
             print(f"{len(files)} generated files are up to date.")
             return 0
         if changed:
@@ -586,6 +635,10 @@ def main(arguments: list[str] | None = None, root: Path = REPOSITORY_ROOT) -> in
         if undeclared_wiring:
             print("These plugin hook wiring files are undeclared:")
             for relative in undeclared_wiring:
+                print(f"  {relative}")
+        if stale:
+            print("These manifests are for a harness the plugin opted out of; delete them:")
+            for relative in stale:
                 print(f"  {relative}")
         return 2
 
