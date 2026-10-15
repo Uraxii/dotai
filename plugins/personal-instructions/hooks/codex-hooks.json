@@ -5,7 +5,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "\"${PLUGIN_ROOT}/hooks/inject_instructions.py\" --harness codex --event SessionStart",
+            "command": "bash \"${PLUGIN_ROOT}/hooks/inject_instructions.sh\" --harness codex --event SessionStart",
+            "commandWindows": "\"${PLUGIN_ROOT}/hooks/run-hook.cmd\" inject_instructions.sh --harness codex --event SessionStart",
             "timeout": 5
           }
         ]
@@ -14,7 +15,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "\"${PLUGIN_ROOT}/hooks/inject_instructions.py\" --harness codex --event SessionStart --file main-agent-instructions.md",
+            "command": "bash \"${PLUGIN_ROOT}/hooks/inject_instructions.sh\" --harness codex --event SessionStart --file main-agent-instructions.md",
+            "commandWindows": "\"${PLUGIN_ROOT}/hooks/run-hook.cmd\" inject_instructions.sh --harness codex --event SessionStart --file main-agent-instructions.md",
             "timeout": 5
           }
         ]
@@ -25,7 +27,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "\"${PLUGIN_ROOT}/hooks/inject_instructions.py\" --harness codex --event SubagentStart",
+            "command": "bash \"${PLUGIN_ROOT}/hooks/inject_instructions.sh\" --harness codex --event SubagentStart",
+            "commandWindows": "\"${PLUGIN_ROOT}/hooks/run-hook.cmd\" inject_instructions.sh --harness codex --event SubagentStart",
             "timeout": 5
           }
         ]
