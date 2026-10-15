@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/handoff-token-flag.py --mode context",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/handoff-token-flag.sh\" --mode context",
             "timeout": 5
           }
         ]
