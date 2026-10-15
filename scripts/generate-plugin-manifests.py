@@ -317,7 +317,7 @@ PLUGINS: list[dict[str, object]] = [
     },
     {
         "name": "shunt",
-        "version": "0.3.0",
+        "version": "0.3.1",
         "marketplace_version": True,
         "hooks": ["claude", "codex", "copilot"],
         "skills": False,
