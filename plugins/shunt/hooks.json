@@ -5,13 +5,15 @@
       {
         "type": "command",
         "matcher": "view",
-        "bash": "\"$PLUGIN_ROOT/hooks/check-file-size\" --harness copilot",
+        "bash": "bash \"${PLUGIN_ROOT}/hooks/check-file-size\" --harness copilot",
+        "powershell": "& \"${PLUGIN_ROOT}\\hooks\\run-hook.cmd\" check-file-size --harness copilot",
         "timeoutSec": 5
       },
       {
         "type": "command",
         "matcher": "bash",
-        "bash": "\"$PLUGIN_ROOT/hooks/check-bash-read\" --harness copilot",
+        "bash": "bash \"${PLUGIN_ROOT}/hooks/check-bash-read\" --harness copilot",
+        "powershell": "& \"${PLUGIN_ROOT}\\hooks\\run-hook.cmd\" check-bash-read --harness copilot",
         "timeoutSec": 5
       }
     ]

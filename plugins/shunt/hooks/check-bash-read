@@ -8,8 +8,30 @@
 MIN_LINES="${SHUNT_MIN_LINES:-350}"
 case "$MIN_LINES" in ''|*[!0-9]*) MIN_LINES=350 ;; esac
 
+# hook-json.awk reads the hook input, so the hook needs only bash and awk, and Git
+# Bash runs it on Windows.
+case "${BASH_SOURCE[0]}" in
+  */*) hooks_dir=${BASH_SOURCE[0]%/*} ;;
+  *) hooks_dir=. ;;
+esac
+# The value at a JSON path in the hook input, as jq -r '.path // empty' prints
+# it. A second path reads inside that member first, parsing it when it is a
+# JSON string, as Copilot sends toolArgs.
+field() {
+  printf '%s' "$input" | LC_ALL=C JSON_MODE=get JSON_PATH="$1" JSON_VIA="${2-}" awk -f "$hooks_dir/hook-json.awk"
+}
+deny() {
+  local reason
+  reason=$(LC_ALL=C JSON_MODE=quote JSON_TEXT="$1" awk -f "$hooks_dir/hook-json.awk")
+  if [ "$harness" = copilot ]; then
+    printf '{"permissionDecision":"deny","permissionDecisionReason":%s}\n' "$reason"
+  else
+    printf '{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":%s}}\n' "$reason"
+  fi
+}
+
 input=$(cat)
-cwd=$(echo "$input" | jq -r '.cwd // empty')
+cwd=$(field /cwd)
 
 harness=claude
 if [ "${1:-}" = "--harness" ]; then
@@ -18,10 +40,9 @@ fi
 case "$harness" in claude|codex|copilot) ;; *) exit 0 ;; esac
 
 if [ "$harness" = copilot ]; then
-  tool_args=$(echo "$input" | jq -c '.toolArgs // {} | if type == "string" then fromjson? else . end')
-  command=$(echo "$tool_args" | jq -r '.command // empty')
+  command=$(field /command /toolArgs)
 else
-  command=$(echo "$input" | jq -r '.tool_input.command // empty')
+  command=$(field /tool_input/command)
 fi
 [ -z "$command" ] && exit 0
 
@@ -58,15 +79,9 @@ esac
 lines=$(wc -l < "$file_path" 2>/dev/null | tr -d ' ' || echo "0")
 if [ "$lines" -gt "$MIN_LINES" ]; then
   reason="Delegate via the bulk-reader skill for understanding or questions about this ${lines}-line file, including answers with line citations. Keep the file out of the main agent's context; the reader returns the citations. If you are already the reader subagent, do not delegate again. Use main-agent chunks only for edits, explicit requests for exact content, or when no subagent tool exists. For those cases or subagent reads:"
-  if [ "$harness" = claude ] && [ -n "$(echo "$input" | jq -r '.agent_id // empty')" ]; then
+  if [ "$harness" = claude ] && [ -n "$(field /agent_id)" ]; then
     reason="You are the reader subagent; do not delegate again. File is ${lines} lines."
   fi
   reason="$reason Read it in chunks of at most ${MIN_LINES} lines until you have read the full file. Use bash: sed -n 'START,ENDp' FILE, with END-START+1 <= ${MIN_LINES} (start with sed -n '1,${MIN_LINES}p' FILE, then continue at $((MIN_LINES + 1))). Use grep for targeted lookups."
-  if [ "$harness" = copilot ]; then
-    jq -cn --arg reason "$reason" \
-      '{permissionDecision: "deny", permissionDecisionReason: $reason}'
-  else
-    jq -cn --arg reason "$reason" \
-      '{hookSpecificOutput: {hookEventName: "PreToolUse", permissionDecision: "deny", permissionDecisionReason: $reason}}'
-  fi
+  deny "$reason"
 fi
