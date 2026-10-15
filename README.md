@@ -43,13 +43,13 @@ installed only one of them.
 | `plugins/<plugin>/skills/` | Every skill, `skills/<name>/SKILL.md`. Source of truth. |
 | `plugins/pstack/models.json` | Model picks per role and harness. The only copy in the repository. Every skill that picks a model by role ships in `pstack` and points at it by path. A per-harness override sheet in the user's config directory replaces a role for one harness without touching this repo (see the `setup-pstack` skill). |
 | `plugins/pstack/agents/` | Claude and Copilot agent files. |
-| `scripts/` | `generate-plugin-manifests.py` writes all 33 plugin manifests, both marketplace files, and the plugin table above from one list. |
+| `scripts/` | `generate-plugin-manifests.py` writes all 33 plugin manifests, both marketplace files, and the plugin table above from one list. `run-hook-tests.sh` runs every plugin hook test and the shunt evals. |
 | `themes/` | Editor themes. Source of truth only. Nothing installs them, so copy one into `~/.claude/themes/` yourself. |
 | `output-styles/` | Output styles, `output-styles/<name>.md`. Nothing installs them, so copy one into `~/.claude/output-styles/` and select it with `/output-style` yourself. |
 | `statusline.sh` | Statusline command: usage bars and tokens per minute. Nothing installs it, so copy it to `~/.claude/statusline.sh` and set `statusLine` yourself. |
-| `plugins/mpocock/hooks/` | `handoff-token-flag.py` warns before context compaction and points the agent at the `handoff` skill, which ships in this same plugin. Plugin installation wires it for Claude Code and Codex. |
+| `plugins/mpocock/hooks/` | `handoff-token-flag.sh` warns before context compaction and points the agent at the `handoff` skill, which ships in this same plugin. Plugin installation wires it for Claude Code and Codex. |
 | `plugins/pstack/hooks/` | `session-start.sh` injects the poteto-mode routing mandate at session start, wired by `hooks.json` (Claude Code), `codex-hooks.json` (Codex), and `copilot-hooks.json` (Copilot CLI, which also gets `pre-tool-use.sh`). A `session hook: off` line in the user's `pstack-models.md` sheet turns it off. See [Session-start reminder](#session-start-reminder). Add `.nikki-agents/` to the exclude config of your editor, LSP, and any semantic index: `.git/info/exclude` covers git, ripgrep, and fd, but an indexer that keeps its own ignore list walks the worktrees and ends up crawling six figures of files in a repo with a few hundred tracked ones. |
-| `plugins/steer/hooks/` | `opus_5_reduce_output.py` is a Claude Code `Stop` hook that asks for a plain-English recap at the end of a turn on Opus 5 or Fable 5 that changed something. A turn that mutated nothing has nothing to recap, so it ends silently. Spawning a subagent counts as a mutation, because a delegate's own edits never reach this transcript. Plugin installation wires it, and no other harness gets it. |
+| `plugins/steer/hooks/` | `opus_5_reduce_output.sh` is a Claude Code `Stop` hook that asks for a plain-English recap at the end of a turn on Opus 5 or Fable 5 that changed something. A turn that mutated nothing has nothing to recap, so it ends silently. Spawning a subagent counts as a mutation, because a delegate's own edits never reach this transcript. Plugin installation wires it, and no other harness gets it. |
 
 ## Install
 
