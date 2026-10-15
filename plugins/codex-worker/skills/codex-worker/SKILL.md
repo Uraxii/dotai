@@ -1,6 +1,11 @@
+---
+name: codex-worker
+description: Delegates a code change from a Claude Code session to an outside Codex CLI worker. Covers sandbox scope, the `codex exec` run, monitoring, follow-ups, review, and a worker inside the pstack Orchestrate playbook. Use when Claude Code is the harness and a code delegate should be a Codex CLI run. Do not use when the agent itself runs inside Codex.
+---
+
 # Codex workers from Claude Code
 
-Use this file only when Claude Code is the harness and Codex is an outside worker. Do not use this file when pstack runs inside Codex. For that case, read [`codex-tools.md`](codex-tools.md) and use `spawn_agent`.
+Use this skill only when Claude Code is the harness and Codex is an outside worker. Do not use this skill when the agent runs inside Codex. In that case, use `spawn_agent`.
 
 A Codex worker is a delegate. It does the brief and edits the code. It is the same as a `pstack:poteto-agent` code delegate.
 
@@ -31,7 +36,7 @@ Do not add guard hooks or wrapper scripts to the run.
 
 ## Start the run
 
-1. Give each worker its own worktree or branch (**principle-separate-before-serializing-shared-state**).
+1. Give each worker its own worktree or branch (**pstack:principle-separate-before-serializing-shared-state**).
 2. Make a `<run-dir>` outside the worktree. This keeps the run files out of the diff.
 3. Write the brief to `<run-dir>/brief.md`. Start the brief with "Load the poteto-mode skill."
 4. In the brief, give the goal, the done state, the checks, and the branch for the commit. The worker commits its own work.
@@ -63,7 +68,7 @@ A refused commit can also end with `turn.completed`, so do all the checks. If th
 
 ## Send a follow-up
 
-The **Fresh subagents by default** rule in [Subagents](../SKILL.md#subagents) applies. A fresh run in the same worktree keeps the files and the changes that are not committed. Resume only if the follow-up needs the conversation of the thread, and a brief cannot hold it at low cost.
+The **Fresh subagents by default** rule in the Subagents section of the `pstack:poteto-mode` skill applies. A fresh run in the same worktree keeps the files and the changes that are not committed. Resume only if the follow-up needs the conversation of the thread, and a brief cannot hold it at low cost.
 
 ```bash
 rm -f <run-dir>/exit-code; (cd <worktree> && codex exec resume --json <scope> -o <run-dir>/last-message.md <thread_id> - < <run-dir>/follow-up.md > <run-dir>/events-resume-<n>.jsonl; echo $? > <run-dir>/exit-code)
@@ -75,7 +80,7 @@ rm -f <run-dir>/exit-code; (cd <worktree> && codex exec resume --json <scope> -o
 
 The review is a separate step. Start it after the work run stops. Any harness can do the review. The reviewer must be a fresh agent that did not write the change. Use one of these reviewers:
 
-- A fresh Claude subagent. Follow [Subagents](../SKILL.md#subagents).
+- A fresh Claude subagent. Follow the Subagents section of the `pstack:poteto-mode` skill.
 - A separate Codex review run that is read-only. Start it from the worktree with the Bash tool and `run_in_background: true`. This run reads the diff. It does not do the checks.
 
   ```bash
@@ -84,13 +89,13 @@ The review is a separate step. Start it after the work run stops. Any harness ca
 
   The findings are in `review.md`. The review run failed if `review-exit-code` is not `0`. It also failed if the last `turn.*` event in `review-events.jsonl` is not `turn.completed`.
 
-Outside Orchestrate, Codex can review the work of Codex. Inside Orchestrate, the reviewer must use a different model family from the worker. If no review completes, keep the gate closed. Follow [Subagents](../SKILL.md#subagents).
+Outside Orchestrate, Codex can review the work of Codex. Inside Orchestrate, the reviewer must use a different model family from the worker. If no review completes, keep the gate closed. Follow the Subagents section of the `pstack:poteto-mode` skill.
 
 Do not use the report of the worker as the review. The auto reviewer that approves a commit controls only sandbox access. It does not review the code.
 
 ## Use a worker in Orchestrate
 
-The Orchestrate drain loop reads only `Agent` notifications. In that playbook, spawn a background `pstack:poteto-agent` as a wrapper. In the brief, tell the wrapper to start one Codex worker as this file tells you. Also tell it to return the result of each failure check and the text of `last-message.md`.
+The drain loop of the Orchestrate playbook in `pstack:poteto-mode` reads only `Agent` notifications. In that playbook, spawn a background `pstack:poteto-agent` as a wrapper. In the brief, tell the wrapper to start one Codex worker as this skill tells you. Also tell it to return the result of each failure check and the text of `last-message.md`.
 
 1. The wrapper starts the run in the background.
 2. The wrapper waits with a foreground Bash call and `timeout: 600000`:

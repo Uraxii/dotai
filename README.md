@@ -1,11 +1,11 @@
 # dotai
 
 Skills and agents for Claude Code, Codex, GitHub Copilot CLI, opencode, and
-Hermes, written in the open Agent Skills format. Fourteen plugins live under
+Hermes, written in the open Agent Skills format. Fifteen plugins live under
 `plugins/`, and each one installs on its own. `pstack` carries the shared
 machinery: the poteto-mode workflow, the principles, the playbooks, and the
-agent files. The other thirteen each cover one tool or one job, and none of them
-needs `pstack` installed.
+agent files. The other fourteen each cover one tool or one job. Only
+`codex-worker` refers to `pstack` skills, so install it next to `pstack`.
 
 ## Plugins
 
@@ -20,6 +20,7 @@ needs `pstack` installed.
 | `llm-wiki` | Keep research findings in a searchable project knowledgebase instead of re-deriving them. |
 | `proton` | Read and store secrets in Proton Pass through pass-cli, so none lands in a repo or a shell history. |
 | `sandbox` | Give an agent a throwaway podman container with its own clone of the repo, ports, and a virtual display. |
+| `codex-worker` | Delegate a code change from Claude Code to an outside Codex CLI worker. |
 | `mpocock` | Compact a conversation into a handoff document another agent can pick the work up from. |
 | `skills` | Review and author SKILL.md files, finding and repairing the smells that stop a skill triggering. |
 | `codebase-memory` | Query a code graph through the codebase-memory-mcp server, skill, and graph-verification agents. |

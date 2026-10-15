@@ -1,0 +1,9 @@
+{
+  "name": "codex-worker",
+  "version": "1.0.0",
+  "description": "Delegate a code change from Claude Code to an outside Codex CLI worker.",
+  "author": {
+    "name": "Uraxii",
+    "url": "https://github.com/Uraxii"
+  }
+}

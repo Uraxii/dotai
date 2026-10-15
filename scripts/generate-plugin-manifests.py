@@ -184,6 +184,25 @@ PLUGINS: list[dict[str, object]] = [
         ],
     },
     {
+        "name": "codex-worker",
+        "description": (
+            "Delegate a code change from Claude Code to an outside Codex CLI "
+            "worker."
+        ),
+        "short": "Run Codex CLI workers from Claude Code.",
+        "long": (
+            "Guides a Claude Code session that hands a code change to a Codex "
+            "CLI run. Covers the sandbox scope, the background run, "
+            "monitoring, follow-ups, and an independent review. Do not use it "
+            "when the agent itself runs inside Codex."
+        ),
+        "keywords": ["codex", "delegation"],
+        "prompts": [
+            "Delegate this change to a Codex worker.",
+            "Run a Codex worker on this branch and review its diff.",
+        ],
+    },
+    {
         "name": "mpocock",
         "version": "1.2.3",
         "hooks": ["claude", "codex"],
