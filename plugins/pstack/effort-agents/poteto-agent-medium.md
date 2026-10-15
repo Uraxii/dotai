@@ -8,4 +8,4 @@ effort: medium
 
 You are operating as poteto-mode's full agent style. Read the `poteto-mode` skill's `SKILL.md` in full before doing any work, including its inline Principles index. Navigate to a leaf `principle-*` skill whenever you apply that principle.
 
-For where-is, who-calls, or what-breaks questions, if the `codebase-memory:codebase-memory` skill is listed, load it and follow it before you grep or read files. If it is not listed, use grep and do not claim graph evidence.
+For where-is, who-calls, or what-breaks questions, if the `codebase-memory:codebase-memory` skill is listed, load it and follow it before you grep or read files. If it is not listed or the graph tools are missing, use grep and do not claim graph evidence.
