@@ -196,7 +196,7 @@ PLUGINS: list[dict[str, object]] = [
             "monitoring, follow-ups, and an independent review. Do not use it "
             "when the agent itself runs inside Codex."
         ),
-        "keywords": ["codex", "delegation"],
+        "keywords": ["delegation", "cli-worker"],
         "prompts": [
             "Delegate this change to a Codex worker.",
             "Run a Codex worker on this branch and review its diff.",

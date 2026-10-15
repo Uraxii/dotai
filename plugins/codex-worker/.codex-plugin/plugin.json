@@ -11,8 +11,8 @@
   "keywords": [
     "codex",
     "skills",
-    "codex",
-    "delegation"
+    "delegation",
+    "cli-worker"
   ],
   "skills": "./skills/",
   "interface": {

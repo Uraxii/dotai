@@ -1,6 +1,6 @@
 ---
 name: codex-worker
-description: Delegates a code change from a Claude Code session to an outside Codex CLI worker. Covers sandbox scope, the `codex exec` run, monitoring, follow-ups, review, and a worker inside the pstack Orchestrate playbook. Use when Claude Code is the harness and a code delegate should be a Codex CLI run. Do not use when the agent itself runs inside Codex.
+description: Delegates a code change from a Claude Code session to an outside Codex CLI worker. Covers sandbox scope, the `codex exec` run, monitoring, follow-ups, review, and a worker inside the pstack Orchestrate playbook. Use when Claude Code is the harness and a code delegate should be a Codex CLI run, or when asked to hand a task to Codex, run `codex exec`, or use Codex as a worker or reviewer. Do not use when the agent itself runs inside Codex.
 ---
 
 # Codex workers from Claude Code
@@ -95,7 +95,7 @@ Do not use the report of the worker as the review. The auto reviewer that approv
 
 ## Use a worker in Orchestrate
 
-The drain loop of the Orchestrate playbook in `pstack:poteto-mode` reads only `Agent` notifications. In that playbook, spawn a background `pstack:poteto-agent` as a wrapper. In the brief, tell the wrapper to start one Codex worker as this skill tells you. Also tell it to return the result of each failure check and the text of `last-message.md`.
+The drain loop of the Orchestrate playbook in `pstack:poteto-mode` reads only `Agent` notifications. In that playbook, spawn a background `pstack:poteto-agent` as a wrapper. In the brief, tell the wrapper to invoke the `codex-worker:codex-worker` skill and start one Codex worker as it says. Also tell it to return the result of each failure check and the text of `last-message.md`.
 
 1. The wrapper starts the run in the background.
 2. The wrapper waits with a foreground Bash call and `timeout: 600000`:

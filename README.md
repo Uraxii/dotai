@@ -5,7 +5,8 @@ Hermes, written in the open Agent Skills format. Fifteen plugins live under
 `plugins/`, and each one installs on its own. `pstack` carries the shared
 machinery: the poteto-mode workflow, the principles, the playbooks, and the
 agent files. The other fourteen each cover one tool or one job. Only
-`codex-worker` refers to `pstack` skills, so install it next to `pstack`.
+`codex-worker` refers to `pstack` skills and agents, so install it next to
+`pstack`.
 
 ## Plugins
 
