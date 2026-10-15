@@ -5,7 +5,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${PLUGIN_ROOT}/hooks/handoff-token-flag.py --mode context",
+            "command": "bash \"${PLUGIN_ROOT}/hooks/handoff-token-flag.sh\" --mode context",
+            "commandWindows": "\"${PLUGIN_ROOT}/hooks/run-hook.cmd\" handoff-token-flag.sh --mode context",
             "timeout": 5
           }
         ]

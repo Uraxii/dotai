@@ -6,7 +6,7 @@ WORKDIR=$(mktemp -d)
 trap 'rm -rf "$WORKDIR"' EXIT
 mkdir "$WORKDIR/bin"
 mkdir "$WORKDIR/.handoffs"
-for tool in cat jq wc tr grep sed; do
+for tool in cat awk wc tr grep sed; do
   ln -s "$(command -v "$tool")" "$WORKDIR/bin/$tool"
 done
 BASH_BIN=$(command -v bash)

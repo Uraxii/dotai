@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/opus_5_reduce_output.py",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/opus_5_reduce_output.sh\"",
             "timeout": 10,
             "statusMessage": "Writing recap..."
           }

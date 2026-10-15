@@ -1,6 +1,6 @@
 {
   "name": "codebase-memory",
-  "version": "2.2.0",
+  "version": "2.3.0",
   "description": "Query a code graph through the codebase-memory-mcp server, skill, and graph-verification agents.",
   "author": {
     "name": "Uraxii",
