@@ -103,20 +103,6 @@
       "category": "Productivity"
     },
     {
-      "name": "codex-worker",
-      "source": {
-        "source": "url",
-        "url": "https://github.com/Uraxii/dotai.git",
-        "ref": "main",
-        "path": "plugins/codex-worker"
-      },
-      "policy": {
-        "installation": "AVAILABLE",
-        "authentication": "ON_INSTALL"
-      },
-      "category": "Productivity"
-    },
-    {
       "name": "mpocock",
       "source": {
         "source": "url",
