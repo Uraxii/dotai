@@ -208,7 +208,7 @@ PLUGINS: list[dict[str, object]] = [
     },
     {
         "name": "mpocock",
-        "version": "1.2.3",
+        "version": "1.2.4",
         "hooks": ["claude", "codex"],
         "description": (
             "Compact a conversation into a handoff document another agent "
@@ -299,7 +299,7 @@ PLUGINS: list[dict[str, object]] = [
     },
     {
         "name": "steer",
-        "version": "1.2.3",
+        "version": "1.2.4",
         "hooks": ["claude"],
         "skills": False,
         "description": (
