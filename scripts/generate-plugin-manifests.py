@@ -208,7 +208,7 @@ PLUGINS: list[dict[str, object]] = [
     },
     {
         "name": "mpocock",
-        "version": "1.2.3",
+        "version": "1.3.0",
         "hooks": ["claude", "codex"],
         "description": (
             "Compact a conversation into a handoff document another agent "
@@ -251,7 +251,7 @@ PLUGINS: list[dict[str, object]] = [
     },
     {
         "name": "codebase-memory",
-        "version": "2.2.0",
+        "version": "2.3.0",
         "hooks": ["claude", "copilot"],
         "agents": ["claude", "copilot"],
         "mcp_servers": {
@@ -299,7 +299,7 @@ PLUGINS: list[dict[str, object]] = [
     },
     {
         "name": "steer",
-        "version": "1.2.3",
+        "version": "1.3.0",
         "hooks": ["claude"],
         "skills": False,
         "description": (
@@ -317,7 +317,7 @@ PLUGINS: list[dict[str, object]] = [
     },
     {
         "name": "shunt",
-        "version": "0.3.0",
+        "version": "0.4.0",
         "marketplace_version": True,
         "hooks": ["claude", "codex", "copilot"],
         "skills": False,
@@ -343,7 +343,7 @@ PLUGINS: list[dict[str, object]] = [
     },
     {
         "name": "personal-instructions",
-        "version": "1.0.3",
+        "version": "1.1.0",
         "hooks": ["claude", "codex", "copilot"],
         "skills": False,
         "description": (
