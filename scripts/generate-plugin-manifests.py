@@ -166,7 +166,7 @@ PLUGINS: list[dict[str, object]] = [
     },
     {
         "name": "sandbox",
-        "version": "1.0.2",
+        "version": "1.0.3",
         "description": (
             "Give an agent a throwaway podman container with its own clone "
             "of the repo, ports, and a virtual display."
@@ -208,7 +208,7 @@ PLUGINS: list[dict[str, object]] = [
     },
     {
         "name": "mpocock",
-        "version": "1.2.3",
+        "version": "1.2.4",
         "hooks": ["claude", "codex"],
         "description": (
             "Compact a conversation into a handoff document another agent "
@@ -299,7 +299,7 @@ PLUGINS: list[dict[str, object]] = [
     },
     {
         "name": "steer",
-        "version": "1.2.3",
+        "version": "1.2.4",
         "hooks": ["claude"],
         "skills": False,
         "description": (
@@ -317,7 +317,7 @@ PLUGINS: list[dict[str, object]] = [
     },
     {
         "name": "shunt",
-        "version": "0.3.0",
+        "version": "0.3.1",
         "marketplace_version": True,
         "hooks": ["claude", "codex", "copilot"],
         "skills": False,
@@ -343,7 +343,7 @@ PLUGINS: list[dict[str, object]] = [
     },
     {
         "name": "personal-instructions",
-        "version": "1.0.3",
+        "version": "1.0.4",
         "hooks": ["claude", "codex", "copilot"],
         "skills": False,
         "description": (
