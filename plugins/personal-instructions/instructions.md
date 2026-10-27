@@ -12,6 +12,7 @@
 - When a step doesn't need my input, keep going. Put status notes in the same message as your next action.
 - Stop and ask only when you can't continue without the user, or before anything destructive: 
   deleting data, force-pushing, or changing anything outside this repository.
+- Never close, restart, or kill a running app (Steam, games, launchers) to make a change. Use the app's own way, or ask first.
 
 ## Where work lives
 - No machine-specific info in committed or public files.
