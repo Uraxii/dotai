@@ -43,7 +43,7 @@ installed only one of them.
 | `plugins/<plugin>/skills/` | Every skill, `skills/<name>/SKILL.md`. Source of truth. |
 | `plugins/pstack/models.json` | Model picks per role and harness. The only copy in the repository. Every skill that picks a model by role ships in `pstack` and points at it by path. A per-harness override sheet in the user's config directory replaces a role for one harness without touching this repo (see the `setup-pstack` skill). |
 | `plugins/pstack/agents/` | Claude and Copilot agent files. |
-| `scripts/` | `generate-plugin-manifests.py` writes all 33 plugin manifests, both marketplace files, and the plugin table above from one list. `run-hook-tests.sh` runs every plugin hook test and the shunt evals. |
+| `scripts/` | `generate-plugin-manifests.py` writes all 33 plugin manifests, both marketplace files, and the plugin table above from one list. `run-hook-tests.sh` runs `lint-hook-references.sh`, which checks that every hook manifest names files that exist through the root variable its harness sets, then every plugin hook test and the shunt evals. |
 | `themes/` | Editor themes. Source of truth only. Nothing installs them, so copy one into `~/.claude/themes/` yourself. |
 | `output-styles/` | Output styles, `output-styles/<name>.md`. Nothing installs them, so copy one into `~/.claude/output-styles/` and select it with `/output-style` yourself. |
 | `statusline.sh` | Statusline command: usage bars and tokens per minute. Nothing installs it, so copy it to `~/.claude/statusline.sh` and set `statusLine` yourself. |

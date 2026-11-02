@@ -1,12 +1,15 @@
 #!/bin/bash
-# Runs every plugin hook test and the shunt evals, and checks that the files
-# each plugin carries its own copy of have not drifted apart.
+# Lints every hook manifest, runs every plugin hook test and the shunt evals,
+# and checks that the files each plugin carries its own copy of have not
+# drifted apart.
 #
 # Usage: scripts/run-hook-tests.sh
 # Needs bash and jq for the tests; the hooks themselves need only bash and awk.
 
 root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 failed=0
+
+bash "$root/scripts/lint-hook-references.sh" || failed=1
 
 # A plugin cannot read another plugin's files, so each one ships these.
 for shared in hook-json.awk run-hook.cmd; do
