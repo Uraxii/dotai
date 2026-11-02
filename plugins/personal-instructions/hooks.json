@@ -5,13 +5,13 @@
       {
         "type": "command",
         "bash": "bash \"${PLUGIN_ROOT}/hooks/inject_instructions.sh\" --harness copilot --event SessionStart",
-        "powershell": "& \"${PLUGIN_ROOT}\\hooks\\run-hook.cmd\" inject_instructions.sh --harness copilot --event SessionStart",
+        "powershell": "& \"$env:PLUGIN_ROOT\\hooks\\run-hook.cmd\" inject_instructions.sh --harness copilot --event SessionStart; exit $LASTEXITCODE",
         "timeoutSec": 5
       },
       {
         "type": "command",
         "bash": "bash \"${PLUGIN_ROOT}/hooks/inject_instructions.sh\" --harness copilot --event SessionStart --file main-agent-instructions.md",
-        "powershell": "& \"${PLUGIN_ROOT}\\hooks\\run-hook.cmd\" inject_instructions.sh --harness copilot --event SessionStart --file main-agent-instructions.md",
+        "powershell": "& \"$env:PLUGIN_ROOT\\hooks\\run-hook.cmd\" inject_instructions.sh --harness copilot --event SessionStart --file main-agent-instructions.md; exit $LASTEXITCODE",
         "timeoutSec": 5
       }
     ],
@@ -19,7 +19,7 @@
       {
         "type": "command",
         "bash": "bash \"${PLUGIN_ROOT}/hooks/inject_instructions.sh\" --harness copilot --event SubagentStart",
-        "powershell": "& \"${PLUGIN_ROOT}\\hooks\\run-hook.cmd\" inject_instructions.sh --harness copilot --event SubagentStart",
+        "powershell": "& \"$env:PLUGIN_ROOT\\hooks\\run-hook.cmd\" inject_instructions.sh --harness copilot --event SubagentStart; exit $LASTEXITCODE",
         "timeoutSec": 5
       }
     ]
