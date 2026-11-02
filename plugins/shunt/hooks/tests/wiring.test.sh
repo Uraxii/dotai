@@ -41,4 +41,22 @@ for wiring in "claude hooks/claude-hooks.json PreToolUse 2" "codex hooks/codex-h
   done < <(windows_commands "$harness" "$PLUGIN_ROOT_DIR/$config" "$event")
 done
 
+# The launcher's batch half runs bash with a backslash-only path, which Git
+# Bash leaves as it is. On Linux a backslash is a plain filename character, so
+# the hook is copied to a file named like that Windows path, beside a directory
+# named like its directory part, and run from a cwd with no hook-json.awk.
+win_dir='C:\plugin\hooks'
+mkdir "$WORK/$win_dir"
+cp "$PLUGIN_ROOT_DIR/hooks/hook-json.awk" "$WORK/$win_dir/"
+for hook in check-file-size check-bash-read; do
+  cp "$PLUGIN_ROOT_DIR/hooks/$hook" "$WORK/$win_dir\\$hook"
+  case "$hook" in
+    check-file-size) input=$read_input ;;
+    *) input=$bash_input ;;
+  esac
+  capture bash -c 'cd "$1" && exec bash "$2" --harness copilot' _ "$WORK" "$win_dir\\$hook" <<<"$input"
+  expect_equal "$hook run by a backslash path denies a 480-line read" deny \
+    "$(jq -r '.permissionDecision' <<<"$STDOUT" 2>/dev/null)"
+done
+
 finish
