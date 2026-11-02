@@ -51,8 +51,14 @@ run_wiring() {
 # batch half; it checks that the command names the launcher.
 run_windows_wiring() {
   local command="$1" hooks_dir="$2" rest
+  # PowerShell reads ${PLUGIN_ROOT} as its own unset variable, not the
+  # environment variable, so Copilot's powershell key must use $env:.
   case "$command" in
-    *'"${PLUGIN_ROOT}/hooks/run-hook.cmd" '* | *'"${PLUGIN_ROOT}\hooks\run-hook.cmd" '*) rest=${command#*run-hook.cmd\" } ;;
+    '"${PLUGIN_ROOT}/hooks/run-hook.cmd" '*) rest=${command#*run-hook.cmd\" } ;;
+    '& "$env:PLUGIN_ROOT\hooks\run-hook.cmd" '*'; exit $LASTEXITCODE')
+      rest=${command#*run-hook.cmd\" }
+      rest=${rest%'; exit $LASTEXITCODE'}
+      ;;
     *)
       STATUS="no launcher in: $command"
       STDOUT=
