@@ -36,7 +36,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/lifecycle_context.py\" --harness claude --event SessionStart",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/lifecycle_context.sh\" --harness claude --event SessionStart",
             "timeout": 5
           }
         ]
@@ -48,7 +48,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/lifecycle_context.py\" --harness claude --event SubagentStart",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/lifecycle_context.sh\" --harness claude --event SubagentStart",
             "timeout": 5
           }
         ]
