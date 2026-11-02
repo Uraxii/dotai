@@ -43,8 +43,10 @@ the exact cited lines. See [bulk-reader](skills/bulk-reader/SKILL.md).
 
 ## Prerequisites
 
-Reads need Bash and [jq](https://jqlang.org), plus the harness's subagent tools
-when available. No Portal CLI, Portal authentication, or AiKA reader mode is
+Reads need Bash and awk. On Windows, that is Git for Windows: Claude Code runs
+the hooks with Git Bash, and Codex and Copilot reach it through
+`hooks/run-hook.cmd`. Reads also need the harness's subagent tools when
+available. No Portal CLI, Portal authentication, or AiKA reader mode is
 needed.
 
 ### Portal setup for code-writer only
@@ -125,6 +127,8 @@ The upstream 82–94% AiKA read benchmarks do not measure this subagent path.
 bash plugins/shunt/evals/run.sh
 python3 scripts/generate-plugin-manifests.py --check
 ```
+
+`scripts/run-hook-tests.sh` runs these evals with every other plugin hook test.
 
 The default suite checks hook routing, six deny-reason scenarios, chunk
 continuation, and code-writer transport against a stub. No Portal access is

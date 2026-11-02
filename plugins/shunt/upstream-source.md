@@ -25,7 +25,9 @@ Both hooks now follow the current `PreToolUse` hook output schema:
   `git push --force`).
 - Block: `{"hookSpecificOutput": {"hookEventName": "PreToolUse",
   "permissionDecision": "deny", "permissionDecisionReason": "<message>"}}`,
-  built with `jq -cn --arg` so paths and messages are escaped, `exit 0`.
+  built with `hooks/hook-json.awk` so messages are escaped, `exit 0`. The
+  hooks read their JSON input with the same file and need no jq, because
+  Git for Windows ships awk but not jq.
 
 `evals/run.sh` treats empty stdout as `allow` and the matching deny envelope
 as `block`. The hook accepts `--harness claude|codex|copilot`: Claude and

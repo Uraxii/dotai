@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/inject_instructions.py\" --harness claude --event SessionStart",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/inject_instructions.sh\" --harness claude --event SessionStart",
             "timeout": 5
           }
         ]
@@ -16,7 +16,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/inject_instructions.py\" --harness claude --event SessionStart --file main-agent-instructions.md",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/inject_instructions.sh\" --harness claude --event SessionStart --file main-agent-instructions.md",
             "timeout": 5
           }
         ]
@@ -27,7 +27,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/inject_instructions.py\" --harness claude --event SubagentStart",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/inject_instructions.sh\" --harness claude --event SubagentStart",
             "timeout": 5
           }
         ]

@@ -4,19 +4,22 @@
     "sessionStart": [
       {
         "type": "command",
-        "bash": "python3 \"$PLUGIN_ROOT/hooks/inject_instructions.py\" --harness copilot --event SessionStart",
+        "bash": "bash \"${PLUGIN_ROOT}/hooks/inject_instructions.sh\" --harness copilot --event SessionStart",
+        "powershell": "& \"$env:PLUGIN_ROOT\\hooks\\run-hook.cmd\" inject_instructions.sh --harness copilot --event SessionStart; exit $LASTEXITCODE",
         "timeoutSec": 5
       },
       {
         "type": "command",
-        "bash": "python3 \"$PLUGIN_ROOT/hooks/inject_instructions.py\" --harness copilot --event SessionStart --file main-agent-instructions.md",
+        "bash": "bash \"${PLUGIN_ROOT}/hooks/inject_instructions.sh\" --harness copilot --event SessionStart --file main-agent-instructions.md",
+        "powershell": "& \"$env:PLUGIN_ROOT\\hooks\\run-hook.cmd\" inject_instructions.sh --harness copilot --event SessionStart --file main-agent-instructions.md; exit $LASTEXITCODE",
         "timeoutSec": 5
       }
     ],
     "subagentStart": [
       {
         "type": "command",
-        "bash": "python3 \"$PLUGIN_ROOT/hooks/inject_instructions.py\" --harness copilot --event SubagentStart",
+        "bash": "bash \"${PLUGIN_ROOT}/hooks/inject_instructions.sh\" --harness copilot --event SubagentStart",
+        "powershell": "& \"$env:PLUGIN_ROOT\\hooks\\run-hook.cmd\" inject_instructions.sh --harness copilot --event SubagentStart; exit $LASTEXITCODE",
         "timeoutSec": 5
       }
     ]
