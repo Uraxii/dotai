@@ -9,11 +9,9 @@ MIN_LINES="${SHUNT_MIN_LINES:-350}"
 case "$MIN_LINES" in ''|*[!0-9]*) MIN_LINES=350 ;; esac
 
 # hook-json.awk reads the hook input, so the hook needs only bash and awk, and Git
-# Bash runs it on Windows.
-case "${BASH_SOURCE[0]}" in
-  */*) hooks_dir=${BASH_SOURCE[0]%/*} ;;
-  *) hooks_dir=. ;;
-esac
+# Bash runs it on Windows, where the launcher passes a path split by \.
+hooks_dir=${BASH_SOURCE[0]%[/\\]*}
+[ "$hooks_dir" = "${BASH_SOURCE[0]}" ] && hooks_dir=.
 # The value at a JSON path in the hook input, as jq -r '.path // empty' prints
 # it. A second path reads inside that member first, parsing it when it is a
 # JSON string, as Copilot sends toolArgs.
