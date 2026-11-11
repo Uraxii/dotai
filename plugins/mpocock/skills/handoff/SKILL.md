@@ -18,3 +18,5 @@ Do not duplicate content already captured in other artifacts (specs, plans, ADRs
 Redact any sensitive information, such as API keys, passwords, or personally identifiable information.
 
 If the user passed arguments, treat them as a description of what the next session will focus on and tailor the doc accordingly.
+
+After you create or update a handoff file, end your output with one line that holds only the file's full absolute path as inline code, for example `/home/user/project/.handoffs/auth-migration.md`, so the user can copy it into the next session.
