@@ -16,9 +16,7 @@
 ## Where work lives
 - No machine-specific info in committed or public files.
 - Each project gets its own dir under `~/Projects`. Create it if missing.
-- Track work with `/beads:bd` skill. Tick each item when it’s done, and add anything new you find.
-- Keep `.beads`, `.handoffs`, and `.kb` projects' `.nikki-agents/`, never at the repo root.
-- `BEADS_DIR` =`<project>/.nikki-agents/.beads` in `env` block of project `.claude/settings.local.json` so `/beads:bd` finds it.
+- Keep `.handoffs` and `.kb` in projects' `.nikki-agents/`, never at the repo root.
 
 ## Git
 - Features branch off `develop`. Never delete `develop`.
