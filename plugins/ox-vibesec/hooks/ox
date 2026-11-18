@@ -1,0 +1,17 @@
+#!/bin/sh
+# OX's installer keeps the hook and its pinned node outside this plugin, and a
+# reinstall can change the node version directory, so resolve both per call.
+script="$HOME/.claude/hooks/ox_mind.js"
+node=$(ls -d "$HOME"/.ox/node/v*/bin/node 2>/dev/null | sort -V | tail -n 1)
+if [ -z "$node" ] || [ ! -x "$node" ] || [ ! -f "$script" ]; then
+  echo "ox-vibesec: OX VibeSec is not installed on this machine; see https://docs.ox.security/vibesec/installing-vibesec" >&2
+  exit 0
+fi
+# ox_mind.js reads its token from CLAUDE_PLUGIN_DATA when set, but the installer saves it in ~/.claude.
+unset CLAUDE_PLUGIN_DATA
+# The Bash tool does not export CLAUDE_PLUGIN_ROOT, and --status needs it to find hooks.json.
+if [ -z "$CLAUDE_PLUGIN_ROOT" ]; then
+  CLAUDE_PLUGIN_ROOT=$(cd "$(dirname "$0")/.." && pwd)
+  export CLAUDE_PLUGIN_ROOT
+fi
+exec "$node" "$script" --ide claude "$@"
