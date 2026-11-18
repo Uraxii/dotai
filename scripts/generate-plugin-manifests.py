@@ -207,8 +207,18 @@ PLUGINS: list[dict[str, object]] = [
         ],
     },
     {
+        # Claude Code loads hooks/hooks.json without a manifest key, and OX's
+        # --status check looks for that exact path, so no "hooks" entry here.
+        "name": "ox-vibesec",
+        "harnesses": ["claude"],
+        "description": (
+            "Wire the OX Security VibeSec hooks and its status and login "
+            "commands through a plugin instead of settings.json."
+        ),
+    },
+    {
         "name": "mpocock",
-        "version": "1.2.5",
+        "version": "1.2.6",
         "hooks": ["claude", "codex"],
         "description": (
             "Compact a conversation into a handoff document another agent "
@@ -343,7 +353,7 @@ PLUGINS: list[dict[str, object]] = [
     },
     {
         "name": "personal-instructions",
-        "version": "1.0.5",
+        "version": "1.0.6",
         "hooks": ["claude", "codex", "copilot"],
         "skills": False,
         "description": (

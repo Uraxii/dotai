@@ -47,6 +47,11 @@
       "description": "Delegate a code change from Claude Code to an outside Codex CLI worker."
     },
     {
+      "name": "ox-vibesec",
+      "source": "./plugins/ox-vibesec",
+      "description": "Wire the OX Security VibeSec hooks and its status and login commands through a plugin instead of settings.json."
+    },
+    {
       "name": "mpocock",
       "source": "./plugins/mpocock",
       "description": "Compact a conversation into a handoff document another agent can pick the work up from."
