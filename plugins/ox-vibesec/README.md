@@ -4,6 +4,7 @@ This plugin connects the OX Security VibeSec hooks to Claude Code. It adds the
 hooks for five events: SessionStart, UserPromptSubmit, PreToolUse, PostToolUse,
 and PostToolUseFailure. It also adds three commands: `/ox-vibesec:status`,
 `/ox-vibesec:login-oauth`, and `/ox-vibesec:login-api-key`.
+The `update` skill tells an agent how to update the plugin and the VibeSec hook code.
 
 The plugin does not contain VibeSec. Run the OX installer once before you
 install the plugin. The installer downloads a Node.js runtime to `~/.ox/node/`

@@ -210,6 +210,7 @@ PLUGINS: list[dict[str, object]] = [
         # Claude Code loads hooks/hooks.json without a manifest key, and OX's
         # --status check looks for that exact path, so no "hooks" entry here.
         "name": "ox-vibesec",
+        "version": "1.1.0",
         "harnesses": ["claude"],
         "description": (
             "Wire the OX Security VibeSec hooks and its status and login "
