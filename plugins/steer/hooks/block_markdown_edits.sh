@@ -12,6 +12,10 @@
 # A .ai/ deeper in the tree does not count, and ".." segments are resolved
 # first, so <root>/.ai/../README.md is outside.
 #
+# Any path with a directory segment named "plans" (any case) is also allowed,
+# in or out of a repo, such as ~/.claude/plans/ (plan mode) or docs/plans/.
+# ".." is resolved first, so /repo/plans/../README.md is outside.
+#
 # The user asked when their latest prompt in the transcript names the file's
 # basename, the basename without its extension (at least 4 characters), the
 # word "markdown", or ".md", ignoring case. Inside a subagent, transcript_path
@@ -40,11 +44,25 @@ lexical() {
   case $1 in /*) printf '%s\n' "${out:-/}" ;; *) printf '%s\n' "${out#/}" ;; esac
 }
 
+# absolute FILE CWD: FILE with "\\" as "/", made absolute against CWD and resolved.
+absolute() {
+  local path=${1//\\//}
+  case $path in /* | [A-Za-z]:/*) ;; *) [ -n "$2" ] || return 1; path=$2/$path ;; esac
+  lexical "$path"
+}
+
+# in_plans_dir FILE CWD: succeeds when a directory segment of FILE is "plans".
+in_plans_dir() {
+  local path
+  path=$(absolute "$1" "$2") || return 1
+  case /${path%/*}/ in */[Pp][Ll][Aa][Nn][Ss]/*) return 0 ;; esac
+  return 1
+}
+
 # in_project_scratch FILE CWD: succeeds when FILE is inside <root>/.ai/.
 in_project_scratch() {
-  local path=${1//\\//} dir rest='' rel root
-  case $path in /* | [A-Za-z]:/*) ;; *) [ -n "$2" ] || return 1; path=$2/$path ;; esac
-  path=$(lexical "$path")
+  local path dir rest='' rel root
+  path=$(absolute "$1" "$2") || return 1
   dir=$path
   until [ -d "$dir" ]; do
     case $dir in */*) ;; *) return 1 ;; esac
@@ -67,6 +85,7 @@ in_project_scratch() {
 fields=$(read_json payload 2>/dev/null <<<"$(cat)") || exit 0
 { IFS= read -r transcript; IFS= read -r name; IFS= read -r file; IFS= read -r cwd; } <<<"$fields"
 in_project_scratch "$file" "$cwd" && exit 0
+in_plans_dir "$file" "$cwd" && exit 0
 [ -n "$transcript" ] && [ -f "$transcript" ] || exit 0
 FILE_NAME=$name read_json transcript "$transcript" 2>/dev/null
 exit 0

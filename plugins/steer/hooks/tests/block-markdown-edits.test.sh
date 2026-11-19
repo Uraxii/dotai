@@ -104,6 +104,20 @@ expect_equal "a task notification is not the user's prompt" deny "$DECISION"
 decide /repo/guide.md "$(user_prompt 'fix the parser'; sidechain_prompt 'brief: edit guide.md')"
 expect_equal "a subagent brief is not the user's prompt" deny "$DECISION"
 
+# A plans/ directory segment.
+for file in /home/u/.claude/plans/foo.md /repo/docs/plans/x.md 'C:\Users\u\.claude\plans\x.md' /repo/Plans/x.md; do
+  decide "$file" "$(user_prompt 'fix the parser')"
+  expect_equal "$file is under plans/ and allows" allow "$DECISION"
+done
+for file in /repo/plans.md /repo/myplans/x.md /repo/plans/../README.md; do
+  decide "$file" "$(user_prompt 'fix the parser')"
+  expect_equal "$file is not under plans/ and denies" deny "$DECISION"
+done
+decide plans/x.md "$(user_prompt 'fix the parser')" Edit /repo
+expect_equal "a relative path under plans/ resolves against cwd and allows" allow "$DECISION"
+decide ../README.md "$(user_prompt 'fix the parser')" Edit /repo/plans
+expect_equal "a relative path escaping plans/ denies" deny "$DECISION"
+
 # The project's .ai/ folder.
 project="$WORK/project"
 git init -q "$project"
