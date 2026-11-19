@@ -8,8 +8,9 @@
 #
 # MODE=transcript reads the transcript file, with FILE_NAME set to that
 # basename. It prints the deny output when the user's latest prompt names
-# none of the unlock words, and prints nothing when it names one or when no
-# prompt of the user's is found.
+# none of the unlock words and is not a short approval of an assistant
+# message that names the file. It prints nothing when no prompt of the
+# user's is found.
 
 BEGIN {
   if (ENVIRON["MODE"] == "payload") {
@@ -28,7 +29,7 @@ BEGIN {
   }
 }
 
-index($0, "\"user\"") { LINES[++line_count] = $0 }
+index($0, "\"user\"") || index($0, "\"assistant\"") { LINES[++line_count] = $0 }
 
 END {
   if (ENVIRON["MODE"] == "payload") exit
@@ -37,15 +38,16 @@ END {
     if (human_prompt()) break
   }
   if (i < 1) exit
-  prompt = tolower(prompt_text())
+  prompt = tolower(message_text())
   name = ENVIRON["FILE_NAME"]
   stem = name
   sub(/\.[^.]*$/, "", stem)
   if (index(prompt, tolower(name)) || index(prompt, "markdown") || index(prompt, ".md")) exit
   if (length(stem) >= 4 && index(prompt, tolower(stem))) exit
+  if (approval(prompt) && index(tolower(assistant_text_before(i)), tolower(name))) exit
   reason = "Blocked: the user's latest message does not ask for markdown edits, so " name " stays as it is. " \
     "Markdown outside the project's .ai/ folder needs the user's request. Ask the user in chat before you edit it. " \
-    "If the user names the file or says \"markdown\", the edit is allowed. " \
+    "If the user names the file, says \"markdown\", or answers yes to your question that names the file, the edit is allowed. " \
     "Notes, plans and handoffs belong in .ai/ at the project root, where markdown edits are always allowed."
   printf "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":%s}}\n", jquote(reason)
 }
@@ -57,11 +59,30 @@ function human_prompt() {
   return real_user_prompt() && (JT["/origin/kind"] != "string" || jis("/origin/kind", "human"))
 }
 
-function prompt_text(    b, out) {
+function message_text(    b, out) {
   if (JT["/message/content"] == "string") return jget("/message/content")
   out = ""
   for (b = 0; b < JN["/message/content"]; b++) {
     if (jis("/message/content/" b "/type", "text")) out = out jget("/message/content/" b "/text") "\n"
   }
   return out
+}
+
+# A short yes to the assistant's question, such as "yes, go ahead". PROMPT is
+# lowercase. "yesterday" and "okra" are not approvals.
+function approval(prompt) {
+  gsub(/^[ \t\r\n]+|[ \t\r\n]+$/, "", prompt)
+  return length(prompt) <= 80 && \
+    prompt ~ /^(yes|y|yep|yeah|sure|ok|okay|go ahead|do it|approved|please do)([^a-z]|$)/
+}
+
+# The text of the main thread's last assistant entry with text before line
+# I, within the turn that line I ends. Tool calls carry no text blocks.
+function assistant_text_before(i,    j) {
+  for (j = i - 1; j >= 1; j--) {
+    if (!jparse(LINES[j]) || JT[""] != "object" || jtruthy("/isSidechain")) continue
+    if (real_user_prompt()) return ""
+    if (jis("/type", "assistant") && message_text() != "") return message_text()
+  }
+  return ""
 }

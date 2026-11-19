@@ -22,7 +22,10 @@
 #
 # The user asked when their latest prompt in the transcript names the file's
 # basename, the basename without its extension (at least 4 characters), the
-# word "markdown", or ".md", ignoring case. Inside a subagent, transcript_path
+# word "markdown", or ".md", ignoring case. A short approval also counts: a
+# prompt of at most 80 characters that starts with "yes", "ok", "go ahead" or
+# a similar word, when the main thread's last assistant text before it names
+# the file's basename. Inside a subagent, transcript_path
 # is still the main session's transcript, so the user's prompt decides there
 # too, not the delegating agent's brief.
 #

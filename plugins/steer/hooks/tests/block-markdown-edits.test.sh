@@ -17,6 +17,7 @@ tool_result() { jq -cn --arg t "$1" '{type: "user", message: {content: [{type: "
 injected_prompt() { jq -cn --arg t "$1" '{type: "user", isMeta: true, message: {content: [{type: "text", text: $t}]}}'; }
 notification() { jq -cn --arg t "$1" '{type: "user", origin: {kind: "task-notification"}, message: {content: $t}}'; }
 sidechain_prompt() { jq -cn --arg t "$1" '{type: "user", isSidechain: true, message: {content: $t}}'; }
+assistant_says() { jq -cn --arg t "$1" '{type: "assistant", message: {content: [{type: "text", text: $t}]}}'; }
 assistant() { echo '{"type": "assistant", "message": {"model": "claude-opus-5", "content": [{"type": "tool_use", "name": "Edit"}]}}'; }
 
 # decide FILE TRANSCRIPT_LINES [TOOL] [CWD]: writes the transcript, runs the
@@ -103,6 +104,27 @@ decide /repo/guide.md "$(user_prompt 'fix the parser'; notification 'agent done:
 expect_equal "a task notification is not the user's prompt" deny "$DECISION"
 decide /repo/guide.md "$(user_prompt 'fix the parser'; sidechain_prompt 'brief: edit guide.md')"
 expect_equal "a subagent brief is not the user's prompt" deny "$DECISION"
+
+# A short approval of the assistant's question.
+decide /repo/README.md "$(user_prompt 'fix the parser'; assistant_says 'May I edit README.md?'; user_prompt 'yes, go ahead')"
+expect_equal "yes to a question naming the file allows" allow "$DECISION"
+decide /repo/README.md "$(user_prompt 'fix the parser'; assistant_says 'May I edit CHANGELOG.md?'; user_prompt 'yes')"
+expect_equal "yes to a question naming another file denies" deny "$DECISION"
+decide /repo/README.md "$(user_prompt 'fix the parser'; assistant_says 'May I edit README.md?'; user_prompt "yesterday's parser broke")"
+expect_equal "a word that starts with yes is not an approval" deny "$DECISION"
+decide /repo/README.md "$(user_prompt 'fix the parser'; assistant_says 'May I edit README.md?'
+  user_prompt 'yes but first explain why the tokenizer drops trailing whitespace in the parser tests')"
+expect_equal "a prompt over 80 characters is not an approval" deny "$DECISION"
+decide /repo/README.md "$(user_prompt 'fix the parser'
+  jq -cn '{type: "assistant", message: {content: [{type: "text", text: "May I edit README.md?"}, {type: "tool_use", name: "Read"}]}}'
+  tool_result 'ok'; user_prompt 'OK')"
+expect_equal "a question in a text block beside a tool_use counts" allow "$DECISION"
+decide /repo/README.md "$(user_prompt 'fix the parser'
+  jq -cn '{type: "assistant", isSidechain: true, message: {content: [{type: "text", text: "May I edit README.md?"}]}}'
+  user_prompt 'yes')"
+expect_equal "a subagent's question does not count" deny "$DECISION"
+decide /repo/README.md "$(user_prompt 'fix the parser'; assistant_says 'May I edit README.md?'; user_prompt 'no'; assistant; user_prompt 'yes')"
+expect_equal "an approval only answers the assistant's latest turn" deny "$DECISION"
 
 # Harness plan files.
 export HOME=/home/u
