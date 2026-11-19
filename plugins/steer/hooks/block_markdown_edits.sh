@@ -1,9 +1,16 @@
 #!/usr/bin/env bash
 # block_markdown_edits: PreToolUse hook that denies Write, Edit and MultiEdit
-# on a markdown file (.md, .markdown, .mdx, any case) unless the user asked.
+# on a markdown file (.md, .markdown, .mdx, any case) unless the file is in
+# the project's .ai/ scratch folder or the user asked.
 #
-# Wired in the plugin's hooks/claude-hooks.json. It needs only bash and awk,
-# so Git Bash runs it on Windows. block_markdown_edits.awk reads the JSON.
+# Wired in the plugin's hooks/claude-hooks.json. It needs only bash, awk and
+# git, so Git Bash runs it on Windows. block_markdown_edits.awk reads the JSON.
+#
+# The project's .ai/ folder is <root>/.ai, where <root> is the git top level
+# of the target's nearest existing directory, so a worktree's own .ai/ counts.
+# Outside a git repo, <root> is $CLAUDE_PROJECT_DIR, then the payload's cwd.
+# A .ai/ deeper in the tree does not count, and ".." segments are resolved
+# first, so <root>/.ai/../README.md is outside.
 #
 # The user asked when their latest prompt in the transcript names the file's
 # basename, the basename without its extension (at least 4 characters), the
@@ -12,19 +19,54 @@
 # too, not the delegating agent's brief.
 #
 # Hook protocol (Claude Code):
-# - stdin: JSON envelope with tool_input.file_path and transcript_path.
+# - stdin: JSON envelope with tool_input.file_path, cwd and transcript_path.
 # - stdout: a PreToolUse deny object, or nothing to allow.
 # - exit code: always 0. Bad JSON, a missing transcript, no user prompt or
 #   any error allows. Never crash the session.
 
+set -f
 hooks_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd) || exit 0
 read_json() {
   LC_ALL=C MODE=$1 awk -f "$hooks_dir/hook-json.awk" -f "$hooks_dir/user-prompt.awk" \
     -f "$hooks_dir/block_markdown_edits.awk" "${@:2}"
 }
 
+# lexical PATH: PATH with "." and ".." segments resolved, without touching disk.
+lexical() {
+  local part out='' IFS=/
+  for part in $1; do
+    case $part in '' | .) ;; ..) out=${out%/*} ;; *) out=$out/$part ;; esac
+  done
+  case $1 in /*) printf '%s\n' "${out:-/}" ;; *) printf '%s\n' "${out#/}" ;; esac
+}
+
+# in_project_scratch FILE CWD: succeeds when FILE is inside <root>/.ai/.
+in_project_scratch() {
+  local path=${1//\\//} dir rest='' rel root
+  case $path in /* | [A-Za-z]:/*) ;; *) [ -n "$2" ] || return 1; path=$2/$path ;; esac
+  path=$(lexical "$path")
+  dir=$path
+  until [ -d "$dir" ]; do
+    case $dir in */*) ;; *) return 1 ;; esac
+    rest=/${dir##*/}$rest
+    dir=${dir%/*}
+    [ -n "$dir" ] || dir=/
+  done
+  if rel=$(git -C "$dir" rev-parse --show-prefix 2>/dev/null); then
+    rel=$rel${rest#/}
+  else
+    root=${CLAUDE_PROJECT_DIR:-$2}
+    [ -n "$root" ] || return 1
+    root=$(lexical "${root//\\//}")
+    case $path in "${root%/}"/*) rel=${path#"${root%/}"/} ;; *) return 1 ;; esac
+  fi
+  case $rel in .ai/*) return 0 ;; esac
+  return 1
+}
+
 fields=$(read_json payload 2>/dev/null <<<"$(cat)") || exit 0
-transcript=${fields%%$'\n'*}
+{ IFS= read -r transcript; IFS= read -r name; IFS= read -r file; IFS= read -r cwd; } <<<"$fields"
+in_project_scratch "$file" "$cwd" && exit 0
 [ -n "$transcript" ] && [ -f "$transcript" ] || exit 0
-FILE_NAME=${fields#*$'\n'} read_json transcript "$transcript" 2>/dev/null
+FILE_NAME=$name read_json transcript "$transcript" 2>/dev/null
 exit 0

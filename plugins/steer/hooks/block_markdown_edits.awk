@@ -2,9 +2,9 @@
 # user-prompt.awk, with LC_ALL=C.
 #
 # MODE=payload reads the PreToolUse envelope on stdin. When the target is a
-# markdown file it prints the transcript path, then the file's basename, and
-# exits 0. It exits 1 for anything else: not JSON, no file_path, or a file
-# that is not markdown.
+# markdown file it prints the transcript path, the file's basename, the
+# file_path and the payload's cwd, one per line, and exits 0. It exits 1 for
+# anything else: not JSON, no file_path, or a file that is not markdown.
 #
 # MODE=transcript reads the transcript file, with FILE_NAME set to that
 # basename. It prints the deny output when the user's latest prompt names
@@ -16,11 +16,14 @@ BEGIN {
     text = ""
     while ((getline line) > 0) text = text line "\n"
     if (!jparse(text) || JT[""] != "object" || JT["/tool_input/file_path"] != "string") exit 1
-    name = jget("/tool_input/file_path")
+    path = jget("/tool_input/file_path")
+    name = path
     sub(/.*[\/\\]/, "", name)
     if (tolower(name) !~ /\.(md|markdown|mdx)$/) exit 1
     print (JT["/transcript_path"] == "string" ? jget("/transcript_path") : "")
     print name
+    print path
+    print (JT["/cwd"] == "string" ? jget("/cwd") : "")
     exit 0
   }
 }
@@ -41,7 +44,9 @@ END {
   if (index(prompt, tolower(name)) || index(prompt, "markdown") || index(prompt, ".md")) exit
   if (length(stem) >= 4 && index(prompt, tolower(stem))) exit
   reason = "Blocked: the user's latest message does not ask for markdown edits, so " name " stays as it is. " \
-    "Ask the user in chat before you edit it. If the user names the file or says \"markdown\", the edit is allowed."
+    "Markdown outside the project's .ai/ folder needs the user's request. Ask the user in chat before you edit it. " \
+    "If the user names the file or says \"markdown\", the edit is allowed. " \
+    "Notes, plans and handoffs belong in .ai/ at the project root, where markdown edits are always allowed."
   printf "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":%s}}\n", jquote(reason)
 }
 

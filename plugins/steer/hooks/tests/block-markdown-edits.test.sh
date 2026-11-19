@@ -9,6 +9,7 @@ PLUGIN_ROOT_DIR="$(dirname "$HOOKS_DIR")"
 HOOK="$HOOKS_DIR/block_markdown_edits.sh"
 WORK=$(mktemp -d)
 trap 'rm -rf "$WORK"' EXIT
+unset CLAUDE_PROJECT_DIR
 
 user_prompt() { jq -cn --arg t "$1" '{type: "user", message: {content: $t}}'; }
 text_prompt() { jq -cn --arg t "$1" '{type: "user", origin: {kind: "human"}, message: {content: [{type: "text", text: $t}]}}'; }
@@ -18,13 +19,14 @@ notification() { jq -cn --arg t "$1" '{type: "user", origin: {kind: "task-notifi
 sidechain_prompt() { jq -cn --arg t "$1" '{type: "user", isSidechain: true, message: {content: $t}}'; }
 assistant() { echo '{"type": "assistant", "message": {"model": "claude-opus-5", "content": [{"type": "tool_use", "name": "Edit"}]}}'; }
 
-# decide FILE TRANSCRIPT_LINES [TOOL]: writes the transcript, runs the hook on
-# an edit of FILE, and sets DECISION to allow, deny, or a description of an
-# invalid result.
+# decide FILE TRANSCRIPT_LINES [TOOL] [CWD]: writes the transcript, runs the
+# hook on an edit of FILE, and sets DECISION to allow, deny, or a description
+# of an invalid result.
 decide() {
   printf '%s\n' "$2" >"$WORK/t.jsonl"
-  decide_payload "$(jq -cn --arg f "$1" --arg t "$WORK/t.jsonl" --arg n "${3:-Edit}" \
-    '{hook_event_name: "PreToolUse", tool_name: $n, tool_input: {file_path: $f}, transcript_path: $t}')"
+  decide_payload "$(jq -cn --arg f "$1" --arg t "$WORK/t.jsonl" --arg n "${3:-Edit}" --arg c "${4:-}" \
+    '{hook_event_name: "PreToolUse", tool_name: $n, tool_input: {file_path: $f}, transcript_path: $t}
+     + (if $c == "" then {} else {cwd: $c} end)')"
 }
 decide_payload() {
   run_hook "$HOOK" <<<"$1"
@@ -62,6 +64,7 @@ decide /repo/docs/guide.md "$(user_prompt 'fix the parser')"
 expect_equal "a markdown edit with no mention denies" deny "$DECISION"
 expect_contains "the reason names the file" "guide.md" "$(jq -r '.hookSpecificOutput.permissionDecisionReason' <<<"$STDOUT")"
 expect_contains "the reason says to ask the user" "Ask the user in chat" "$(jq -r '.hookSpecificOutput.permissionDecisionReason' <<<"$STDOUT")"
+expect_contains "the reason points notes at .ai/" "Notes, plans and handoffs belong in .ai/" "$(jq -r '.hookSpecificOutput.permissionDecisionReason' <<<"$STDOUT")"
 for tool in Write MultiEdit; do
   decide /repo/guide.md "$(user_prompt 'fix the parser')" "$tool"
   expect_equal "$tool on markdown with no mention denies" deny "$DECISION"
@@ -100,6 +103,39 @@ decide /repo/guide.md "$(user_prompt 'fix the parser'; notification 'agent done:
 expect_equal "a task notification is not the user's prompt" deny "$DECISION"
 decide /repo/guide.md "$(user_prompt 'fix the parser'; sidechain_prompt 'brief: edit guide.md')"
 expect_equal "a subagent brief is not the user's prompt" deny "$DECISION"
+
+# The project's .ai/ folder.
+project="$WORK/project"
+git init -q "$project"
+decide "$project/.ai/plans/x.md" "$(user_prompt 'fix the parser')" Write
+expect_equal "a write inside <root>/.ai/, before .ai/ exists, allows" allow "$DECISION"
+mkdir -p "$project/.ai/plans"
+decide "$project/.ai/plans/x.md" "$(user_prompt 'fix the parser')"
+expect_equal "an edit inside an existing <root>/.ai/ allows" allow "$DECISION"
+decide "$project/docs/.ai/x.md" "$(user_prompt 'fix the parser')"
+expect_equal "a .ai/ below the root does not count" deny "$DECISION"
+decide "$project/.ai/../README.md" "$(user_prompt 'fix the parser')"
+expect_equal "a .. segment out of .ai/ denies" deny "$DECISION"
+decide "$project/.ai" "$(user_prompt 'fix the parser')"
+expect_equal "a non-markdown path is untouched by the .ai/ rule" allow "$DECISION"
+worktree="$project/.claude/worktrees/agent"
+git init -q "$worktree"
+decide "$worktree/.ai/notes.md" "$(user_prompt 'fix the parser')"
+expect_equal "a nested repo's own .ai/ allows" allow "$DECISION"
+decide "$worktree/README.md" "$(user_prompt 'fix the parser')"
+expect_equal "a nested repo's README still denies" deny "$DECISION"
+plain="$WORK/plain"
+mkdir -p "$plain"
+CLAUDE_PROJECT_DIR=$plain decide "$plain/.ai/x.md" "$(user_prompt 'fix the parser')"
+expect_equal "outside git, CLAUDE_PROJECT_DIR/.ai/ allows" allow "$DECISION"
+CLAUDE_PROJECT_DIR=$plain decide "$plain/notes.md" "$(user_prompt 'fix the parser')"
+expect_equal "outside git, a file beside .ai/ denies" deny "$DECISION"
+decide "$plain/.ai/x.md" "$(user_prompt 'fix the parser')" Edit "$plain"
+expect_equal "outside git with no CLAUDE_PROJECT_DIR, the payload cwd's .ai/ allows" allow "$DECISION"
+decide "$plain/.ai/x.md" "$(user_prompt 'fix the parser')"
+expect_equal "outside git with no root at all, the prompt decides" deny "$DECISION"
+decide ".ai/x.md" "$(user_prompt 'fix the parser')" Edit "$project"
+expect_equal "a relative path resolves against the payload cwd" allow "$DECISION"
 
 # Fail open.
 decide /repo/guide.md "$(assistant)"
