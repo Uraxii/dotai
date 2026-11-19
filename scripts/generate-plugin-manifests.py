@@ -124,7 +124,7 @@ PLUGINS: list[dict[str, object]] = [
     },
     {
         "name": "llm-wiki",
-        "version": "1.1.1",
+        "version": "1.1.2",
         "description": (
             "Keep research findings in a searchable project knowledgebase "
             "instead of re-deriving them."
@@ -375,7 +375,7 @@ PLUGINS: list[dict[str, object]] = [
     },
     {
         "name": "personal-instructions",
-        "version": "1.0.6",
+        "version": "1.0.7",
         "hooks": ["claude", "codex", "copilot"],
         "skills": False,
         "description": (
