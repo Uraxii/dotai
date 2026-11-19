@@ -11,7 +11,8 @@
 # of the target's nearest existing directory, so a worktree's own .ai/ counts.
 # Outside a git repo, <root> is $CLAUDE_PROJECT_DIR, then the payload's cwd.
 # A .ai/ deeper in the tree does not count, and ".." segments are resolved
-# first, so <root>/.ai/../README.md is outside.
+# first, so <root>/.ai/../README.md is outside. A target that is itself a
+# symlink gets neither this exemption nor the plan-file ones below.
 #
 # Harness plan files are also allowed, with ".." resolved first:
 # - Claude Code plan mode: $CLAUDE_CONFIG_DIR/plans/, default ~/.claude/plans/.
@@ -104,8 +105,12 @@ in_project_allowed() {
 
 fields=$(read_json payload 2>/dev/null <<<"$(cat)") || exit 0
 { IFS= read -r transcript; IFS= read -r name; IFS= read -r file; IFS= read -r cwd; } <<<"$fields"
-in_project_allowed "$file" "$cwd" && exit 0
-in_harness_plans "$file" "$cwd" && exit 0
+# A symlink, even a dangling one, can point anywhere, so it gets no folder
+# exemption. Directory symlinks need no check: git resolves them.
+if ! { path=$(absolute "$file" "$cwd") && [ -L "$path" ]; }; then
+  in_project_allowed "$file" "$cwd" && exit 0
+  in_harness_plans "$file" "$cwd" && exit 0
+fi
 [ -n "$transcript" ] && [ -f "$transcript" ] || exit 0
 FILE_NAME=$name read_json transcript "$transcript" 2>/dev/null
 exit 0
