@@ -1,4 +1,5 @@
-# The JSON side of opus_5_reduce_output.sh. Load after hook-json.awk, with LC_ALL=C.
+# The JSON side of opus_5_reduce_output.sh. Load after hook-json.awk and
+# user-prompt.awk, with LC_ALL=C.
 #
 # MODE=payload reads the Stop envelope on stdin. It prints 1 or 0 for
 # stop_hook_active, then the transcript path or an empty line. It exits 1 when
@@ -69,18 +70,6 @@ END {
   if (prompt_seen && broken_turn) exit 1
   print model
   print (!prompt_seen ? "unknown" : mutated ? "mutated" : "clean")
-}
-
-# A tool result and a harness injection (isMeta) are type "user" too, but
-# only a typed prompt bounds the turn.
-function real_user_prompt(    b) {
-  if (!jis("/type", "user") || jtruthy("/isMeta") || JT["/message"] != "object") return 0
-  if (JT["/message/content"] == "string") return 1
-  if (JT["/message/content"] != "array") return 0
-  for (b = 0; b < JN["/message/content"]; b++) {
-    if (JT["/message/content/" b] == "object" && jis("/message/content/" b "/type", "text")) return 1
-  }
-  return 0
 }
 
 # Agent, Task and SendMessage count as mutations because a delegate's own
