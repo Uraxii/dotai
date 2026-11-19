@@ -216,7 +216,7 @@
       "id": 26,
       "name": "claude-read-nested-hidden-handoff",
       "harness": "claude",
-      "input": {"tool_input": {"file_path": "{{FIXTURES}}/.nikki-agents/.handoffs/work.md"}},
+      "input": {"tool_input": {"file_path": "{{FIXTURES}}/.ai/.handoffs/work.md"}},
       "fixture": {"lines": 800},
       "expected_decision": "allow",
       "reason": "Handoff directory permits a full read above the threshold"
@@ -306,7 +306,7 @@
       "id": 36,
       "name": "codex-read-nested-hidden-handoff",
       "harness": "codex",
-      "input": {"tool_input": {"file_path": "{{FIXTURES}}/.nikki-agents/.handoffs/work.md"}},
+      "input": {"tool_input": {"file_path": "{{FIXTURES}}/.ai/.handoffs/work.md"}},
       "fixture": {"lines": 800},
       "expected_decision": "allow",
       "reason": "Handoff directory permits a full read above the threshold"
@@ -396,7 +396,7 @@
       "id": 46,
       "name": "copilot-read-nested-hidden-handoff",
       "harness": "copilot",
-      "input": {"toolName": "view", "toolArgs": {"path": "{{FIXTURES}}/.nikki-agents/.handoffs/work.md"}},
+      "input": {"toolName": "view", "toolArgs": {"path": "{{FIXTURES}}/.ai/.handoffs/work.md"}},
       "fixture": {"lines": 800},
       "expected_decision": "allow",
       "reason": "Handoff directory permits a full read above the threshold"

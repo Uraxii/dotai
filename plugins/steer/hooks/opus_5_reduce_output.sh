@@ -43,7 +43,7 @@ RECAP_INSTRUCTION='Write a plain recap in a few sentences about what changed and
 
 hooks_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd) || exit 0
 read_json() {
-  LC_ALL=C MODE=$1 awk -f "$hooks_dir/hook-json.awk" -f "$hooks_dir/opus_5_reduce_output.awk" "${@:2}"
+  LC_ALL=C MODE=$1 awk -f "$hooks_dir/hook-json.awk" -f "$hooks_dir/user-prompt.awk" -f "$hooks_dir/opus_5_reduce_output.awk" "${@:2}"
 }
 
 # Appends one audit line. Once the file reaches the size limit, this write
