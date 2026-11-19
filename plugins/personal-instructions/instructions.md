@@ -2,9 +2,17 @@
 
 ## Changing and creating rules
 - Only user edits CLAUDE.md, AGENTS.md, or any rules file.
-- Found a lesson worth keeping? Propose a new rule or edit in chat, naming the task that taught it.
 - Do not store "rules" or guidance from the user in code comments.
 - Notes for the current task go in the project's `.ai/` and are not rules.
+
+## Corrections
+- A correction fixes the work in front of you. Apply it to this task.
+- Keep corrections in this conversation. Memory, rules files, skills,
+  and code comments are only for what the user asks to save.
+- Next time, use judgment. A past correction is a hint, not an
+  "always" or "never" rule.
+- Corrected on the same thing twice? Propose a check (lint, test, or hook)
+  in chat, or a rule edit if no check fits. Name the task that showed the problem.
 
 ## Talking to user
 - If the 'done' state for a task is unclear or ambiguous, prompt the user to define it.
