@@ -72,6 +72,11 @@
       "description": "Answer in a compressed register that drops filler and keeps every technical fact."
     },
     {
+      "name": "asd-ste100",
+      "source": "./plugins/asd-ste100",
+      "description": "Rewrite ambiguous English into ASD-STE100 Simplified Technical English so agents and readers cannot misread it."
+    },
+    {
       "name": "steer",
       "source": "./plugins/steer",
       "description": "Harness hooks that steer agent behaviour, independent of any skill."
