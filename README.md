@@ -27,6 +27,7 @@ agent files. The other fifteen each cover one tool or one job. Only
 | `skills` | Review and author SKILL.md files, finding and repairing the smells that stop a skill triggering. |
 | `codebase-memory` | Query a code graph through the codebase-memory-mcp server, skill, and graph-verification agents. |
 | `caveman` | Answer in a compressed register that drops filler and keeps every technical fact. |
+| `asd-ste100` | Rewrite ambiguous English into ASD-STE100 Simplified Technical English so agents and readers cannot misread it. |
 | `steer` | Harness hooks that steer agent behaviour, independent of any skill. |
 | `shunt` | Shunts large reads to small subagents and boilerplate generation to Portal AiKA to save main-agent context tokens. |
 | `personal-instructions` | Inject a hand-edited instructions.md at session start and, where the harness has a subagent-start hook, subagent start. |

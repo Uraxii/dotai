@@ -309,6 +309,27 @@ PLUGINS: list[dict[str, object]] = [
         ],
     },
     {
+        "name": "asd-ste100",
+        "description": (
+            "Rewrite ambiguous English into ASD-STE100 Simplified Technical "
+            "English so agents and readers cannot misread it."
+        ),
+        "short": "Rewrite English so it has one reading.",
+        "long": (
+            "Applies the ASD-STE100 Simplified Technical English rules to "
+            "text that an agent or a downstream system must parse without a "
+            "human to resolve ambiguity: tool descriptions, error messages, "
+            "inter-agent instructions, and status reports. Ships a "
+            "stdlib-only linter for the structural rules. Vendored unedited "
+            "from danyuchn/asd-ste100-skill."
+        ),
+        "keywords": ["writing-style", "controlled-language"],
+        "prompts": [
+            "Rewrite this error message in Simplified Technical English.",
+            "Make this tool description impossible for an agent to misread.",
+        ],
+    },
+    {
         "name": "steer",
         "version": "1.2.5",
         "hooks": ["claude"],

@@ -1,0 +1,32 @@
+{
+  "name": "asd-ste100",
+  "version": "1.0.0",
+  "description": "Rewrite ambiguous English into ASD-STE100 Simplified Technical English so agents and readers cannot misread it.",
+  "author": {
+    "name": "Uraxii",
+    "url": "https://github.com/Uraxii"
+  },
+  "homepage": "https://github.com/Uraxii/dotai",
+  "repository": "https://github.com/Uraxii/dotai",
+  "keywords": [
+    "codex",
+    "skills",
+    "writing-style",
+    "controlled-language"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "asd-ste100",
+    "shortDescription": "Rewrite English so it has one reading.",
+    "longDescription": "Applies the ASD-STE100 Simplified Technical English rules to text that an agent or a downstream system must parse without a human to resolve ambiguity: tool descriptions, error messages, inter-agent instructions, and status reports. Ships a stdlib-only linter for the structural rules. Vendored unedited from danyuchn/asd-ste100-skill.",
+    "developerName": "Uraxii",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Skills"
+    ],
+    "defaultPrompt": [
+      "Rewrite this error message in Simplified Technical English.",
+      "Make this tool description impossible for an agent to misread."
+    ]
+  }
+}
