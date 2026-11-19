@@ -104,19 +104,29 @@ expect_equal "a task notification is not the user's prompt" deny "$DECISION"
 decide /repo/guide.md "$(user_prompt 'fix the parser'; sidechain_prompt 'brief: edit guide.md')"
 expect_equal "a subagent brief is not the user's prompt" deny "$DECISION"
 
-# A plans/ directory segment.
-for file in /home/u/.claude/plans/foo.md /repo/docs/plans/x.md 'C:\Users\u\.claude\plans\x.md' /repo/Plans/x.md; do
+# Harness plan files.
+export HOME=/home/u
+unset CLAUDE_CONFIG_DIR COPILOT_HOME
+for file in /home/u/.claude/plans/foo.md /home/u/.copilot/session-state/abc-123/plan.md; do
   decide "$file" "$(user_prompt 'fix the parser')"
-  expect_equal "$file is under plans/ and allows" allow "$DECISION"
+  expect_equal "$file is a harness plan and allows" allow "$DECISION"
 done
-for file in /repo/plans.md /repo/myplans/x.md /repo/plans/../README.md; do
+for file in /repo/docs/plans/README.md /repo/Plans/CLAUDE.md /home/u/.claude/plans/../settings.md /home/u/.claude/plansX/a.md \
+  /home/u/.copilot/session-state/notes.md /home/u/.copilot/session-state/abc/other.md /home/u/.copilot/session-state/abc/x/plan.md; do
   decide "$file" "$(user_prompt 'fix the parser')"
-  expect_equal "$file is not under plans/ and denies" deny "$DECISION"
+  expect_equal "$file is not a harness plan and denies" deny "$DECISION"
 done
-decide plans/x.md "$(user_prompt 'fix the parser')" Edit /repo
-expect_equal "a relative path under plans/ resolves against cwd and allows" allow "$DECISION"
-decide ../README.md "$(user_prompt 'fix the parser')" Edit /repo/plans
-expect_equal "a relative path escaping plans/ denies" deny "$DECISION"
+decide .claude/plans/x.md "$(user_prompt 'fix the parser')" Edit /home/u
+expect_equal "a relative path into ~/.claude/plans/ resolves against cwd and allows" allow "$DECISION"
+CLAUDE_CONFIG_DIR=/cfg/claude COPILOT_HOME=/cfg/copilot
+export CLAUDE_CONFIG_DIR COPILOT_HOME
+decide /cfg/claude/plans/x.md "$(user_prompt 'fix the parser')"
+expect_equal "CLAUDE_CONFIG_DIR moves the Claude Code plans directory" allow "$DECISION"
+decide /cfg/copilot/session-state/abc/plan.md "$(user_prompt 'fix the parser')"
+expect_equal "COPILOT_HOME moves the Copilot CLI session state" allow "$DECISION"
+decide /home/u/.claude/plans/x.md "$(user_prompt 'fix the parser')"
+expect_equal "with CLAUDE_CONFIG_DIR set, ~/.claude/plans/ denies" deny "$DECISION"
+unset CLAUDE_CONFIG_DIR COPILOT_HOME
 
 # The project's .ai/ folder.
 project="$WORK/project"
@@ -138,6 +148,10 @@ decide "$worktree/.ai/notes.md" "$(user_prompt 'fix the parser')"
 expect_equal "a nested repo's own .ai/ allows" allow "$DECISION"
 decide "$worktree/README.md" "$(user_prompt 'fix the parser')"
 expect_equal "a nested repo's README still denies" deny "$DECISION"
+decide "$project/.hermes/plans/2026-01-01_000000-x.md" "$(user_prompt 'fix the parser')" Write
+expect_equal "a Hermes plan in <root>/.hermes/plans/ allows" allow "$DECISION"
+decide "$project/docs/.hermes/plans/x.md" "$(user_prompt 'fix the parser')" Write
+expect_equal "a .hermes/plans/ below the root does not count" deny "$DECISION"
 plain="$WORK/plain"
 mkdir -p "$plain"
 CLAUDE_PROJECT_DIR=$plain decide "$plain/.ai/x.md" "$(user_prompt 'fix the parser')"

@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # block_markdown_edits: PreToolUse hook that denies Write, Edit and MultiEdit
 # on a markdown file (.md, .markdown, .mdx, any case) unless the file is in
-# the project's .ai/ scratch folder or the user asked.
+# the project's .ai/ scratch folder, is a plan file an agent harness writes,
+# or the user asked.
 #
 # Wired in the plugin's hooks/claude-hooks.json. It needs only bash, awk and
 # git, so Git Bash runs it on Windows. block_markdown_edits.awk reads the JSON.
@@ -12,9 +13,12 @@
 # A .ai/ deeper in the tree does not count, and ".." segments are resolved
 # first, so <root>/.ai/../README.md is outside.
 #
-# Any path with a directory segment named "plans" (any case) is also allowed,
-# in or out of a repo, such as ~/.claude/plans/ (plan mode) or docs/plans/.
-# ".." is resolved first, so /repo/plans/../README.md is outside.
+# Harness plan files are also allowed, with ".." resolved first:
+# - Claude Code plan mode: $CLAUDE_CONFIG_DIR/plans/, default ~/.claude/plans/.
+# - GitHub Copilot CLI: $COPILOT_HOME/session-state/<id>/plan.md, default
+#   ~/.copilot/session-state/<id>/plan.md.
+# - Hermes /plan: <root>/.hermes/plans/, with <root> as for .ai/.
+# Other directories named plans, such as docs/plans/, are not allowed.
 #
 # The user asked when their latest prompt in the transcript names the file's
 # basename, the basename without its extension (at least 4 characters), the
@@ -51,16 +55,29 @@ absolute() {
   lexical "$path"
 }
 
-# in_plans_dir FILE CWD: succeeds when a directory segment of FILE is "plans".
-in_plans_dir() {
-  local path
+# in_harness_plans FILE CWD: succeeds when FILE is a Claude Code or Copilot CLI plan file.
+# ponytail: ignores Claude Code's plansDirectory setting and compares Windows
+# drive paths (C:/) and Git Bash paths (/c/) as different; read settings.json
+# and map drive letters if plans there get denied.
+in_harness_plans() {
+  local path claude copilot rest
   path=$(absolute "$1" "$2") || return 1
-  case /${path%/*}/ in */[Pp][Ll][Aa][Nn][Ss]/*) return 0 ;; esac
+  claude=${CLAUDE_CONFIG_DIR:-${HOME:+$HOME/.claude}}
+  copilot=${COPILOT_HOME:-${HOME:+$HOME/.copilot}}
+  if [ -n "$claude" ]; then
+    claude=$(lexical "${claude//\\//}")
+    case $path in "${claude%/}"/plans/*) return 0 ;; esac
+  fi
+  if [ -n "$copilot" ]; then
+    copilot=$(lexical "${copilot//\\//}")
+    case $path in "${copilot%/}"/session-state/*) rest=${path#"${copilot%/}"/session-state/} ;; *) return 1 ;; esac
+    case $rest in */*/*) ;; ?*/plan.md) return 0 ;; esac
+  fi
   return 1
 }
 
-# in_project_scratch FILE CWD: succeeds when FILE is inside <root>/.ai/.
-in_project_scratch() {
+# in_project_allowed FILE CWD: succeeds when FILE is inside <root>/.ai/ or <root>/.hermes/plans/.
+in_project_allowed() {
   local path dir rest='' rel root
   path=$(absolute "$1" "$2") || return 1
   dir=$path
@@ -78,14 +95,14 @@ in_project_scratch() {
     root=$(lexical "${root//\\//}")
     case $path in "${root%/}"/*) rel=${path#"${root%/}"/} ;; *) return 1 ;; esac
   fi
-  case $rel in .ai/*) return 0 ;; esac
+  case $rel in .ai/* | .hermes/plans/*) return 0 ;; esac
   return 1
 }
 
 fields=$(read_json payload 2>/dev/null <<<"$(cat)") || exit 0
 { IFS= read -r transcript; IFS= read -r name; IFS= read -r file; IFS= read -r cwd; } <<<"$fields"
-in_project_scratch "$file" "$cwd" && exit 0
-in_plans_dir "$file" "$cwd" && exit 0
+in_project_allowed "$file" "$cwd" && exit 0
+in_harness_plans "$file" "$cwd" && exit 0
 [ -n "$transcript" ] && [ -f "$transcript" ] || exit 0
 FILE_NAME=$name read_json transcript "$transcript" 2>/dev/null
 exit 0
