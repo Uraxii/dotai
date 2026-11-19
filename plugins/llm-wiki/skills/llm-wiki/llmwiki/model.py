@@ -19,7 +19,7 @@ REQUEST_TIMEOUT_SEC = 60  # a hung endpoint must not wedge a cron job forever
 # real endpoint in this environment, since no credentials exist here.
 # Base64 inflates raw bytes by about a third on the wire, so this caps
 # the JSON body around 13.3MB. Replace it with the largest attachment
-# the probe script (.nikki-agents/probe-attachments.py) finds the
+# the probe script (.ai/probe-attachments.py) finds the
 # configured endpoint actually accepts, rounded down.
 MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024
 
