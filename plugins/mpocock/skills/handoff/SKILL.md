@@ -19,4 +19,6 @@ Redact any sensitive information, such as API keys, passwords, or personally ide
 
 If the user passed arguments, treat them as a description of what the next session will focus on and tailor the doc accordingly.
 
-After you create or update a handoff file, end your output with one line that holds only the file's full absolute path as inline code, for example `/home/user/project/.handoffs/auth-migration.md`, so the user can copy it into the next session.
+Run `printenv CLAUDE_CODE_REMOTE`. If it prints `true`, the session runs in a Claude Code cloud environment and the user cannot open the file. Still write the file, then send it to the user as a downloadable file with a tool that sends files to the user, such as `SendUserFile`. If no such tool is available, or sending fails, output the entire handoff document in chat as one fenced code block instead, so the user can copy it. Use a backtick fence of at least three backticks, and more than the longest backtick run in the document. In a cloud session, skip the path line described below.
+
+In a local session, after you create or update a handoff file, end your output with one line that holds only the file's full absolute path as inline code, for example `/home/user/project/.handoffs/auth-migration.md`, so the user can copy it into the next session.
