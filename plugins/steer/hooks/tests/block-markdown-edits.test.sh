@@ -66,6 +66,7 @@ expect_equal "a markdown edit with no mention denies" deny "$DECISION"
 expect_contains "the reason names the file" "guide.md" "$(jq -r '.hookSpecificOutput.permissionDecisionReason' <<<"$STDOUT")"
 expect_contains "the reason says to ask the user" "Ask the user in chat" "$(jq -r '.hookSpecificOutput.permissionDecisionReason' <<<"$STDOUT")"
 expect_contains "the reason points notes at .ai/" "Notes, plans and handoffs belong in .ai/" "$(jq -r '.hookSpecificOutput.permissionDecisionReason' <<<"$STDOUT")"
+expect_contains "the reason suggests a lasting rule" "an AGENTS.md entry, a lint, or a test" "$(jq -r '.hookSpecificOutput.permissionDecisionReason' <<<"$STDOUT")"
 for tool in Write MultiEdit; do
   decide /repo/guide.md "$(user_prompt 'fix the parser')" "$tool"
   expect_equal "$tool on markdown with no mention denies" deny "$DECISION"
