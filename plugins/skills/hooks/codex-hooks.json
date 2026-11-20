@@ -1,0 +1,17 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "apply_patch",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${PLUGIN_ROOT}/hooks/skill-quality-guidance\" --harness codex",
+            "commandWindows": "\"${PLUGIN_ROOT}/hooks/run-hook.cmd\" skill-quality-guidance --harness codex",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}
