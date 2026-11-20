@@ -32,6 +32,10 @@ printf '# Guide\n' >"$dir/references/guide.md"
 run_hook "$lint" "$dir"
 expect_equal "a reference linked only from a README fails" 1 "$STATUS"
 expect_contains "the orphan is named" "FAIL  references/guide.md: no link" "$STDOUT"
+run_hook "${lint%/*}/checks/orphan-references.sh" "$dir"
+expect_equal "the orphan check fails on its own" 1 "$STATUS"
+run_hook "${lint%/*}/checks/links.sh" "$dir"
+expect_equal "the links check passes on its own" "0 " "$STATUS $STDOUT"
 
 dir=$(skill folder "$good" "Read [examples](references/) when a widget breaks.")
 printf '# Guide\n' >"$dir/references/guide.md"

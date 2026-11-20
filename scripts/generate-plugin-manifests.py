@@ -241,7 +241,7 @@ PLUGINS: list[dict[str, object]] = [
     },
     {
         "name": "skills",
-        "version": "1.1.0",
+        "version": "1.1.1",
         "hooks": ["claude", "codex", "copilot"],
         "description": (
             "Review and author SKILL.md files, finding and repairing the "

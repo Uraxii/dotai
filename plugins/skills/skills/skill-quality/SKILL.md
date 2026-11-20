@@ -15,8 +15,10 @@ needless ceremony.
 
 After each change, run `scripts/lint-skills.sh <skill-dir>`. Done = exit 0.
 Repair each `FAIL`. Repair each `WARN`, or keep it only for a real reason.
-Script owns: frontmatter, name and description length, XML in description,
-body length, backslash paths, broken links, orphan references.
+Each check is own script in `scripts/checks/`. Run one alone with
+`scripts/checks/<check>.sh <skill-dir>`. Scripts own: frontmatter, name and
+description length, XML in description, body length, backslash paths, broken
+links, orphan references.
 
 ## Under-specified guidance
 
