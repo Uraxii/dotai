@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "hooks": {
+    "postToolUse": [
+      {
+        "type": "command",
+        "matcher": "edit|create",
+        "bash": "bash \"${PLUGIN_ROOT}/hooks/skill-quality-guidance\" --harness copilot",
+        "powershell": "& \"$env:PLUGIN_ROOT\\hooks\\run-hook.cmd\" skill-quality-guidance --harness copilot; exit $LASTEXITCODE",
+        "timeoutSec": 5
+      }
+    ]
+  }
+}
