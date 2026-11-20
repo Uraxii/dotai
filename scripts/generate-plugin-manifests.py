@@ -242,6 +242,7 @@ PLUGINS: list[dict[str, object]] = [
     {
         "name": "skills",
         "version": "1.0.1",
+        "hooks": ["claude", "codex", "copilot"],
         "description": (
             "Review and author SKILL.md files, finding and repairing the "
             "smells that stop a skill triggering."

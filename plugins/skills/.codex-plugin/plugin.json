@@ -15,6 +15,7 @@
     "review"
   ],
   "skills": "./skills/",
+  "hooks": "./hooks/codex-hooks.json",
   "interface": {
     "displayName": "skills",
     "shortDescription": "Review and repair SKILL.md files.",
@@ -22,7 +23,8 @@
     "developerName": "Uraxii",
     "category": "Developer Tools",
     "capabilities": [
-      "Skills"
+      "Skills",
+      "Hooks"
     ],
     "defaultPrompt": [
       "Review this SKILL.md and tell me why it never triggers.",

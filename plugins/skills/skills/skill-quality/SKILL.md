@@ -1,14 +1,22 @@
 ---
 name: skill-quality
 description: >-
-  Reviews or authors SKILL.md files for actionable skill smells and focused
-  repairs.
+  Reviews or authors SKILL.md and skill reference files for actionable skill
+  smells and focused repairs. Use when writing, changing, or reviewing a skill.
 ---
 
 # Skill smells
 
-Use when authoring, changing, or reviewing `SKILL.md`. Find smell. Make
-smallest repair. Smell = heuristic, never excuse to add needless ceremony.
+Use when authoring, changing, or reviewing `SKILL.md` or its reference files.
+Find smell. Make smallest repair. Smell = heuristic, never excuse to add
+needless ceremony.
+
+## Verify
+
+After each change, run `scripts/lint-skills.sh <skill-dir>`. Done = exit 0.
+Repair each `FAIL`. Repair each `WARN`, or keep it only for a real reason.
+Script owns: frontmatter, name and description length, XML in description,
+body length, backslash paths, broken links, orphan references.
 
 ## Under-specified guidance
 
@@ -44,10 +52,11 @@ smallest repair. Smell = heuristic, never excuse to add needless ceremony.
 
 - **Undelegated detail.** Conditional, low-level detail in entrypoint. Move to
   reference or script. Keep always-needed instructions inline.
-- **Lengthy skill body.** Body >5,000 words. Cut, split, or route detail out.
-- **Lengthy skill name.** Name >64 chars. Rename for discovery.
-- **Lengthy skill description.** Description >1,024 chars. Keep capability +
-  routing only.
+- **Unrouted reference.** Link gives no load trigger. Add one: "Read
+  `references/<topic>.md` when Y." README link does not route a reference.
+- **Duplicated reference.** Same detail in `SKILL.md` and reference. Keep one.
+- **Inline-only reference.** Every run must read reference. Move its text into
+  `SKILL.md`.
 - **Confusing skill description.** Missing what, when, or discovery keywords.
   Add missing part.
 
@@ -68,14 +77,8 @@ smallest repair. Smell = heuristic, never excuse to add needless ceremony.
 - **Time-sensitive skill.** File embeds decaying fact. Query source at use,
   name update rule, or cut claim.
 
-## Security hazard
-
-- **XML in description.** Description has XML tags. They can inject
-  instructions. Use plain text.
-
 ## Convention and style violations
 
-- **Backslash path.** Skill-dir path uses `\\`. Use `/`.
 - **Unclear skill name.** Name hides capability or action. Rename for cold
   reader.
 - **Non-third-person description.** Description not third person. Rewrite as

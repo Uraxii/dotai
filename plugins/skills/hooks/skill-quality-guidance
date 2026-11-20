@@ -1,0 +1,80 @@
+#!/bin/bash
+# Adds the skill-quality guidance to the agent's context when it edits a
+# SKILL.md or a reference Markdown file in a skill directory. It never blocks:
+# every path exits 0, because a Copilot hook that fails can deny the call.
+#
+# Usage: skill-quality-guidance --harness claude|codex|copilot
+# - claude: PreToolUse on Write|Edit|MultiEdit, path in tool_input.file_path.
+# - codex: PreToolUse on apply_patch, paths in the patch's file headers.
+# - copilot: postToolUse on edit|create, path in toolArgs.path. Copilot's
+#   preToolUse cannot add context, so the guidance follows the first edit.
+# The guidance is added once per session for each skill directory.
+
+hooks_dir=${BASH_SOURCE[0]%[/\\]*}
+[ "$hooks_dir" = "${BASH_SOURCE[0]}" ] && hooks_dir=.
+skill_md="$hooks_dir/../skills/skill-quality/SKILL.md"
+lint="$hooks_dir/../skills/skill-quality/scripts/lint-skills.sh"
+
+field() {
+  printf '%s' "$input" | LC_ALL=C JSON_MODE=get JSON_PATH="$1" JSON_VIA="${2-}" awk -f "$hooks_dir/hook-json.awk"
+}
+quote() {
+  LC_ALL=C JSON_MODE=quote JSON_TEXT="$1" awk -f "$hooks_dir/hook-json.awk"
+}
+
+harness=
+[ "${1:-}" = --harness ] && harness=${2:-}
+case "$harness" in claude | codex | copilot) ;; *) exit 0 ;; esac
+
+input=$(cat)
+cwd=$(field /cwd)
+case "$harness" in
+  claude)
+    paths=$(field /tool_input/file_path)
+    session=$(field /session_id)
+    ;;
+  codex)
+    paths=$(field /tool_input/command | sed -nE 's/^\*\*\* (Add File|Update File|Move to): (.*)$/\2/p')
+    session=$(field /session_id)
+    ;;
+  copilot)
+    paths=$(field /path /toolArgs)
+    session=$(field /sessionId)
+    ;;
+esac
+
+# Skill directories this edit touches that have not had the guidance yet.
+dirs=()
+while IFS= read -r path; do
+  path=${path%$'\r'}
+  [ -n "$path" ] || continue
+  case "$path" in /* | [A-Za-z]:[/\\]*) ;; *) [ -n "$cwd" ] && path="$cwd/$path" ;; esac
+  path=${path//\\//}
+  [[ "$path" =~ ^(.*/skills/[^/]+)/.+\.md$ ]] || continue
+  dir=${BASH_REMATCH[1]}
+  if [[ "$session" =~ ^[A-Za-z0-9_.-]+$ ]]; then
+    marker="${TMPDIR:-/tmp}/skill-quality-$session-$(printf '%s' "$dir" | cksum | cut -d' ' -f1)"
+    [ -e "$marker" ] && continue
+    : >"$marker" 2>/dev/null
+  fi
+  [[ " ${dirs[*]} " == *" $dir "* ]] || dirs+=("$dir")
+done <<<"$paths"
+[ "${#dirs[@]}" -gt 0 ] && [ -f "$skill_md" ] || exit 0
+
+body=$(awk 'NR == 1 && /^---$/ { front = 1; next } front && /^---$/ { front = 0; next } !front' "$skill_md")
+context="You are editing a skill. Follow this skill-quality guidance.
+
+$body
+
+The verification script is $(cd "${lint%/*}" && pwd)/lint-skills.sh. Run it on each skill directory you change:"
+for dir in "${dirs[@]}"; do
+  context="$context
+- $dir"
+done
+
+if [ "$harness" = copilot ]; then
+  printf '{"additionalContext":%s}\n' "$(quote "$context")"
+else
+  printf '{"hookSpecificOutput":{"hookEventName":"PreToolUse","additionalContext":%s}}\n' "$(quote "$context")"
+fi
+exit 0
