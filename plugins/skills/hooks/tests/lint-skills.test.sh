@@ -51,7 +51,7 @@ expect_contains "a missing linked file fails" "link to references/nope.md does n
 expect_equal "a placeholder path is not a link" "" "$(grep '<topic>' <<<"$STDOUT")"
 
 dir=$(skill wrong-name "Has <b>tags</b>. Use when testing." 'Open references\guide.md.')
-sed -i 's/^name: .*/name: Other_Name/' "$dir/SKILL.md"
+sed 's/^name: .*/name: Other_Name/' "$dir/SKILL.md" >"$WORK/tmp" && mv "$WORK/tmp" "$dir/SKILL.md"
 run_hook "$lint" "$dir"
 expect_contains "a name that is not the directory fails" "is not the directory name" "$STDOUT"
 expect_contains "a name with capitals fails" "has characters other than" "$STDOUT"
@@ -66,6 +66,17 @@ expect_contains "a description that starts with Use warns" "not third person" "$
 dir=$(skill nowhen "Checks widgets." "Body.")
 run_hook "$lint" "$dir"
 expect_contains "a description with no trigger warns" "does not say when" "$STDOUT"
+
+dir=$(skill forms "$good" 'Read [t](references/t.md "Title"), [s](references/my%20ref.md) and [a](<references/a b.md>). Write links like `[x](references/nope.md)`. See `forms/references/p.md`. Run from the plugin'"'"'s `scripts/` folder.')
+for f in t "my ref" "a b" p; do printf '# Ref\n' >"$dir/references/$f.md"; done
+run_hook "$lint" "$dir"
+expect_contains "titled, encoded, angle and name-prefixed links resolve; inline code and bare folders are skipped" \
+  "$dir: 0 failed, 0 warnings" "$STDOUT"
+
+dir=$(skill crlf "$good" "Body.")
+awk '{ printf "%s\r\n", $0 }' "$dir/SKILL.md" >"$WORK/tmp" && mv "$WORK/tmp" "$dir/SKILL.md"
+run_hook "$lint" "$dir"
+expect_equal "a SKILL.md with CRLF line endings passes" 0 "$STATUS"
 
 run_hook "$lint" "$PLUGIN_ROOT_DIR/skills/skill-quality"
 expect_equal "skill-quality passes its own verification" 0 "$STATUS"

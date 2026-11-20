@@ -12,6 +12,8 @@ export PLUGIN_ROOT="$PLUGIN_ROOT_DIR" CLAUDE_PLUGIN_ROOT="$PLUGIN_ROOT_DIR" TMPD
 hook="$PLUGIN_ROOT_DIR/hooks/skill-quality-guidance"
 skill_a="$WORK/repo/skills/alpha"
 skill_b="$WORK/repo/skills/beta"
+mkdir -p "$skill_a" "$skill_b" "$WORK/repo/plugin/hooks/tests" "$skill_a/examples/skills/inner"
+touch "$skill_a/SKILL.md" "$skill_b/SKILL.md"
 
 # input HARNESS SESSION PATH...: an edit of each PATH in that harness's shape.
 input() {
@@ -48,7 +50,8 @@ for wiring in "claude hooks/claude-hooks.json PreToolUse" "codex hooks/codex-hoo
   run_wiring "$harness" "$command" <<<"$(input "$harness" "$session" "$skill_b/references/x.md")"
   expect_contains "$harness: reference edit in a second skill adds the guidance" "- $skill_b" "$(context)"
 
-  for path in "$WORK/repo/README.md" "$WORK/repo/skills/gamma/run.sh" "$WORK/repo/skills/notes.md"; do
+  for path in "$WORK/repo/README.md" "$WORK/repo/skills/gamma/run.sh" "$WORK/repo/skills/notes.md" \
+    "$WORK/repo/skills/gamma/references/x.md" "$WORK/repo/plugin/hooks/tests/README.md"; do
     run_wiring "$harness" "$command" <<<"$(input "$harness" "$session-other" "$path")"
     expect_equal "$harness: $path adds nothing" "" "$STDOUT"
   done
@@ -68,6 +71,13 @@ expect_contains "codex patch with two files names the second skill" "- $skill_b"
 
 run_hook "$hook" --harness claude <<<"$(jq -cn --arg c "$WORK/repo" '{session_id: "s-rel", cwd: $c, tool_input: {file_path: "skills/alpha/SKILL.md"}}')"
 expect_contains "a relative path resolves against cwd" "- $WORK/repo/skills/alpha" "$(context)"
+
+run_hook "$hook" --harness claude <<<"$(input claude s-new "$WORK/repo/skills/gamma/SKILL.md")"
+expect_contains "creating a SKILL.md adds the guidance" "- $WORK/repo/skills/gamma" "$(context)"
+
+run_hook "$hook" --harness claude <<<"$(input claude s-nested "$skill_a/examples/skills/inner/x.md")"
+expect_contains "a skills folder inside a skill resolves to the outer skill" "- $skill_a" "$(context)"
+expect_equal "the inner folder is not named" "" "$(context | grep -F "inner")"
 
 run_hook "$hook" --harness other <<<"$(input claude s-x "$skill_a/SKILL.md")"
 expect_equal "an unknown harness adds nothing" "" "$STDOUT"

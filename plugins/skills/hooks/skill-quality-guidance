@@ -26,6 +26,7 @@ harness=
 [ "${1:-}" = --harness ] && harness=${2:-}
 case "$harness" in claude | codex | copilot) ;; *) exit 0 ;; esac
 
+[ -f "$skill_md" ] || exit 0
 input=$(cat)
 cwd=$(field /cwd)
 case "$harness" in
@@ -50,16 +51,25 @@ while IFS= read -r path; do
   [ -n "$path" ] || continue
   case "$path" in /* | [A-Za-z]:[/\\]*) ;; *) [ -n "$cwd" ] && path="$cwd/$path" ;; esac
   path=${path//\\//}
-  [[ "$path" =~ ^(.*/skills/[^/]+)/.+\.md$ ]] || continue
-  dir=${BASH_REMATCH[1]}
+  case "$path" in *.md) ;; *) continue ;; esac
+  # The outermost skills/NAME directory that holds a SKILL.md, or the one
+  # whose SKILL.md this edit creates.
+  dir=
+  rest=$path
+  while [[ "$rest" =~ ^(.*/skills/[^/]+)/.+$ ]]; do
+    rest=${BASH_REMATCH[1]}
+    { [ -f "$rest/SKILL.md" ] || [ "$path" = "$rest/SKILL.md" ]; } && dir=$rest
+  done
+  [ -n "$dir" ] || continue
   if [[ "$session" =~ ^[A-Za-z0-9_.-]+$ ]]; then
     marker="${TMPDIR:-/tmp}/skill-quality-$session-$(printf '%s' "$dir" | cksum | cut -d' ' -f1)"
-    [ -e "$marker" ] && continue
-    : >"$marker" 2>/dev/null
+    # noclobber makes the check and the create one step, so parallel edits
+    # cannot both add the guidance.
+    (set -C && : >"$marker") 2>/dev/null || continue
   fi
   [[ " ${dirs[*]} " == *" $dir "* ]] || dirs+=("$dir")
 done <<<"$paths"
-[ "${#dirs[@]}" -gt 0 ] && [ -f "$skill_md" ] || exit 0
+[ "${#dirs[@]}" -gt 0 ] || exit 0
 
 body=$(awk 'NR == 1 && /^---$/ { front = 1; next } front && /^---$/ { front = 0; next } !front' "$skill_md")
 context="You are editing a skill. Follow this skill-quality guidance.

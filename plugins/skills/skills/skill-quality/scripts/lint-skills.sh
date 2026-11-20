@@ -19,20 +19,25 @@ report() { # LEVEL FILE MESSAGE FIX
 
 # Prints the body of a Markdown file without code fences, as LINE<TAB>TEXT.
 prose() {
-  awk 'NR == 1 && /^---$/ { front = 1; next }
+  awk '{ sub(/\r$/, "") }
+       NR == 1 && /^---$/ { front = 1; next }
        front { if (/^---$/) front = 0; next }
        /^[ \t]*(```|~~~)/ { fence = !fence; next }
        !fence { print NR "\t" $0 }' "$1"
 }
 
-# Prints each local link target in FILE: Markdown link targets and
-# backticked paths under a skill subdirectory. Placeholders are skipped.
+# Prints each local link target in FILE: Markdown link targets outside inline
+# code, and backticked file paths under a skill subdirectory, optionally after
+# the skill's own name. Placeholders and bare directories in backticks are
+# skipped.
 targets() {
-  local text
+  local text name=${dir##*/}
   text=$(prose "$1" | cut -f2-)
   {
-    grep -oE '\]\([^)[:space:]]+\)' <<<"$text" | sed -E 's/^\]\(//; s/\)$//; s/#.*//'
-    grep -oE '`(\./)?(scripts|references|playbooks|examples|assets)/[^`[:space:]]*`' <<<"$text" | tr -d '`'
+    sed -E 's/`[^`]*`//g' <<<"$text" | grep -oE '\]\((<[^>]+>|[^)[:space:]]+)' |
+      sed -E 's/^\]\(<?//; s/>$//; s/#.*//; s/%20/ /g'
+    grep -oE "\`(\./|$name/)?(scripts|references|playbooks|examples|assets)/[^\`[:space:]]*[^/\`[:space:]]\`" <<<"$text" |
+      tr -d '`' | sed -E "s#^(\./|$name/)##"
   } | grep -vE '^$|^[a-z]+:|^/|[<>*{}$]'
 }
 
@@ -52,7 +57,7 @@ while IFS= read -r ref; do refs+=("$ref"); done < <(
 if [ ! -f "$skill" ]; then
   report FAIL "$skill" "SKILL.md is missing" "add SKILL.md with name and description frontmatter"
 else
-  front=$(awk 'NR == 1 { if (!/^---$/) exit; next } /^---$/ { exit } { print }' "$skill")
+  front=$(awk '{ sub(/\r$/, "") } NR == 1 { if (!/^---$/) exit; next } /^---$/ { exit } { print }' "$skill")
   name=$(sed -nE 's/^name:[[:space:]]*["'\'']?([^"'\'']*)["'\'']?[[:space:]]*$/\1/p' <<<"$front")
   # Joins a plain, quoted or folded (>- or |) description into one line.
   description=$(awk '/^description:/ { on = 1; sub(/^description:[ \t]*/, ""); if ($0 !~ /^[>|][-+]?$/) print; next }
@@ -73,7 +78,7 @@ else
       report FAIL "$skill" "description has an XML tag, which can inject instructions" "use plain text"
     grep -qiE '^(use|i |you|this skill)' <<<"$description" &&
       report WARN "$skill" "description is not third person" "start with what the skill does, such as 'Reviews ...'"
-    grep -qiE '\b(when|whenever|before|after|use for|use to|triggers?)\b' <<<"$description" ||
+    grep -qiE '(^|[^a-z])(when|whenever|before|after|use for|use to|triggers?)([^a-z]|$)' <<<"$description" ||
       report WARN "$skill" "description does not say when to use the skill" "add 'Use when ...' with discovery keywords"
   fi
   words=$(prose "$skill" | cut -f2- | wc -w | tr -d ' ')
@@ -86,7 +91,7 @@ for file in "$skill" "${refs[@]}"; do
   while IFS=$'\t' read -r line text; do
     [[ "$text" =~ (scripts|references|playbooks|examples|assets)\\ ]] &&
       report FAIL "$file" "line $line has a backslash path" "use / in skill paths"
-    grep -qiE '\b(as of|currently|new in)\b|\b20[0-9]{2}\b' <<<"$text" &&
+    grep -qiE '(^|[^a-z])(as of|currently|new in)([^a-z]|$)|(^|[^0-9])20[0-9]{2}([^0-9]|$)' <<<"$text" &&
       report WARN "$file" "line $line may hold a fact that decays: ${text:0:80}" "query the source at use, name an update rule, or cut the claim"
   done < <(prose "$file")
   while IFS= read -r target; do
@@ -97,9 +102,10 @@ done
 
 # --- References: orphans, depth, contents list ---
 # Breadth-first from SKILL.md. A README.md does not pass links on. A link to a
-# directory reaches the .md files directly in it.
-declare -A depth=()
-[ -f "$skill" ] && depth["$skill"]=0
+# directory reaches the .md files directly in it. seen holds PATH<TAB>DEPTH
+# lines, because macOS bash 3.2 has no associative arrays.
+seen="$skill	0"
+depth_of() { awk -F'\t' -v p="$1" '$1 == p { print $2; exit }' <<<"$seen"; }
 queue=("$skill")
 while [ "${#queue[@]}" -gt 0 ]; do
   file=${queue[0]}
@@ -119,19 +125,21 @@ while [ "${#queue[@]}" -gt 0 ]; do
       next=$(cd "${next%/*}" && pwd)/${next##*/}
       next=${next#"$(cd "$dir" && pwd)"/}
       next="$dir/$next"
-      [ -n "${depth[$next]+set}" ] && continue
-      depth["$next"]=$((depth["$file"] + 1))
+      [ -n "$(depth_of "$next")" ] && continue
+      seen="$seen
+$next	$(($(depth_of "$file") + 1))"
       queue+=("$next")
     done
   done < <(targets "$file")
 done
 
 for ref in "${refs[@]}"; do
-  if [ -z "${depth[$ref]+set}" ]; then
+  depth=$(depth_of "$ref")
+  if [ -z "$depth" ]; then
     report FAIL "$ref" "no link from SKILL.md or a linked reference reaches this file" \
       "link it from SKILL.md with when to read it, or delete it"
-  elif [ "${depth[$ref]}" -gt 1 ]; then
-    report WARN "$ref" "this file is ${depth[$ref]} links from SKILL.md, so agents may read it only in part" \
+  elif [ "$depth" -gt 1 ]; then
+    report WARN "$ref" "this file is $depth links from SKILL.md, so agents may read it only in part" \
       "link it directly from SKILL.md"
   fi
   lines=$(wc -l <"$ref" | tr -d ' ')
