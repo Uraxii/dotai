@@ -6,6 +6,10 @@ Watch an open PR — fix failing CI, handle the straightforward review comments,
 
 Ships in the [`pstack`](../../README.md) plugin of [Uraxii/dotai](https://github.com/Uraxii/dotai). The agent reads [SKILL.md](SKILL.md); this file is for people.
 
+## Requirements
+
+Requires the `gh` CLI, authenticated for the PR's repository. Uses the Claude Code `loop` skill to pace re-checks.
+
 ## Install
 
 Claude Code:

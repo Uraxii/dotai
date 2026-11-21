@@ -6,6 +6,10 @@ Prepare PRs for review by cleaning noisy history, improving PR descriptions, and
 
 Ships in the [`pstack`](../../README.md) plugin of [Uraxii/dotai](https://github.com/Uraxii/dotai). The agent reads [SKILL.md](SKILL.md); this file is for people.
 
+## Requirements
+
+Requires `git` and the `gh` CLI, authenticated for the PR's repository.
+
 ## Install
 
 Claude Code:

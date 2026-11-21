@@ -1,6 +1,7 @@
 ---
 name: get-pr-comments
 description: Fetch and summarize review comments from the active pull request
+compatibility: Needs read access to the pull request on its forge, for example through the `gh` CLI.
 license: MIT
 metadata:
   version: 1.0.0

@@ -6,6 +6,10 @@ Periodic pass that keeps a project's verification skill and feature map honest: 
 
 Ships in the [`pstack`](../../README.md) plugin of [Uraxii/dotai](https://github.com/Uraxii/dotai). The agent reads [SKILL.md](SKILL.md); this file is for people.
 
+## Requirements
+
+Requires parallel subagents and an existing project verification skill with a feature map, such as one from `/create-verification-skill`.
+
 ## Install
 
 Claude Code:

@@ -1,6 +1,10 @@
 ---
 name: poteto-mode
 description: poteto's agent style for concise, detailed responses, deliberate subagents, unslopped prose, simple code, and verified work. Use for poteto, /poteto-mode, or requests to work in this style.
+compatibility: >
+  Written for Claude Code. Codex, Pi, and GitHub Copilot need the tool mappings
+  in `references/`. Requires background subagents, `git`, and the `gh` CLI. The
+  bundled scripts need `node`, and `watch-pr`, `ship-pr`, and `orch` need `bun`.
 license: MIT
 metadata:
   version: 1.0.0

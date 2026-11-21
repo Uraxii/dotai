@@ -6,6 +6,10 @@ Use for \"automate me\", \"create/update/refresh my -mode skill\", \"turn/captur
 
 Ships in the [`pstack`](../../README.md) plugin of [Uraxii/dotai](https://github.com/Uraxii/dotai). The agent reads [SKILL.md](SKILL.md); this file is for people.
 
+## Requirements
+
+Requires parallel subagents, the `plugin-dev:skill-development` skill, and Claude Code transcripts in `~/.claude/projects/`. Needs `git` to commit the skill and open a PR.
+
 ## Install
 
 Claude Code:

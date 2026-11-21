@@ -6,6 +6,10 @@ Use for 'why does X work this way', 'why we picked Y', design rationale, regress
 
 Ships in the [`pstack`](../../README.md) plugin of [Uraxii/dotai](https://github.com/Uraxii/dotai). The agent reads [SKILL.md](SKILL.md); this file is for people.
 
+## Requirements
+
+Requires parallel subagents with MCP access, `git`, and the `gh` CLI. Each other evidence source needs a matching MCP server, such as an issue tracker, team chat, or error tracker.
+
 ## Install
 
 Claude Code:

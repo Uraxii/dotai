@@ -6,6 +6,10 @@ Reconstruct your recent working context from your own chat history, live state, 
 
 Ships in the [`pstack`](../../README.md) plugin of [Uraxii/dotai](https://github.com/Uraxii/dotai). The agent reads [SKILL.md](SKILL.md); this file is for people.
 
+## Requirements
+
+Requires parallel subagents, Claude Code transcripts in `~/.claude/projects/`, `git`, and the `gh` CLI. Uses the available MCP servers through the `why` skill.
+
 ## Install
 
 Claude Code:

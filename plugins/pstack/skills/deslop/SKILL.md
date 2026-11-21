@@ -1,6 +1,7 @@
 ---
 name: deslop
 description: Remove AI-generated code slop and clean up code style
+compatibility: Requires a `git` repository to diff the branch against `main`.
 license: MIT
 metadata:
   version: 1.0.0

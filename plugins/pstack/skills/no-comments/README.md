@@ -6,6 +6,10 @@ Spawn the comment-sicko subagent, fix accepted findings, and offer encodings for
 
 Ships in the [`pstack`](../../README.md) plugin of [Uraxii/dotai](https://github.com/Uraxii/dotai). The agent reads [SKILL.md](SKILL.md); this file is for people.
 
+## Requirements
+
+Requires subagents and the `pstack:comment-sicko` agent from the pstack plugin.
+
 ## Install
 
 Claude Code:

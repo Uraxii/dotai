@@ -1,6 +1,10 @@
 ---
 name: reflect
 description: Spawn three parallel review subagents over the active transcript, surface learnings, and route each to a concrete edit on an existing skill. Use when the user says reflect.
+compatibility: >
+  Requires `node` to run `scripts/find-transcript.mjs` on Claude Code
+  transcripts in `~/.claude/projects/`. Requires parallel subagents with MCP
+  access and the `plugin-dev:skill-development` skill.
 license: MIT
 metadata:
   version: 1.0.0

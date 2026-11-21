@@ -6,6 +6,10 @@ Generate a project-local verification skill that drives your app the way a user 
 
 Ships in the [`pstack`](../../README.md) plugin of [Uraxii/dotai](https://github.com/Uraxii/dotai). The agent reads [SKILL.md](SKILL.md); this file is for people.
 
+## Requirements
+
+Writes a Claude Code project skill to `.claude/skills/verify/`. Needs Claude Code 2.1.200 or later for that skill to replace the bundled `/verify`.
+
 ## Install
 
 Claude Code:

@@ -6,6 +6,10 @@ Summarize authored commits over a user-specified time period into a concise upda
 
 Ships in the [`pstack`](../../README.md) plugin of [Uraxii/dotai](https://github.com/Uraxii/dotai). The agent reads [SKILL.md](SKILL.md); this file is for people.
 
+## Requirements
+
+Requires `git` with a configured user email.
+
 ## Install
 
 Claude Code:

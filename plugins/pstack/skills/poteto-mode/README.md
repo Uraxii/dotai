@@ -6,6 +6,10 @@ poteto's agent style for concise, detailed responses, deliberate subagents, unsl
 
 Ships in the [`pstack`](../../README.md) plugin of [Uraxii/dotai](https://github.com/Uraxii/dotai). The agent reads [SKILL.md](SKILL.md); this file is for people.
 
+## Requirements
+
+Written for Claude Code. Codex, Pi, and GitHub Copilot need the tool mappings in `references/`. Requires background subagents, `git`, and the `gh` CLI. The bundled scripts need `node`, and `watch-pr`, `ship-pr`, and `orch` need `bun`.
+
 ## Install
 
 Claude Code:

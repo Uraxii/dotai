@@ -6,6 +6,10 @@ Fan out N parallel workers, drain them, and return one report. Use for /swarm, '
 
 Ships in the [`pstack`](../../README.md) plugin of [Uraxii/dotai](https://github.com/Uraxii/dotai). The agent reads [SKILL.md](SKILL.md); this file is for people.
 
+## Requirements
+
+Requires a harness that can spawn parallel background subagents with a model choice.
+
 ## Install
 
 Claude Code:

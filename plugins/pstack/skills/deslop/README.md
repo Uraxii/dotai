@@ -6,6 +6,10 @@ Remove AI-generated code slop and clean up code style
 
 Ships in the [`pstack`](../../README.md) plugin of [Uraxii/dotai](https://github.com/Uraxii/dotai). The agent reads [SKILL.md](SKILL.md); this file is for people.
 
+## Requirements
+
+Requires a `git` repository to diff the branch against `main`.
+
 ## Install
 
 Claude Code:

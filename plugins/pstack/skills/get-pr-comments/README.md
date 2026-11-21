@@ -6,6 +6,10 @@ Fetch and summarize review comments from the active pull request
 
 Ships in the [`pstack`](../../README.md) plugin of [Uraxii/dotai](https://github.com/Uraxii/dotai). The agent reads [SKILL.md](SKILL.md); this file is for people.
 
+## Requirements
+
+Needs read access to the pull request on its forge, for example through the `gh` CLI.
+
 ## Install
 
 Claude Code:

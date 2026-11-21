@@ -1,6 +1,9 @@
 ---
 name: create-verification-skill
 description: "Generate a project-local verification skill that drives your app the way a user does — any language, framework, or platform. Use for /create-verification-skill, \"make a control skill for this repo\", \"make a driver skill for this repo\", or when a project has no scripted way to prove UI/CLI/service behavior."
+compatibility: >
+  Writes a Claude Code project skill to `.claude/skills/verify/`. Needs Claude
+  Code 2.1.200 or later for that skill to replace the bundled `/verify`.
 license: MIT
 metadata:
   version: 1.0.0

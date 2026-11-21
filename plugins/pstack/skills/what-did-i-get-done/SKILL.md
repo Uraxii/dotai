@@ -1,6 +1,7 @@
 ---
 name: what-did-i-get-done
 description: Summarize authored commits over a user-specified time period into a concise update
+compatibility: Requires `git` with a configured user email.
 license: MIT
 metadata:
   version: 1.0.0

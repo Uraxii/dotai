@@ -1,6 +1,7 @@
 ---
 name: fix-merge-conflicts
 description: Resolve merge conflicts non-interactively, validate build and tests, and finalize conflict resolution
+compatibility: Requires `git`.
 license: MIT
 metadata:
   version: 1.0.0

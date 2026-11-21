@@ -1,6 +1,7 @@
 ---
 name: fix-ci
 description: Find failing PR checks, inspect logs or external check links, and apply focused fixes
+compatibility: Requires the `gh` CLI, authenticated for the PR's repository.
 license: MIT
 metadata:
   version: 1.0.0

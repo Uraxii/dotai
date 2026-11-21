@@ -1,6 +1,7 @@
 ---
 name: no-comments
 description: "Spawn the comment-sicko subagent, fix accepted findings, and offer encodings for claimed constraints."
+compatibility: Requires subagents and the `pstack:comment-sicko` agent from the pstack plugin.
 license: MIT
 metadata:
   version: 1.0.0

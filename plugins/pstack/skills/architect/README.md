@@ -6,6 +6,10 @@ Sketch types, signatures, and module structure before code, then stay in the loo
 
 Ships in the [`pstack`](../../README.md) plugin of [Uraxii/dotai](https://github.com/Uraxii/dotai). The agent reads [SKILL.md](SKILL.md); this file is for people.
 
+## Requirements
+
+Requires a harness that can spawn parallel subagents with a model choice. Phase B runs the `arena` skill.
+
 ## Install
 
 Claude Code:

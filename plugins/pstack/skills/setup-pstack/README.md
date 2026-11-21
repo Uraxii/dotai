@@ -6,6 +6,10 @@ Configure which models pstack uses per role. Detects available models and writes
 
 Ships in the [`pstack`](../../README.md) plugin of [Uraxii/dotai](https://github.com/Uraxii/dotai). The agent reads [SKILL.md](SKILL.md); this file is for people.
 
+## Requirements
+
+Requires one of these runtimes: Claude Code, Codex, Pi, GitHub Copilot, opencode, or Gemini CLI. On GitHub Copilot, the sheet check runs `scripts/check-sheet.sh` with `sh`.
+
 ## Install
 
 Claude Code:

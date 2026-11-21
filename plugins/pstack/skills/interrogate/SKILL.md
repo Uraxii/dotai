@@ -1,6 +1,9 @@
 ---
 name: interrogate
 description: "Use for \"interrogate\", \"adversarial review\", \"multi-model review\", \"challenge this\", \"stress test this code\", \"find blind spots\", or \"tear this apart\". Multiple LLM reviewers challenge changes from independent angles."
+compatibility: >
+  Requires a harness that can spawn parallel subagents on different models. Uses
+  `git` to collect the diff.
 license: MIT
 metadata:
   version: 1.0.0

@@ -6,6 +6,10 @@ Spawn three parallel review subagents over the active transcript, surface learni
 
 Ships in the [`pstack`](../../README.md) plugin of [Uraxii/dotai](https://github.com/Uraxii/dotai). The agent reads [SKILL.md](SKILL.md); this file is for people.
 
+## Requirements
+
+Requires `node` to run `scripts/find-transcript.mjs` on Claude Code transcripts in `~/.claude/projects/`. Requires parallel subagents with MCP access and the `plugin-dev:skill-development` skill.
+
 ## Install
 
 Claude Code:

@@ -6,6 +6,10 @@ Keep a reviewable decision trail for long-running or unattended work: a TSV log 
 
 Ships in the [`pstack`](../../README.md) plugin of [Uraxii/dotai](https://github.com/Uraxii/dotai). The agent reads [SKILL.md](SKILL.md); this file is for people.
 
+## Requirements
+
+Requires a subagent on a different model family for the trail review. The audit reads Claude Code transcripts in `~/.claude/projects/`. `scripts/log.sh` needs `bash`.
+
 ## Install
 
 Claude Code:

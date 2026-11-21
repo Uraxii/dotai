@@ -6,6 +6,10 @@ Create or refresh reviewer-facing PR titles and descriptions. Use when opening a
 
 Ships in the [`pstack`](../../README.md) plugin of [Uraxii/dotai](https://github.com/Uraxii/dotai). The agent reads [SKILL.md](SKILL.md); this file is for people.
 
+## Requirements
+
+Requires `git` and a forge CLI or PR tool. For GitHub, requires an authenticated `gh` 2.99 or later.
+
 ## Install
 
 Claude Code:

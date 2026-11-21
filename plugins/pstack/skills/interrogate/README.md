@@ -6,6 +6,10 @@ Use for \"interrogate\", \"adversarial review\", \"multi-model review\", \"chall
 
 Ships in the [`pstack`](../../README.md) plugin of [Uraxii/dotai](https://github.com/Uraxii/dotai). The agent reads [SKILL.md](SKILL.md); this file is for people.
 
+## Requirements
+
+Requires a harness that can spawn parallel subagents on different models. Uses `git` to collect the diff.
+
 ## Install
 
 Claude Code:

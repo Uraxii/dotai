@@ -6,6 +6,10 @@ Explain a body of work plainly so a person actually understands it. Runs the `ho
 
 Ships in the [`pstack`](../../README.md) plugin of [Uraxii/dotai](https://github.com/Uraxii/dotai). The agent reads [SKILL.md](SKILL.md); this file is for people.
 
+## Requirements
+
+Requires subagents, because it runs the `how` and `why` skills.
+
 ## Install
 
 Claude Code:

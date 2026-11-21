@@ -6,6 +6,10 @@ Use for \"how does X work\", code walkthroughs before changing something, and pl
 
 Ships in the [`pstack`](../../README.md) plugin of [Uraxii/dotai](https://github.com/Uraxii/dotai). The agent reads [SKILL.md](SKILL.md); this file is for people.
 
+## Requirements
+
+Requires a harness that can spawn subagents with a model choice.
+
 ## Install
 
 Claude Code:

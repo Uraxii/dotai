@@ -6,6 +6,10 @@ Spawn N parallel candidates at the same task, pick a base, graft the strongest p
 
 Ships in the [`pstack`](../../README.md) plugin of [Uraxii/dotai](https://github.com/Uraxii/dotai). The agent reads [SKILL.md](SKILL.md); this file is for people.
 
+## Requirements
+
+Requires a harness that can spawn parallel background subagents with a model choice. Uses `git` worktrees for candidate output when available.
+
 ## Install
 
 Claude Code:
