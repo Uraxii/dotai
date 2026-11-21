@@ -5,7 +5,7 @@ description: >-
   smells and focused repairs. Use when writing, changing, or reviewing a skill.
 ---
 
-# Skill smells
+# Skill quality
 
 Use when authoring, changing, or reviewing `SKILL.md` or its reference files.
 Find smell. Make smallest repair. Smell = heuristic, never excuse to add
