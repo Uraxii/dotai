@@ -4,7 +4,7 @@ description: "Use when English text must be parsed without a human to resolve am
 compatibility: The optional linter, scripts/ste-lint.py, needs Python 3. It uses only the standard library.
 license: MIT
 metadata:
-  version: 0.4.1
+  version: 0.4.2
   author: Dustin Yuchen Teng
   homepage: https://github.com/Uraxii/dotai
   source: https://github.com/danyuchn/asd-ste100-skill/tree/707362731928d0d92526c066df15dbbe6a378c07
