@@ -9,3 +9,7 @@ Imported from Dustin Yuchen Teng's `danyuchn/asd-ste100-skill` repository on 202
 The skill, its references, examples, and linter are upstream's, unedited.
 Upstream's README and plugin manifests are not vendored, because dotai
 generates its own manifests.
+
+dotai removes `examples/linter-edge-cases.md`: upstream's deliberately
+non-STE test input for `scripts/ste-lint.py`. No skill file links it, so
+it only failed the skill-quality orphan check.

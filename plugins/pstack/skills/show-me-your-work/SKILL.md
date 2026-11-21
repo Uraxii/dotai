@@ -1,6 +1,16 @@
 ---
 name: show-me-your-work
 description: "Keep a reviewable decision trail for long-running or unattended work: a TSV log with one row per decision (what, why, evidence, result). Local by default; commit it when a reviewer needs the trail to trust the result. Use for /show-me-your-work, autonomous or multi-phase runs, or work a human reviews after stepping away."
+compatibility: >
+  Requires a subagent on a different model family for the trail review. The
+  audit reads Claude Code transcripts in `~/.claude/projects/`. `scripts/log.sh`
+  needs `bash`.
+license: MIT
+metadata:
+  version: 1.0.0
+  author: Michael Denyer
+  homepage: https://github.com/Uraxii/dotai
+  source: https://github.com/michael-denyer/pstack-claude/tree/1bfdab4/plugins/pstack/skills/show-me-your-work
 ---
 
 # Show me your work

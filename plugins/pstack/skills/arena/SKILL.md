@@ -1,6 +1,15 @@
 ---
 name: arena
 description: "Spawn N parallel candidates at the same task, pick a base, graft the strongest parts of the losers into it. Use for /arena, 'arena this', 'throw it in the arena', or when one attempt at a non-trivial artifact would lock in the wrong shape."
+compatibility: >
+  Requires a harness that can spawn parallel background subagents with a model
+  choice. Uses `git` worktrees for candidate output when available.
+license: MIT
+metadata:
+  version: 1.0.0
+  author: Michael Denyer
+  homepage: https://github.com/Uraxii/dotai
+  source: https://github.com/michael-denyer/pstack-claude/tree/1bfdab4/plugins/pstack/skills/arena
 ---
 
 # Arena

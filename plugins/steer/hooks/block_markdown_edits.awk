@@ -48,7 +48,7 @@ END {
   reason = "Blocked: the user's latest message does not ask for markdown edits, so " name " stays as it is. " \
     "Markdown outside the project's .ai/ folder needs the user's request. Ask the user in chat before you edit it. " \
     "If the user names the file, says \"markdown\", or answers yes to your question that names the file, the edit is allowed. " \
-    "plans, handoffs, TODOs belong in .ai/ at the project root, where markdown edits are always allowed. " \
+    "Notes, plans and handoffs belong in .ai/ at the project root, where markdown edits are always allowed. " \
     "Keep your notes in memory or in .ai/, not in this file. " \
     "If you think a lasting rule is necessary, suggest it to the user in chat as an AGENTS.md entry, a lint, or a test. " \
     "Name which one, and tell the user which mistake that rule prevents."

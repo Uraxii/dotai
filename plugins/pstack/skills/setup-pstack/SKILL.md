@@ -1,6 +1,16 @@
 ---
 name: setup-pstack
 description: Configure which models pstack uses per role. Detects available models and writes the current runtime's override sheet. Use for /setup-pstack, "configure pstack models", changing pstack's model choices, or turning the SessionStart hook on or off.
+compatibility: >
+  Requires one of these runtimes: Claude Code, Codex, Pi, GitHub Copilot,
+  opencode, or Gemini CLI. On GitHub Copilot, the sheet check runs
+  `scripts/check-sheet.sh` with `sh`.
+license: MIT
+metadata:
+  version: 1.0.0
+  author: Michael Denyer
+  homepage: https://github.com/Uraxii/dotai
+  source: https://github.com/michael-denyer/pstack-claude/tree/1bfdab4/plugins/pstack/skills/setup-pstack
 ---
 
 # Setup pstack

@@ -2,6 +2,12 @@
 name: principle-fix-root-causes
 description: "Apply when debugging. Trace each symptom to its root cause and fix it there; reproduce first, ask why until you reach it, resist nil-check guards that silence crashes."
 user-invocable: false
+license: MIT
+metadata:
+  version: 1.0.0
+  author: Michael Denyer
+  homepage: https://github.com/Uraxii/dotai
+  source: https://github.com/michael-denyer/pstack-claude/tree/1bfdab4/plugins/pstack/skills/principle-fix-root-causes
 ---
 
 # Fix Root Causes

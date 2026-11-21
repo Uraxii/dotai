@@ -23,7 +23,7 @@ agent files. The other fifteen each cover one tool or one job. Only
 | `sandbox` | Give an agent a throwaway podman container with its own clone of the repo, ports, and a virtual display. |
 | `codex-worker` | Delegate a code change from Claude Code to an outside Codex CLI worker. |
 | `ox-vibesec` | Wire the OX Security VibeSec hooks and its status and login commands through a plugin instead of settings.json. |
-| `mpocock` | Compact a conversation into a handoff document another agent can pick the work up from. |
+| `mpocock` | Matt Pocock's handoff and wayfinder skills: compact a conversation into a handoff document, and plan work too big for one session as a map of decision tickets. |
 | `skills` | Review and author SKILL.md files, finding and repairing the smells that stop a skill triggering. |
 | `codebase-memory` | Query a code graph through the codebase-memory-mcp server, skill, and graph-verification agents. |
 | `caveman` | Answer in a compressed register that drops filler and keeps every technical fact. |
@@ -45,7 +45,7 @@ installed only one of them.
 | `plugins/<plugin>/skills/` | Every skill, `skills/<name>/SKILL.md`. Source of truth. |
 | `plugins/pstack/models.json` | Model picks per role and harness. The only copy in the repository. Every skill that picks a model by role ships in `pstack` and points at it by path. A per-harness override sheet in the user's config directory replaces a role for one harness without touching this repo (see the `setup-pstack` skill). |
 | `plugins/pstack/agents/` | Claude and Copilot agent files. |
-| `scripts/` | `generate-plugin-manifests.py` writes all 41 plugin manifests, both marketplace files, and the plugin table above from one list. `run-hook-tests.sh` runs `lint-hook-references.sh`, which checks that every hook manifest names files that exist through the root variable its harness sets, then every plugin hook test and the shunt evals. |
+| `scripts/` | `generate-plugin-manifests.py` writes all 41 plugin manifests, both marketplace files, the plugin table above, and the README of every plugin and skill from one list. `run-hook-tests.sh` runs `lint-hook-references.sh`, which checks that every hook manifest names files that exist through the root variable its harness sets, then every plugin hook test and the shunt evals. |
 | `themes/` | Editor themes. Source of truth only. Nothing installs them, so copy one into `~/.claude/themes/` yourself. |
 | `output-styles/` | Output styles, `output-styles/<name>.md`. Nothing installs them, so copy one into `~/.claude/output-styles/` and select it with `/output-style` yourself. |
 | `statusline.sh` | Statusline command: usage bars and tokens per minute. Nothing installs it, so copy it to `~/.claude/statusline.sh` and set `statusLine` yourself. |

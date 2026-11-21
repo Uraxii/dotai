@@ -134,18 +134,41 @@ def as_claude_plugin_agent(text: str) -> str:
     )
 
 
-def with_local_setup(skill: str) -> str:
-    """Add the session setup steps that upstream's skill lacks."""
+SKILL_MD = Path("skills/codebase-memory/SKILL.md")
+SKILL_HEADER = (
+    "compatibility: Needs the codebase-memory-mcp server. This plugin registers it.\n"
+    "metadata:\n"
+    "  version: {version}\n"
+    "  author: DeusData\n"
+    "  homepage: https://github.com/Uraxii/dotai\n"
+    "  source: https://github.com/DeusData/codebase-memory-mcp/tree/v0.11.0\n"
+)
+
+
+def current_skill_version() -> str:
+    """The checked-in skill version, so a sync keeps it; bump it after a sync."""
+    for line in (PLUGIN_ROOT / SKILL_MD).read_text(encoding="utf-8").splitlines():
+        if line.startswith("  version: "):
+            return line.split(": ", 1)[1].strip()
+    return "1.0.0"
+
+
+def with_local_setup(skill: str, version: str) -> str:
+    """Add the session setup steps and the metadata that upstream's skill lacks."""
     if SKILL_ANCHOR not in skill:
         raise SystemExit(f"upstream skill no longer has {SKILL_ANCHOR.strip()!r}")
+    head, close, body = skill.partition("\n---\n")
+    if not skill.startswith("---\n") or not close:
+        raise SystemExit("upstream skill no longer has frontmatter")
+    skill = f"{head}\n{SKILL_HEADER.format(version=version)}---\n{body}"
     return skill.replace(SKILL_ANCHOR, SKILL_SETUP + SKILL_ANCHOR, 1)
 
 
 def wanted_files(upstream: Path) -> dict[Path, str]:
     cli_source = (upstream / "src/cli/cli.c").read_text(encoding="utf-8")
     files = {
-        Path("skills/codebase-memory/SKILL.md"): with_local_setup(
-            c_string_constant(cli_source, "skill_content")
+        SKILL_MD: with_local_setup(
+            c_string_constant(cli_source, "skill_content"), current_skill_version()
         ),
         Path("hooks/instructions.md"): c_string_constant(
             cli_source, "agent_instructions_content"

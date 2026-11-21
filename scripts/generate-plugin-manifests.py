@@ -5,6 +5,8 @@ Every plugin in the repository needs a `plugin.json`, a
 `.claude-plugin/plugin.json`, and a `.codex-plugin/plugin.json`, and each
 must appear in `.claude-plugin/marketplace.json`, in
 `.agents/plugins/marketplace.json`, and in the plugin table in `README.md`.
+Each plugin and each of its skills also gets a `README.md`, except a
+plugin README listed in HAND_WRITTEN_READMES.
 That is three manifests, two marketplace entries, and one table row per
 plugin, whose names, versions, and descriptions all have to agree.
 
@@ -19,6 +21,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import subprocess
 import sys
 from pathlib import Path
 
@@ -35,6 +38,8 @@ FIRST_RELEASE = "1.0.0"
 
 PLUGIN_TABLE_START = "<!-- dotai:plugins:start -->"
 PLUGIN_TABLE_END = "<!-- dotai:plugins:end -->"
+# Plugins whose README.md a person writes; the generator leaves it alone.
+HAND_WRITTEN_READMES = {"ox-vibesec", "pstack", "shunt"}
 HOOK_WIRING_PATHS = {
     "claude": Path("hooks/claude-hooks.json"),
     "codex": Path("hooks/codex-hooks.json"),
@@ -64,7 +69,7 @@ PLUGINS: list[dict[str, object]] = [
     PSTACK,
     {
         "name": "artifact",
-        "version": "1.0.1",
+        "version": "1.1.0",
         "description": (
             "Explain a code change as a self-contained interactive HTML page."
         ),
@@ -83,7 +88,7 @@ PLUGINS: list[dict[str, object]] = [
     },
     {
         "name": "notion",
-        "version": "1.0.1",
+        "version": "1.1.0",
         "description": (
             "Reach Notion from the command line, and publish a code-change "
             "explainer as a Notion page."
@@ -103,7 +108,7 @@ PLUGINS: list[dict[str, object]] = [
     },
     {
         "name": "azure",
-        "version": "1.0.1",
+        "version": "1.1.0",
         "description": (
             "Read Azure DevOps projects, repos, pipelines, releases, and "
             "work items over the REST API."
@@ -124,7 +129,7 @@ PLUGINS: list[dict[str, object]] = [
     },
     {
         "name": "llm-wiki",
-        "version": "1.1.2",
+        "version": "1.2.0",
         "description": (
             "Keep research findings in a searchable project knowledgebase "
             "instead of re-deriving them."
@@ -145,7 +150,7 @@ PLUGINS: list[dict[str, object]] = [
     },
     {
         "name": "proton",
-        "version": "1.0.1",
+        "version": "1.1.0",
         "description": (
             "Read and store secrets in Proton Pass through pass-cli, so none "
             "lands in a repo or a shell history."
@@ -166,7 +171,7 @@ PLUGINS: list[dict[str, object]] = [
     },
     {
         "name": "sandbox",
-        "version": "1.0.3",
+        "version": "1.1.0",
         "description": (
             "Give an agent a throwaway podman container with its own clone "
             "of the repo, ports, and a virtual display."
@@ -188,6 +193,7 @@ PLUGINS: list[dict[str, object]] = [
     },
     {
         "name": "codex-worker",
+        "version": "1.1.0",
         "harnesses": ["claude"],
         "description": (
             "Delegate a code change from Claude Code to an outside Codex CLI "
@@ -210,7 +216,7 @@ PLUGINS: list[dict[str, object]] = [
         # Claude Code loads hooks/hooks.json without a manifest key, and OX's
         # --status check looks for that exact path, so no "hooks" entry here.
         "name": "ox-vibesec",
-        "version": "1.1.0",
+        "version": "1.2.0",
         "harnesses": ["claude"],
         "description": (
             "Wire the OX Security VibeSec hooks and its status and login "
@@ -219,29 +225,31 @@ PLUGINS: list[dict[str, object]] = [
     },
     {
         "name": "mpocock",
-        "version": "1.2.6",
+        "version": "1.3.0",
         "hooks": ["claude", "codex"],
         "description": (
-            "Compact a conversation into a handoff document another agent "
-            "can pick the work up from."
+            "Matt Pocock's handoff and wayfinder skills: compact a "
+            "conversation into a handoff document, and plan work too big for "
+            "one session as a map of decision tickets."
         ),
-        "short": "Session handoff documents.",
+        "short": "Session handoffs and wayfinding maps.",
         "long": (
-            "Writes down what a session established, what it decided, and "
-            "what is still open, in a form a fresh agent reads instead of "
-            "the transcript. Use it before context runs out, before handing "
-            "a long pipeline to a successor, or when another session "
-            "continues the work."
+            "handoff writes down what a session established, what it decided, "
+            "and what is still open, in a form a fresh agent reads instead of "
+            "the transcript. wayfinder charts work too big for one session as "
+            "a shared map of decision tickets on the issue tracker, then "
+            "resolves them one at a time. Both come from Matt Pocock's skills "
+            "repository, https://github.com/mattpocock/skills, under MIT."
         ),
-        "keywords": ["handoff", "context"],
+        "keywords": ["handoff", "context", "planning"],
         "prompts": [
             "Write a handoff document for this session.",
-            "Compact what we have done so another agent can continue.",
+            "Wayfind this idea into a map of decision tickets.",
         ],
     },
     {
         "name": "skills",
-        "version": "1.1.1",
+        "version": "1.2.0",
         "hooks": ["claude", "codex", "copilot"],
         "description": (
             "Review and author SKILL.md files, finding and repairing the "
@@ -263,7 +271,7 @@ PLUGINS: list[dict[str, object]] = [
     },
     {
         "name": "codebase-memory",
-        "version": "2.2.1",
+        "version": "2.3.0",
         "hooks": ["claude", "copilot"],
         "agents": ["claude", "copilot"],
         "mcp_servers": {
@@ -290,7 +298,7 @@ PLUGINS: list[dict[str, object]] = [
     },
     {
         "name": "caveman",
-        "version": "1.0.1",
+        "version": "1.1.0",
         "description": (
             "Answer in a compressed register that drops filler and keeps "
             "every technical fact."
@@ -311,6 +319,7 @@ PLUGINS: list[dict[str, object]] = [
     },
     {
         "name": "asd-ste100",
+        "version": "1.1.0",
         "description": (
             "Rewrite ambiguous English into ASD-STE100 Simplified Technical "
             "English so agents and readers cannot misread it."
@@ -332,7 +341,7 @@ PLUGINS: list[dict[str, object]] = [
     },
     {
         "name": "steer",
-        "version": "1.4.0",
+        "version": "1.4.1",
         "hooks": ["claude"],
         "skills": False,
         "description": (
@@ -350,7 +359,7 @@ PLUGINS: list[dict[str, object]] = [
     },
     {
         "name": "shunt",
-        "version": "0.3.2",
+        "version": "0.4.0",
         "marketplace_version": True,
         "hooks": ["claude", "codex", "copilot"],
         "skills": False,
@@ -376,7 +385,7 @@ PLUGINS: list[dict[str, object]] = [
     },
     {
         "name": "personal-instructions",
-        "version": "1.0.7",
+        "version": "1.0.8",
         "hooks": ["claude", "codex", "copilot"],
         "skills": False,
         "description": (
@@ -539,12 +548,152 @@ def readme_with_plugin_table(root: Path) -> str:
     return f"{before}{start}\n\n{plugin_table()}\n\n{end}{after}"
 
 
+def scalar(value: str) -> str:
+    """Decode one YAML scalar: double-quoted, single-quoted, or plain."""
+    if value[:1] == '"':
+        return json.JSONDecoder().raw_decode(value)[0]
+    if value[:1] == "'":
+        return value[1:value.rindex("'")].replace("''", "'")
+    return value.partition(" #")[0].rstrip()
+
+
+def skill_frontmatter(text: str, label: object) -> dict[str, str]:
+    """Read `name`, `description`, `compatibility`, and `metadata.version`.
+
+    Plain, quoted, and folded (`>-` or `|`) values, like lint-skills.sh reads.
+    """
+    lines = text.splitlines()
+    if not lines or lines[0].strip() != "---":
+        raise SystemExit(f"{label} has no frontmatter")
+    fields: dict[str, list[str]] = {}
+    key = None
+    for line in lines[1:]:
+        if line.strip() == "---":
+            break
+        if not line.strip():
+            continue  # a blank line inside a folded block keeps the block going
+        if line[:1] in (" ", "\t") and key:
+            fields[key].append(line.strip())
+            continue
+        key, _, value = line.partition(":")
+        value = value.strip()
+        fields[key] = [] if value in (">", ">-", "|", "|-") else [value]
+    found = {
+        k: scalar(" ".join(fields.get(k, [])).strip())
+        for k in ("name", "description", "compatibility")
+    }
+    found["version"] = next(
+        (
+            scalar(entry.partition(":")[2].strip())
+            for entry in fields.get("metadata", [])
+            if entry.startswith("version:")
+        ),
+        "",
+    )
+    return found
+
+
+def skills_of(plugin: dict[str, object], root: Path) -> list[dict[str, str]]:
+    skills_root = root / "plugins" / str(plugin["name"]) / "skills"
+    return [
+        {"dir": skill_md.parent.name, **skill_frontmatter(skill_md.read_text(encoding="utf-8"), skill_md)}
+        for skill_md in sorted(skills_root.glob("*/SKILL.md"))
+    ]
+
+
+def install_section(plugin: dict[str, object]) -> str:
+    name = plugin["name"]
+    blocks = []
+    if on_harness(plugin, "claude"):
+        blocks.append(
+            "Claude Code:\n\n```\n/plugin marketplace add Uraxii/dotai\n"
+            f"/plugin install {name}@Uraxii\n```"
+        )
+    if on_harness(plugin, "codex"):
+        blocks.append(
+            "Codex CLI:\n\n```\ncodex plugin marketplace add Uraxii/dotai --ref main\n"
+            f"codex plugin add {name}@uraxii\n```"
+        )
+    if on_harness(plugin, "copilot"):
+        blocks.append(
+            "Copilot CLI:\n\n```\ncopilot plugin marketplace add Uraxii/dotai\n"
+            f"copilot plugin install {name}@Uraxii\n```"
+        )
+    return "## Install\n\n" + "\n\n".join(blocks) + (
+        "\n\nFor other harnesses, see the "
+        f"[repository README]({REPOSITORY_URL}#install)."
+    )
+
+
+def source_section(path: str) -> str:
+    return (
+        "## Source\n\n"
+        f"- Repository: [Uraxii/dotai]({REPOSITORY_URL})\n"
+        f"- This directory: [`{path}`]({REPOSITORY_URL}/tree/main/{path})\n"
+        f"- Issues: [{REPOSITORY_URL}/issues]({REPOSITORY_URL}/issues)\n"
+        f"- Author: [{AUTHOR['name']}]({AUTHOR['url']})"
+    )
+
+
+GENERATED_NOTE = (
+    "<!-- Generated by scripts/generate-plugin-manifests.py. "
+    "Do not edit by hand. -->"
+)
+
+
+def plugin_readme(plugin: dict[str, object], root: Path) -> str:
+    name = plugin["name"]
+    parts = [GENERATED_NOTE, f"# {name}", str(plugin.get("long", plugin["description"]))]
+    skills = skills_of(plugin, root)
+    if skills:
+        rows = "\n".join(
+            f"| [`{s['name']}`](skills/{s['dir']}/README.md) | {s['description']} |"
+            for s in skills
+        )
+        parts.append(f"## Skills\n\n| Skill | What it does |\n|---|---|\n{rows}")
+    if plugin.get("hooks"):
+        harnesses = ", ".join(f"`{h}`" for h in plugin["hooks"])
+        parts.append(
+            f"## Hooks\n\nShips hooks under `hooks/` for {harnesses}. "
+            "Plugin installation wires them."
+        )
+    parts += [install_section(plugin), source_section(f"plugins/{name}")]
+    return "\n\n".join(parts) + "\n"
+
+
+def skill_readme(plugin: dict[str, object], skill: dict[str, str]) -> str:
+    path = f"plugins/{plugin['name']}/skills/{skill['dir']}"
+    return "\n\n".join([
+        GENERATED_NOTE,
+        f"# {skill['name']}",
+        skill["description"],
+        f"Ships in the [`{plugin['name']}`](../../README.md) plugin of "
+        f"[Uraxii/dotai]({REPOSITORY_URL}). The agent reads "
+        "[SKILL.md](SKILL.md); this file is for people.",
+        *([f"## Requirements\n\n{skill['compatibility']}"] if skill["compatibility"] else []),
+        install_section(plugin),
+        source_section(path),
+    ]) + "\n"
+
+
+def readme_files(root: Path) -> dict[Path, str]:
+    files: dict[Path, str] = {}
+    for plugin in PLUGINS:
+        plugin_root = Path("plugins") / str(plugin["name"])
+        if plugin["name"] not in HAND_WRITTEN_READMES:
+            files[plugin_root / "README.md"] = plugin_readme(plugin, root)
+        for skill in skills_of(plugin, root):
+            files[plugin_root / "skills" / skill["dir"] / "README.md"] = skill_readme(plugin, skill)
+    return files
+
+
 def wanted_files(root: Path) -> dict[Path, str]:
     """Map every generated path to the exact text it should hold."""
     files: dict[Path, str] = {
         Path(".claude-plugin/marketplace.json"): render(claude_marketplace()),
         Path(".agents/plugins/marketplace.json"): render(agents_marketplace()),
         Path("README.md"): readme_with_plugin_table(root),
+        **readme_files(root),
     }
     for plugin in PLUGINS:
         if plugin is PSTACK:
@@ -610,6 +759,57 @@ def undeclared_hook_wiring(root: Path) -> list[Path]:
     return undeclared
 
 
+RELEASE_REFS = ("origin/main", "main")
+
+
+def git(root: Path, *arguments: str) -> subprocess.CompletedProcess[str]:
+    try:
+        return subprocess.run(
+            ["git", *arguments], cwd=root, capture_output=True, text=True
+        )
+    except FileNotFoundError:  # no git: behave as outside a repository
+        return subprocess.CompletedProcess(["git"], 128, "", "")
+
+
+def unversioned_skills(root: Path) -> list[str]:
+    """Name each skill with no `metadata.version`, or that changed since the
+    last release (the main branch) without a new one.
+
+    Skills carry their own semver, separate from the plugin's. With no main
+    branch to compare with (a copy of the tree, a shallow clone), only the
+    missing-version part runs.
+    """
+    base = next(
+        (ref for ref in RELEASE_REFS
+         if git(root, "rev-parse", "--verify", "--quiet", ref).returncode == 0),
+        None,
+    )
+    problems = []
+    for skill_md in sorted((root / "plugins").glob("*/skills/*/SKILL.md")):
+        relative = skill_md.relative_to(root)
+        version = skill_frontmatter(skill_md.read_text(encoding="utf-8"), relative)["version"]
+        if not version:
+            problems.append(f"{relative}: add metadata.version (start at 1.0.0)")
+            continue
+        if base is None:
+            continue
+        released = git(root, "show", f"{base}:{relative.as_posix()}")
+        if released.returncode != 0:
+            continue  # new since the release
+        unchanged = git(
+            root, "diff", "--quiet", base, "--", str(relative.parent),
+            f":(exclude){relative.parent.as_posix()}/README.md",
+        )
+        if unchanged.returncode == 0:
+            continue
+        if skill_frontmatter(released.stdout, relative)["version"] == version:
+            problems.append(
+                f"{relative}: changed since {base} but metadata.version is "
+                f"still {version}; bump it"
+            )
+    return problems
+
+
 def render(document: dict[str, object]) -> str:
     return json.dumps(document, indent=2, ensure_ascii=False) + "\n"
 
@@ -653,7 +853,8 @@ def main(arguments: list[str] | None = None, root: Path = REPOSITORY_ROOT) -> in
         missing_wiring = missing_hook_wiring(root)
         undeclared_wiring = undeclared_hook_wiring(root)
         stale = stale_manifests(root)
-        if not changed and not missing_wiring and not undeclared_wiring and not stale:
+        versions = unversioned_skills(root)
+        if not changed and not missing_wiring and not undeclared_wiring and not stale and not versions:
             print(f"{len(files)} generated files are up to date.")
             return 0
         if changed:
@@ -673,6 +874,10 @@ def main(arguments: list[str] | None = None, root: Path = REPOSITORY_ROOT) -> in
             print("These manifests are for a harness the plugin opted out of; delete them:")
             for relative in stale:
                 print(f"  {relative}")
+        if versions:
+            print("These skills need a metadata.version change:")
+            for problem in versions:
+                print(f"  {problem}")
         return 2
 
     changed = write(files, root)
