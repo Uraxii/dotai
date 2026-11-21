@@ -1,6 +1,6 @@
 {
   "name": "asd-ste100",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Rewrite ambiguous English into ASD-STE100 Simplified Technical English so agents and readers cannot misread it.",
   "author": {
     "name": "Uraxii",

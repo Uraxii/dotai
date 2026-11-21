@@ -69,7 +69,7 @@ PLUGINS: list[dict[str, object]] = [
     PSTACK,
     {
         "name": "artifact",
-        "version": "1.0.1",
+        "version": "1.1.0",
         "description": (
             "Explain a code change as a self-contained interactive HTML page."
         ),
@@ -88,7 +88,7 @@ PLUGINS: list[dict[str, object]] = [
     },
     {
         "name": "notion",
-        "version": "1.0.1",
+        "version": "1.1.0",
         "description": (
             "Reach Notion from the command line, and publish a code-change "
             "explainer as a Notion page."
@@ -108,7 +108,7 @@ PLUGINS: list[dict[str, object]] = [
     },
     {
         "name": "azure",
-        "version": "1.0.1",
+        "version": "1.1.0",
         "description": (
             "Read Azure DevOps projects, repos, pipelines, releases, and "
             "work items over the REST API."
@@ -129,7 +129,7 @@ PLUGINS: list[dict[str, object]] = [
     },
     {
         "name": "llm-wiki",
-        "version": "1.1.2",
+        "version": "1.2.0",
         "description": (
             "Keep research findings in a searchable project knowledgebase "
             "instead of re-deriving them."
@@ -150,7 +150,7 @@ PLUGINS: list[dict[str, object]] = [
     },
     {
         "name": "proton",
-        "version": "1.0.1",
+        "version": "1.1.0",
         "description": (
             "Read and store secrets in Proton Pass through pass-cli, so none "
             "lands in a repo or a shell history."
@@ -171,7 +171,7 @@ PLUGINS: list[dict[str, object]] = [
     },
     {
         "name": "sandbox",
-        "version": "1.0.3",
+        "version": "1.1.0",
         "description": (
             "Give an agent a throwaway podman container with its own clone "
             "of the repo, ports, and a virtual display."
@@ -193,6 +193,7 @@ PLUGINS: list[dict[str, object]] = [
     },
     {
         "name": "codex-worker",
+        "version": "1.1.0",
         "harnesses": ["claude"],
         "description": (
             "Delegate a code change from Claude Code to an outside Codex CLI "
@@ -215,7 +216,7 @@ PLUGINS: list[dict[str, object]] = [
         # Claude Code loads hooks/hooks.json without a manifest key, and OX's
         # --status check looks for that exact path, so no "hooks" entry here.
         "name": "ox-vibesec",
-        "version": "1.1.0",
+        "version": "1.2.0",
         "harnesses": ["claude"],
         "description": (
             "Wire the OX Security VibeSec hooks and its status and login "
@@ -248,7 +249,7 @@ PLUGINS: list[dict[str, object]] = [
     },
     {
         "name": "skills",
-        "version": "1.1.2",
+        "version": "1.2.0",
         "hooks": ["claude", "codex", "copilot"],
         "description": (
             "Review and author SKILL.md files, finding and repairing the "
@@ -270,7 +271,7 @@ PLUGINS: list[dict[str, object]] = [
     },
     {
         "name": "codebase-memory",
-        "version": "2.2.1",
+        "version": "2.3.0",
         "hooks": ["claude", "copilot"],
         "agents": ["claude", "copilot"],
         "mcp_servers": {
@@ -297,7 +298,7 @@ PLUGINS: list[dict[str, object]] = [
     },
     {
         "name": "caveman",
-        "version": "1.0.1",
+        "version": "1.1.0",
         "description": (
             "Answer in a compressed register that drops filler and keeps "
             "every technical fact."
@@ -318,6 +319,7 @@ PLUGINS: list[dict[str, object]] = [
     },
     {
         "name": "asd-ste100",
+        "version": "1.1.0",
         "description": (
             "Rewrite ambiguous English into ASD-STE100 Simplified Technical "
             "English so agents and readers cannot misread it."
@@ -339,7 +341,7 @@ PLUGINS: list[dict[str, object]] = [
     },
     {
         "name": "steer",
-        "version": "1.4.0",
+        "version": "1.4.1",
         "hooks": ["claude"],
         "skills": False,
         "description": (
@@ -357,7 +359,7 @@ PLUGINS: list[dict[str, object]] = [
     },
     {
         "name": "shunt",
-        "version": "0.3.2",
+        "version": "0.4.0",
         "marketplace_version": True,
         "hooks": ["claude", "codex", "copilot"],
         "skills": False,
@@ -383,7 +385,7 @@ PLUGINS: list[dict[str, object]] = [
     },
     {
         "name": "personal-instructions",
-        "version": "1.0.7",
+        "version": "1.0.8",
         "hooks": ["claude", "codex", "copilot"],
         "skills": False,
         "description": (
