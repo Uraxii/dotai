@@ -3,6 +3,9 @@ name: skill-quality
 description: >-
   Reviews or authors SKILL.md and skill reference files for actionable skill
   smells and focused repairs. Use when writing, changing, or reviewing a skill.
+metadata:
+  author: Uraxii
+  homepage: https://github.com/Uraxii/dotai
 ---
 
 # Skill quality

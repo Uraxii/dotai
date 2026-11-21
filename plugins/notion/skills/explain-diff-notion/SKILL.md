@@ -1,6 +1,9 @@
 ---
 name: explain-diff-notion
 description: Use when the user asks for a rich explanation of a code change, diff, branch, or PR. Produces a Notion page.
+metadata:
+  author: Uraxii
+  homepage: https://github.com/Uraxii/dotai
 ---
 
 # Explain Diff

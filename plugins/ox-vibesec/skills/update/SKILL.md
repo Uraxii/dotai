@@ -1,6 +1,9 @@
 ---
 name: update
 description: Updates the ox-vibesec plugin and the OX VibeSec hook code that it runs, then removes the duplicate hooks that the OX installer adds and verifies the result. Use when the user asks to update OX, update VibeSec, upgrade the ox plugin, re-run the OX installer, or says that OX is out of date.
+metadata:
+  author: Uraxii
+  homepage: https://github.com/Uraxii/dotai
 ---
 
 # Update OX VibeSec

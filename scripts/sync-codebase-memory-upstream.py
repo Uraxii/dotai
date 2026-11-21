@@ -134,10 +134,22 @@ def as_claude_plugin_agent(text: str) -> str:
     )
 
 
+SKILL_METADATA = (
+    "metadata:\n"
+    "  author: DeusData\n"
+    "  homepage: https://github.com/Uraxii/dotai\n"
+    "  source: https://github.com/DeusData/codebase-memory-mcp\n"
+)
+
+
 def with_local_setup(skill: str) -> str:
-    """Add the session setup steps that upstream's skill lacks."""
+    """Add the session setup steps and the metadata that upstream's skill lacks."""
     if SKILL_ANCHOR not in skill:
         raise SystemExit(f"upstream skill no longer has {SKILL_ANCHOR.strip()!r}")
+    head, close, body = skill.partition("\n---\n")
+    if not skill.startswith("---\n") or not close:
+        raise SystemExit("upstream skill no longer has frontmatter")
+    skill = f"{head}\n{SKILL_METADATA}---\n{body}"
     return skill.replace(SKILL_ANCHOR, SKILL_SETUP + SKILL_ANCHOR, 1)
 
 

@@ -5,6 +5,9 @@ description: >-
   and upload files. Use when the user asks to "call the Notion API", "deploy a
   worker", "upload a file to Notion", "create a page", "query a database", or
   read or search Notion content, or any task involving the `ntn` command.
+metadata:
+  author: Uraxii
+  homepage: https://github.com/Uraxii/dotai
 ---
 
 # Notion CLI
