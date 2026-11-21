@@ -1,6 +1,7 @@
 ---
 name: code-writer
 description: "Delegate boilerplate code generation to AiKA. Use for tests, config, docstrings, type stubs, or any generation where >80% is predictable from reference files."
+compatibility: Needs access to Portal AiKA.
 license: Apache-2.0
 metadata:
   version: 1.0.0

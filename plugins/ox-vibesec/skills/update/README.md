@@ -6,6 +6,10 @@ Updates the ox-vibesec plugin and the OX VibeSec hook code that it runs, then re
 
 Ships in the [`ox-vibesec`](../../README.md) plugin of [Uraxii/dotai](https://github.com/Uraxii/dotai). The agent reads [SKILL.md](SKILL.md); this file is for people.
 
+## Requirements
+
+Needs Claude Code, the ox-vibesec plugin, and network access to run the OX installer.
+
 ## Install
 
 Claude Code:

@@ -6,6 +6,10 @@ Plan a huge chunk of work (more than one agent session can hold) as a shared map
 
 Ships in the [`mpocock`](../../README.md) plugin of [Uraxii/dotai](https://github.com/Uraxii/dotai). The agent reads [SKILL.md](SKILL.md); this file is for people.
 
+## Requirements
+
+Needs an issue tracker: GitHub with the gh CLI, GitLab with the glab CLI, or local markdown files in .scratch/ (the fallback). Research tickets need a harness that can run subagents. Run it by hand; the model does not load it.
+
 ## Install
 
 Claude Code:

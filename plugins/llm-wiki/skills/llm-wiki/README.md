@@ -6,6 +6,10 @@ Use at the moments knowledge is about to be lost or re-derived: before citing a 
 
 Ships in the [`llm-wiki`](../../README.md) plugin of [Uraxii/dotai](https://github.com/Uraxii/dotai). The agent reads [SKILL.md](SKILL.md); this file is for people.
 
+## Requirements
+
+Needs the llmwiki CLI. See references/install.md to install it.
+
 ## Install
 
 Claude Code:

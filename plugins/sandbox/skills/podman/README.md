@@ -6,6 +6,10 @@ Gives an agent a throwaway podman container holding a private clone of a reposit
 
 Ships in the [`sandbox`](../../README.md) plugin of [Uraxii/dotai](https://github.com/Uraxii/dotai). The agent reads [SKILL.md](SKILL.md); this file is for people.
 
+## Requirements
+
+Needs podman and a Containerfile in the project. Screenshots need Xvfb, xdpyinfo, and ImageMagick in the image.
+
 ## Install
 
 Claude Code:

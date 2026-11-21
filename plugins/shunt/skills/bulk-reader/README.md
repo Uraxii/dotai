@@ -6,6 +6,10 @@ Delegate large reads to a small, fast subagent. Use for questions about files >3
 
 Ships in the [`shunt`](../../README.md) plugin of [Uraxii/dotai](https://github.com/Uraxii/dotai). The agent reads [SKILL.md](SKILL.md); this file is for people.
 
+## Requirements
+
+Needs a harness that can run subagents.
+
 ## Install
 
 Claude Code:

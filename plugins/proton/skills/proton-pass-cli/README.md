@@ -6,6 +6,10 @@ Retrieve a stored credential (an API key, a gateway token, a password, an SSH ke
 
 Ships in the [`proton`](../../README.md) plugin of [Uraxii/dotai](https://github.com/Uraxii/dotai). The agent reads [SKILL.md](SKILL.md); this file is for people.
 
+## Requirements
+
+Needs the pass-cli tool and a Proton Pass personal access token in the OS keyring.
+
 ## Install
 
 Claude Code:

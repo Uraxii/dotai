@@ -5,8 +5,8 @@ Every plugin in the repository needs a `plugin.json`, a
 `.claude-plugin/plugin.json`, and a `.codex-plugin/plugin.json`, and each
 must appear in `.claude-plugin/marketplace.json`, in
 `.agents/plugins/marketplace.json`, and in the plugin table in `README.md`.
-Each plugin and each of its skills also gets a `README.md`, except
-pstack, which is vendored, and a plugin listed in HAND_WRITTEN_READMES.
+Each plugin and each of its skills also gets a `README.md`, except a
+plugin README listed in HAND_WRITTEN_READMES.
 That is three manifests, two marketplace entries, and one table row per
 plugin, whose names, versions, and descriptions all have to agree.
 
@@ -39,7 +39,7 @@ FIRST_RELEASE = "1.0.0"
 PLUGIN_TABLE_START = "<!-- dotai:plugins:start -->"
 PLUGIN_TABLE_END = "<!-- dotai:plugins:end -->"
 # Plugins whose README.md a person writes; the generator leaves it alone.
-HAND_WRITTEN_READMES = {"ox-vibesec", "shunt"}
+HAND_WRITTEN_READMES = {"ox-vibesec", "pstack", "shunt"}
 HOOK_WIRING_PATHS = {
     "claude": Path("hooks/claude-hooks.json"),
     "codex": Path("hooks/codex-hooks.json"),
@@ -547,7 +547,7 @@ def readme_with_plugin_table(root: Path) -> str:
 
 
 def skill_frontmatter(text: str, label: object) -> dict[str, str]:
-    """Read `name`, `description`, and `metadata.version` from SKILL.md text.
+    """Read `name`, `description`, `compatibility`, and `metadata.version`.
 
     Plain, quoted, and folded (`>-` or `|`) values, like lint-skills.sh reads.
     """
@@ -567,7 +567,7 @@ def skill_frontmatter(text: str, label: object) -> dict[str, str]:
         fields[key] = [] if value in (">", ">-", "|", "|-") else [value]
     found = {
         k: " ".join(fields.get(k, [])).strip().strip("'\"")
-        for k in ("name", "description")
+        for k in ("name", "description", "compatibility")
     }
     found["version"] = next(
         (
@@ -657,6 +657,7 @@ def skill_readme(plugin: dict[str, object], skill: dict[str, str]) -> str:
         f"Ships in the [`{plugin['name']}`](../../README.md) plugin of "
         f"[Uraxii/dotai]({REPOSITORY_URL}). The agent reads "
         "[SKILL.md](SKILL.md); this file is for people.",
+        *([f"## Requirements\n\n{skill['compatibility']}"] if skill["compatibility"] else []),
         install_section(plugin),
         source_section(path),
     ]) + "\n"
@@ -665,8 +666,6 @@ def skill_readme(plugin: dict[str, object], skill: dict[str, str]) -> str:
 def readme_files(root: Path) -> dict[Path, str]:
     files: dict[Path, str] = {}
     for plugin in PLUGINS:
-        if plugin is PSTACK:
-            continue
         plugin_root = Path("plugins") / str(plugin["name"])
         if plugin["name"] not in HAND_WRITTEN_READMES:
             files[plugin_root / "README.md"] = plugin_readme(plugin, root)

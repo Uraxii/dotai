@@ -6,6 +6,10 @@ Reviews or authors SKILL.md and skill reference files for actionable skill smell
 
 Ships in the [`skills`](../../README.md) plugin of [Uraxii/dotai](https://github.com/Uraxii/dotai). The agent reads [SKILL.md](SKILL.md); this file is for people.
 
+## Requirements
+
+The lint scripts need bash.
+
 ## Install
 
 Claude Code:

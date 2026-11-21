@@ -6,6 +6,10 @@ Query an Azure DevOps organization read-only through its public REST API with th
 
 Ships in the [`azure`](../../README.md) plugin of [Uraxii/dotai](https://github.com/Uraxii/dotai). The agent reads [SKILL.md](SKILL.md); this file is for people.
 
+## Requirements
+
+Needs Python 3 and network access to Azure DevOps. Needs AZURE_DEVOPS_ORG and a token in AZURE_DEVOPS_PAT or AZURE_DEVOPS_BEARER_TOKEN.
+
 ## Install
 
 Claude Code:

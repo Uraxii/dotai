@@ -6,6 +6,10 @@ Use when the user asks for a rich explanation of a code change, diff, branch, or
 
 Ships in the [`notion`](../../README.md) plugin of [Uraxii/dotai](https://github.com/Uraxii/dotai). The agent reads [SKILL.md](SKILL.md); this file is for people.
 
+## Requirements
+
+Needs the Notion MCP tools, connected to a Notion workspace.
+
 ## Install
 
 Claude Code:

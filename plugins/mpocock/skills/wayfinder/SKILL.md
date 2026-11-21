@@ -2,6 +2,10 @@
 name: wayfinder
 description: Plan a huge chunk of work (more than one agent session can hold) as a shared map of decision tickets on your issue tracker, and resolve them one at a time until the way to the destination is clear.
 disable-model-invocation: true
+compatibility: >
+  Needs an issue tracker: GitHub with the gh CLI, GitLab with the glab CLI,
+  or local markdown files in .scratch/ (the fallback). Research tickets need a
+  harness that can run subagents. Run it by hand; the model does not load it.
 license: MIT
 metadata:
   version: 1.0.0
@@ -28,7 +32,7 @@ The map is a single issue on this repo's issue tracker, labelled `wayfinder:map`
 
 The map is an **index**, not a store. It lists the decisions made and points at the tickets that hold their detail; a decision lives in exactly one place, its ticket, so the map never restates it, only gists it and links.
 
-**Where the map, its child tickets, blocking, and frontier queries physically live is tracker-specific.** Use the issue tracker the user's or project's instructions name, and express these with that tracker's own features. If none is named, ask the user which tracker to use.
+**Where the map, its child tickets, blocking, and frontier queries physically live is tracker-specific.** Use the issue tracker the user's or project's instructions name, and follow the **Wayfinding operations** section of its reference: [GitHub](references/issue-tracker-github.md), [GitLab](references/issue-tracker-gitlab.md), or [local markdown](references/issue-tracker-local.md). If none is named, use local markdown. For another tracker, express these with that tracker's own features.
 
 ### The map body
 

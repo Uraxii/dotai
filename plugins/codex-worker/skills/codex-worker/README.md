@@ -6,6 +6,10 @@ Delegates a code change from a Claude Code session to an outside Codex CLI worke
 
 Ships in the [`codex-worker`](../../README.md) plugin of [Uraxii/dotai](https://github.com/Uraxii/dotai). The agent reads [SKILL.md](SKILL.md); this file is for people.
 
+## Requirements
+
+Needs Claude Code as the harness and the codex CLI, signed in. Do not use it inside Codex.
+
 ## Install
 
 Claude Code:

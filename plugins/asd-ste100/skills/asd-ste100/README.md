@@ -6,6 +6,10 @@ Use when English text must be parsed without a human to resolve ambiguity — to
 
 Ships in the [`asd-ste100`](../../README.md) plugin of [Uraxii/dotai](https://github.com/Uraxii/dotai). The agent reads [SKILL.md](SKILL.md); this file is for people.
 
+## Requirements
+
+The optional linter, scripts/ste-lint.py, needs Python 3. It uses only the standard library.
+
 ## Install
 
 Claude Code:

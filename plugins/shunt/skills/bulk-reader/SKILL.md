@@ -1,6 +1,7 @@
 ---
 name: bulk-reader
 description: "Delegate large reads to a small, fast subagent. Use for questions about files >350 lines, questions across 3+ files, or large diff summaries."
+compatibility: Needs a harness that can run subagents.
 license: Apache-2.0
 metadata:
   version: 1.0.0

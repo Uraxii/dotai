@@ -6,6 +6,10 @@ Delegate boilerplate code generation to AiKA. Use for tests, config, docstrings,
 
 Ships in the [`shunt`](../../README.md) plugin of [Uraxii/dotai](https://github.com/Uraxii/dotai). The agent reads [SKILL.md](SKILL.md); this file is for people.
 
+## Requirements
+
+Needs access to Portal AiKA.
+
 ## Install
 
 Claude Code:

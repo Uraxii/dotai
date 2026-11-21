@@ -6,6 +6,10 @@ Use the codebase knowledge graph for structural code queries. Triggers on: explo
 
 Ships in the [`codebase-memory`](../../README.md) plugin of [Uraxii/dotai](https://github.com/Uraxii/dotai). The agent reads [SKILL.md](SKILL.md); this file is for people.
 
+## Requirements
+
+Needs the codebase-memory-mcp server. This plugin registers it.
+
 ## Install
 
 Claude Code:

@@ -1,6 +1,7 @@
 ---
 name: explain-diff-notion
 description: Use when the user asks for a rich explanation of a code change, diff, branch, or PR. Produces a Notion page.
+compatibility: Needs the Notion MCP tools, connected to a Notion workspace.
 metadata:
   version: 1.0.0
   author: Geoffrey Litt

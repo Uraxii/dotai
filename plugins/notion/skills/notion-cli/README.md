@@ -6,6 +6,10 @@ Use the Notion CLI (`ntn`) to interact with the Notion API, manage workers, and 
 
 Ships in the [`notion`](../../README.md) plugin of [Uraxii/dotai](https://github.com/Uraxii/dotai). The agent reads [SKILL.md](SKILL.md); this file is for people.
 
+## Requirements
+
+Needs the ntn CLI and a Notion API token.
+
 ## Install
 
 Claude Code:

@@ -6,6 +6,10 @@ Compact the current conversation into a handoff document for another agent to pi
 
 Ships in the [`mpocock`](../../README.md) plugin of [Uraxii/dotai](https://github.com/Uraxii/dotai). The agent reads [SKILL.md](SKILL.md); this file is for people.
 
+## Requirements
+
+Needs write access to a handoffs directory. Run it by hand; the model does not load it.
+
 ## Install
 
 Claude Code:
