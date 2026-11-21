@@ -2,6 +2,11 @@
 name: principle-sequence-verifiable-units
 description: "Apply to multi-step work (sweeps, migrations, runs of similar edits) and to how you stack commits and PRs. Break work into small units that each end in a verifiable state, check each before the next, and order delivery so the sequence proves itself to a reviewer."
 user-invocable: false
+license: MIT
+metadata:
+  author: Michael Denyer
+  homepage: https://github.com/Uraxii/dotai
+  source: https://github.com/michael-denyer/pstack-claude/tree/1bfdab4/plugins/pstack/skills/principle-sequence-verifiable-units
 ---
 
 # Sequence work into verifiable units

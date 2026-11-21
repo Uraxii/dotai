@@ -2,6 +2,11 @@
 name: principle-migrate-callers-then-delete-legacy-apis
 description: "Apply when introducing a new internal API while old callers still exist. Migrate callers and delete the old API in the same wave instead of preserving compatibility layers."
 user-invocable: false
+license: MIT
+metadata:
+  author: Michael Denyer
+  homepage: https://github.com/Uraxii/dotai
+  source: https://github.com/michael-denyer/pstack-claude/tree/1bfdab4/plugins/pstack/skills/principle-migrate-callers-then-delete-legacy-apis
 ---
 
 # Migrate Callers Then Delete Legacy APIs

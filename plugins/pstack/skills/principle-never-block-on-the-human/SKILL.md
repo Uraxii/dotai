@@ -2,6 +2,11 @@
 name: principle-never-block-on-the-human
 description: "Apply when tempted to ask 'should I do X?' on reversible work. Proceed, present the result, let the human course-correct after the fact; reserve confirmation for irreversible actions."
 user-invocable: false
+license: MIT
+metadata:
+  author: Michael Denyer
+  homepage: https://github.com/Uraxii/dotai
+  source: https://github.com/michael-denyer/pstack-claude/tree/1bfdab4/plugins/pstack/skills/principle-never-block-on-the-human
 ---
 
 # Never Block on the Human

@@ -5,9 +5,11 @@ description: >-
   and upload files. Use when the user asks to "call the Notion API", "deploy a
   worker", "upload a file to Notion", "create a page", "query a database", or
   read or search Notion content, or any task involving the `ntn` command.
+license: MIT
 metadata:
-  author: Uraxii
+  author: Notion Labs
   homepage: https://github.com/Uraxii/dotai
+  source: https://github.com/makenotion/skills/tree/423af2bf546cd0354e5cc871017251945d9ad14f/skills/notion-cli
 ---
 
 # Notion CLI

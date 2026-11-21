@@ -1,6 +1,11 @@
 ---
 name: no-comments
 description: "Spawn the comment-sicko subagent, fix accepted findings, and offer encodings for claimed constraints."
+license: MIT
+metadata:
+  author: Michael Denyer
+  homepage: https://github.com/Uraxii/dotai
+  source: https://github.com/michael-denyer/pstack-claude/tree/1bfdab4/plugins/pstack/skills/no-comments
 ---
 
 # No comments

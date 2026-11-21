@@ -2,6 +2,11 @@
 name: principle-redesign-from-first-principles
 description: "Apply when integrating a new requirement into an existing design. Redesign as if the requirement had been a foundational assumption from day one, instead of bolting it on."
 user-invocable: false
+license: MIT
+metadata:
+  author: Michael Denyer
+  homepage: https://github.com/Uraxii/dotai
+  source: https://github.com/michael-denyer/pstack-claude/tree/1bfdab4/plugins/pstack/skills/principle-redesign-from-first-principles
 ---
 
 # Redesign From First Principles

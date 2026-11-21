@@ -4,6 +4,7 @@ description: >
   Answer in a compressed caveman register that drops filler and keeps every
   technical fact, for the rest of the session. Use for /caveman, "caveman
   mode", "talk like caveman", "be brief" or "less tokens".
+license: MIT
 metadata:
   author: Julius Brussee
   homepage: https://github.com/Uraxii/dotai

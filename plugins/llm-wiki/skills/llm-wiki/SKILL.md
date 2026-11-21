@@ -4,6 +4,7 @@ description: "Use at the moments knowledge is about to be lost or re-derived: be
 metadata:
   author: Uraxii
   homepage: https://github.com/Uraxii/dotai
+  source: https://github.com/Uraxii/llm-wiki/tree/7aab131
 ---
 
 # llm-wiki

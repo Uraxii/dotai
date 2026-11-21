@@ -2,6 +2,9 @@
 name: principle-code-quality
 description: Load before writing or changing code in any language, and before reviewing a diff, designing types or interfaces, refactoring, or debugging. Covers cross-language limits, naming, code smells, type and boundary discipline, domain modelling, reader load, deletion-first sequencing, and scope rules, plus on-demand references for Python, TypeScript, C#, GDScript, and Godot.
 user-invocable: false
+metadata:
+  author: Uraxii
+  homepage: https://github.com/Uraxii/dotai
 ---
 
 # Code quality (all languages, all vendors)

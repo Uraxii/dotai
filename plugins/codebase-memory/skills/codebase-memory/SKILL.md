@@ -4,7 +4,7 @@ description: "Use the codebase knowledge graph for structural code queries. Trig
 metadata:
   author: DeusData
   homepage: https://github.com/Uraxii/dotai
-  source: https://github.com/DeusData/codebase-memory-mcp
+  source: https://github.com/DeusData/codebase-memory-mcp/tree/v0.11.0
 ---
 
 # Codebase Memory — Knowledge Graph Tools

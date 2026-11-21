@@ -1,6 +1,11 @@
 ---
 name: fix-merge-conflicts
 description: Resolve merge conflicts non-interactively, validate build and tests, and finalize conflict resolution
+license: MIT
+metadata:
+  author: Michael Denyer
+  homepage: https://github.com/Uraxii/dotai
+  source: https://github.com/michael-denyer/pstack-claude/tree/1bfdab4/plugins/pstack/skills/fix-merge-conflicts
 ---
 
 # Fix merge conflicts

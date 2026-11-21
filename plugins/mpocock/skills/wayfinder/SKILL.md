@@ -7,7 +7,6 @@ metadata:
   author: Matt Pocock
   homepage: https://github.com/Uraxii/dotai
   source: https://github.com/mattpocock/skills/tree/abeeaf95660ba9e8b7c753eb38f441ca707a8823/skills/engineering/wayfinder
-  upstream-revision: abeeaf95660ba9e8b7c753eb38f441ca707a8823
 ---
 
 A loose idea has arrived, too big for one agent session, and wrapped in fog: the way from here to the **destination** isn't visible yet. Wayfinding is about finding that way, not charging at the destination. This skill charts the way as a **shared map** on the repo's issue tracker, then works its **decision tickets** (questions whose resolution is a decision, not slices of a build to execute) one at a time until the route is clear.

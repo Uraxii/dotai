@@ -138,7 +138,7 @@ SKILL_METADATA = (
     "metadata:\n"
     "  author: DeusData\n"
     "  homepage: https://github.com/Uraxii/dotai\n"
-    "  source: https://github.com/DeusData/codebase-memory-mcp\n"
+    "  source: https://github.com/DeusData/codebase-memory-mcp/tree/v0.11.0\n"
 )
 
 
