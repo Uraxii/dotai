@@ -2,7 +2,7 @@
 
 # maintain-verification-skill
 
-Periodic pass that keeps a project's verification skill and feature map honest: parallel source readers per feature, one live session driving every feature, at most one PR of proven corrections. Use for /maintain-verification-skill or \"audit the verify skill\".
+Periodic pass that keeps a project's verification skill and feature map honest: parallel source readers per feature, one live session driving every feature, at most one PR of proven corrections. Use for /maintain-verification-skill or "audit the verify skill".
 
 Ships in the [`pstack`](../../README.md) plugin of [Uraxii/dotai](https://github.com/Uraxii/dotai). The agent reads [SKILL.md](SKILL.md); this file is for people.
 

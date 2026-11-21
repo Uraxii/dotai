@@ -7,9 +7,9 @@
 
 seen=$(reached)
 for ref in "${refs[@]}"; do
-  case ${ref#"$dir"/} in
-    */licenses/* | */LICENSE* | */NOTICE* | */COPYING*) continue ;;
-  esac
+  name=$(tr '[:upper:]' '[:lower:]' <<<"${ref##*/}")
+  case $name in license | license[.-]* | notice | notice[.-]* | copying | copying[.-]*) continue ;; esac
+  case /${ref#"$dir"/} in */licenses/*) continue ;; esac
   grep -qF "$ref	" <<<"$seen" ||
     fail "$ref" "no link from SKILL.md or a linked reference reaches this file" "link it from SKILL.md with when to read it, or delete it"
 done

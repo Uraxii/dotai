@@ -2,7 +2,7 @@
 
 # principle-prove-it-works
 
-Apply after completing a task, before declaring done. Verify against the real artifact (run the feature, read the actual value, inspect the diff), not a proxy, self-report, or 'it compiles.
+Apply after completing a task, before declaring done. Verify against the real artifact (run the feature, read the actual value, inspect the diff), not a proxy, self-report, or 'it compiles.'
 
 Ships in the [`pstack`](../../README.md) plugin of [Uraxii/dotai](https://github.com/Uraxii/dotai). The agent reads [SKILL.md](SKILL.md); this file is for people.
 

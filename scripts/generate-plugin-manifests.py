@@ -548,6 +548,15 @@ def readme_with_plugin_table(root: Path) -> str:
     return f"{before}{start}\n\n{plugin_table()}\n\n{end}{after}"
 
 
+def scalar(value: str) -> str:
+    """Decode one YAML scalar: double-quoted, single-quoted, or plain."""
+    if value[:1] == '"':
+        return json.JSONDecoder().raw_decode(value)[0]
+    if value[:1] == "'":
+        return value[1:value.rindex("'")].replace("''", "'")
+    return value.partition(" #")[0].rstrip()
+
+
 def skill_frontmatter(text: str, label: object) -> dict[str, str]:
     """Read `name`, `description`, `compatibility`, and `metadata.version`.
 
@@ -561,6 +570,8 @@ def skill_frontmatter(text: str, label: object) -> dict[str, str]:
     for line in lines[1:]:
         if line.strip() == "---":
             break
+        if not line.strip():
+            continue  # a blank line inside a folded block keeps the block going
         if line[:1] in (" ", "\t") and key:
             fields[key].append(line.strip())
             continue
@@ -568,12 +579,12 @@ def skill_frontmatter(text: str, label: object) -> dict[str, str]:
         value = value.strip()
         fields[key] = [] if value in (">", ">-", "|", "|-") else [value]
     found = {
-        k: " ".join(fields.get(k, [])).strip().strip("'\"")
+        k: scalar(" ".join(fields.get(k, [])).strip())
         for k in ("name", "description", "compatibility")
     }
     found["version"] = next(
         (
-            entry.partition(":")[2].strip().strip("'\"")
+            scalar(entry.partition(":")[2].strip())
             for entry in fields.get("metadata", [])
             if entry.startswith("version:")
         ),
@@ -585,7 +596,7 @@ def skill_frontmatter(text: str, label: object) -> dict[str, str]:
 def skills_of(plugin: dict[str, object], root: Path) -> list[dict[str, str]]:
     skills_root = root / "plugins" / str(plugin["name"]) / "skills"
     return [
-        {"dir": skill_md.parent.name, **skill_frontmatter(skill_md.read_text(), skill_md)}
+        {"dir": skill_md.parent.name, **skill_frontmatter(skill_md.read_text(encoding="utf-8"), skill_md)}
         for skill_md in sorted(skills_root.glob("*/SKILL.md"))
     ]
 
@@ -752,9 +763,12 @@ RELEASE_REFS = ("origin/main", "main")
 
 
 def git(root: Path, *arguments: str) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(
-        ["git", *arguments], cwd=root, capture_output=True, text=True
-    )
+    try:
+        return subprocess.run(
+            ["git", *arguments], cwd=root, capture_output=True, text=True
+        )
+    except FileNotFoundError:  # no git: behave as outside a repository
+        return subprocess.CompletedProcess(["git"], 128, "", "")
 
 
 def unversioned_skills(root: Path) -> list[str]:
@@ -773,7 +787,7 @@ def unversioned_skills(root: Path) -> list[str]:
     problems = []
     for skill_md in sorted((root / "plugins").glob("*/skills/*/SKILL.md")):
         relative = skill_md.relative_to(root)
-        version = skill_frontmatter(skill_md.read_text(), relative)["version"]
+        version = skill_frontmatter(skill_md.read_text(encoding="utf-8"), relative)["version"]
         if not version:
             problems.append(f"{relative}: add metadata.version (start at 1.0.0)")
             continue
@@ -782,7 +796,10 @@ def unversioned_skills(root: Path) -> list[str]:
         released = git(root, "show", f"{base}:{relative.as_posix()}")
         if released.returncode != 0:
             continue  # new since the release
-        unchanged = git(root, "diff", "--quiet", base, "--", str(relative.parent))
+        unchanged = git(
+            root, "diff", "--quiet", base, "--", str(relative.parent),
+            f":(exclude){relative.parent.as_posix()}/README.md",
+        )
         if unchanged.returncode == 0:
             continue
         if skill_frontmatter(released.stdout, relative)["version"] == version:

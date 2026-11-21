@@ -2,7 +2,7 @@
 
 # interrogate
 
-Use for \"interrogate\", \"adversarial review\", \"multi-model review\", \"challenge this\", \"stress test this code\", \"find blind spots\", or \"tear this apart\". Multiple LLM reviewers challenge changes from independent angles.
+Use for "interrogate", "adversarial review", "multi-model review", "challenge this", "stress test this code", "find blind spots", or "tear this apart". Multiple LLM reviewers challenge changes from independent angles.
 
 Ships in the [`pstack`](../../README.md) plugin of [Uraxii/dotai](https://github.com/Uraxii/dotai). The agent reads [SKILL.md](SKILL.md); this file is for people.
 
