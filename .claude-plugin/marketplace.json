@@ -54,7 +54,7 @@
     {
       "name": "mpocock",
       "source": "./plugins/mpocock",
-      "description": "Compact a conversation into a handoff document another agent can pick the work up from."
+      "description": "Matt Pocock's handoff and wayfinder skills: compact a conversation into a handoff document, and plan work too big for one session as a map of decision tickets."
     },
     {
       "name": "skills",

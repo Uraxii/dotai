@@ -2,13 +2,14 @@
 
 # mpocock
 
-Writes down what a session established, what it decided, and what is still open, in a form a fresh agent reads instead of the transcript. Use it before context runs out, before handing a long pipeline to a successor, or when another session continues the work.
+handoff writes down what a session established, what it decided, and what is still open, in a form a fresh agent reads instead of the transcript. wayfinder charts work too big for one session as a shared map of decision tickets on the issue tracker, then resolves them one at a time. Both come from Matt Pocock's skills repository, https://github.com/mattpocock/skills, under MIT.
 
 ## Skills
 
 | Skill | What it does |
 |---|---|
 | [`handoff`](skills/handoff/README.md) | Compact the current conversation into a handoff document for another agent to pick up. |
+| [`wayfinder`](skills/wayfinder/README.md) | Plan a huge chunk of work (more than one agent session can hold) as a shared map of decision tickets on your issue tracker, and resolve them one at a time until the way to the destination is clear. |
 
 ## Hooks
 

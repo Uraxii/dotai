@@ -223,24 +223,26 @@ PLUGINS: list[dict[str, object]] = [
     },
     {
         "name": "mpocock",
-        "version": "1.2.7",
+        "version": "1.3.0",
         "hooks": ["claude", "codex"],
         "description": (
-            "Compact a conversation into a handoff document another agent "
-            "can pick the work up from."
+            "Matt Pocock's handoff and wayfinder skills: compact a "
+            "conversation into a handoff document, and plan work too big for "
+            "one session as a map of decision tickets."
         ),
-        "short": "Session handoff documents.",
+        "short": "Session handoffs and wayfinding maps.",
         "long": (
-            "Writes down what a session established, what it decided, and "
-            "what is still open, in a form a fresh agent reads instead of "
-            "the transcript. Use it before context runs out, before handing "
-            "a long pipeline to a successor, or when another session "
-            "continues the work."
+            "handoff writes down what a session established, what it decided, "
+            "and what is still open, in a form a fresh agent reads instead of "
+            "the transcript. wayfinder charts work too big for one session as "
+            "a shared map of decision tickets on the issue tracker, then "
+            "resolves them one at a time. Both come from Matt Pocock's skills "
+            "repository, https://github.com/mattpocock/skills, under MIT."
         ),
-        "keywords": ["handoff", "context"],
+        "keywords": ["handoff", "context", "planning"],
         "prompts": [
             "Write a handoff document for this session.",
-            "Compact what we have done so another agent can continue.",
+            "Wayfind this idea into a map of decision tickets.",
         ],
     },
     {

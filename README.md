@@ -23,7 +23,7 @@ agent files. The other fifteen each cover one tool or one job. Only
 | `sandbox` | Give an agent a throwaway podman container with its own clone of the repo, ports, and a virtual display. |
 | `codex-worker` | Delegate a code change from Claude Code to an outside Codex CLI worker. |
 | `ox-vibesec` | Wire the OX Security VibeSec hooks and its status and login commands through a plugin instead of settings.json. |
-| `mpocock` | Compact a conversation into a handoff document another agent can pick the work up from. |
+| `mpocock` | Matt Pocock's handoff and wayfinder skills: compact a conversation into a handoff document, and plan work too big for one session as a map of decision tickets. |
 | `skills` | Review and author SKILL.md files, finding and repairing the smells that stop a skill triggering. |
 | `codebase-memory` | Query a code graph through the codebase-memory-mcp server, skill, and graph-verification agents. |
 | `caveman` | Answer in a compressed register that drops filler and keeps every technical fact. |

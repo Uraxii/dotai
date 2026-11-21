@@ -3,6 +3,12 @@ name: handoff
 description: Compact the current conversation into a handoff document for another agent to pick up.
 argument-hint: "What will the next session be used for?"
 disable-model-invocation: true
+license: MIT
+metadata:
+  author: Matt Pocock
+  homepage: https://github.com/Uraxii/dotai
+  source: https://github.com/mattpocock/skills/tree/abeeaf95660ba9e8b7c753eb38f441ca707a8823/skills/productivity/handoff
+  upstream-revision: abeeaf95660ba9e8b7c753eb38f441ca707a8823
 ---
 
 Write a handoff document summarizing the objective plus the next-session focus.
