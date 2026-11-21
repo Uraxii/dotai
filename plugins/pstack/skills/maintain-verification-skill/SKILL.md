@@ -1,6 +1,15 @@
 ---
 name: maintain-verification-skill
 description: "Periodic pass that keeps a project's verification skill and feature map honest: parallel source readers per feature, one live session driving every feature, at most one PR of proven corrections. Use for /maintain-verification-skill or \"audit the verify skill\"."
+compatibility: >
+  Requires parallel subagents and an existing project verification skill with a
+  feature map, such as one from `/create-verification-skill`.
+license: MIT
+metadata:
+  version: 1.0.0
+  author: Michael Denyer
+  homepage: https://github.com/Uraxii/dotai
+  source: https://github.com/michael-denyer/pstack-claude/tree/1bfdab4/plugins/pstack/skills/maintain-verification-skill
 ---
 
 # Maintain a verification skill

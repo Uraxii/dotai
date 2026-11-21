@@ -1,6 +1,12 @@
 ---
 name: codebase-memory
 description: "Use the codebase knowledge graph for structural code queries. Triggers on: explore the codebase, understand the architecture, what functions exist, show me the structure, who calls this function, what does X call, trace the call chain, find callers of, show dependencies, impact analysis, dead code, unused functions, high fan-out, refactor candidates, code quality audit, graph query syntax, Cypher query examples, edge types, how to use search_graph."
+compatibility: Needs the codebase-memory-mcp server. This plugin registers it.
+metadata:
+  version: 1.0.0
+  author: DeusData
+  homepage: https://github.com/Uraxii/dotai
+  source: https://github.com/DeusData/codebase-memory-mcp/tree/v0.11.0
 ---
 
 # Codebase Memory — Knowledge Graph Tools
