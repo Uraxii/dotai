@@ -4,6 +4,7 @@ description: Plan a huge chunk of work (more than one agent session can hold) as
 disable-model-invocation: true
 license: MIT
 metadata:
+  version: 1.0.0
   author: Matt Pocock
   homepage: https://github.com/Uraxii/dotai
   source: https://github.com/mattpocock/skills/tree/abeeaf95660ba9e8b7c753eb38f441ca707a8823/skills/engineering/wayfinder

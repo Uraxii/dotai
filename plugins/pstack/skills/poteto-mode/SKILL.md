@@ -3,6 +3,7 @@ name: poteto-mode
 description: poteto's agent style for concise, detailed responses, deliberate subagents, unslopped prose, simple code, and verified work. Use for poteto, /poteto-mode, or requests to work in this style.
 license: MIT
 metadata:
+  version: 1.0.0
   author: Michael Denyer
   homepage: https://github.com/Uraxii/dotai
   source: https://github.com/michael-denyer/pstack-claude/tree/1bfdab4/plugins/pstack/skills/poteto-mode

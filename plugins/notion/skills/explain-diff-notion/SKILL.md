@@ -2,6 +2,7 @@
 name: explain-diff-notion
 description: Use when the user asks for a rich explanation of a code change, diff, branch, or PR. Produces a Notion page.
 metadata:
+  version: 1.0.0
   author: Geoffrey Litt
   homepage: https://github.com/Uraxii/dotai
   source: https://gist.github.com/geoffreylitt/a29df1b5f9865506e8952488eac3d524/126e7fe9eecaafadfe1ac8bb183d135812b608f2

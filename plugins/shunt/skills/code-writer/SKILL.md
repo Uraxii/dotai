@@ -3,6 +3,7 @@ name: code-writer
 description: "Delegate boilerplate code generation to AiKA. Use for tests, config, docstrings, type stubs, or any generation where >80% is predictable from reference files."
 license: Apache-2.0
 metadata:
+  version: 1.0.0
   author: Spotify
   homepage: https://github.com/Uraxii/dotai
   source: https://github.com/spotify/portal-ai-plugins/tree/e14bdb1dc894e0a2ef150fa811db5308ae2ddb37/plugins/shunt

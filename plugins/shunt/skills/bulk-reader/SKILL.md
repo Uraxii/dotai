@@ -3,6 +3,7 @@ name: bulk-reader
 description: "Delegate large reads to a small, fast subagent. Use for questions about files >350 lines, questions across 3+ files, or large diff summaries."
 license: Apache-2.0
 metadata:
+  version: 1.0.0
   author: Spotify
   homepage: https://github.com/Uraxii/dotai
   source: https://github.com/spotify/portal-ai-plugins/tree/e14bdb1dc894e0a2ef150fa811db5308ae2ddb37/plugins/shunt

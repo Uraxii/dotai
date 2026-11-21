@@ -3,6 +3,7 @@ name: thermo-nuclear-code-quality-review
 description: Run an extremely strict maintainability review for abstraction quality, giant files, and spaghetti-condition growth. Use for a thermo-nuclear code quality review, thermonuclear review, deep code quality audit, or especially harsh maintainability review.
 license: MIT
 metadata:
+  version: 1.0.0
   author: Michael Denyer
   homepage: https://github.com/Uraxii/dotai
   source: https://github.com/michael-denyer/pstack-claude/tree/1bfdab4/plugins/pstack/skills/thermo-nuclear-code-quality-review

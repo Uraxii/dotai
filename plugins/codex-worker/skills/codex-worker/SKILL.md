@@ -2,6 +2,7 @@
 name: codex-worker
 description: Delegates a code change from a Claude Code session to an outside Codex CLI worker. Covers sandbox scope, the `codex exec` run, monitoring, follow-ups, review, and a worker inside the pstack Orchestrate playbook. Use when Claude Code is the harness and a code delegate should be a Codex CLI run, or when asked to hand a task to Codex, run `codex exec`, or use Codex as a worker or reviewer. Do not use when the agent itself runs inside Codex.
 metadata:
+  version: 1.0.0
   author: Uraxii
   homepage: https://github.com/Uraxii/dotai
 ---

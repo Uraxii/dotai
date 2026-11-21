@@ -3,6 +3,7 @@ name: tdd
 description: "Use only when the user explicitly asks for TDD, a failing test, or a regression test, OR when the bug has an obvious cheap local test target. Skip when the test path is unclear, expensive, integration-heavy, or not requested."
 license: MIT
 metadata:
+  version: 1.0.0
   author: Michael Denyer
   homepage: https://github.com/Uraxii/dotai
   source: https://github.com/michael-denyer/pstack-claude/tree/1bfdab4/plugins/pstack/skills/tdd

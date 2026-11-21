@@ -2,6 +2,7 @@
 name: write-pr
 description: "Create or refresh reviewer-facing PR titles and descriptions. Use when opening a PR, updating its title or body, or preparing branch changes for review."
 metadata:
+  version: 1.0.0
   author: Uraxii
   homepage: https://github.com/Uraxii/dotai
 ---

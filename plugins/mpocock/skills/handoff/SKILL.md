@@ -5,6 +5,7 @@ argument-hint: "What will the next session be used for?"
 disable-model-invocation: true
 license: MIT
 metadata:
+  version: 1.0.0
   author: Matt Pocock
   homepage: https://github.com/Uraxii/dotai
   source: https://github.com/mattpocock/skills/tree/abeeaf95660ba9e8b7c753eb38f441ca707a8823/skills/productivity/handoff

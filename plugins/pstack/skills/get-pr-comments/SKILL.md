@@ -3,6 +3,7 @@ name: get-pr-comments
 description: Fetch and summarize review comments from the active pull request
 license: MIT
 metadata:
+  version: 1.0.0
   author: Michael Denyer
   homepage: https://github.com/Uraxii/dotai
   source: https://github.com/michael-denyer/pstack-claude/tree/1bfdab4/plugins/pstack/skills/get-pr-comments

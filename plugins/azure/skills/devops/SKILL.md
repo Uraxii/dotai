@@ -2,6 +2,7 @@
 name: devops
 description: Query an Azure DevOps organization read-only through its public REST API with this skill's azure_devops.py: projects, git repos and file contents, builds, pipelines, releases, release environments, Kubernetes resources, and WIQL work item ids. Use for CI, release, repository, and deployment inventory questions about Azure DevOps. Not for GitHub, GitLab, or any other hosting platform.
 metadata:
+  version: 1.0.0
   author: Uraxii
   homepage: https://github.com/Uraxii/dotai
 ---

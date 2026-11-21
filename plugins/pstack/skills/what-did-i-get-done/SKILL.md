@@ -3,6 +3,7 @@ name: what-did-i-get-done
 description: Summarize authored commits over a user-specified time period into a concise update
 license: MIT
 metadata:
+  version: 1.0.0
   author: Michael Denyer
   homepage: https://github.com/Uraxii/dotai
   source: https://github.com/michael-denyer/pstack-claude/tree/1bfdab4/plugins/pstack/skills/what-did-i-get-done

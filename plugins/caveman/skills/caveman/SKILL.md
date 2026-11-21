@@ -6,6 +6,7 @@ description: >
   mode", "talk like caveman", "be brief" or "less tokens".
 license: MIT
 metadata:
+  version: 1.0.0
   author: Julius Brussee
   homepage: https://github.com/Uraxii/dotai
   source: https://github.com/JuliusBrussee/caveman/tree/2fd153c67988e980fb0b2455c90832159a6a5a25/skills/caveman

@@ -2,6 +2,7 @@
 name: proton-pass-cli
 description: Retrieve a stored credential (an API key, a gateway token, a password, an SSH key) from Proton Pass with the pass-cli tool, authenticating with a Personal Access Token held in the OS keyring. Use whenever a task needs a secret that lives in Proton Pass, before starting any tool or service that reads such a secret, or to log in somewhere with a stored password. Covers session bootstrap, authenticated reads with a mandatory access reason, and auto-recovery from an expired session.
 metadata:
+  version: 1.0.0
   author: Uraxii
   homepage: https://github.com/Uraxii/dotai
 ---

@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import subprocess
 import sys
 from pathlib import Path
 
@@ -545,14 +546,14 @@ def readme_with_plugin_table(root: Path) -> str:
     return f"{before}{start}\n\n{plugin_table()}\n\n{end}{after}"
 
 
-def skill_frontmatter(skill_md: Path) -> dict[str, str]:
-    """Read `name` and `description` from a SKILL.md frontmatter.
+def skill_frontmatter(text: str, label: object) -> dict[str, str]:
+    """Read `name`, `description`, and `metadata.version` from SKILL.md text.
 
     Plain, quoted, and folded (`>-` or `|`) values, like lint-skills.sh reads.
     """
-    lines = skill_md.read_text().splitlines()
+    lines = text.splitlines()
     if not lines or lines[0].strip() != "---":
-        raise SystemExit(f"{skill_md} has no frontmatter")
+        raise SystemExit(f"{label} has no frontmatter")
     fields: dict[str, list[str]] = {}
     key = None
     for line in lines[1:]:
@@ -564,16 +565,25 @@ def skill_frontmatter(skill_md: Path) -> dict[str, str]:
         key, _, value = line.partition(":")
         value = value.strip()
         fields[key] = [] if value in (">", ">-", "|", "|-") else [value]
-    return {
+    found = {
         k: " ".join(fields.get(k, [])).strip().strip("'\"")
         for k in ("name", "description")
     }
+    found["version"] = next(
+        (
+            entry.partition(":")[2].strip().strip("'\"")
+            for entry in fields.get("metadata", [])
+            if entry.startswith("version:")
+        ),
+        "",
+    )
+    return found
 
 
 def skills_of(plugin: dict[str, object], root: Path) -> list[dict[str, str]]:
     skills_root = root / "plugins" / str(plugin["name"]) / "skills"
     return [
-        {"dir": skill_md.parent.name, **skill_frontmatter(skill_md)}
+        {"dir": skill_md.parent.name, **skill_frontmatter(skill_md.read_text(), skill_md)}
         for skill_md in sorted(skills_root.glob("*/SKILL.md"))
     ]
 
@@ -737,6 +747,51 @@ def undeclared_hook_wiring(root: Path) -> list[Path]:
     return undeclared
 
 
+RELEASE_REFS = ("origin/main", "main")
+
+
+def git(root: Path, *arguments: str) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        ["git", *arguments], cwd=root, capture_output=True, text=True
+    )
+
+
+def unversioned_skills(root: Path) -> list[str]:
+    """Name each skill with no `metadata.version`, or that changed since the
+    last release (the main branch) without a new one.
+
+    Skills carry their own semver, separate from the plugin's. With no main
+    branch to compare with (a copy of the tree, a shallow clone), only the
+    missing-version part runs.
+    """
+    base = next(
+        (ref for ref in RELEASE_REFS
+         if git(root, "rev-parse", "--verify", "--quiet", ref).returncode == 0),
+        None,
+    )
+    problems = []
+    for skill_md in sorted((root / "plugins").glob("*/skills/*/SKILL.md")):
+        relative = skill_md.relative_to(root)
+        version = skill_frontmatter(skill_md.read_text(), relative)["version"]
+        if not version:
+            problems.append(f"{relative}: add metadata.version (start at 1.0.0)")
+            continue
+        if base is None:
+            continue
+        released = git(root, "show", f"{base}:{relative.as_posix()}")
+        if released.returncode != 0:
+            continue  # new since the release
+        unchanged = git(root, "diff", "--quiet", base, "--", str(relative.parent))
+        if unchanged.returncode == 0:
+            continue
+        if skill_frontmatter(released.stdout, relative)["version"] == version:
+            problems.append(
+                f"{relative}: changed since {base} but metadata.version is "
+                f"still {version}; bump it"
+            )
+    return problems
+
+
 def render(document: dict[str, object]) -> str:
     return json.dumps(document, indent=2, ensure_ascii=False) + "\n"
 
@@ -780,7 +835,8 @@ def main(arguments: list[str] | None = None, root: Path = REPOSITORY_ROOT) -> in
         missing_wiring = missing_hook_wiring(root)
         undeclared_wiring = undeclared_hook_wiring(root)
         stale = stale_manifests(root)
-        if not changed and not missing_wiring and not undeclared_wiring and not stale:
+        versions = unversioned_skills(root)
+        if not changed and not missing_wiring and not undeclared_wiring and not stale and not versions:
             print(f"{len(files)} generated files are up to date.")
             return 0
         if changed:
@@ -800,6 +856,10 @@ def main(arguments: list[str] | None = None, root: Path = REPOSITORY_ROOT) -> in
             print("These manifests are for a harness the plugin opted out of; delete them:")
             for relative in stale:
                 print(f"  {relative}")
+        if versions:
+            print("These skills need a metadata.version change:")
+            for problem in versions:
+                print(f"  {problem}")
         return 2
 
     changed = write(files, root)

@@ -4,6 +4,7 @@ description: "Apply when tempted to ask 'should I do X?' on reversible work. Pro
 user-invocable: false
 license: MIT
 metadata:
+  version: 1.0.0
   author: Michael Denyer
   homepage: https://github.com/Uraxii/dotai
   source: https://github.com/michael-denyer/pstack-claude/tree/1bfdab4/plugins/pstack/skills/principle-never-block-on-the-human

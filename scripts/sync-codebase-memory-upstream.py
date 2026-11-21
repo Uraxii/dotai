@@ -136,6 +136,7 @@ def as_claude_plugin_agent(text: str) -> str:
 
 SKILL_METADATA = (
     "metadata:\n"
+    "  version: 1.0.0\n"
     "  author: DeusData\n"
     "  homepage: https://github.com/Uraxii/dotai\n"
     "  source: https://github.com/DeusData/codebase-memory-mcp/tree/v0.11.0\n"
