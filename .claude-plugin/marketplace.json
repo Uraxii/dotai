@@ -77,6 +77,11 @@
       "description": "Rewrite ambiguous English into ASD-STE100 Simplified Technical English so agents and readers cannot misread it."
     },
     {
+      "name": "gaming",
+      "source": "./plugins/gaming",
+      "description": "Install ANR FG frame generation into PC games through OptiScaler, with GPU spoofing and per-game recipes."
+    },
+    {
       "name": "steer",
       "source": "./plugins/steer",
       "description": "Harness hooks that steer agent behaviour, independent of any skill."
