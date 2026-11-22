@@ -31,7 +31,7 @@ If the user passed arguments, treat them as a description of what the next sessi
 After you create or update the handoff file, do these steps in every session, local or cloud. Do not use a different format.
 
 1. Summarize the handoff content in chat. Give the objective, the next-session focus, and the open items in a few short lines.
-2. Send the file to the user with a tool that sends files to the user, such as `SendUserFile`, so the user can download it. If no such tool is available, or sending fails, put the entire handoff document in chat as one fenced code block instead, so the user can copy it. Use a backtick fence with more backticks than the longest backtick run in the document.
+2. Send the file to the user with a tool that sends files to the user, such as `SendUserFile`, so the user can download it. If no such tool is available, or sending fails, and the user cannot open the file where it is (for example, the session runs in a remote container), put the entire handoff document in chat as one fenced code block instead, so the user can copy it. Use a backtick fence of at least three backticks, and more than the longest backtick run in the document.
 3. End your message with the file's full absolute path in a fenced code block. Put `@` before the path, with no space, so a paste into the next session refers to the file. Most harnesses show a copy button on a code block. Put nothing after the code block.
 
 Example of the end of the message:
