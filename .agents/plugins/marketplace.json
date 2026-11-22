@@ -173,6 +173,20 @@
       "category": "Productivity"
     },
     {
+      "name": "gaming",
+      "source": {
+        "source": "url",
+        "url": "https://github.com/Uraxii/dotai.git",
+        "ref": "main",
+        "path": "plugins/gaming"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    },
+    {
       "name": "steer",
       "source": {
         "source": "url",

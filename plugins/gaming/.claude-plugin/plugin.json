@@ -1,0 +1,9 @@
+{
+  "name": "gaming",
+  "version": "1.0.0",
+  "description": "Install ANR FG frame generation into PC games through OptiScaler, with GPU spoofing and per-game recipes.",
+  "author": {
+    "name": "Uraxii",
+    "url": "https://github.com/Uraxii"
+  }
+}

@@ -340,6 +340,27 @@ PLUGINS: list[dict[str, object]] = [
         ],
     },
     {
+        "name": "gaming",
+        "description": (
+            "Install ANR FG frame generation into PC games through "
+            "OptiScaler, with GPU spoofing and per-game recipes."
+        ),
+        "short": "Install ANR FG into a game.",
+        "long": (
+            "Installs ANR FG (Apex Neural Rendering frame generation) into a "
+            "PC game through OptiScaler and spoofs the GPU so the game offers "
+            "the DLSS frame generation that ANR replaces. Covers Windows and "
+            "Linux/Proton, keeps per-game spoof recipes with evidence labels, "
+            "and looks up the OptiScaler wiki and ANR issues for games it "
+            "does not know yet."
+        ),
+        "keywords": ["gaming", "frame-generation", "optiscaler"],
+        "prompts": [
+            "Install ANR frame generation into The Witcher 3.",
+            "Get DLSS frame gen working on my RTX 3080 with ANR.",
+        ],
+    },
+    {
         "name": "steer",
         "version": "1.4.1",
         "hooks": ["claude"],
