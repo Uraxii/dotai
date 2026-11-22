@@ -29,7 +29,7 @@ flag() {
   run_hook "$HOOK" "$@" <<<"$(jq -cn --arg t "$transcript" --arg s "$session" '{transcript_path: $t, session_id: $s}')"
 }
 message_for() {
-  printf '%s\n' "[handoff-token-flag] Main session context ~${1}k tokens, past the 200k soft limit. At the next natural stopping point, suggest writing a handoff doc via the \`handoff\` skill and closing this session; if the user agrees, report the resulting path as the first line. Do not start major new work. Do not silently rely on auto-compact."
+  printf '%s\n' "[handoff-token-flag] Main session context ~${1}k tokens, past the 200k soft limit. At the next natural stopping point, suggest writing a handoff doc via the \`handoff\` skill and closing this session; if the user agrees, present it the way the skill says. Do not start major new work. Do not silently rely on auto-compact."
 }
 
 expect_equal "codex manifest points at codex-hooks.json" ./hooks/codex-hooks.json \

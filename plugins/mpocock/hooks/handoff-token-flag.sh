@@ -75,5 +75,5 @@ remainder=$((tokens % 1000))
 if ((remainder > 500 || (remainder == 500 && k % 2 == 1))); then
   k=$((k + 1))
 fi
-echo "[handoff-token-flag] Main session context ~${k}k tokens, past the 200k soft limit. At the next natural stopping point, suggest writing a handoff doc via the \`handoff\` skill and closing this session; if the user agrees, report the resulting path as the first line. Do not start major new work. Do not silently rely on auto-compact."
+echo "[handoff-token-flag] Main session context ~${k}k tokens, past the 200k soft limit. At the next natural stopping point, suggest writing a handoff doc via the \`handoff\` skill and closing this session; if the user agrees, present it the way the skill says. Do not start major new work. Do not silently rely on auto-compact."
 exit 0
