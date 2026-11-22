@@ -225,7 +225,7 @@ PLUGINS: list[dict[str, object]] = [
     },
     {
         "name": "mpocock",
-        "version": "1.3.0",
+        "version": "1.4.0",
         "hooks": ["claude", "codex"],
         "description": (
             "Matt Pocock's handoff and wayfinder skills: compact a "

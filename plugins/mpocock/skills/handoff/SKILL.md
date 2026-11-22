@@ -6,7 +6,7 @@ disable-model-invocation: true
 compatibility: Needs write access to a handoffs directory. Run it by hand; the model does not load it.
 license: MIT
 metadata:
-  version: 1.0.0
+  version: 1.1.0
   author: Matt Pocock
   homepage: https://github.com/Uraxii/dotai
   source: https://github.com/mattpocock/skills/tree/abeeaf95660ba9e8b7c753eb38f441ca707a8823/skills/productivity/handoff
@@ -26,6 +26,20 @@ Redact any sensitive information, such as API keys, passwords, or personally ide
 
 If the user passed arguments, treat them as a description of what the next session will focus on and tailor the doc accordingly.
 
-Run `printenv CLAUDE_CODE_REMOTE`. If it prints `true`, the session runs in a Claude Code cloud environment and the user cannot open the file. Still write the file, then send it to the user as a downloadable file with a tool that sends files to the user, such as `SendUserFile`. If no such tool is available, or sending fails, output the entire handoff document in chat as one fenced code block instead, so the user can copy it. Use a backtick fence of at least three backticks, and more than the longest backtick run in the document. In a cloud session, skip the path line described below.
+## Present the handoff
 
-In a local session, after you create or update a handoff file, end your output with one line that holds only the file's full absolute path as inline code, for example `/home/user/project/.handoffs/auth-migration.md`, so the user can copy it into the next session.
+After you create or update the handoff file, do these steps in every session, local or cloud. Do not use a different format.
+
+1. Summarize the handoff content in chat. Give the objective, the next-session focus, and the open items in a few short lines.
+2. Send the file to the user with a tool that sends files to the user, such as `SendUserFile`, so the user can download it. If no such tool is available, or sending fails, and the user cannot open the file where it is (for example, the session runs in a remote container), put the entire handoff document in chat as one fenced code block instead, so the user can copy it. Use a backtick fence of at least three backticks, and more than the longest backtick run in the document.
+3. End your message with the file's full absolute path in a fenced code block. Put `@` before the path, with no space, so a paste into the next session refers to the file. Most harnesses show a copy button on a code block. Put nothing after the code block.
+
+Example of the end of the message:
+
+````
+Handoff: auth migration. Token refresh is done. Next session moves the session store to Redis. Open item: decide the TTL for remember-me tokens.
+
+```
+@/home/user/project/.ai/.handoffs/auth-migration.md
+```
+````
