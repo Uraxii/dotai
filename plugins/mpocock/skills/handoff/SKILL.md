@@ -32,7 +32,7 @@ After you create or update the handoff file, do these steps in every session, lo
 
 1. Summarize the handoff content in chat. Give the objective, the next-session focus, and the open items in a few short lines.
 2. Send the file to the user with a tool that sends files to the user, such as `SendUserFile`, so the user can download it. If no such tool is available, or sending fails, tell the user in one line.
-3. End your message with the file's full absolute path in a fenced code block. Most harnesses show a copy button on a code block. Put nothing after the code block.
+3. End your message with the file's full absolute path in a fenced code block. Put `@` before the path, with no space, so a paste into the next session refers to the file. Most harnesses show a copy button on a code block. Put nothing after the code block.
 
 Example of the end of the message:
 
@@ -40,6 +40,6 @@ Example of the end of the message:
 Handoff: auth migration. Token refresh is done. Next session moves the session store to Redis. Open item: decide the TTL for remember-me tokens.
 
 ```
-/home/user/project/.ai/.handoffs/auth-migration.md
+@/home/user/project/.ai/.handoffs/auth-migration.md
 ```
 ````
