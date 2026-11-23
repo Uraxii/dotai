@@ -26,6 +26,12 @@ run_hook() {
   capture bash "$@"
 }
 
+# run_python_hook HOOK_SCRIPT [ARG...]: the same for a Python hook, isolated
+# from PYTHON* variables, user site-packages and the script's directory.
+run_python_hook() {
+  capture python3 -I "$@"
+}
+
 # Prints, one per line, the commands a harness config runs for EVENT on Linux
 # and macOS: Claude's and Codex's command key, and Copilot's bash key.
 wiring_commands() {

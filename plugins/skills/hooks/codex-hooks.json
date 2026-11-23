@@ -6,8 +6,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"${PLUGIN_ROOT}/hooks/skill-quality-guidance\" --harness codex",
-            "commandWindows": "\"${PLUGIN_ROOT}/hooks/run-hook.cmd\" skill-quality-guidance --harness codex",
+            "command": "python3 \"${PLUGIN_ROOT}/hooks/skill_quality_guidance.py\" --harness codex",
+            "commandWindows": "powershell.exe -NoProfile -Command \"py -3 '${PLUGIN_ROOT}/hooks/skill_quality_guidance.py' --harness codex 2>$null; if (-not $?) { python '${PLUGIN_ROOT}/hooks/skill_quality_guidance.py' --harness codex 2>$null }; if (-not $?) { $LASTEXITCODE = 0 }; exit $LASTEXITCODE\"",
             "timeout": 5
           }
         ]

@@ -5,8 +5,8 @@
       {
         "type": "command",
         "matcher": "edit|create",
-        "bash": "bash \"${PLUGIN_ROOT}/hooks/skill-quality-guidance\" --harness copilot",
-        "powershell": "& \"$env:PLUGIN_ROOT\\hooks\\run-hook.cmd\" skill-quality-guidance --harness copilot; exit $LASTEXITCODE",
+        "bash": "python3 \"${PLUGIN_ROOT}/hooks/skill_quality_guidance.py\" --harness copilot || true",
+        "powershell": "py -3 \"$env:PLUGIN_ROOT\\hooks\\skill_quality_guidance.py\" --harness copilot 2>$null; if (-not $?) { python \"$env:PLUGIN_ROOT\\hooks\\skill_quality_guidance.py\" --harness copilot 2>$null }; if (-not $?) { $LASTEXITCODE = 0 }; exit $LASTEXITCODE",
         "timeoutSec": 5
       }
     ]

@@ -4,7 +4,8 @@
 # drifted apart.
 #
 # Usage: scripts/run-hook-tests.sh
-# Needs bash and jq for the tests; the hooks themselves need only bash and awk.
+# Needs bash, jq and python3 for the tests; the hooks need bash and awk, or
+# python3 for the skills plugin.
 
 root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 failed=0
