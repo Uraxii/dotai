@@ -8,6 +8,50 @@
             "type": "command",
             "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/session-start.sh\" codex",
             "commandWindows": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File \"${CLAUDE_PLUGIN_ROOT}/hooks/session-start.ps1\""
+          },
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/guidelines.sh\" codex",
+            "commandWindows": "py -3 -I \"${CLAUDE_PLUGIN_ROOT}/skills/principle-code-quality/scripts/guideline_hook.py\" --harness codex",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/guidelines.sh\" codex",
+            "commandWindows": "py -3 -I \"${CLAUDE_PLUGIN_ROOT}/skills/principle-code-quality/scripts/guideline_hook.py\" --harness codex",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "apply_patch",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/guidelines.sh\" codex",
+            "commandWindows": "py -3 -I \"${CLAUDE_PLUGIN_ROOT}/skills/principle-code-quality/scripts/guideline_hook.py\" --harness codex",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "apply_patch",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/guidelines.sh\" codex",
+            "commandWindows": "py -3 -I \"${CLAUDE_PLUGIN_ROOT}/skills/principle-code-quality/scripts/guideline_hook.py\" --harness codex",
+            "timeout": 15
           }
         ]
       }
