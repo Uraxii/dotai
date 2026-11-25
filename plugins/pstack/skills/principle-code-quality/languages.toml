@@ -1,0 +1,181 @@
+# Language id -> file extensions, for picking a file's language by suffix.
+# Source: GitHub Linguist lib/linguist/languages.yml at commit
+# 17441c4584414d7f72ceec15c17126247fd25daf (read 2026-11-25).
+# Ambiguous extensions go to the one language most common for code
+# review, or are dropped when no language clearly wins. Match on the
+# lowercased file name suffix; some extensions span two dots (.rs.in).
+
+[python]
+extensions = [".py", ".gyp", ".gypi", ".lmi", ".py3", ".pyde", ".pyi", ".pyp", ".pyt", ".pyw", ".rpy", ".tac", ".vpy", ".wsgi", ".xpy"]
+
+[typescript]
+extensions = [".ts", ".cts", ".mts", ".tsx"]
+
+[javascript]
+extensions = [".js", "._js", ".bones", ".cjs", ".es6", ".jake", ".javascript", ".jsb", ".jscad", ".jsfl", ".jslib", ".jsm", ".jspre", ".jss", ".jsx", ".mjs", ".njs", ".pac", ".sjs", ".ssjs", ".xsjs", ".xsjslib"]
+
+[csharp]
+# .cake: C# Cake build script (CoffeeScript also claims .cake).
+extensions = [".cs", ".cake", ".cs.pp", ".csx", ".linq"]
+
+[gdscript]
+extensions = [".gd"]
+
+[gdshader]
+extensions = [".gdshader", ".gdshaderinc"]
+
+[go]
+extensions = [".go"]
+
+[rust]
+extensions = [".rs", ".rs.in"]
+
+[java]
+extensions = [".java", ".jav", ".jsh"]
+
+[kotlin]
+extensions = [".kt", ".ktm", ".kts"]
+
+[swift]
+extensions = [".swift"]
+
+[c]
+# .h: C (C++ and Objective-C also claim .h).
+extensions = [".c", ".cats", ".h", ".h.in", ".idc"]
+
+[cpp]
+extensions = [".cpp", ".c++", ".cc", ".cp", ".cppm", ".cxx", ".h++", ".hh", ".hpp", ".hxx", ".inl", ".ino", ".ipp", ".ixx", ".tcc", ".tpp", ".txx"]
+
+[objective_c]
+extensions = [".m", ".mm"]
+
+[ruby]
+extensions = [".rb", ".builder", ".eye", ".gemspec", ".god", ".jbuilder", ".mspec", ".pluginspec", ".podspec", ".prawn", ".rabl", ".rake", ".rbi", ".rbuild", ".rbw", ".rbx", ".ru", ".ruby", ".thor", ".watchr"]
+
+[php]
+extensions = [".php", ".aw", ".ctp", ".php3", ".php4", ".php5", ".phps", ".phpt"]
+
+[lua]
+extensions = [".lua", ".nse", ".p8", ".pd_lua", ".rbxs", ".rockspec", ".wlua"]
+
+[luau]
+extensions = [".luau"]
+
+[shell]
+extensions = [".sh", ".bash", ".bats", ".command", ".ksh", ".pacscript", ".sbatch", ".sh.in", ".slurm", ".tmux", ".tool", ".zsh", ".zsh-theme"]
+
+[powershell]
+extensions = [".ps1", ".psd1", ".psm1"]
+
+[batchfile]
+extensions = [".bat", ".cmd"]
+
+[scala]
+extensions = [".scala", ".kojo", ".sbt", ".sc"]
+
+[dart]
+extensions = [".dart"]
+
+[elixir]
+extensions = [".ex", ".exs"]
+
+[erlang]
+extensions = [".erl", ".app", ".app.src", ".escript", ".hrl", ".xrl", ".yrl"]
+
+[gleam]
+extensions = [".gleam"]
+
+[haskell]
+extensions = [".hs", ".hs-boot", ".hsc"]
+
+[fsharp]
+# .fs: F# (GLSL also claims .fs).
+extensions = [".fs", ".fsi", ".fsx"]
+
+[vbnet]
+extensions = [".vb", ".vbhtml"]
+
+[r]
+extensions = [".r", ".rd", ".rhistory", ".rsx"]
+
+[julia]
+extensions = [".jl"]
+
+[zig]
+extensions = [".zig", ".zig.zon"]
+
+[clojure]
+extensions = [".clj", ".boot", ".cl2", ".cljc", ".cljs", ".cljs.hl", ".cljscm", ".cljx", ".hic"]
+
+[perl]
+extensions = [".pl", ".perl", ".ph", ".plx", ".pm", ".psgi", ".t"]
+
+[groovy]
+extensions = [".groovy", ".grt", ".gtpl", ".gvy"]
+
+[ocaml]
+extensions = [".ml", ".eliom", ".eliomi", ".ml4", ".mli", ".mll", ".mly"]
+
+[nim]
+extensions = [".nim", ".nim.cfg", ".nimble", ".nimrod", ".nims"]
+
+[sql]
+extensions = [".sql", ".ddl", ".mysql", ".prc", ".tab", ".udf", ".viw"]
+
+[fortran]
+extensions = [".f", ".f77", ".for", ".fpp", ".f90", ".f03", ".f08", ".f95"]
+
+[assembly]
+extensions = [".asm", ".a51", ".nas", ".nasm", ".s"]
+
+[crystal]
+extensions = [".cr"]
+
+[elm]
+extensions = [".elm"]
+
+[coffeescript]
+extensions = [".coffee", "._coffee", ".cjsx", ".coffee.erb", ".iced"]
+
+[solidity]
+extensions = [".sol"]
+
+[common_lisp]
+extensions = [".lisp", ".asd", ".lsp", ".ny", ".podsl", ".sexp"]
+
+[scheme]
+extensions = [".scm", ".sld", ".sps", ".ss"]
+
+[racket]
+extensions = [".rkt", ".rktd", ".rktl", ".scrbl"]
+
+[emacs_lisp]
+extensions = [".el", ".eld", ".emacs", ".emacs.desktop"]
+
+[pascal]
+extensions = [".pas", ".dfm", ".dpr", ".lpr", ".pascal"]
+
+[ada]
+extensions = [".adb", ".ada", ".ads"]
+
+[cobol]
+extensions = [".cob", ".cbl", ".ccp", ".cobol", ".cpy"]
+
+[verilog]
+extensions = [".v", ".veo"]
+
+[systemverilog]
+extensions = [".sv", ".svh", ".vh"]
+
+[vhdl]
+extensions = [".vhdl", ".vhd", ".vhf", ".vhi", ".vho", ".vhs", ".vht", ".vhw"]
+
+[glsl]
+# .frag: GLSL (JavaScript also claims .frag).
+extensions = [".glsl", ".fp", ".frag", ".frg", ".fsh", ".fshader", ".geo", ".geom", ".glslf", ".glslv", ".gshader", ".rchit", ".rmiss", ".tesc", ".tese", ".vert", ".vrx", ".vs", ".vsh", ".vshader"]
+
+[hlsl]
+extensions = [".hlsl", ".cginc", ".fx", ".fxh", ".hlsli"]
+
+[cuda]
+extensions = [".cu", ".cuh"]
