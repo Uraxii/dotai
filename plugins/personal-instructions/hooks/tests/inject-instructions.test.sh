@@ -170,4 +170,38 @@ PY
 expect_equal "Devin generator handles missing instruction sources" 0 "$STATUS"
 expect_equal "Devin generator reports no errors for missing sources" "" "$STDERR"
 
+capture python3 -B - "$REAL_PLUGIN_ROOT/../.." "$WORK" <<'PY'
+from contextlib import redirect_stdout
+from io import StringIO
+from pathlib import Path
+import runpy
+from shutil import copytree, ignore_patterns
+import sys
+
+repo, work = map(Path, sys.argv[1:])
+generator = runpy.run_path(str(repo / "scripts/generate-plugin-manifests.py"))
+root = work / "stale-rule"
+copytree(repo, root, ignore=ignore_patterns(".git", ".fixtures"))
+plugin = root / "plugins/personal-instructions"
+rule = plugin / "AGENTS.md"
+(plugin / "instructions.md").unlink()
+(plugin / "main-agent-instructions.md").unlink()
+original = rule.read_bytes()
+output = StringIO()
+with redirect_stdout(output):
+    assert generator["main"](["--check"], root=root) == 2
+    assert "generated Devin rules have no instruction sources" in output.getvalue()
+    assert "plugins/personal-instructions/AGENTS.md" in output.getvalue()
+    assert rule.read_bytes() == original
+    assert generator["main"]([], root=root) == 0
+    assert not rule.exists()
+    assert generator["main"](["--check"], root=root) == 0
+    rule.write_text("# Handwritten rules\n")
+    assert generator["main"](["--check"], root=root) == 0
+    assert generator["main"]([], root=root) == 0
+    assert rule.read_text() == "# Handwritten rules\n"
+PY
+expect_equal "Devin generator flags and removes stale generated rules but preserves handwritten rules" 0 "$STATUS"
+expect_equal "stale rule checks report no unexpected errors" "" "$STDERR"
+
 finish

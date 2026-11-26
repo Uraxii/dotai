@@ -805,6 +805,22 @@ def stale_manifests(root: Path) -> list[Path]:
     return stale
 
 
+def stale_devin_rules(root: Path, files: dict[Path, str]) -> list[Path]:
+    stale = []
+    marker = GENERATED_NOTE.encode("utf-8")
+    for plugin in PLUGINS:
+        if not plugin.get("devin_rule_sources"):
+            continue
+        relative = Path("plugins") / str(plugin["name"]) / "AGENTS.md"
+        rule = root / relative
+        if relative in files or rule.is_symlink() or not rule.is_file():
+            continue
+        with rule.open("rb") as stream:
+            if stream.read(len(marker)) == marker:
+                stale.append(relative)
+    return stale
+
+
 def missing_hook_wiring(root: Path) -> list[Path]:
     """Return declared hook wiring paths that are absent from `root`."""
     missing = []
@@ -920,6 +936,7 @@ def main(arguments: list[str] | None = None, root: Path = REPOSITORY_ROOT) -> in
     )
     options = parser.parse_args(arguments)
     files = wanted_files(root)
+    stale_rules = stale_devin_rules(root, files)
 
     if options.check:
         changed = drifted(files, root)
@@ -927,7 +944,7 @@ def main(arguments: list[str] | None = None, root: Path = REPOSITORY_ROOT) -> in
         undeclared_wiring = undeclared_hook_wiring(root)
         stale = stale_manifests(root)
         versions = unversioned_skills(root)
-        if not changed and not missing_wiring and not undeclared_wiring and not stale and not versions:
+        if not (changed or missing_wiring or undeclared_wiring or stale or stale_rules or versions):
             print(f"{len(files)} generated files are up to date.")
             return 0
         if changed:
@@ -947,6 +964,10 @@ def main(arguments: list[str] | None = None, root: Path = REPOSITORY_ROOT) -> in
             print("These manifests are for a harness the plugin opted out of; delete them:")
             for relative in stale:
                 print(f"  {relative}")
+        if stale_rules:
+            print("These generated Devin rules have no instruction sources; regenerate to remove them:")
+            for relative in stale_rules:
+                print(f"  {relative}")
         if versions:
             print("These skills need a metadata.version change:")
             for problem in versions:
@@ -956,6 +977,9 @@ def main(arguments: list[str] | None = None, root: Path = REPOSITORY_ROOT) -> in
     changed = write(files, root)
     for relative in changed:
         print(f"wrote {relative}")
+    for relative in stale_rules:
+        (root / relative).unlink()
+        print(f"removed {relative}")
     print(f"{len(files)} generated files, {len(changed)} rewritten.")
     return 0
 
