@@ -76,16 +76,17 @@ patch_event = {
 @@ next section
 +inserted
 *** End of File
+
 *** Delete File: obsolete.py
 *** End Patch
 """},
 }
 
 
-def adapter_call(event, payload, result=None, *, results=None):
+def adapter_call(event, payload, result=None, *, results=None, cwd=plugin):
     stdout, stderr = StringIO(), StringIO()
     with (
-        patch.dict(os.environ, {"OX_VIBESEC_API_KEY": test_key, "DEVIN_PROJECT_DIR": str(plugin)}),
+        patch.dict(os.environ, {"OX_VIBESEC_API_KEY": test_key, "DEVIN_PROJECT_DIR": str(cwd)}),
         patch.object(sys, "argv", ["hook.py", event]),
         patch.object(sys, "stdin", StringIO(json.dumps(payload))),
         patch.object(vibesec.Runtime, "run", return_value=result, side_effect=results) as runtime,
@@ -135,6 +136,14 @@ runtime.assert_not_called()
 print("PASS  ox-vibesec: block decisions, key redaction, exec and edit mapping, PostToolUse, invalid session rejection")
 
 accepted = Mock(returncode=0, stdout="")
+project = tempfile.TemporaryDirectory()
+root = Path(project.name)
+existing = root / "existing.py"
+existing_before = "before\ncontext\nold\nnext section\n"
+existing_after = "after\ncontext\nnew\nnext section\ninserted\n"
+added_content = "first\n\n*** Delete File: literal.py\n"
+existing.write_text(existing_before)
+(root / "obsolete.py").touch()
 for event in ("PreToolUse", "PostToolUse"):
     response = {"tool_response": {"success": True, "output": "ok"}} if event == "PostToolUse" else {}
     for name in ("exec", "edit", "write", "apply_patch"):
@@ -143,34 +152,30 @@ for event in ("PreToolUse", "PostToolUse"):
     assert (code, stdout, stderr) == (0, "", "")
     assert runtime.call_args.args[0]["tool_name"] == "Write"
     assert runtime.call_args.args[0]["tool_input"] == {"file_path": "new file.py", "content": ""}
-    code, stdout, stderr, runtime = adapter_call(event, {**patch_event, **response}, accepted)
+    if response:
+        existing.write_text(existing_after)
+        (root / "new file.py").write_text(added_content)
+        (root / "obsolete.py").unlink()
+    code, stdout, stderr, runtime = adapter_call(event, {**patch_event, **response}, accepted, cwd=root)
     assert (code, stdout, stderr) == (0, "", "")
     sent = [call.args[0] for call in runtime.call_args_list]
-    expected_ids = ["patch-id:1", "patch-id:2"] + (["patch-id:2:1"] if response else [])
-    assert [payload["tool_use_id"] for payload in sent] == expected_ids
-    hunks = [
-        {"old_string": "before\ncontext\nold", "new_string": "after\ncontext\nnew"},
-        {"old_string": "", "new_string": "inserted"},
-    ]
-    expected_edits = (
-        [("Edit", {"file_path": "existing.py", **hunk}) for hunk in hunks] if response else
-        [("MultiEdit", {"file_path": "existing.py", "edits": hunks})]
-    )
+    assert [payload["tool_use_id"] for payload in sent] == ["patch-id:1", "patch-id:2"]
     assert [(p["tool_name"], p["tool_input"]) for p in sent] == [
-        ("Write", {"file_path": "new file.py", "content": "first\n\n*** Delete File: literal.py\n"}),
-        *expected_edits,
+        ("Write", {"file_path": "new file.py", "content": added_content}),
+        ("Write", {"file_path": "existing.py", "content": existing_after}),
     ]
     assert all(payload["hook_event_name"] == event for payload in sent)
     if response:
         assert all(payload["tool_response"] == {"success": True, "stdout": "ok", "stderr": ""}
                    for payload in sent)
 
-code, stdout, stderr, runtime = adapter_call("PreToolUse", patch_event, results=[
+existing.write_text(existing_before)
+code, stdout, stderr, runtime = adapter_call("PreToolUse", patch_event, cwd=root, results=[
     Mock(returncode=1), Mock(returncode=2, stderr=f"Blocked {test_key}\n"),
 ])
 assert (code, stdout, stderr) == (2, "", "Blocked [redacted]\n")
 assert runtime.call_count == 2
-code, stdout, stderr, runtime = adapter_call("PreToolUse", patch_event, results=[
+code, stdout, stderr, runtime = adapter_call("PreToolUse", patch_event, cwd=root, results=[
     accepted,
     vendor_reply({"permissionDecision": "deny", "permissionDecisionReason": "Second file"}),
 ])
@@ -181,11 +186,17 @@ for invalid, warning in (
     ({"input": "*** Begin Patch"}, "OX VibeSec could not parse patch; check skipped.\n"),
     ({"input": "*** Begin Patch\n*** Delete File: obsolete.py\n*** End Patch"},
      "OX VibeSec could not parse patch; check skipped.\n"),
+    ({"input": patch_event["tool_input"]["input"].replace("-before", "-not present")},
+     "OX VibeSec could not parse patch; check skipped.\n"),
+    ({"input": "*** Begin Patch\n*** Update File: existing.py\n@@\n*** End Patch"},
+     "OX VibeSec could not parse patch; check skipped.\n"),
 ):
-    code, stdout, stderr, runtime = adapter_call("PreToolUse", {**patch_event, "tool_input": invalid}, accepted)
+    code, stdout, stderr, runtime = adapter_call(
+        "PreToolUse", {**patch_event, "tool_input": invalid}, accepted, cwd=root,
+    )
     assert (code, stdout, stderr) == (0, "", warning)
     runtime.assert_not_called()
-print("PASS  ox-vibesec: dispatches writes and patch hunks, and blocks on a later file")
+print("PASS  ox-vibesec: dispatches full-file patch writes and blocks on a later file")
 
 manifest_patch = {
     **patch_event,
@@ -197,50 +208,74 @@ manifest_patch = {
 @@
 -    "gamma": "1.0.0"
 +    "gamma": "2.0.0"
+*** Update File: ./package.json
+@@
+-    "alpha": "2.0.0",
++    "alpha": "3.0.0",
 *** End Patch
 """},
 }
-manifest_hunks = [
-    {"old_string": '    "alpha": "1.0.0",', "new_string": '    "alpha": "2.0.0",'},
-    {"old_string": '    "gamma": "1.0.0"', "new_string": '    "gamma": "2.0.0"'},
-]
-code, stdout, stderr, runtime = adapter_call("PreToolUse", manifest_patch, accepted)
+manifest = root / "package.json"
+before = '{\n  "dependencies": {\n    "alpha": "1.0.0",\n    "beta": "1.0.0",\n    "gamma": "1.0.0"\n  }\n}\n'
+after = before.replace('"alpha": "1', '"alpha": "3').replace('"gamma": "1', '"gamma": "2')
+manifest.write_text(before)
+code, stdout, stderr, runtime = adapter_call("PreToolUse", manifest_patch, accepted, cwd=root)
 assert (code, stdout, stderr) == (0, "", "")
 runtime.assert_called_once()
 pre = runtime.call_args.args[0]
-assert pre["tool_name"] == "MultiEdit"
-assert pre["tool_input"] == {"file_path": "package.json", "edits": manifest_hunks}
-with patch.object(hook, "monotonic", side_effect=[100, 101, 102]):
+assert pre["tool_name"] == "Write"
+assert pre["tool_input"] == {"file_path": "./package.json", "content": after}
+assert manifest.read_text() == before
+manifest.write_text(after)
+with patch.object(hook, "monotonic", side_effect=[100, 101]):
     code, stdout, stderr, runtime = adapter_call("PostToolUse", {
         **manifest_patch, "tool_response": {"success": True},
-    }, accepted)
+    }, vendor_reply({"hookEventName": "PostToolUse", "additionalContext": "One finding"}), cwd=root)
+assert (code, stderr) == (0, "")
+assert json.loads(stdout)["hookSpecificOutput"]["additionalContext"] == "One finding"
+runtime.assert_called_once()
+post = runtime.call_args.args[0]
+assert runtime.call_args.kwargs["deadline"] == 123
+assert (post["tool_name"], post["tool_input"], post["tool_use_id"]) == (
+    pre["tool_name"], pre["tool_input"], pre["tool_use_id"],
+)
+code, stdout, stderr, runtime = adapter_call("PostToolUse", {
+    **manifest_patch, "tool_response": {"success": False},
+}, accepted, cwd=root)
 assert (code, stdout, stderr) == (0, "", "")
-post = [call.args[0] for call in runtime.call_args_list]
-assert [call.kwargs["deadline"] for call in runtime.call_args_list] == [123, 123]
-assert [payload["tool_name"] for payload in post] == ["Edit", "Edit"]
-assert [payload["tool_input"] for payload in post] == [
-    {"file_path": "package.json", **hunk} for hunk in manifest_hunks
-]
-assert [payload["tool_use_id"] for payload in post] == [pre["tool_use_id"], "patch-id:1"]
-print("PASS  ox-vibesec: preserves two package.json hunks in MultiEdit and post-tool Edit calls")
+runtime.assert_not_called()
+print("PASS  ox-vibesec: replays multiple sections in order and reports a post-tool finding once")
 
 wrapped = "\n".join([
     "apply_patch <<'PATCH'", "*** Begin Patch", "", "*** Update File:  old file.py  ",
-    "*** Move to:  new file.py  ", "@@", "-before", r"\ No newline at end of file",
+    "*** Move to:  moved file.py  ", "@@ second section", "-before", r"\ No newline at end of file",
     "+after", "*** End Patch", "PATCH",
 ])
-for event, path in (("PreToolUse", "old file.py"), ("PostToolUse", "new file.py")):
-    assert hook.patch_edits(wrapped, event) == [
-        {"file_path": path, "edits": [{"old_string": "before", "new_string": "after"}]},
-    ]
-print("PASS  ox-vibesec: accepts wrapped patches with padded paths and newline markers")
+old = root / "old file.py"
+old.write_text("first section\nbefore\nsecond section\nbefore")
+moved_content = "first section\nbefore\nsecond section\nafter\n"
+for event in ("PreToolUse", "PostToolUse"):
+    response = {}
+    if event == "PostToolUse":
+        old.unlink()
+        (root / "moved file.py").write_text(moved_content)
+        response = {"tool_response": {"success": True}}
+    code, stdout, stderr, runtime = adapter_call(event, {
+        **patch_event, "tool_input": {"input": wrapped}, **response,
+    }, accepted, cwd=root)
+    assert (code, stdout, stderr) == (0, "", "")
+    runtime.assert_called_once()
+    payload = runtime.call_args.args[0]
+    assert payload["tool_name"] == "Write"
+    assert payload["tool_input"] == {"file_path": "moved file.py", "content": moved_content}
+print("PASS  ox-vibesec: uses anchors for repeated text and writes moved files under their final path")
 
 with patch.object(hook, "monotonic", side_effect=[100, 101, 123]):
-    code, stdout, stderr, runtime = adapter_call("PreToolUse", patch_event, accepted)
+    code, stdout, stderr, runtime = adapter_call("PreToolUse", patch_event, accepted, cwd=root)
 assert (code, stdout, stderr) == (0, "", "OX VibeSec: check skipped (time budget)\n")
 assert runtime.call_count == 1 and runtime.call_args.kwargs["deadline"] == 123
 with patch.object(hook, "monotonic", side_effect=[100, 101, 122, 123]):
-    code, stdout, stderr, runtime = adapter_call("PreToolUse", patch_event, results=[
+    code, stdout, stderr, runtime = adapter_call("PreToolUse", patch_event, cwd=root, results=[
         accepted, subprocess.TimeoutExpired("vendor hook", 1),
     ])
 assert (code, stdout, stderr) == (0, "", "OX VibeSec: check skipped (time budget)\n")
@@ -248,7 +283,7 @@ assert runtime.call_count == 2
 print("PASS  ox-vibesec: stops patch checks when the shared time budget expires")
 
 guidance = vendor_reply({"hookEventName": "PreToolUse", "additionalContext": f"Keep {test_key}"})
-code, stdout, stderr, runtime = adapter_call("PreToolUse", patch_event, results=[
+code, stdout, stderr, runtime = adapter_call("PreToolUse", patch_event, cwd=root, results=[
     guidance, Mock(returncode=1),
 ])
 assert code == 0 and stderr == "OX VibeSec hook unavailable.\n" and runtime.call_count == 2
@@ -256,6 +291,7 @@ assert json.loads(stdout) == {"hookSpecificOutput": {
     "hookEventName": "PreToolUse", "additionalContext": "Keep [redacted]",
 }}
 print("PASS  ox-vibesec: retains guidance when another patch check fails")
+project.cleanup()
 
 code, stdout, stderr, _ = adapter_call("PreToolUse", exec_event, None)
 assert code == 0 and not stdout

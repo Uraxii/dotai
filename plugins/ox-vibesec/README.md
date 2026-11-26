@@ -42,11 +42,11 @@ On restricted networks, allow HTTPS access to these hosts:
 - `api.cloud.ox.security` for the OX API
 
 Devin forwards prompts, shell calls and results, and supported file changes
-from `edit`, `write`, and `apply_patch`. Patches forward added file content
-and update hunks, not standalone file deletions. The adapter does not forward
-transcripts or apply OX's suggested tool rewrites. Only enable it where your
-organization permits OX to receive this data. These hooks fail open and are not
-an enforcement boundary.
+from `edit`, `write`, and `apply_patch`. For patches, OX receives the complete
+resulting contents of each added or updated file at its final path, but not
+deleted files. The adapter does not forward transcripts or apply OX's suggested
+tool rewrites. Only enable it where your organization permits OX to receive this
+data. These hooks fail open and are not an enforcement boundary.
 
 ## Other harnesses
 

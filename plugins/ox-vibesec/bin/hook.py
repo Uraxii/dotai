@@ -7,12 +7,13 @@ from pathlib import Path
 from time import monotonic
 
 import vibesec
+from patch_replay import patch_writes
 
 
 PATCH_CHECK_BUDGET = 23
 
 
-def ox_payload(event, data, cwd, *, patch_edit=None):
+def ox_payload(event, data, cwd):
     session_id = data.get("session_id", "")
     if not isinstance(session_id, str) or not re.fullmatch(r"[A-Za-z0-9_-]{1,128}", session_id):
         return None
@@ -24,13 +25,11 @@ def ox_payload(event, data, cwd, *, patch_edit=None):
             return None
         payload["prompt"] = data["prompt"]
     else:
-        args = patch_edit if patch_edit is not None else data.get("tool_input")
-        tool = "edit" if patch_edit is not None else data.get("tool_name")
+        args = data.get("tool_input")
+        tool = data.get("tool_name")
         if not isinstance(args, dict):
             return None
-        if patch_edit is not None and "edits" in patch_edit:
-            payload.update(tool_name="MultiEdit", tool_input=patch_edit)
-        elif tool == "exec" and isinstance(args.get("command"), str):
+        if tool == "exec" and isinstance(args.get("command"), str):
             payload.update(tool_name="Bash", tool_input={"command": args["command"]})
         elif tool in ("edit", "write"):
             path = args.get("file_path") or args.get("path")
@@ -62,90 +61,33 @@ def ox_payload(event, data, cwd, *, patch_edit=None):
     return payload
 
 
-def patch_edits(text, event):
-    if not isinstance(text, str):
-        return []
-    lines = text.replace("\r\n", "\n").strip().split("\n")
-    wrapper = re.fullmatch(r"""(?:apply_patch[ \t]+)?<<[ \t]*(['"]?)([A-Za-z_]\w*)\1""", lines[0])
-    if wrapper and lines[-1] == wrapper[2]:
-        lines = lines[1:-1]
-    if len(lines) < 2:
-        return []
-    if lines[0].strip() != "*** Begin Patch" or lines[-1].strip() != "*** End Patch":
-        return []
-    body = "\n".join([*lines[1:-1], ""]).lstrip("\n \t")
-    if body.startswith("*** Environment ID: "):
-        body = body.partition("\n")[2].lstrip("\n \t")
-    prefix, *sections = re.split(
-        r"^\*\*\* (Add|Update|Delete) File: (.+)\n", body, flags=re.MULTILINE,
-    )
-    if prefix:
-        return []
-    edits = []
-    for operation, path, section in zip(sections[::3], sections[1::3], sections[2::3]):
-        path = path.strip()
-        if not path:
-            return []
-        lines = section.removesuffix("\n").split("\n") if section else []
-        lines = [line for line in lines if line != r"\ No newline at end of file"]
-        if operation == "Delete":
-            if lines:
-                return []
-            continue
-        if operation == "Add":
-            if any(not line.startswith("+") for line in lines):
-                return []
-            edits.append({"file_path": path, "content": "".join(line[1:] + "\n" for line in lines)})
-            continue
-        if lines and lines[0].startswith("*** Move to: "):
-            destination = lines.pop(0).removeprefix("*** Move to: ").strip()
-            if not destination:
-                return []
-            if event == "PostToolUse":
-                path = destination
-        hunks = []
-        changes = []
-        for line in [*lines, "@@"]:
-            if line.rstrip() in ("@@", "*** End of File") or line.startswith("@@ "):
-                if any(entry[0] in "+-" for entry in changes):
-                    hunks.append({
-                        "old_string": "\n".join(entry[1:] for entry in changes if entry[0] != "+"),
-                        "new_string": "\n".join(entry[1:] for entry in changes if entry[0] != "-"),
-                    })
-                changes = []
-            elif not line or line[0] in " +-":
-                changes.append(line or " ")
-            else:
-                return []
-        if hunks:
-            edits.append({"file_path": path, "edits": hunks})
-    return edits
-
-
 def ox_payloads(event, data, cwd):
     if event not in ("PreToolUse", "PostToolUse") or data.get("tool_name") != "apply_patch":
         payload = ox_payload(event, data, cwd)
         return [payload] if payload else []
     args = data.get("tool_input")
     text = args.get("input") if isinstance(args, dict) else None
-    edits = patch_edits(text, event)
-    if not edits and isinstance(text, str) and text.strip():
+    if not isinstance(text, str) or not text.strip():
+        return []
+    post = event == "PostToolUse"
+    if post:
+        response = data.get("tool_response")
+        if not isinstance(response, dict) or response.get("success") is not True:
+            return []
+    try:
+        writes = patch_writes(text, cwd, post=post)
+    except (OSError, ValueError):
+        writes = []
+    if not writes:
         print("OX VibeSec could not parse patch; check skipped.", file=sys.stderr)
     payloads = []
-    for index, edit in enumerate(edits, 1):
-        parts = [edit]
-        if event == "PostToolUse" and "edits" in edit:
-            parts = [{"file_path": edit["file_path"], **hunk} for hunk in edit["edits"]]
-        for part_index, part in enumerate(parts):
-            payload = ox_payload(event, data, cwd, patch_edit=part)
-            if not payload:
-                return []
-            if "tool_use_id" in payload:
-                if len(edits) > 1:
-                    payload["tool_use_id"] += f":{index}"
-                if part_index:
-                    payload["tool_use_id"] += f":{part_index}"
-            payloads.append(payload)
+    for index, write in enumerate(writes, 1):
+        payload = ox_payload(event, {**data, "tool_name": "write", "tool_input": write}, cwd)
+        if not payload:
+            return []
+        if len(writes) > 1 and "tool_use_id" in payload:
+            payload["tool_use_id"] += f":{index}"
+        payloads.append(payload)
     return payloads
 
 
