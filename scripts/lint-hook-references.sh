@@ -75,10 +75,7 @@ for manifest in "$root"/plugins/*/hooks.json "$root"/plugins/*/hooks/*.json; do
   events=.hooks
   case "${manifest#"$plugin"/}" in
     hooks.json)
-      if [ -f "$plugin/.devin-plugin/plugin.json" ] &&
-        jq -e '.hooks | type == "object" and length > 0 and all(keys[]; test("^[A-Z]"))' "$manifest" >/dev/null; then
-        allowed="PLUGIN_ROOT DEVIN_PLUGIN_ROOT CLAUDE_PLUGIN_ROOT"
-      elif jq -e 'type == "object" and (.hooks | type == "object")' "$manifest" >/dev/null; then
+      if jq -e 'type == "object" and (.hooks | type == "object")' "$manifest" >/dev/null; then
         allowed=PLUGIN_ROOT
       else
         if ! jq -e 'type == "object" and all(.[]; type == "array")' "$manifest" >/dev/null; then

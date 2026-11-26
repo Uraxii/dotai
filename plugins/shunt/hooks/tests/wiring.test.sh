@@ -47,7 +47,7 @@ config="$PLUGIN_ROOT_DIR/hooks.json"
 unset PLUGIN_ROOT CLAUDE_PLUGIN_ROOT
 export DEVIN_PLUGIN_ROOT="$PLUGIN_ROOT_DIR" DEVIN_PROJECT_DIR="$WORK"
 for tool in read exec; do
-  command=$(jq -r --arg m "^$tool\$" '.hooks.PreToolUse[] | select(.matcher == $m) | .hooks[].command' "$config")
+  command=$(jq -r --arg m "^$tool\$" '.PreToolUse[] | select(.matcher == $m) | .hooks[].command' "$config")
   case "$tool" in
     read)
       full='{"tool_name":"read","tool_input":{"path":"big.txt"}}'

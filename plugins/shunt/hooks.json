@@ -1,26 +1,24 @@
 {
-  "hooks": {
-    "PreToolUse": [
-      {
-        "matcher": "^read$",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "for root in \"${PLUGIN_ROOT:-}\" \"${DEVIN_PLUGIN_ROOT:-}\" \"${CLAUDE_PLUGIN_ROOT:-}\" /opt/.devin/plugins_cache/cache/*shunt*/*; do if [ -n \"$root\" ] && [ -f \"$root/hooks/check-file-size\" ]; then exec bash \"$root/hooks/check-file-size\" --harness devin; fi; done; echo 'shunt: plugin root not found' >&2",
-            "timeout": 5
-          }
-        ]
-      },
-      {
-        "matcher": "^exec$",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "for root in \"${PLUGIN_ROOT:-}\" \"${DEVIN_PLUGIN_ROOT:-}\" \"${CLAUDE_PLUGIN_ROOT:-}\" /opt/.devin/plugins_cache/cache/*shunt*/*; do if [ -n \"$root\" ] && [ -f \"$root/hooks/check-bash-read\" ]; then exec bash \"$root/hooks/check-bash-read\" --harness devin; fi; done; echo 'shunt: plugin root not found' >&2",
-            "timeout": 5
-          }
-        ]
-      }
-    ]
-  }
+  "PreToolUse": [
+    {
+      "matcher": "^read$",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "for root in \"${PLUGIN_ROOT:-}\" \"${DEVIN_PLUGIN_ROOT:-}\" \"${CLAUDE_PLUGIN_ROOT:-}\" /opt/.devin/plugins_cache/cache/*shunt*/*; do if [ -n \"$root\" ] && [ -f \"$root/hooks/check-file-size\" ]; then exec bash \"$root/hooks/check-file-size\" --harness devin; fi; done; echo 'shunt: plugin root not found' >&2",
+          "timeout": 5
+        }
+      ]
+    },
+    {
+      "matcher": "^exec$",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "for root in \"${PLUGIN_ROOT:-}\" \"${DEVIN_PLUGIN_ROOT:-}\" \"${CLAUDE_PLUGIN_ROOT:-}\" /opt/.devin/plugins_cache/cache/*shunt*/*; do if [ -n \"$root\" ] && [ -f \"$root/hooks/check-bash-read\" ]; then exec bash \"$root/hooks/check-bash-read\" --harness devin; fi; done; echo 'shunt: plugin root not found' >&2",
+          "timeout": 5
+        }
+      ]
+    }
+  ]
 }

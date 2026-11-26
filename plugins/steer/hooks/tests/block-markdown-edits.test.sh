@@ -224,7 +224,7 @@ expect_equal "a non-string file_path allows" allow "$DECISION"
 decide /repo/guide.md "not json"$'\n'"{ also not json"
 expect_equal "an unparseable transcript allows" allow "$DECISION"
 
-devin_command=$(wiring_commands devin "$PLUGIN_ROOT_DIR/hooks.json" UserPromptSubmit)
+devin_command=$(jq -r '.UserPromptSubmit[].hooks[].command' "$PLUGIN_ROOT_DIR/hooks.json")
 run_wiring devin "$devin_command" <<< '{"hook_event_name":"UserPromptSubmit","prompt":"Fix the parser","session_id":"session-1","prompt_id":"prompt-1"}'
 expect_equal "Devin prompt without a transcript exits 0" 0 "$STATUS"
 expect_equal "Devin prompt adds context rather than blocking" "UserPromptSubmit null" \
