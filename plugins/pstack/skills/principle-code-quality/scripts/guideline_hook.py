@@ -270,7 +270,8 @@ def patch_change(file: PatchFile, base: Neutral) -> Neutral:
     disk = read_disk(file.source, str(base["cwd"]), str(base["root"]))
     if file.action == "Add File":
         added = "".join(line[1:] + "\n" for line in file.body)
-        return {"path": file.target, "before": disk.text, "after": added}
+        return {"path": file.target, "before": disk.text, "after": added,
+                "before_problem": disk.problem}
     after = None if disk.text is None else apply_update(disk.text, file.body)
     if after is None:
         return unbuilt(file.target, disk)
@@ -358,7 +359,9 @@ def path_problem(path: Path) -> str:
         return f"its status could not be read ({type(error).__name__})"
     if stat.S_ISREG(mode):
         return ""
-    return "it is a directory" if stat.S_ISDIR(mode) else "it is not a regular file"
+    if stat.S_ISDIR(mode):
+        return "it is a directory"
+    return "it is not a regular file"
 
 
 def check(paths: Sequence[str]) -> int:

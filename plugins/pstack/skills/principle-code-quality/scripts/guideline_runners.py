@@ -162,6 +162,10 @@ def run_tool(
 
 NOT_UNDERSTOOD = RunResult(None, "output was not understood")
 RUFF_EXCLUDED = "Ignored path via"
+RUFF_EXCLUDED_PROBLEM = (
+    "skips this file under its exclude settings "
+    "(the project's or ruff's defaults)"
+)
 
 
 def wanted(code: object, codes: frozenset[str]) -> bool:
@@ -197,7 +201,7 @@ def run_ruff(executable: str, target: Target) -> RunResult:
     if process is None:
         return RunResult(None, f"timed out after {RUNNER_TIMEOUT_S} s")
     if RUFF_EXCLUDED in process.stderr:
-        return RunResult(None, "skips files the project's ruff config excludes")
+        return RunResult(None, RUFF_EXCLUDED_PROBLEM)
     try:
         rows = json.loads(process.stdout)
         findings = tuple(

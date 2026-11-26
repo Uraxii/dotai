@@ -45,6 +45,7 @@ UNAVAILABLE_LABEL = "warn (detector unavailable)"
 RESEND_AFTER_PROMPTS = 20
 MAX_TEXT_CHARS = 9000
 DROPPED_NOTICE_CHARS = 600
+NOTICE_COUNT_CHARS = 60
 DROPPED_FILES_NAMED = 3
 MAX_CONTENT_CHARS = 1_000_000
 MAX_PROMPT_CHARS = 100_000
@@ -310,7 +311,6 @@ class Engine:
         self.hits: list[Hit] = []
         self.fulls: dict[str, str] = {}
         self.blocked = False
-        self.reserve = 0
         self.cap = sys.maxsize if event.kind == "check" else MAX_TEXT_CHARS
 
     def classify(self, raw: str, content: str | None) -> CodeFile | str:
@@ -348,7 +348,8 @@ class Engine:
             return file
         if self.event.kind == "check":
             reason = change.problem or file
-            self.notices.append(f"Notice: did not check {change.path}: {reason}")
+            notice = f"Notice: did not check {change.path}: {reason}"
+            self.notices.append(notice)
         return None
 
     def report_unbuilt(self, rel: str, problem: str) -> None:
@@ -536,7 +537,7 @@ class Engine:
         """Append the item when the whole text, plus `reserve` characters
         kept free, stays under the size cap."""
         used = sum(len(item) + 2 for item in items)
-        if used + len(text) + self.reserve + reserve > self.cap:
+        if used + len(text) + reserve > self.cap:
             return False
         items.append(text)
         return True
@@ -550,7 +551,7 @@ class Engine:
         unique = list(dict.fromkeys(self.notices))
         added = [
             notice for notice in unique
-            if self.add(items, notice, DROPPED_NOTICE_CHARS)
+            if self.add(items, notice, NOTICE_COUNT_CHARS)
         ]
         if len(added) < len(unique):
             items.append(
@@ -622,7 +623,6 @@ class Engine:
         if kind == "pre_write":
             self.hits = []
         items = [] if kind == "check" else [CONTEXT_HEADER]
-        self.reserve = (len(OVERRIDE_LINE) + 2) * (kind == "check")
         notices = self.add_notices(items)
         self.add_hits(items)
         self.add_fulls(items)

@@ -278,7 +278,7 @@ hook RUFF_JSON="$F403_ROW" RUFF_STDERR='DEBUG Ignored path via `exclude`: "src/d
 ')"
 expect_equal "a file ruff's config excludes does not deny" "" "$(decision)"
 expect_contains "and the user is told ruff skipped it" \
-  "Notice: ruff skips files the project's ruff config excludes, so detectors ruff:S101 did not run." "$(context)"
+  "Notice: ruff skips this file under its exclude settings (the project's or ruff's defaults), so detectors ruff:S101 did not run." "$(context)"
 printf '[lint]\nignore = ["F403"]\n' >"$PROJECT/ruff.toml"
 hook RUFF_JSON="$F403_ROW" <<<"$(tool_payload PostToolUse Write src/app.py '{}')"
 expect_equal "the ignored rule stays quiet after the write" "" "$(grep -F py.import.no-star <<<"$STDOUT")"
@@ -500,6 +500,15 @@ hook <<<"$(patch_payload PreToolUse '*** Begin Patch
 +    return tuple(page for path in paths for page in parse_page(_read(path)))
 *** End Patch')"
 expect_equal "a Codex patch that adds the violation is denied" "$PAGES_REASON" "$(reason)"
+printf '%s\xff\n' "$PAGES" >"$PROJECT/pages.py"
+hook <<<"$(patch_payload PreToolUse '*** Begin Patch
+*** Add File: pages.py
++def pages(paths):
++    return tuple(page for path in paths for page in parse_page(_read(path)))
+*** End Patch')"
+expect_equal "a Codex Add File over a file that is not UTF-8 does not deny" "" "$(decision)"
+expect_contains "and its findings are warnings" \
+  "Notice: could not read the current pages.py: it is not UTF-8 text, so its findings are warnings." "$(context)"
 
 new_case codex-update
 printf '%s' "$EXPLICIT_LOOP" >"$PROJECT/pages.py"
@@ -588,10 +597,14 @@ capture env PATH="$HOOK_PATH" python3 -I "$ENGINE" --harness unknown </dev/null
 expect_equal "a usage error never exits 2, which Codex reads as a block" 64 "$STATUS"
 
 new_case truncated
+guideline py-types-mypy.md 'Type every function.' 'id: py.types.mypy' 'languages: python' \
+  'scope: contextual' 'severity: warn' 'enabled: true' 'detectors: mypy:X'
 many="$(for i in $(seq 400); do echo "x$i = [a for b in c for a in b]"; done)"
 hook <<<"$(write many.py "$many")"
 expect_contains "findings past the size cap are counted" \
   "more findings did not fit in this message. Run the check command on many.py to see all of them." "$(reason)"
+expect_contains "a denial full of findings still names the detector that did not run" \
+  "Notice: mypy has no runner yet, so detectors mypy:X did not run." "$(reason)"
 expect_equal "the denial stays inside the size cap" yes "$([ "$(reason | wc -c)" -le 9000 ] && echo yes)"
 printf '%s\n' "$many" >"$PROJECT/many.py"
 cd "$PROJECT"
@@ -602,8 +615,6 @@ new_case huge-guideline
 cp "$FIXTURES/py-comprehension-one-for.md" "$WORK/one-for.md"
 guideline py-comprehension-one-for.md "$(printf 'x%.0s' $(seq 8400))" 'id: py.comprehension.one-for' \
   'languages: python' 'scope: contextual' 'severity: block' 'enabled: true' 'detectors: code_quality:CQ001'
-guideline py-types-mypy.md 'Type every function.' 'id: py.types.mypy' 'languages: python' \
-  'scope: contextual' 'severity: warn' 'enabled: true' 'detectors: mypy:X'
 hook <<<"$(write pages.py "$PAGES")"
 expect_contains "a denial whose guideline does not fit still names the rule and line" \
   "[py.comprehension.one-for] block: code_quality:CQ001 at pages.py:2" "$(reason)"
