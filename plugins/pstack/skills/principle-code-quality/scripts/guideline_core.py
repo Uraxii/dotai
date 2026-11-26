@@ -30,9 +30,9 @@ from guideline_runners import (
 )
 
 EXCLUDED_DIRECTORIES = frozenset({
-    ".git", "node_modules", ".venv", "venv", "site-packages", "dist",
-    "build", "vendor", "__pycache__",
+    ".git", "node_modules", ".venv", "venv", "site-packages", "__pycache__",
 })
+EXCLUDED_AT_ROOT = frozenset({"dist", "build", "vendor"})
 EXCLUDED_SUFFIX = ".min.js"
 OVERRIDE_LINE = "Project standards, configs and lints override these defaults."
 CONTEXT_HEADER = f"Code-quality guidelines (pstack):\n{OVERRIDE_LINE}"
@@ -55,7 +55,8 @@ EVENT_KINDS = frozenset({
     "post_write", "post_read", "check",
 })
 MAIN_AGENT = "main"
-PATH_IN_PROMPT = re.compile(r"[\w./\\-]*\.[\w.]+")
+PATH_IN_PROMPT = re.compile(r"[\w./\\-]*\.\w+(?:\.\w+)*")
+SHEBANG_LANGUAGES = {"python": "python", "node": "javascript"}
 UNSAFE_NAME_CHARS = re.compile(r"[^A-Za-z0-9_-]")
 
 
@@ -77,6 +78,7 @@ class FileChange(NamedTuple):
     path: str
     before: str | None
     after: str | None
+    problem: str = ""
 
 
 class Event(NamedTuple):
@@ -102,15 +104,37 @@ def optional_text(value: object) -> str | None:
     return None
 
 
+def file_change(item: dict[str, object]) -> FileChange:
+    after = item.get("after")
+    problem = item.get("problem")
+    if isinstance(after, str) and len(after) > MAX_CONTENT_CHARS:
+        problem = "it is larger than 1 MB"
+    return FileChange(
+        str(item["path"]), optional_text(item.get("before")),
+        optional_text(after), problem if isinstance(problem, str) else "",
+    )
+
+
 def file_changes(raw: object) -> tuple[FileChange, ...]:
     if not isinstance(raw, list):
         return ()
     return tuple(
-        FileChange(item["path"], optional_text(item.get("before")),
-                   optional_text(item.get("after")))
-        for item in raw[:MAX_FILES_PER_EVENT]
+        file_change(item) for item in raw[:MAX_FILES_PER_EVENT]
         if isinstance(item, dict) and isinstance(item.get("path"), str)
     )
+
+
+def shebang_language(content: str | None) -> str | None:
+    """The language a `#!` line names, for a file with no extension."""
+    if content is None or not content.startswith("#!"):
+        return None
+    words = content[2:].partition("\n")[0].split()
+    if words and words[0].endswith("/env"):
+        words = [word for word in words[1:] if not word.startswith("-")]
+    if not words:
+        return None
+    name = words[0].rsplit("/", 1)[-1].rstrip("0123456789.")
+    return SHEBANG_LANGUAGES.get(name)
 
 
 def event_from_json(data: object) -> Event | None:
@@ -281,35 +305,65 @@ class Engine:
         self.fulls: dict[str, str] = {}
         self.blocked = False
 
-    def code_file(self, raw: str) -> CodeFile | None:
-        """Describe a payload path, or None when no guideline covers it."""
+    def classify(self, raw: str, content: str | None) -> CodeFile | str:
+        """Describe a payload path, or say why no guideline covers it."""
         path = resolve_in_root(raw, self.event.cwd, self.event.root)
+        if path is None:
+            return "it is outside the project"
         language = language_of(Path(raw).name, self.extensions)
-        if path is None or language is None:
-            return None
+        if language is None and not Path(raw).suffix:
+            language = shebang_language(content)
+        if language is None:
+            return "no guideline covers its file type"
         root = Path(self.event.root).resolve()
         rel = path.relative_to(root).as_posix()
-        parts = set(rel.split("/")[:-1])
-        if parts & EXCLUDED_DIRECTORIES or rel.endswith(EXCLUDED_SUFFIX):
-            return None
-        applicable = tuple(
-            guideline for guideline in self.guidelines
+        directories = rel.split("/")[:-1]
+        if set(directories) & EXCLUDED_DIRECTORIES or (
+            directories and directories[0] in EXCLUDED_AT_ROOT
+        ):
+            return "it is in a dependency or build directory"
+        if rel.endswith(EXCLUDED_SUFFIX):
+            return "it is minified"
+        applicable = (
+            self.applicable(guideline, path, rel, root)
+            for guideline in self.guidelines
             if guideline.enabled and language in guideline.languages
-            and self.applies(guideline, path, rel, root)
         )
-        return CodeFile(path, rel, language, applicable)
+        return CodeFile(path, rel, language, tuple(filter(None, applicable)))
+
+    def code_file(self, change: FileChange) -> CodeFile | None:
+        file = self.classify(change.path, change.after)
+        if isinstance(file, CodeFile):
+            if change.problem:
+                self.report_unbuilt(file.rel, change.problem)
+            return file
+        if self.event.kind == "check":
+            self.notices.append(f"Notice: did not check {change.path}: {file}")
+        return None
+
+    def report_unbuilt(self, rel: str, problem: str) -> None:
+        later = ", so PostToolUse checks it" * (self.event.kind == "pre_write")
+        self.notices.append(f"Notice: did not check {rel}: {problem}{later}")
 
     @staticmethod
-    def applies(guideline: Guideline, path: Path, rel: str, root: Path) -> bool:
+    def applicable(
+        guideline: Guideline, path: Path, rel: str, root: Path
+    ) -> Guideline | None:
+        """The guideline minus detectors the project turns off; None when
+        it is out of scope or the project turns off every detector."""
         in_paths = not guideline.paths or any(
             glob_matches(rel, glob) for glob in guideline.paths
         )
         excluded = any(glob_matches(rel, glob) for glob in guideline.exclude)
-        disabled = any(
-            project_disables(tool, code, path, root)
-            for tool, code in guideline.detectors
+        if excluded or not in_paths:
+            return None
+        detectors = tuple(
+            (tool, code) for tool, code in guideline.detectors
+            if not project_disables(tool, code, path, root)
         )
-        return in_paths and not excluded and not disabled
+        if guideline.detectors and not detectors:
+            return None
+        return guideline._replace(detectors=detectors)
 
     def note_language(
         self, language: str, guidelines: Iterable[Guideline]
@@ -346,7 +400,7 @@ class Engine:
         )
         self.notices.append(
             f"Notice: {tool} {problem}, so detectors {', '.join(codes)} did "
-            "not run. Their guidelines follow as warnings."
+            "not run. Their guidelines apply as warnings."
         )
         for guideline in affected:
             self.fulls[guideline.id] = UNAVAILABLE_LABEL
@@ -379,7 +433,7 @@ class Engine:
         return hits, failed
 
     def pre_write(self, change: FileChange) -> None:
-        file = self.code_file(change.path)
+        file = self.code_file(change)
         if file is None or change.after is None:
             return
         self.note_language(file.language, file.guidelines)
@@ -405,7 +459,7 @@ class Engine:
                 self.fulls.setdefault(guideline.id, guideline.label)
 
     def post_write(self, change: FileChange) -> None:
-        file = self.code_file(change.path)
+        file = self.code_file(change)
         if file is None:
             return
         self.note_language(file.language, file.guidelines)
@@ -467,23 +521,37 @@ class Engine:
         return True
 
     def add_notices(self, items: list[str]) -> list[str]:
-        """Add each notice this agent has not seen; return those added."""
+        """Add every notice of this call; return those new to this agent.
+
+        A notice is one line, so it repeats on each call it applies to.
+        Only the message to the user is sent once.
+        """
         added = [
             notice for notice in dict.fromkeys(self.notices)
-            if notice not in self.state.notices and self.add(items, notice)
+            if self.add(items, notice)
         ]
-        self.state.notices += added
-        return added
+        new = [notice for notice in added if notice not in self.state.notices]
+        self.state.notices += new
+        return new
 
     def add_hits(self, items: list[str]) -> None:
         ordered = sorted(self.hits, key=lambda hit: (
             hit.severity != "block", hit.rel, hit.finding.line,
             hit.guideline.id,
         ))
+        dropped: dict[str, int] = {}
         for hit in ordered:
             repeated = self.suppressed(hit.guideline.id)
-            if self.add(items, self.hit_item(hit)) and not repeated:
+            if not self.add(items, self.hit_item(hit)):
+                dropped[hit.rel] = dropped.get(hit.rel, 0) + 1
+            elif not repeated:
                 self.state.sent[hit.guideline.id] = self.state.prompt
+        if dropped:
+            items.append(
+                f"Notice: {sum(dropped.values())} more findings did not fit "
+                f"in this message. Run the check command on "
+                f"{', '.join(dropped)} to see all of them."
+            )
 
     def add_fulls(self, items: list[str]) -> None:
         """Add queued and new guidelines in full; keep what does not fit."""

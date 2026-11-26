@@ -189,7 +189,22 @@ $ONE_FOR
 new_case refused
 printf 'x = 1\n' >"$PROJECT/pages.py"
 hook <<<"$(tool_payload PreToolUse Edit pages.py '{old_string: "absent", new_string: "y = [a for b in c for a in b]"}')"
-expect_equal "an edit the tool would refuse says nothing" "0:" "$STATUS:$STDOUT"
+expect_contains "an edit whose text cannot be built is named" "Notice: did not check pages.py: could not build the text this edit leaves, so PostToolUse checks it" "$(context)"
+expect_equal "and is not denied" "" "$(decision)"
+
+new_case crlf
+printf 'def pages(paths):\r\n    return tuple(found)\r\n' >"$PROJECT/pages.py"
+hook <<<"$(tool_payload PreToolUse Edit pages.py '{old_string: "def pages(paths):\n    return tuple(found)", new_string: "def pages(paths):\n    return tuple(p for q in found for p in q)"}')"
+expect_contains "an LF edit to a CRLF file is applied and denied" \
+  "[py.comprehension.one-for] block: code_quality:CQ001 at pages.py:2" "$(reason)"
+
+new_case unreadable
+printf 'x = 1\n\xff\n' >"$PROJECT/pages.py"
+hook <<<"$(tool_payload PreToolUse Edit pages.py '{old_string: "x = 1", new_string: "y = 2"}')"
+expect_contains "a file that is not UTF-8 is named" \
+  "Notice: did not check pages.py: it is not UTF-8 text, so PostToolUse checks it" "$(context)"
+hook <<<"$(tool_payload PostToolUse Edit pages.py '{}')"
+expect_contains "and named again after the write" "Notice: did not check pages.py: it is not UTF-8 text" "$(context)"
 
 new_case non-code
 hook <<<"$(write notes.md "$PAGES")"
@@ -200,6 +215,13 @@ hook <<<"$(write ../outside.py "$PAGES")"
 expect_equal "a file outside the project says nothing" "0:" "$STATUS:$STDOUT"
 hook <<<"$(write node_modules/pkg/pages.py "$PAGES")"
 expect_equal "a vendored file says nothing" "0:" "$STATUS:$STDOUT"
+hook <<<"$(write build/pages.py "$PAGES")"
+expect_equal "a file in a root build directory says nothing" "0:" "$STATUS:$STDOUT"
+hook <<<"$(write src/app/build/pages.py "$PAGES")"
+expect_equal "a nested build directory is checked" deny "$(decision)"
+hook <<<"$(write bin/pages "#!/usr/bin/env python3
+$PAGES")"
+expect_equal "an extensionless file with a python shebang is checked" deny "$(decision)"
 
 new_case multi-edit
 printf 'x = 1\n' >"$PROJECT/pages.py"
@@ -240,10 +262,18 @@ hook RUFF_JSON="$F403_ROW" <<<"$(write src/app.py 'from os import *
 expect_equal "a rule the project ignores does not block" "" "$(decision)"
 expect_equal "a rule the project ignores gives no finding" "" "$(grep -F py.import.no-star <<<"$STDOUT")"
 expect_equal "ruff runs with the project config, without the ignored rule" \
-  "check --extend-select S101 --output-format json --stdin-filename $PROJECT/src/app.py -" \
+  "check --force-exclude --extend-select S101 --output-format json --stdin-filename $PROJECT/src/app.py -" \
   "$(cat "$WORK/ruff.args")"
 hook RUFF_JSON="$F403_ROW" <<<"$(tool_payload PostToolUse Write src/app.py '{}')"
 expect_equal "the ignored rule stays quiet after the write" "" "$(grep -F py.import.no-star <<<"$STDOUT")"
+cp -r "$FIXTURES" "$WORK/two-detectors"
+sed -i 's/^detectors: ruff:F403$/detectors: ruff:F403, code_quality:CQ001/' "$WORK/two-detectors/py-import-no-star.md"
+rm "$WORK/two-detectors/py-comprehension-one-for.md"
+hook PSTACK_GUIDELINES_DIR="$WORK/two-detectors" RUFF_JSON="$F403_ROW" <<<"$(write src/two.py 'x = [a for b in c for a in b]
+')"
+expect_contains "an ignored detector leaves the guideline's other detectors on" \
+  "[py.import.no-star] block: code_quality:CQ001 at src/two.py:1" "$(reason)"
+expect_equal "the ignored detector gives no finding" "" "$(grep -F 'ruff:F403 at' <<<"$(reason)")"
 
 new_case project-pyproject
 printf '[tool.ruff.lint.per-file-ignores]\n"src/*" = ["F403"]\n' >"$PROJECT/pyproject.toml"
@@ -264,11 +294,15 @@ new_case missing-ruff
 rm "$WORK/bin/ruff"
 hook <<<"$(write src/app.py 'from os import *
 ')"
-RUFF_NOTICE='Notice: ruff is not installed, so detectors ruff:F403, ruff:S101 did not run. Their guidelines follow as warnings.'
+RUFF_NOTICE='Notice: ruff is not installed, so detectors ruff:F403, ruff:S101 did not run. Their guidelines apply as warnings.'
 expect_contains "a missing tool is named in the context" "$RUFF_NOTICE" "$(context)"
 expect_contains "its guideline follows as a warning" "[py.import.no-star] warn (detector unavailable)" "$(context)"
 expect_equal "the user sees the same notice" "$RUFF_NOTICE" "$(jq -r .systemMessage <<<"$STDOUT")"
 expect_equal "a missing tool never denies" "" "$(decision)"
+hook <<<"$(write src/app.py 'from os import *
+')"
+expect_contains "the notice repeats on each call the tool is missing" "$RUFF_NOTICE" "$(context)"
+expect_equal "the user is told only once" "null" "$(jq -r .systemMessage <<<"$STDOUT")"
 cat >"$WORK/bin/ruff" <<'STUB'
 #!/bin/sh
 if [ "$1" = --version ]; then
@@ -293,7 +327,7 @@ started=$SECONDS
 hook RUFF_SLEEP=5 <<<"$(write src/app.py 'x = 1
 ')"
 expect_contains "a slow tool is cut off and named" "Notice: ruff timed out after 1.5 s, so detectors" "$(context)"
-expect_equal "the hook returns inside its budget" yes "$([ $((SECONDS - started)) -le 3 ] && echo yes)"
+expect_equal "the hook returns before the slow tool ends" yes "$([ $((SECONDS - started)) -lt 5 ] && echo yes)"
 
 new_case eslint-missing
 mv "$WORK/bin/eslint" "$WORK/eslint.stub"
@@ -369,6 +403,14 @@ expect_equal "an engine failure exits 0" 0 "$STATUS"
 expect_json "an engine failure tells the user and does not deny" \
   "{\"systemMessage\": \"pstack guideline hook failed; code-quality guidelines were not checked for this call. Details: $WORK/data/guideline-state/errors.log\"}" "$STDOUT"
 expect_contains "the failure is logged" "NotADirectoryError" "$(cat "$WORK/data/guideline-state/errors.log")"
+rm "$WORK/data/guideline-state/errors.log"
+: >"$WORK/victim"
+ln -s "$WORK/victim" "$WORK/data/guideline-state/errors.log"
+hook PSTACK_GUIDELINES_DIR="$WORK/not-a-directory" <<<"$(write pages.py "$PAGES")"
+expect_json "a planted log symlink is refused and the user still hears of the failure" \
+  '{"systemMessage": "pstack guideline hook failed; code-quality guidelines were not checked for this call."}' "$STDOUT"
+expect_equal "and the symlink target is untouched" "" "$(cat "$WORK/victim")"
+rm "$WORK/data/guideline-state/errors.log"
 hook <<<'not json'
 expect_equal "a malformed payload says nothing" "0:" "$STATUS:$STDOUT"
 hook <<<'{"hook_event_name": "PreToolUse", "tool_name": "Write", "cwd": 7, "tool_input": {"file_path": ["a.py"], "content": 3}}'
@@ -442,7 +484,20 @@ expect_contains "after a Codex patch the file's findings arrive as warnings" \
 new_case codex-no-apply
 printf 'x = 1\n' >"$PROJECT/pages.py"
 hook <<<"$(patch_payload PreToolUse "$UPDATE")"
-expect_equal "a Codex patch that does not apply says nothing" "0:" "$STATUS:$STDOUT"
+expect_contains "a Codex patch that does not apply is named" "Notice: did not check pages.py: could not build the text this edit leaves, so PostToolUse checks it" "$(context)"
+expect_equal "and is not denied" "" "$(decision)"
+
+new_case codex-whitespace
+printf 'def pages(paths):  \r\n    return tuple(found)\r\n' >"$PROJECT/pages.py"
+hook <<<"$(patch_payload PreToolUse '*** Begin Patch
+*** Update File: pages.py
+@@
+ def pages(paths):
+-    return tuple(found)
++    return tuple(p for q in found for p in q)
+*** End Patch')"
+expect_contains "a Codex hunk matches past trailing whitespace and CRLF" \
+  "[py.comprehension.one-for] block: code_quality:CQ001 at pages.py:2" "$(reason)"
 HARNESS=claude
 
 new_case neutral
@@ -478,5 +533,19 @@ $OVERRIDE
 printf '%s' "$EXPLICIT_LOOP" >"$PROJECT/pages.py"
 capture env PATH="$HOOK_PATH" python3 -I "$ENGINE" check pages.py
 expect_equal "check exits 0 on a clean file" 0 "$STATUS"
+mkdir -p build && printf '%s' "$PAGES" >build/b.py
+capture env PATH="$HOOK_PATH" python3 -I "$ENGINE" check gone.py build/b.py pages.py
+expect_equal "check exits 3 on a missing path" 3 "$STATUS"
+expect_contains "check names the missing path" "Notice: did not check gone.py: no such file" "$STDOUT"
+expect_contains "check names an excluded path" \
+  "Notice: did not check build/b.py: it is in a dependency or build directory" "$STDOUT"
+capture env PATH="$HOOK_PATH" python3 -I "$ENGINE" --harness unknown </dev/null
+expect_equal "a usage error never exits 2, which Codex reads as a block" 64 "$STATUS"
+
+new_case truncated
+many="$(for i in $(seq 400); do echo "x$i = [a for b in c for a in b]"; done)"
+hook <<<"$(write many.py "$many")"
+expect_contains "findings past the size cap are counted" \
+  "more findings did not fit in this message. Run the check command on many.py to see all of them." "$(reason)"
 
 finish

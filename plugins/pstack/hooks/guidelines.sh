@@ -52,6 +52,11 @@ log="$data/guideline-state/errors.log"
 (
   umask 077
   mkdir -p "$data/guideline-state" || exit
+  # Write only in directories this user owns, and never through a symlink.
+  for owned in "$data" "$data/guideline-state"; do
+    [ -O "$owned" ] && [ ! -L "$owned" ] || exit
+  done
+  [ -L "$log" ] && exit
   [ -f "$log" ] && [ "$(wc -c <"$log")" -gt 200000 ] && : >"$log"
   printf '%s %s exit %s\n%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$harness" "$status" "$errors" >>"$log"
 ) 2>/dev/null
