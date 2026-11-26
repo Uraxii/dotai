@@ -215,7 +215,7 @@ PLUGINS: list[dict[str, object]] = [
     {
         # Claude Code loads hooks/hooks.json implicitly. OX --status checks that exact path.
         "name": "ox-vibesec",
-        "version": "1.2.0",
+        "version": "1.3.0",
         "harnesses": ["claude"],
         "hooks": ["devin"],
         "devin_manifest": {
