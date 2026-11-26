@@ -34,6 +34,13 @@ absent. It verifies the installer checksum before it installs the OX runtime.
 It does not install Claude Code or change the user's Claude configuration.
 The runtime is separate from the OX MCP.
 
+The adapter requires Python 3 and Bash. It uses curl to download the installer.
+On restricted networks, allow HTTPS access to these hosts:
+
+- `ox-vibesec.s3.eu-west-1.amazonaws.com` for the installer and bootstrap
+- `nodejs.org` for the Node.js runtime
+- `api.cloud.ox.security` for the OX API
+
 Devin forwards prompts, shell calls and results, and file edits with a
 path and replacement text or content. It does not forward patch-only
 edits or transcripts, or apply OX's suggested tool rewrites. Only enable
