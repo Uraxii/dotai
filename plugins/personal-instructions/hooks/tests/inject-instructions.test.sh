@@ -143,4 +143,31 @@ expect_equal "Devin rule contains both instruction sources" \
 expect_equal "Devin does not discover a root injection hook" no \
   "$([ -e "$REAL_PLUGIN_ROOT/hooks.json" ] && echo yes || echo no)"
 
+capture python3 -B - "$REAL_PLUGIN_ROOT/../.." "$WORK" <<'PY'
+from contextlib import redirect_stdout
+from io import StringIO
+from pathlib import Path
+import runpy
+import sys
+
+repo, work = map(Path, sys.argv[1:])
+generator = runpy.run_path(str(repo / "scripts/generate-plugin-manifests.py"))
+for name in (None, "instructions.md", "main-agent-instructions.md"):
+    root = work / ("generate-" + (name or "no-sources"))
+    plugin = root / "plugins/personal-instructions"
+    plugin.mkdir(parents=True)
+    (root / "README.md").write_text((repo / "README.md").read_text())
+    if name:
+        (plugin / name).write_text("# Only available rules\n")
+    with redirect_stdout(StringIO()):
+        assert generator["main"]([], root=root) == 0
+    rule = plugin / "AGENTS.md"
+    if name:
+        assert rule.read_text().splitlines()[2:] == ["# Only available rules"]
+    else:
+        assert not rule.exists()
+PY
+expect_equal "Devin generator handles missing instruction sources" 0 "$STATUS"
+expect_equal "Devin generator reports no errors for missing sources" "" "$STDERR"
+
 finish

@@ -779,11 +779,15 @@ def wanted_files(root: Path) -> dict[Path, str]:
                 **plugin["devin_manifest"],
             })
         if sources := plugin.get("devin_rule_sources"):
-            sections = [
-                "\n".join(line.rstrip() for line in (root / plugin_root / source).read_text().splitlines()).strip()
-                for source in sources
-            ]
-            files[plugin_root / "AGENTS.md"] = "\n\n".join([GENERATED_NOTE, *sections]) + "\n"
+            sections = []
+            for source in sources:
+                try:
+                    text = (root / plugin_root / source).read_text()
+                except FileNotFoundError:
+                    continue
+                sections.append("\n".join(line.rstrip() for line in text.splitlines()).strip())
+            if sections:
+                files[plugin_root / "AGENTS.md"] = "\n\n".join([GENERATED_NOTE, *sections]) + "\n"
     return files
 
 
