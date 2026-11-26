@@ -17,6 +17,11 @@ sys.path.insert(0, str(plugin / "bin"))
 import hook
 import vibesec
 
+manifest = json.loads((plugin / ".devin-plugin/plugin.json").read_text())
+assert manifest["skills"] == []
+assert (plugin / "skills/update/SKILL.md").is_file()
+print("PASS  ox-vibesec: Devin disables skill loading; Claude updater remains bundled")
+
 hooks = json.loads((plugin / "hooks.json").read_text())
 session = {"session_id": "devin-test"}
 assert set(hooks) == {"SessionStart", "UserPromptSubmit", "PreToolUse", "PostToolUse"}
