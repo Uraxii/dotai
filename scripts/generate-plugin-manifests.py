@@ -218,6 +218,7 @@ PLUGINS: list[dict[str, object]] = [
         "name": "ox-vibesec",
         "version": "1.2.0",
         "harnesses": ["claude"],
+        "hooks": ["devin"],
         "description": (
             "Wire the OX Security VibeSec hooks and its status and login "
             "commands through a plugin instead of settings.json."
@@ -449,6 +450,11 @@ def claude_agent_paths(plugin: dict[str, object], root: Path = REPOSITORY_ROOT) 
 
 
 def hook_wiring_paths(plugin: dict[str, object]) -> dict[str, Path]:
+    if "devin" in plugin.get("hooks", []):
+        return {
+            **{harness: path for harness, path in HOOK_WIRING_PATHS.items() if harness != "copilot"},
+            "devin": Path("hooks.json"),
+        }
     return HOOK_WIRING_PATHS
 
 

@@ -66,8 +66,15 @@ for manifest in "$root"/plugins/*/hooks.json "$root"/plugins/*/hooks/*.json; do
   plugin_name=${manifest#"$root"/plugins/}
   plugin_name=${plugin_name%%/*}
   plugin=$root/plugins/$plugin_name
+  events=.hooks
   case "${manifest#"$plugin"/}" in
-    hooks.json) allowed=PLUGIN_ROOT ;;
+    hooks.json)
+      if [ -f "$plugin/.devin-plugin/plugin.json" ]; then
+        allowed="DEVIN_PLUGIN_ROOT CLAUDE_PLUGIN_ROOT PLUGIN_ROOT"
+        events=.
+      else
+        allowed=PLUGIN_ROOT
+      fi ;;
     hooks/claude-hooks.json | hooks/hooks.json) allowed=CLAUDE_PLUGIN_ROOT ;;
     # Codex sets both; pstack's script reads CLAUDE_PLUGIN_ROOT under Codex.
     hooks/codex-hooks.json) allowed="PLUGIN_ROOT CLAUDE_PLUGIN_ROOT" ;;
@@ -84,11 +91,11 @@ for manifest in "$root"/plugins/*/hooks.json "$root"/plugins/*/hooks/*.json; do
 
   while IFS=$'\t' read -r event field command; do
     check "$event" "$field" "$command"
-  done < <(jq -r '.hooks | to_entries[] | .key as $e | .value[] | (.hooks // [.])[]
+  done < <(jq -r "$events"' | to_entries[] | .key as $e | .value[] | (.hooks // [.])[]
     | to_entries[] | select(.key | IN("command", "bash", "powershell", "commandWindows"))
     | "\($e)\t\(.key)\t\(.value)"' "$manifest")
 
-  if [ "${manifest#"$plugin"/}" = hooks.json ]; then
+  if [ "${manifest#"$plugin"/}" = hooks.json ] && [ "$events" = .hooks ]; then
     while IFS=$'\t' read -r event has missing; do
       fail "$event" "$missing" "is missing beside $has; Copilot runs bash on Linux and macOS, powershell on Windows" \
         "add a $missing command for the same hook"

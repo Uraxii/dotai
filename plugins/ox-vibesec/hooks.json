@@ -1,0 +1,48 @@
+{
+  "SessionStart": [
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "root=\"${DEVIN_PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-${PLUGIN_ROOT:-}}}\"; if [ -n \"$root\" ]; then set -- \"$root/bin/hook.py\"; else set -- /opt/.devin/plugins_cache/cache/github.com_Uraxii_dotai_plugins_ox-vibesec-*/*/bin/hook.py; fi; [ \"$#\" -eq 1 ] && [ -f \"$1\" ] && exec python3 -B \"$1\" SessionStart",
+          "timeout": 120
+        }
+      ]
+    }
+  ],
+  "UserPromptSubmit": [
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "root=\"${DEVIN_PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-${PLUGIN_ROOT:-}}}\"; if [ -n \"$root\" ]; then set -- \"$root/bin/hook.py\"; else set -- /opt/.devin/plugins_cache/cache/github.com_Uraxii_dotai_plugins_ox-vibesec-*/*/bin/hook.py; fi; [ \"$#\" -eq 1 ] && [ -f \"$1\" ] && exec python3 -B \"$1\" UserPromptSubmit",
+          "timeout": 25
+        }
+      ]
+    }
+  ],
+  "PreToolUse": [
+    {
+      "matcher": "^(exec|edit)$",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "root=\"${DEVIN_PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-${PLUGIN_ROOT:-}}}\"; if [ -n \"$root\" ]; then set -- \"$root/bin/hook.py\"; else set -- /opt/.devin/plugins_cache/cache/github.com_Uraxii_dotai_plugins_ox-vibesec-*/*/bin/hook.py; fi; [ \"$#\" -eq 1 ] && [ -f \"$1\" ] && exec python3 -B \"$1\" PreToolUse",
+          "timeout": 25
+        }
+      ]
+    }
+  ],
+  "PostToolUse": [
+    {
+      "matcher": "^(exec|edit)$",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "root=\"${DEVIN_PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-${PLUGIN_ROOT:-}}}\"; if [ -n \"$root\" ]; then set -- \"$root/bin/hook.py\"; else set -- /opt/.devin/plugins_cache/cache/github.com_Uraxii_dotai_plugins_ox-vibesec-*/*/bin/hook.py; fi; [ \"$#\" -eq 1 ] && [ -f \"$1\" ] && exec python3 -B \"$1\" PostToolUse",
+          "timeout": 25
+        }
+      ]
+    }
+  ]
+}
