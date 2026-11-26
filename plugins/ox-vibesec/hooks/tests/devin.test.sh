@@ -207,5 +207,13 @@ with tempfile.TemporaryDirectory() as temp:
     assert "2 commands checked, 1 failed" in result.stdout, result.stdout
     print("PASS  ox-vibesec: hook lint distinguishes bare and wrapped schemas regardless of manifest")
 
+    (bare / "hooks.json").write_text(json.dumps({
+        "description": "not an event", "SessionStart": [{"hooks": [{"command": "true"}]}],
+    }))
+    result = subprocess.run(["bash", lint, "--root", home], capture_output=True, text=True)
+    assert result.returncode == 1 and not result.stderr, result
+    assert "must map hook event names to arrays" in result.stdout, result.stdout
+    print("PASS  ox-vibesec: hook lint rejects non-array values in bare event maps")
+
 print("PASS  ox-vibesec: plugin-relative hooks, no-secret startup, edit mapping, installer verification, authenticated proxy environment")
 PY

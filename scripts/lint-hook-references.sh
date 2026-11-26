@@ -77,6 +77,10 @@ for manifest in "$root"/plugins/*/hooks.json "$root"/plugins/*/hooks/*.json; do
       if jq -e 'type == "object" and (.hooks | type == "object")' "$manifest" >/dev/null; then
         allowed=PLUGIN_ROOT
       else
+        if ! jq -e 'type == "object" and all(.[]; type == "array")' "$manifest" >/dev/null; then
+          fail - - "must map hook event names to arrays" "remove non-event keys and give each event an array value"
+          continue
+        fi
         allowed="DEVIN_PLUGIN_ROOT CLAUDE_PLUGIN_ROOT PLUGIN_ROOT"
         events=.
       fi ;;
