@@ -12,7 +12,7 @@ import vibesec
 PATCH_CHECK_BUDGET = 23
 
 
-def ox_payload(event, data, cwd):
+def ox_payload(event, data, cwd, *, patch_edit=None):
     session_id = data.get("session_id", "")
     if not isinstance(session_id, str) or not re.fullmatch(r"[A-Za-z0-9_-]{1,128}", session_id):
         return None
@@ -24,18 +24,21 @@ def ox_payload(event, data, cwd):
             return None
         payload["prompt"] = data["prompt"]
     else:
-        args = data.get("tool_input")
+        args = patch_edit if patch_edit is not None else data.get("tool_input")
+        tool = "edit" if patch_edit is not None else data.get("tool_name")
         if not isinstance(args, dict):
             return None
-        if data.get("tool_name") == "exec" and isinstance(args.get("command"), str):
+        if patch_edit is not None and "edits" in patch_edit:
+            payload.update(tool_name="MultiEdit", tool_input=patch_edit)
+        elif tool == "exec" and isinstance(args.get("command"), str):
             payload.update(tool_name="Bash", tool_input={"command": args["command"]})
-        elif data.get("tool_name") in ("edit", "write"):
+        elif tool in ("edit", "write"):
             path = args.get("file_path") or args.get("path")
             if not isinstance(path, str):
                 return None
             if isinstance(args.get("content"), str):
                 payload.update(tool_name="Write", tool_input={"file_path": path, "content": args["content"]})
-            elif data.get("tool_name") == "edit" and isinstance(args.get("new_string"), str):
+            elif tool == "edit" and isinstance(args.get("new_string"), str):
                 payload.update(tool_name="Edit", tool_input={"file_path": path, "new_string": args["new_string"]})
                 if isinstance(args.get("old_string"), str):
                     payload["tool_input"]["old_string"] = args["old_string"]
@@ -100,20 +103,22 @@ def patch_edits(text, event):
                 return []
             if event == "PostToolUse":
                 path = destination
+        hunks = []
         changes = []
-        for line in lines:
+        for line in [*lines, "@@"]:
             if line.rstrip() in ("@@", "*** End of File") or line.startswith("@@ "):
-                continue
-            if not line or line[0] in " +-":
+                if any(entry[0] in "+-" for entry in changes):
+                    hunks.append({
+                        "old_string": "\n".join(entry[1:] for entry in changes if entry[0] != "+"),
+                        "new_string": "\n".join(entry[1:] for entry in changes if entry[0] != "-"),
+                    })
+                changes = []
+            elif not line or line[0] in " +-":
                 changes.append(line or " ")
             else:
                 return []
-        if any(line[0] in "+-" for line in changes):
-            edits.append({
-                "file_path": path,
-                "old_string": "\n".join(line[1:] for line in changes if line[0] != "+"),
-                "new_string": "\n".join(line[1:] for line in changes if line[0] != "-"),
-            })
+        if hunks:
+            edits.append({"file_path": path, "edits": hunks})
     return edits
 
 
@@ -128,12 +133,19 @@ def ox_payloads(event, data, cwd):
         print("OX VibeSec could not parse patch; check skipped.", file=sys.stderr)
     payloads = []
     for index, edit in enumerate(edits, 1):
-        payload = ox_payload(event, {**data, "tool_name": "edit", "tool_input": edit}, cwd)
-        if not payload:
-            return []
-        if len(edits) > 1 and "tool_use_id" in payload:
-            payload["tool_use_id"] += f":{index}"
-        payloads.append(payload)
+        parts = [edit]
+        if event == "PostToolUse" and "edits" in edit:
+            parts = [{"file_path": edit["file_path"], **hunk} for hunk in edit["edits"]]
+        for part_index, part in enumerate(parts):
+            payload = ox_payload(event, data, cwd, patch_edit=part)
+            if not payload:
+                return []
+            if "tool_use_id" in payload:
+                if len(edits) > 1:
+                    payload["tool_use_id"] += f":{index}"
+                if part_index:
+                    payload["tool_use_id"] += f":{part_index}"
+            payloads.append(payload)
     return payloads
 
 
