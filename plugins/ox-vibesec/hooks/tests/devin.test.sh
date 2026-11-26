@@ -146,12 +146,11 @@ for event in ("PreToolUse", "PostToolUse"):
     code, stdout, stderr, runtime = adapter_call(event, {**patch_event, **response}, accepted)
     assert (code, stdout, stderr) == (0, "", "")
     sent = [call.args[0] for call in runtime.call_args_list]
-    assert [payload["tool_use_id"] for payload in sent] == ["patch-id:1", "patch-id:2", "patch-id:3"]
+    assert [payload["tool_use_id"] for payload in sent] == ["patch-id:1", "patch-id:2"]
     assert [(p["tool_name"], p["tool_input"]) for p in sent] == [
         ("Write", {"file_path": "new file.py", "content": "first\n\n*** Delete File: literal.py\n"}),
         ("Edit", {"file_path": "existing.py", "old_string": "before\ncontext\nold",
-                  "new_string": "after\ncontext\nnew"}),
-        ("Edit", {"file_path": "existing.py", "old_string": "", "new_string": "inserted"}),
+                  "new_string": "after\ncontext\nnew\ninserted"}),
     ]
     assert all(payload["hook_event_name"] == event for payload in sent)
     if response:
@@ -169,11 +168,49 @@ code, stdout, stderr, runtime = adapter_call("PreToolUse", patch_event, results=
 ])
 assert code == 0 and json.loads(stdout) == {"decision": "block", "reason": "Second file"} and not stderr
 assert runtime.call_count == 2
-for invalid in ({"patch": patch_event["tool_input"]["input"]}, {"input": "*** Begin Patch"}):
+for invalid, warning in (
+    ({"patch": patch_event["tool_input"]["input"]}, ""),
+    ({"input": "*** Begin Patch"}, "OX VibeSec could not parse patch; check skipped.\n"),
+    ({"input": "*** Begin Patch\n*** Delete File: obsolete.py\n*** End Patch"},
+     "OX VibeSec could not parse patch; check skipped.\n"),
+):
     code, stdout, stderr, runtime = adapter_call("PreToolUse", {**patch_event, "tool_input": invalid}, accepted)
-    assert (code, stdout, stderr) == (0, "", "")
+    assert (code, stdout, stderr) == (0, "", warning)
     runtime.assert_not_called()
 print("PASS  ox-vibesec: dispatches writes and patch hunks, and blocks on a later file")
+
+wrapped = "\n".join([
+    "apply_patch <<'PATCH'", "*** Begin Patch", "", "*** Update File:  old file.py  ",
+    "*** Move to:  new file.py  ", "@@", "-before", r"\ No newline at end of file",
+    "+after", "*** End Patch", "PATCH",
+])
+for event, path in (("PreToolUse", "old file.py"), ("PostToolUse", "new file.py")):
+    assert hook.patch_edits(wrapped, event) == [
+        {"file_path": path, "old_string": "before", "new_string": "after"},
+    ]
+print("PASS  ox-vibesec: accepts wrapped patches with padded paths and newline markers")
+
+with patch.object(hook, "monotonic", side_effect=[100, 101, 123]):
+    code, stdout, stderr, runtime = adapter_call("PreToolUse", patch_event, accepted)
+assert (code, stdout, stderr) == (0, "", "OX VibeSec: check skipped (time budget)\n")
+assert runtime.call_count == 1 and runtime.call_args.kwargs["deadline"] == 123
+with patch.object(hook, "monotonic", side_effect=[100, 101, 122, 123]):
+    code, stdout, stderr, runtime = adapter_call("PreToolUse", patch_event, results=[
+        accepted, subprocess.TimeoutExpired("vendor hook", 1),
+    ])
+assert (code, stdout, stderr) == (0, "", "OX VibeSec: check skipped (time budget)\n")
+assert runtime.call_count == 2
+print("PASS  ox-vibesec: stops patch checks when the shared time budget expires")
+
+guidance = vendor_reply({"hookEventName": "PreToolUse", "additionalContext": f"Keep {test_key}"})
+code, stdout, stderr, runtime = adapter_call("PreToolUse", patch_event, results=[
+    guidance, Mock(returncode=1),
+])
+assert code == 0 and stderr == "OX VibeSec hook unavailable.\n" and runtime.call_count == 2
+assert json.loads(stdout) == {"hookSpecificOutput": {
+    "hookEventName": "PreToolUse", "additionalContext": "Keep [redacted]",
+}}
+print("PASS  ox-vibesec: retains guidance when another patch check fails")
 
 code, stdout, stderr, _ = adapter_call("PreToolUse", exec_event, None)
 assert code == 0 and not stdout
@@ -368,6 +405,12 @@ with tempfile.TemporaryDirectory() as temp:
         nodes[version] = node
     runtime = vibesec.Runtime(runtime_home, None)
     assert runtime.installed("test-token") == ["sh", vibesec.LAUNCHER]
+    with patch.object(vibesec, "monotonic", side_effect=[100, 102]), patch.object(
+        vibesec.subprocess, "run", return_value=Mock(returncode=0),
+    ) as launch:
+        runtime.run({}, home, "test-token", deadline=105)
+    assert [call.kwargs["timeout"] for call in launch.call_args_list] == [5, 3]
+    print("PASS  ox-vibesec: runtime checks and launcher share the same deadline")
     result = runtime.run({}, home, "test-token")
     assert result.returncode == 0 and result.stdout == "v24.9\n" and not result.stderr
     nodes["v24.10"].chmod(0o755)

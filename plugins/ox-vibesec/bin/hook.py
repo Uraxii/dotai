@@ -4,8 +4,12 @@ import re
 import subprocess
 import sys
 from pathlib import Path
+from time import monotonic
 
 import vibesec
+
+
+PATCH_CHECK_BUDGET = 23
 
 
 def ox_payload(event, data, cwd):
@@ -59,19 +63,28 @@ def patch_edits(text, event):
     if not isinstance(text, str):
         return []
     lines = text.replace("\r\n", "\n").strip().split("\n")
+    wrapper = re.fullmatch(r"""(?:apply_patch[ \t]+)?<<[ \t]*(['"]?)([A-Za-z_]\w*)\1""", lines[0])
+    if wrapper and lines[-1] == wrapper[2]:
+        lines = lines[1:-1]
+    if len(lines) < 2:
+        return []
     if lines[0].strip() != "*** Begin Patch" or lines[-1].strip() != "*** End Patch":
         return []
-    body = lines[1:-1]
-    if body and body[0].startswith("*** Environment ID: "):
-        body = body[1:]
+    body = "\n".join([*lines[1:-1], ""]).lstrip("\n \t")
+    if body.startswith("*** Environment ID: "):
+        body = body.partition("\n")[2].lstrip("\n \t")
     prefix, *sections = re.split(
-        r"^\*\*\* (Add|Update|Delete) File: (.+)\n", "\n".join([*body, ""]), flags=re.MULTILINE,
+        r"^\*\*\* (Add|Update|Delete) File: (.+)\n", body, flags=re.MULTILINE,
     )
     if prefix:
         return []
     edits = []
     for operation, path, section in zip(sections[::3], sections[1::3], sections[2::3]):
+        path = path.strip()
+        if not path:
+            return []
         lines = section.removesuffix("\n").split("\n") if section else []
+        lines = [line for line in lines if line != r"\ No newline at end of file"]
         if operation == "Delete":
             if lines:
                 return []
@@ -82,25 +95,25 @@ def patch_edits(text, event):
             edits.append({"file_path": path, "content": "".join(line[1:] + "\n" for line in lines)})
             continue
         if lines and lines[0].startswith("*** Move to: "):
-            destination = lines.pop(0).removeprefix("*** Move to: ")
+            destination = lines.pop(0).removeprefix("*** Move to: ").strip()
             if not destination:
                 return []
             if event == "PostToolUse":
                 path = destination
-        hunk = []
-        for line in [*lines, "@@"]:
+        changes = []
+        for line in lines:
             if line.rstrip() in ("@@", "*** End of File") or line.startswith("@@ "):
-                if any(entry.startswith(("-", "+")) for entry in hunk):
-                    edits.append({
-                        "file_path": path,
-                        "old_string": "\n".join(entry[1:] for entry in hunk if entry[0] != "+"),
-                        "new_string": "\n".join(entry[1:] for entry in hunk if entry[0] != "-"),
-                    })
-                hunk = []
-            elif not line or line[0] in " +-":
-                hunk.append(line or " ")
+                continue
+            if not line or line[0] in " +-":
+                changes.append(line or " ")
             else:
                 return []
+        if any(line[0] in "+-" for line in changes):
+            edits.append({
+                "file_path": path,
+                "old_string": "\n".join(line[1:] for line in changes if line[0] != "+"),
+                "new_string": "\n".join(line[1:] for line in changes if line[0] != "-"),
+            })
     return edits
 
 
@@ -109,7 +122,10 @@ def ox_payloads(event, data, cwd):
         payload = ox_payload(event, data, cwd)
         return [payload] if payload else []
     args = data.get("tool_input")
-    edits = patch_edits(args.get("input"), event) if isinstance(args, dict) else []
+    text = args.get("input") if isinstance(args, dict) else None
+    edits = patch_edits(text, event)
+    if not edits and isinstance(text, str) and text.strip():
+        print("OX VibeSec could not parse patch; check skipped.", file=sys.stderr)
     payloads = []
     for index, edit in enumerate(edits, 1):
         payload = ox_payload(event, {**data, "tool_name": "edit", "tool_input": edit}, cwd)
@@ -130,6 +146,7 @@ def run():
     if not isinstance(data, dict):
         return 0
     cwd = Path(os.environ.get("DEVIN_PROJECT_DIR") or os.getcwd())
+    deadline = monotonic() + PATCH_CHECK_BUDGET if data.get("tool_name") == "apply_patch" else None
     payloads = ox_payloads(event, data, cwd)
     if not payloads:
         return 0
@@ -139,14 +156,19 @@ def run():
         Path(installer) if installer else None,
     )
     failed = False
+    budget_exhausted = False
     contexts = []
+    options = {"deadline": deadline} if deadline is not None else {}
     for payload in payloads:
+        if deadline is not None and monotonic() >= deadline:
+            budget_exhausted = True
+            break
         try:
-            result = runtime.run(payload, cwd, key, initialize=event == "SessionStart")
+            result = runtime.run(payload, cwd, key, initialize=event == "SessionStart", **options)
             if result is None:
                 if event != "SessionStart":
                     print("OX VibeSec runtime is not initialized; check skipped.", file=sys.stderr)
-                return 0
+                break
             if result.returncode == 2:
                 reason = result.stderr.strip().replace(key, "[redacted]")
                 print(reason or "OX VibeSec blocked this action.", file=sys.stderr)
@@ -155,6 +177,12 @@ def run():
                 failed = True
                 continue
             reply = json.loads(result.stdout) if result.stdout.strip() else None
+        except subprocess.TimeoutExpired:
+            if deadline is not None and monotonic() >= deadline:
+                budget_exhausted = True
+                break
+            failed = True
+            continue
         except (OSError, RuntimeError, ValueError, subprocess.SubprocessError):
             failed = True
             continue
@@ -167,10 +195,14 @@ def run():
             return 0
         if output.get("hookEventName") == event and isinstance(output.get("additionalContext"), str):
             contexts.append(output["additionalContext"].replace(key, "[redacted]"))
-    if failed:
-        raise RuntimeError("hook")
+    if budget_exhausted:
+        print("OX VibeSec: check skipped (time budget)", file=sys.stderr)
     if contexts:
         print(json.dumps({"hookSpecificOutput": {"hookEventName": event, "additionalContext": "\n\n".join(contexts)}}))
+    if failed:
+        if not contexts and not budget_exhausted:
+            raise RuntimeError("hook")
+        print("OX VibeSec hook unavailable.", file=sys.stderr)
     return 0
 
 

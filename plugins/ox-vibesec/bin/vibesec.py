@@ -6,6 +6,7 @@ import subprocess
 import sys
 import tempfile
 from pathlib import Path
+from time import monotonic
 from urllib.request import proxy_bypass_environment
 
 
@@ -13,6 +14,15 @@ INSTALLER_URL = "https://ox-vibesec.s3.eu-west-1.amazonaws.com/vibesec-installat
 INSTALLER_SHA256 = "51f97f30518e7ff3b48a8d90b404b243896bc5d24f9d8b074d68d9846d3e1a25"
 OX_API_ENDPOINT = "api.cloud.ox.security:443"
 LAUNCHER = Path(__file__).resolve().parents[1] / "hooks/ox"
+
+
+def hook_timeout(deadline):
+    if deadline is None:
+        return 20
+    remaining = deadline - monotonic()
+    if remaining <= 0:
+        raise subprocess.TimeoutExpired(LAUNCHER, 0)
+    return min(20, remaining)
 
 
 def verified_installer(staged, destination, env):
@@ -61,7 +71,7 @@ class Runtime:
         if no_proxy != "*" and proxy_bypass_environment(OX_API_ENDPOINT, {"no": no_proxy}):
             self.env["no_proxy"] = f"{no_proxy},{OX_API_ENDPOINT}"
 
-    def installed(self, key):
+    def installed(self, key, deadline=None):
         try:
             auth = json.loads((self.home / ".claude/.ox.json").read_text())
         except (OSError, ValueError):
@@ -70,7 +80,7 @@ class Runtime:
             return None
         command = ["sh", LAUNCHER]
         result = subprocess.run(
-            [*command, "--check-runtime"], env=self.env, capture_output=True, timeout=20,
+            [*command, "--check-runtime"], env=self.env, capture_output=True, timeout=hook_timeout(deadline),
         )
         return command if result.returncode == 0 else None
 
@@ -103,12 +113,12 @@ class Runtime:
                 raise RuntimeError("OX installer failed")
             return command
 
-    def run(self, payload, cwd, key, *, initialize=False):
+    def run(self, payload, cwd, key, *, initialize=False, deadline=None):
         os.umask(0o077)
-        command = self.start(key) if initialize else self.installed(key)
+        command = self.start(key) if initialize else self.installed(key, deadline)
         if not command:
             return None
         return subprocess.run(
             command, input=json.dumps(redact(payload, key)), text=True, capture_output=True,
-            env=self.env, cwd=cwd, timeout=20,
+            env=self.env, cwd=cwd, timeout=hook_timeout(deadline),
         )
