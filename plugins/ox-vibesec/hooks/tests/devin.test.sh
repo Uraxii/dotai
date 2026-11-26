@@ -198,7 +198,7 @@ with tempfile.TemporaryDirectory() as temp:
 
     with patch.dict(os.environ, {"HTTPS_PROXY": "HTTP://LOCALHOST:3128"}, clear=True):
         runtime = vibesec.Runtime(home / "runtime", staged)
-    assert runtime.proxy_args == ["--proxy", "http://LOCALHOST:3128"]
+    assert runtime.env["HTTPS_PROXY"] == "http://LOCALHOST:3128"
     print("PASS  ox-vibesec: lowercases only the forwarded proxy scheme")
     with (
         patch.object(runtime, "installed", return_value=["sh", vibesec.LAUNCHER]),
@@ -209,39 +209,45 @@ with tempfile.TemporaryDirectory() as temp:
     print("PASS  ox-vibesec: hook subprocess enables the environment for an unauthenticated proxy")
 
     proxy = "http://localhost:3128"
-    for bypass in ("api.cloud.ox.security", "API.CLOUD.OX.SECURITY:443", ".ox.security", "*.ox.security", "*"):
+    for bypass in (
+        "api.cloud.ox.security", "API.CLOUD.OX.SECURITY:443", ".ox.security",
+        "ox.security", "cloud.ox.security", ".ox.security:443",
+    ):
         with patch.dict(os.environ, {"HTTPS_PROXY": proxy, "NO_PROXY": bypass}, clear=True):
             runtime = vibesec.Runtime(home / "runtime", staged)
-        assert runtime.proxy_args == []
         assert runtime.env["NO_PROXY"] == bypass
+        assert runtime.env["no_proxy"] == f"{bypass},api.cloud.ox.security:443"
         assert runtime.env["NODE_USE_ENV_PROXY"] == "1"
-    with patch.dict(os.environ, {
-        "HTTPS_PROXY": proxy, "NO_PROXY": "*", "no_proxy": ".other.example, api.cloud.ox.security:80",
-    }, clear=True):
+    with patch.dict(os.environ, {"HTTPS_PROXY": proxy, "NO_PROXY": "*"}, clear=True):
         runtime = vibesec.Runtime(home / "runtime", staged)
-    assert runtime.proxy_args == ["--proxy", proxy]
-    print("PASS  ox-vibesec: leaves OX API proxy bypass to the vendor runtime when NO_PROXY matches")
+    assert runtime.env["NO_PROXY"] == "*" and "no_proxy" not in runtime.env
+    for bypass in ("*.ox.security", ".other.example, api.cloud.ox.security:80"):
+        with patch.dict(os.environ, {
+            "HTTPS_PROXY": proxy, "NO_PROXY": "*", "no_proxy": bypass,
+        }, clear=True):
+            runtime = vibesec.Runtime(home / "runtime", staged)
+        assert runtime.env["no_proxy"] == bypass
+    print("PASS  ox-vibesec: preserves NO_PROXY suffix bypasses for the OX installer")
 
-    proxy = "http://test-user:test-password@localhost:3128"
-    with patch.dict(os.environ, {"HTTPS_PROXY": proxy}, clear=True):
-        runtime = vibesec.Runtime(home / "runtime", staged)
     launcher = ["sh", vibesec.LAUNCHER]
-    with (
-        patch.object(vibesec, "verified_installer", return_value=dest),
-        patch.object(runtime, "installed", side_effect=[None, launcher]),
-        patch.object(vibesec.subprocess, "run", return_value=Mock(returncode=0)) as run,
-    ):
-        assert runtime.start("test-token") == launcher
-        args, kwargs = run.call_args
-        assert "--proxy" not in args[0] and all(proxy not in arg for arg in args[0])
-        assert kwargs["env"]["HTTPS_PROXY"] == proxy
-        assert kwargs["env"]["NODE_USE_ENV_PROXY"] == "1"
-        assert kwargs["input"] == "test-token\n"
+    for proxy in ("http://localhost:3128", "http://test-user:test-password@localhost:3128"):
+        with patch.dict(os.environ, {"HTTPS_PROXY": proxy}, clear=True):
+            runtime = vibesec.Runtime(home / "runtime", staged)
+        with (
+            patch.object(vibesec, "verified_installer", return_value=dest),
+            patch.object(runtime, "installed", side_effect=[None, launcher]),
+            patch.object(vibesec.subprocess, "run", return_value=Mock(returncode=0)) as run,
+        ):
+            assert runtime.start("test-token") == launcher
+            args, kwargs = run.call_args
+            assert "--proxy" not in args[0] and all(proxy not in arg for arg in args[0])
+            assert kwargs["env"]["HTTPS_PROXY"] == proxy
+            assert kwargs["env"]["NODE_USE_ENV_PROXY"] == "1"
+            assert kwargs["input"] == "test-token\n"
 
     proxy_with_bracket = "http://test-user:test[password@localhost:3128"
     with patch.dict(os.environ, {"HTTPS_PROXY": proxy_with_bracket}, clear=True):
         runtime = vibesec.Runtime(home / "runtime", staged)
-    assert runtime.proxy_args == []
     assert runtime.env["HTTPS_PROXY"] == proxy_with_bracket
     assert runtime.env["NODE_USE_ENV_PROXY"] == "1"
     print("PASS  ox-vibesec: proxy passwords with brackets reach the Node environment fallback")

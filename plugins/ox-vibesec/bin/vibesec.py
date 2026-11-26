@@ -5,12 +5,12 @@ import os
 import subprocess
 import tempfile
 from pathlib import Path
-from urllib.parse import urlsplit
+from urllib.request import proxy_bypass_environment
 
 
 INSTALLER_URL = "https://ox-vibesec.s3.eu-west-1.amazonaws.com/vibesec-installation/install.sh"
 INSTALLER_SHA256 = "51f97f30518e7ff3b48a8d90b404b243896bc5d24f9d8b074d68d9846d3e1a25"
-OX_API_HOST = "api.cloud.ox.security"
+OX_API_ENDPOINT = "api.cloud.ox.security:443"
 LAUNCHER = Path(__file__).resolve().parents[1] / "hooks/ox"
 
 
@@ -35,18 +35,6 @@ def redact(value, key):
     return value
 
 
-def bypasses_ox_api(no_proxy):
-    for entry in no_proxy.lower().split(","):
-        entry = entry.strip()
-        if entry in ("*", OX_API_HOST, f"{OX_API_HOST}:443"):
-            return True
-        if entry.startswith(".") and (OX_API_HOST == entry[1:] or OX_API_HOST.endswith(entry)):
-            return True
-        if entry.startswith("*.") and OX_API_HOST.endswith(entry[1:]):
-            return True
-    return False
-
-
 class Runtime:
     def __init__(self, home, staged):
         self.home = home
@@ -56,20 +44,15 @@ class Runtime:
             "no_proxy", "SSL_CERT_FILE", "NODE_EXTRA_CA_CERTS",
         ) if k in os.environ}
         self.env.update(HOME=str(home), TMPDIR=str(home / "tmp"))
-        proxy = self.env.get("https_proxy") or self.env.get("HTTPS_PROXY") or ""
-        try:
-            url = urlsplit(proxy)
-        except ValueError:
-            url = None
-        self.proxy_args = []
+        for name in ("https_proxy", "HTTPS_PROXY", "http_proxy", "HTTP_PROXY"):
+            if proxy := self.env.get(name):
+                scheme, separator, rest = proxy.partition("://")
+                if separator and scheme.lower() in ("http", "https"):
+                    self.env[name] = scheme.lower() + separator + rest
+                self.env["NODE_USE_ENV_PROXY"] = "1"
         no_proxy = self.env.get("no_proxy") or self.env.get("NO_PROXY", "")
-        if (
-            url is not None and url.scheme == "http" and url.username is None
-            and url.password is None and not bypasses_ox_api(no_proxy)
-        ):
-            self.proxy_args = ["--proxy", "http:" + proxy.split(":", 1)[1]]
-        if proxy or self.env.get("http_proxy") or self.env.get("HTTP_PROXY"):
-            self.env["NODE_USE_ENV_PROXY"] = "1"
+        if no_proxy != "*" and proxy_bypass_environment(OX_API_ENDPOINT, {"no": no_proxy}):
+            self.env["no_proxy"] = f"{no_proxy},{OX_API_ENDPOINT}"
 
     def installed(self, key):
         try:
@@ -98,7 +81,7 @@ class Runtime:
                 return command
             with tempfile.TemporaryDirectory(dir=tmp) as directory:
                 installer = verified_installer(self.staged, Path(directory) / "install.sh", self.env)
-                args = ["bash", str(installer), "--token-stdin", "--ide", "claude", *self.proxy_args]
+                args = ["bash", str(installer), "--token-stdin", "--ide", "claude"]
                 result = subprocess.run(
                     args, input=key + "\n", text=True, capture_output=True,
                     env=self.env, cwd=self.home, timeout=78,
