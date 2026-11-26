@@ -17,6 +17,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import stat
 import sys
 import tempfile
 import time
@@ -185,7 +186,8 @@ def claude_tool_event(payload: Payload, base: Neutral) -> Neutral | None:
     after = pending_write(tool, tool_input, disk.text) if known else None
     if after is None:
         return {"kind": "pre_write", "files": [unbuilt(raw, disk)]}
-    change = {"path": raw, "before": disk.text, "after": after}
+    change = {"path": raw, "before": disk.text, "after": after,
+              "before_problem": disk.problem}
     return {"kind": "pre_write", "files": [change]}
 
 
@@ -346,13 +348,25 @@ def run_hook(harness: str) -> int:
     return 0
 
 
+def path_problem(path: Path) -> str:
+    """Why `check` cannot read a path; empty for a regular file."""
+    try:
+        mode = path.stat().st_mode
+    except FileNotFoundError:
+        return "no such file"
+    except OSError as error:
+        return f"its status could not be read ({type(error).__name__})"
+    if stat.S_ISREG(mode):
+        return ""
+    return "it is a directory" if stat.S_ISDIR(mode) else "it is not a regular file"
+
+
 def check(paths: Sequence[str]) -> int:
     """Print guidelines and findings for files; exit 1 on a block hit."""
     cwd = os.getcwd()
     problems = {
-        path: "it is a directory" if (Path(cwd) / path).is_dir()
-        else "no such file"
-        for path in paths if not (Path(cwd) / path).is_file()
+        path: problem for path in paths
+        if (problem := path_problem(Path(cwd) / path))
     }
     files = [
         {"path": path, "problem": problems[path]} if path in problems
@@ -382,7 +396,12 @@ def log_failure(harness: str) -> Path:
         if directory.is_symlink() or user not in (None, owner):
             raise PermissionError(f"{directory} is not owned by this user")
     flags = os.O_WRONLY | os.O_CREAT | os.O_APPEND
-    descriptor = os.open(log, flags | getattr(os, "O_NOFOLLOW", 0), 0o600)
+    for extra in ("O_NOFOLLOW", "O_NONBLOCK"):
+        flags |= getattr(os, extra, 0)
+    descriptor = os.open(log, flags, 0o600)
+    if not stat.S_ISREG(os.fstat(descriptor).st_mode):
+        os.close(descriptor)
+        raise PermissionError(f"{log} is not a regular file")
     with os.fdopen(descriptor, "a", encoding="utf-8") as handle:
         if handle.tell() > MAX_LOG_BYTES:
             handle.truncate(0)

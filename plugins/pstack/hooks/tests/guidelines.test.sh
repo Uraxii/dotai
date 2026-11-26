@@ -61,6 +61,7 @@ fi
 echo "$*" >>"$WORK/ruff.args"
 cat >/dev/null
 [ -n "$RUFF_SLEEP" ] && sleep "$RUFF_SLEEP"
+[ -n "$RUFF_STDERR" ] && printf '%s\n' "$RUFF_STDERR" >&2
 printf '%s\n' "${RUFF_JSON:-[]}"
 STUB
 cat >"$WORK/bin/eslint" <<'STUB'
@@ -206,7 +207,13 @@ expect_contains "a file that is not UTF-8 is named" \
 hook <<<"$(tool_payload PostToolUse Edit pages.py '{}')"
 expect_contains "and named again after the write" "Notice: did not check pages.py: it is not UTF-8 text" "$(context)"
 hook <<<"$(write pages.py "$PAGES")"
-expect_equal "a Write over a file that is not UTF-8 is still checked" deny "$(decision)"
+expect_equal "a Write over a file that is not UTF-8 does not deny" "" "$(decision)"
+expect_contains "but is still checked, and its findings are warnings" \
+  "Notice: could not read the current pages.py: it is not UTF-8 text, so its findings are warnings." "$(context)"
+printf '#!/usr/bin/env python3\nx = 0\n' >"$PROJECT/run"
+hook <<<"$(tool_payload PreToolUse Edit run '{old_string: "not here", new_string: "y = 1"}')"
+expect_contains "an unbuilt edit to an extensionless script is named" \
+  "Notice: did not check run: could not build the text this edit leaves" "$(context)"
 
 new_case non-code
 hook <<<"$(write notes.md "$PAGES")"
@@ -264,14 +271,14 @@ hook RUFF_JSON="$F403_ROW" <<<"$(write src/app.py 'from os import *
 expect_equal "a rule the project ignores does not block" "" "$(decision)"
 expect_equal "a rule the project ignores gives no finding" "" "$(grep -F py.import.no-star <<<"$STDOUT")"
 expect_equal "ruff runs with the project config, without the ignored rule" \
-  "check --force-exclude --exclude .git --extend-select S101 --output-format json --stdin-filename $PROJECT/src/app.py -" \
+  "check --verbose --force-exclude --extend-select S101 --output-format json --stdin-filename $PROJECT/src/app.py -" \
   "$(cat "$WORK/ruff.args")"
-printf 'exclude = ["gen"]\n[lint]\nignore = ["F403"]\n' >"$PROJECT/ruff.toml"
-hook RUFF_JSON="$F403_ROW" <<<"$(write src/dist/app.py 'from os import *
+hook RUFF_JSON="$F403_ROW" RUFF_STDERR='DEBUG Ignored path via `exclude`: "src/dist"' \
+  <<<"$(write src/dist/app.py 'assert x
 ')"
-expect_equal "a project that sets exclude keeps it, with no ruff defaults replaced" \
-  "check --force-exclude --extend-select S101 --output-format json --stdin-filename $PROJECT/src/dist/app.py -" \
-  "$(tail -n 1 "$WORK/ruff.args")"
+expect_equal "a file ruff's config excludes does not deny" "" "$(decision)"
+expect_contains "and the user is told ruff skipped it" \
+  "Notice: ruff skips files the project's ruff config excludes, so detectors ruff:S101 did not run." "$(context)"
 printf '[lint]\nignore = ["F403"]\n' >"$PROJECT/ruff.toml"
 hook RUFF_JSON="$F403_ROW" <<<"$(tool_payload PostToolUse Write src/app.py '{}')"
 expect_equal "the ignored rule stays quiet after the write" "" "$(grep -F py.import.no-star <<<"$STDOUT")"
@@ -321,6 +328,7 @@ fi
 echo "$*" >>"$WORK/ruff.args"
 cat >/dev/null
 [ -n "$RUFF_SLEEP" ] && sleep "$RUFF_SLEEP"
+[ -n "$RUFF_STDERR" ] && printf '%s\n' "$RUFF_STDERR" >&2
 printf '%s\n' "${RUFF_JSON:-[]}"
 STUB
 chmod +x "$WORK/bin/ruff"
@@ -426,6 +434,19 @@ hook PSTACK_GUIDELINES_DIR="$WORK/not-a-directory" <<<"$(write pages.py "$PAGES"
 expect_json "a planted log symlink is refused and the user still hears of the failure" \
   '{"systemMessage": "pstack guideline hook failed; code-quality guidelines were not checked for this call."}' "$STDOUT"
 expect_equal "and the symlink target is untouched" "" "$(cat "$WORK/victim")"
+HARNESS=bogus hook <<<'{}'
+expect_json "a wrapper that refuses a log symlink names no log" \
+  '{"systemMessage": "pstack guideline hook failed; code-quality guidelines were not checked for this call."}' "$STDOUT"
+expect_equal "and the wrapper leaves the symlink target untouched" "" "$(cat "$WORK/victim")"
+rm "$WORK/data/guideline-state/errors.log"
+mkfifo "$WORK/data/guideline-state/errors.log"
+capture timeout 5 env PATH="$HOOK_PATH" bash "$HOOK" bogus <<<'{}'
+expect_json "a wrapper does not stall on a log that is a FIFO" \
+  '{"systemMessage": "pstack guideline hook failed; code-quality guidelines were not checked for this call."}' "$STDOUT"
+capture timeout 5 env PATH="$HOOK_PATH" PSTACK_GUIDELINES_DIR="$WORK/not-a-directory" \
+  bash "$HOOK" claude <<<"$(write pages.py "$PAGES")"
+expect_json "the engine does not stall on a log that is a FIFO" \
+  '{"systemMessage": "pstack guideline hook failed; code-quality guidelines were not checked for this call."}' "$STDOUT"
 rm "$WORK/data/guideline-state/errors.log"
 hook <<<'not json'
 expect_equal "a malformed payload says nothing" "0:" "$STATUS:$STDOUT"
@@ -559,6 +580,10 @@ capture env PATH="$HOOK_PATH" python3 -I "$ENGINE" check build nope.txt
 expect_equal "check exits 3 on a directory" 3 "$STATUS"
 expect_contains "check names a directory" "Notice: did not check build: it is a directory" "$STDOUT"
 expect_contains "check names a missing file of any type" "Notice: did not check nope.txt: no such file" "$STDOUT"
+mkfifo queue.py
+capture env PATH="$HOOK_PATH" python3 -I "$ENGINE" check queue.py
+expect_equal "check exits 3 on a special file" 3 "$STATUS"
+expect_contains "check names a special file" "Notice: did not check queue.py: it is not a regular file" "$STDOUT"
 capture env PATH="$HOOK_PATH" python3 -I "$ENGINE" --harness unknown </dev/null
 expect_equal "a usage error never exits 2, which Codex reads as a block" 64 "$STATUS"
 
@@ -567,5 +592,25 @@ many="$(for i in $(seq 400); do echo "x$i = [a for b in c for a in b]"; done)"
 hook <<<"$(write many.py "$many")"
 expect_contains "findings past the size cap are counted" \
   "more findings did not fit in this message. Run the check command on many.py to see all of them." "$(reason)"
+expect_equal "the denial stays inside the size cap" yes "$([ "$(reason | wc -c)" -le 9000 ] && echo yes)"
+printf '%s\n' "$many" >"$PROJECT/many.py"
+cd "$PROJECT"
+capture env PATH="$HOOK_PATH" python3 -I "$ENGINE" check many.py
+expect_equal "check shows every finding" 400 "$(grep -c '^\[py.comprehension.one-for\] block' <<<"$STDOUT")"
+
+new_case huge-guideline
+cp "$FIXTURES/py-comprehension-one-for.md" "$WORK/one-for.md"
+guideline py-comprehension-one-for.md "$(printf 'x%.0s' $(seq 8400))" 'id: py.comprehension.one-for' \
+  'languages: python' 'scope: contextual' 'severity: block' 'enabled: true' 'detectors: code_quality:CQ001'
+guideline py-types-mypy.md 'Type every function.' 'id: py.types.mypy' 'languages: python' \
+  'scope: contextual' 'severity: warn' 'enabled: true' 'detectors: mypy:X'
+hook <<<"$(write pages.py "$PAGES")"
+expect_contains "a denial whose guideline does not fit still names the rule and line" \
+  "[py.comprehension.one-for] block: code_quality:CQ001 at pages.py:2" "$(reason)"
+expect_contains "a denial keeps the detector-unavailable notice" \
+  "Notice: mypy has no runner yet, so detectors mypy:X did not run." "$(reason)"
+expect_equal "and stays inside the size cap" yes "$([ "$(reason | wc -c)" -le 9000 ] && echo yes)"
+mv "$WORK/one-for.md" "$FIXTURES/py-comprehension-one-for.md"
+rm "$FIXTURES/py-types-mypy.md"
 
 finish

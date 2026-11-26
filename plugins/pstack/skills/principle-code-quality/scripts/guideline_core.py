@@ -12,6 +12,7 @@ import os
 import re
 import shutil
 import stat
+import sys
 import tempfile
 import time
 from collections import Counter
@@ -81,6 +82,7 @@ class FileChange(NamedTuple):
     before: str | None
     after: str | None
     problem: str = ""
+    before_problem: str = ""
 
 
 class Event(NamedTuple):
@@ -111,9 +113,11 @@ def file_change(item: dict[str, object]) -> FileChange:
     problem = item.get("problem")
     if isinstance(after, str) and len(after) > MAX_CONTENT_CHARS:
         problem = "it is larger than 1 MB"
+    before_problem = item.get("before_problem")
     return FileChange(
         str(item["path"]), optional_text(item.get("before")),
         optional_text(after), problem if isinstance(problem, str) else "",
+        before_problem if isinstance(before_problem, str) else "",
     )
 
 
@@ -306,6 +310,8 @@ class Engine:
         self.hits: list[Hit] = []
         self.fulls: dict[str, str] = {}
         self.blocked = False
+        self.reserve = 0
+        self.cap = sys.maxsize if event.kind == "check" else MAX_TEXT_CHARS
 
     def classify(self, raw: str, content: str | None) -> CodeFile | str:
         """Describe a payload path, or say why no guideline covers it."""
@@ -334,7 +340,8 @@ class Engine:
         return CodeFile(path, rel, language, tuple(filter(None, applicable)))
 
     def code_file(self, change: FileChange) -> CodeFile | None:
-        file = self.classify(change.path, change.after)
+        known = change.before if change.after is None else change.after
+        file = self.classify(change.path, known)
         if isinstance(file, CodeFile):
             if change.problem:
                 self.report_unbuilt(file.rel, change.problem)
@@ -450,6 +457,12 @@ class Engine:
             if hit.guideline.severity == "block"
             and hit.finding.tool not in failed
         ]
+        if added and change.before_problem:
+            self.notices.append(
+                f"Notice: could not read the current {file.rel}: "
+                f"{change.before_problem}, so its findings are warnings."
+            )
+            added = []
         if added:
             self.blocked = True
             self.hits += [
@@ -505,12 +518,16 @@ class Engine:
         age = self.state.prompt - self.state.sent[guideline_id]
         return self.event.agent != MAIN_AGENT or age < RESEND_AFTER_PROMPTS
 
-    def hit_item(self, hit: Hit) -> str:
+    @staticmethod
+    def hit_head(hit: Hit) -> str:
         finding = hit.finding
-        head = (
+        return (
             f"[{hit.guideline.id}] {hit.severity}: {finding.tool}:"
             f"{finding.code} at {hit.rel}:{finding.line}"
         )
+
+    def hit_item(self, hit: Hit) -> str:
+        head = self.hit_head(hit)
         if self.suppressed(hit.guideline.id):
             return f"{head} (guidance sent earlier)"
         return f"{head}\n{hit.guideline.body}"
@@ -519,7 +536,7 @@ class Engine:
         """Append the item when the whole text, plus `reserve` characters
         kept free, stays under the size cap."""
         used = sum(len(item) + 2 for item in items)
-        if used + len(text) + reserve > MAX_TEXT_CHARS:
+        if used + len(text) + self.reserve + reserve > self.cap:
             return False
         items.append(text)
         return True
@@ -530,10 +547,16 @@ class Engine:
         A notice is one line, so it repeats on each call it applies to.
         Only the message to the user is sent once.
         """
+        unique = list(dict.fromkeys(self.notices))
         added = [
-            notice for notice in dict.fromkeys(self.notices)
-            if self.add(items, notice)
+            notice for notice in unique
+            if self.add(items, notice, DROPPED_NOTICE_CHARS)
         ]
+        if len(added) < len(unique):
+            items.append(
+                f"Notice: {len(unique) - len(added)} more notices did not fit "
+                f"in this message."
+            )
         new = [notice for notice in added if notice not in self.state.notices]
         self.state.notices += new
         return new
@@ -546,10 +569,11 @@ class Engine:
         dropped: dict[str, int] = {}
         for hit in ordered:
             repeated = self.suppressed(hit.guideline.id)
-            if not self.add(items, self.hit_item(hit), DROPPED_NOTICE_CHARS):
+            if self.add(items, self.hit_item(hit), DROPPED_NOTICE_CHARS):
+                if not repeated:
+                    self.state.sent[hit.guideline.id] = self.state.prompt
+            elif not self.add(items, self.hit_head(hit), DROPPED_NOTICE_CHARS):
                 dropped[hit.rel] = dropped.get(hit.rel, 0) + 1
-            elif not repeated:
-                self.state.sent[hit.guideline.id] = self.state.prompt
         if dropped:
             named = ", ".join(list(dropped)[:DROPPED_FILES_NAMED])
             others = len(dropped) - DROPPED_FILES_NAMED
@@ -590,6 +614,7 @@ class Engine:
             self.queue_fulls()
             items = [DENY_HEADER]
             self.add_hits(items)
+            self.add_notices(items)
             return Result(deny="\n\n".join(items))
         if not self.event.channel:
             self.queue_fulls()
@@ -597,6 +622,7 @@ class Engine:
         if kind == "pre_write":
             self.hits = []
         items = [] if kind == "check" else [CONTEXT_HEADER]
+        self.reserve = (len(OVERRIDE_LINE) + 2) * (kind == "check")
         notices = self.add_notices(items)
         self.add_hits(items)
         self.add_fulls(items)

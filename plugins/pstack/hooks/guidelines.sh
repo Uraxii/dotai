@@ -55,9 +55,9 @@ details=''
   mkdir -p "$data/guideline-state" || exit
   # Write only in directories this user owns, and never through a symlink.
   for owned in "$data" "$data/guideline-state"; do
-    [ -O "$owned" ] && [ ! -L "$owned" ] || exit
+    [ -O "$owned" ] && [ ! -L "$owned" ] || exit 1
   done
-  [ -L "$log" ] && exit
+  { [ -L "$log" ] || { [ -e "$log" ] && [ ! -f "$log" ]; }; } && exit 1
   [ -f "$log" ] && [ "$(wc -c <"$log")" -gt 200000 ] && : >"$log"
   printf '%s %s exit %s\n%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$harness" "$status" "$errors" >>"$log"
 ) 2>/dev/null && details=" Details: $(json_text "$log")"
