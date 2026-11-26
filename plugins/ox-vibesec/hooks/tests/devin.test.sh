@@ -246,6 +246,30 @@ with tempfile.TemporaryDirectory() as temp:
     assert runtime.env["NODE_USE_ENV_PROXY"] == "1"
     print("PASS  ox-vibesec: proxy passwords with brackets reach the Node environment fallback")
 
+    runtime_home = home / "runtime with spaces"
+    vendor_hook = runtime_home / ".claude/hooks/ox_mind.js"
+    vendor_hook.parent.mkdir(parents=True)
+    vendor_hook.touch()
+    (vendor_hook.parent.parent / ".ox.json").write_text(json.dumps({"access_token": "test-token"}))
+    nodes = {}
+    for version, mode in (("v24.9", 0o755), ("v24.10", 0o644)):
+        node = runtime_home / f".ox/node/{version}/bin/node"
+        node.parent.mkdir(parents=True)
+        node.write_text(f"#!/bin/sh\necho {version}\n")
+        node.chmod(mode)
+        nodes[version] = node
+    runtime = vibesec.Runtime(runtime_home, None)
+    assert runtime.installed("test-token") == ["sh", vibesec.LAUNCHER]
+    result = runtime.run({}, home, "test-token")
+    assert result.returncode == 0 and result.stdout == "v24.9\n" and not result.stderr
+    nodes["v24.10"].chmod(0o755)
+    result = runtime.run({}, home, "test-token")
+    assert result.returncode == 0 and result.stdout == "v24.10\n" and not result.stderr
+    for node in nodes.values():
+        node.chmod(0o644)
+    assert runtime.run({}, home, "test-token") is None
+    print("PASS  ox-vibesec: readiness and launcher resolve the newest executable Node")
+
     lint = plugin.parents[1] / "scripts/lint-hook-references.sh"
     bare = home / "plugins/bare"
     bare.mkdir(parents=True)

@@ -78,11 +78,11 @@ class Runtime:
             return None
         if not isinstance(auth, dict) or auth.get("access_token") != key:
             return None
-        if not (self.home / ".claude/hooks/ox_mind.js").is_file():
-            return None
-        if not any(os.access(p, os.X_OK) for p in self.home.glob(".ox/node/v*/bin/node")):
-            return None
-        return ["sh", LAUNCHER]
+        command = ["sh", LAUNCHER]
+        result = subprocess.run(
+            [*command, "--check-runtime"], env=self.env, capture_output=True, timeout=20,
+        )
+        return command if result.returncode == 0 else None
 
     def start(self, key):
         self.home.mkdir(parents=True, exist_ok=True)
