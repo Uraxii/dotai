@@ -57,8 +57,9 @@ staged file that fails verification. The blueprint does not use the token.
 
 The hook commands use the runtime's plugin-root variable when set. Devin's
 public documentation does not specify a root variable for native command
-hooks. When none is set, the commands look for one dotai VibeSec install
-in the Devin Cloud plugin cache and refuse to guess if ambiguous.
+hooks. When none is set, the commands use the most recently modified
+matching hook in the Devin Cloud plugin cache. If no hook is found, they
+log `ox-vibesec: plugin root not found`.
 
 Devin forwards prompts, shell calls and results, and file edits with a
 path and replacement text or content. It does not forward patch-only

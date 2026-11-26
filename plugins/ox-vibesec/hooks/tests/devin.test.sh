@@ -47,6 +47,25 @@ with tempfile.TemporaryDirectory() as temp:
         assert not completed.stdout and not completed.stderr
     assert not list(home.iterdir())
 
+    for variable in ("DEVIN_PLUGIN_ROOT", "CLAUDE_PLUGIN_ROOT", "PLUGIN_ROOT"):
+        env.pop(variable, None)
+    command = hooks["SessionStart"][0]["hooks"][0]["command"].replace(
+        "/opt/.devin/plugins_cache/cache/", '"$HOME/cache/"',
+    )
+    missing = subprocess.run(command, shell=True, cwd=home, env=env, capture_output=True, text=True)
+    assert missing.returncode == 1
+    assert missing.stderr == "ox-vibesec: plugin root not found\n"
+
+    cache = home / "cache/github.com_Uraxii_dotai_plugins_ox-vibesec-test"
+    for revision, timestamp in (("zz-old", 1), ("aa-new", 2)):
+        script = cache / revision / "bin/hook.py"
+        script.parent.mkdir(parents=True)
+        script.write_text(f"print({revision!r})\n")
+        os.utime(script, (timestamp, timestamp))
+    newest = subprocess.run(command, shell=True, cwd=home, env=env, capture_output=True, text=True)
+    assert newest.returncode == 0 and newest.stdout == "aa-new\n" and not newest.stderr
+    print("PASS  ox-vibesec: cache fallback chooses the newest hook and reports a missing root")
+
     installer = b"fake installer"
     digest = hashlib.sha256(installer).hexdigest()
     staged = home / "staged.sh"
