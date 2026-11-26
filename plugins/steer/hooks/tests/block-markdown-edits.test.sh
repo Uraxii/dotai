@@ -58,6 +58,34 @@ while IFS= read -r command; do
     "$(jq -r '.hookSpecificOutput.permissionDecision' <<<"$STDOUT" 2>/dev/null)"
 done < <(wiring_commands claude "$config" PreToolUse)
 
+submit_command=$(wiring_commands claude "$config" UserPromptSubmit)
+write_command=$(wiring_commands claude "$config" PreToolUse)
+submit_prompt() {
+  CLAUDE_CONFIG_DIR="$WORK/claude" run_wiring claude "$submit_command" \
+    <<<"$(jq -cn --arg id "$1" --arg prompt "$2" \
+      '{hook_event_name:"UserPromptSubmit",session_id:"session-1",prompt_id:$id,prompt:$prompt}')"
+}
+first_write() {
+  CLAUDE_CONFIG_DIR="$WORK/claude" run_wiring claude "$write_command" \
+    <<<"$(jq -cn --arg id "$1" --arg t "$WORK/not-flushed.jsonl" \
+      '{hook_event_name:"PreToolUse",tool_name:"Write",session_id:"session-1",prompt_id:$id,
+        tool_input:{file_path:"/repo/guide.md"},transcript_path:$t}')"
+}
+submit_prompt prompt-1 'fix the parser'
+first_write prompt-1
+expect_equal "first unrequested Write is denied without a flushed transcript" deny \
+  "$(jq -r '.hookSpecificOutput.permissionDecision' <<<"$STDOUT")"
+submit_prompt prompt-2 $'fix the parser\nUpdate guide.md as well'
+first_write prompt-2
+expect_equal "first requested Write allows without a flushed transcript" "" "$STDOUT"
+printf '%s\n' "$(assistant)" >"$WORK/not-flushed.jsonl"
+submit_prompt prompt-3 'fix the parser'
+first_write prompt-3
+expect_equal "an existing transcript without the first prompt still denies" deny \
+  "$(jq -r '.hookSpecificOutput.permissionDecision' <<<"$STDOUT")"
+first_write prompt-2
+expect_equal "another prompt cannot use the cached authorization check" "" "$STDOUT"
+
 # The gate.
 decide /repo/src/parser.py "$(user_prompt 'fix the parser')"
 expect_equal "a non-markdown file allows" allow "$DECISION"

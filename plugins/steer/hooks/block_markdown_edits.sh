@@ -33,8 +33,8 @@
 # Hook protocol (Claude Code):
 # - stdin: JSON envelope with tool_input.file_path, cwd and transcript_path.
 # - stdout: a PreToolUse deny object, or nothing to allow.
-# - exit code: always 0. Bad JSON, a missing transcript, no user prompt or
-#   any error allows. Never crash the session.
+# - exit code: always 0. Without a transcript prompt, use the matching
+#   UserPromptSubmit prompt if available. Unknown prompts allow.
 
 set -f
 hooks_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd) || exit 0
@@ -42,6 +42,24 @@ read_json() {
   LC_ALL=C MODE=$1 awk -f "$hooks_dir/hook-json.awk" -f "$hooks_dir/user-prompt.awk" \
     -f "$hooks_dir/block_markdown_edits.awk" "${@:2}"
 }
+
+prompt_cache() {
+  local config=${CLAUDE_CONFIG_DIR:-${HOME:+$HOME/.claude}}
+  [ -n "$config" ] && [ -n "$1" ] || return 1
+  printf '%s/dotai-steer/%s.json\n' "$config" "$1"
+}
+
+if [ "${1:-}" = --remember-prompt ]; then
+  fields=$(read_json submit) || exit 0
+  cache=$(prompt_cache "${fields%%$'\n'*}") || exit 0
+  umask 077
+  mkdir -p "${cache%/*}" || exit 0
+  tmp=$(mktemp "$cache.XXXXXXXX") || exit 0
+  if ! printf '%s\n' "${fields#*$'\n'}" >"$tmp" || ! mv -f "$tmp" "$cache"; then
+    rm -f "$tmp"
+  fi
+  exit 0
+fi
 
 # lexical PATH: PATH with "." and ".." segments resolved, without touching disk.
 lexical() {
@@ -104,13 +122,15 @@ in_project_allowed() {
 }
 
 fields=$(read_json payload 2>/dev/null <<<"$(cat)") || exit 0
-{ IFS= read -r transcript; IFS= read -r name; IFS= read -r file; IFS= read -r cwd; } <<<"$fields"
+{ IFS= read -r transcript; IFS= read -r name; IFS= read -r file; IFS= read -r cwd
+  IFS= read -r session; IFS= read -r prompt_id; } <<<"$fields"
 # A symlink, even a dangling one, can point anywhere, so it gets no folder
 # exemption. Directory symlinks need no check: git resolves them.
 if ! { path=$(absolute "$file" "$cwd") && [ -L "$path" ]; }; then
   in_project_allowed "$file" "$cwd" && exit 0
   in_harness_plans "$file" "$cwd" && exit 0
 fi
-[ -n "$transcript" ] && [ -f "$transcript" ] || exit 0
-FILE_NAME=$name read_json transcript "$transcript" 2>/dev/null
+cache=$(prompt_cache "$session")
+[ -f "$transcript" ] || transcript=/dev/null
+FILE_NAME=$name PROMPT_CACHE=$cache PROMPT_ID=$prompt_id read_json transcript "$transcript" 2>/dev/null
 exit 0
