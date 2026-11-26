@@ -33,6 +33,14 @@ with patch.dict(ox, {"version": "2.0.0"}):
     assert json.loads(files[Path("plugins/ox-vibesec/.devin-plugin/plugin.json")])["version"] == "2.0.0"
 print("PASS  ox-vibesec: Devin manifest version comes from the generator")
 
+try:
+    generator["hook_wiring_paths"]({**ox, "hooks": ["copilot", "devin"]})
+except ValueError as error:
+    assert str(error) == "ox-vibesec: copilot and devin hooks both use hooks.json"
+else:
+    raise AssertionError("accepted conflicting hook wiring")
+print("PASS  ox-vibesec: generator rejects conflicting Copilot and Devin hooks")
+
 hooks = json.loads((plugin / "hooks.json").read_text())
 session = {"session_id": "devin-test"}
 assert set(hooks) == {"SessionStart", "UserPromptSubmit", "PreToolUse", "PostToolUse"}

@@ -453,7 +453,10 @@ def claude_agent_paths(plugin: dict[str, object], root: Path = REPOSITORY_ROOT) 
 
 
 def hook_wiring_paths(plugin: dict[str, object]) -> dict[str, Path]:
-    if "devin" in plugin.get("hooks", []):
+    hooks = plugin.get("hooks", [])
+    if "devin" in hooks:
+        if "copilot" in hooks:
+            raise ValueError(f"{plugin['name']}: copilot and devin hooks both use hooks.json")
         return {
             **{harness: path for harness, path in HOOK_WIRING_PATHS.items() if harness != "copilot"},
             "devin": Path("hooks.json"),
