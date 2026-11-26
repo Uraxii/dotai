@@ -23,7 +23,8 @@ from code_quality import check_source
 
 RUNNER_TIMEOUT_S = 1.5
 DEFAULT_LINE_LENGTH = 80
-RUFF_CONFIG_NAMES = ("ruff.toml", ".ruff.toml", "pyproject.toml")
+# In ruff's order of precedence within one directory.
+RUFF_CONFIG_NAMES = (".ruff.toml", "ruff.toml", "pyproject.toml")
 ESLINT_CONFIG_PATTERN = re.compile(
     r"^(eslint\.config\.[cm]?[jt]s|\.eslintrc(\.(js|cjs|json|ya?ml))?)$"
 )

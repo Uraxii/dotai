@@ -266,13 +266,18 @@ Import names explicitly; do not use \`from module import *\`." "$(reason)"
 
 new_case project-ignores
 printf '[lint]\nignore = ["F403"]\n' >"$PROJECT/ruff.toml"
+printf '[lint]\n' >"$PROJECT/.ruff.toml"
+hook RUFF_JSON="$F403_ROW" <<<"$(write src/app.py 'from os import *
+')"
+expect_equal ".ruff.toml wins over ruff.toml, as in ruff" deny "$(decision)"
+rm "$PROJECT/.ruff.toml"
 hook RUFF_JSON="$F403_ROW" <<<"$(write src/app.py 'from os import *
 ')"
 expect_equal "a rule the project ignores does not block" "" "$(decision)"
 expect_equal "a rule the project ignores gives no finding" "" "$(grep -F py.import.no-star <<<"$STDOUT")"
 expect_equal "ruff runs with the project config, without the ignored rule" \
   "check --verbose --force-exclude --extend-select S101 --output-format json --stdin-filename $PROJECT/src/app.py -" \
-  "$(cat "$WORK/ruff.args")"
+  "$(tail -n 1 "$WORK/ruff.args")"
 hook RUFF_JSON="$F403_ROW" RUFF_STDERR='DEBUG Ignored path via `exclude`: "src/dist"' \
   <<<"$(write src/dist/app.py 'assert x
 ')"
@@ -629,6 +634,20 @@ expect_contains "a denial with dropped findings counts the notices left out" "mo
 expect_equal "and stays inside the size cap" yes "$([ "$(reason | wc -c)" -le 9000 ] && echo yes)"
 expect_contains "the dropped-findings notice names only whole files" \
   "Run the check command on a$wide.py, b$wide.py and 1 more files to see all of them." "$(reason)"
+spread=$'*** Begin Patch'
+for i in $(seq 50); do spread+=$'\n'"*** Add File: clean$i.py"$'\n+x = 1'; done
+spread+=$'\n*** Add File: last.py\n+x = [a for b in c for a in b]'
+HARNESS=codex hook <<<"$(patch_payload PreToolUse "$spread")"
+expect_contains "files past the per-call limit are counted" \
+  "Notice: did not check 1 more files: a hook call checks at most 50. Run the check command on them." "$(context)"
+for i in $(seq 50); do echo 'x = 1' >"clean$i.py"; done
+capture env PATH="$HOOK_PATH" python3 -I "$ENGINE" check clean*.py missing51.py
+expect_contains "check has no file limit" "Notice: did not check missing51.py: no such file" "$STDOUT"
+python3 -c 'import json, sys; json.dump({"hook_event_name": "PreToolUse", "tool_name": "Write", "cwd": sys.argv[1], "tool_input": {"file_path": "bulk.py", "content": "x" * 16_000_001}}, sys.stdout)' "$PROJECT" >"$WORK/big.json"
+hook <"$WORK/big.json"
+expect_json "an oversized payload is named, not dropped" \
+  '{"systemMessage": "pstack guideline hook skipped this call: its input is larger than 16 MB, so code-quality guidelines were not checked."}' "$STDOUT"
+rm "$WORK/big.json"
 
 new_case huge-guideline
 cp "$FIXTURES/py-comprehension-one-for.md" "$WORK/one-for.md"

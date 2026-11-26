@@ -95,6 +95,7 @@ class Event(NamedTuple):
     prompt: str = ""
     files: tuple[FileChange, ...] = ()
     channel: bool = True
+    skipped_files: int = 0
 
 
 class Result(NamedTuple):
@@ -126,7 +127,7 @@ def file_changes(raw: object) -> tuple[FileChange, ...]:
     if not isinstance(raw, list):
         return ()
     return tuple(
-        file_change(item) for item in raw[:MAX_FILES_PER_EVENT]
+        file_change(item) for item in raw
         if isinstance(item, dict) and isinstance(item.get("path"), str)
     )
 
@@ -156,6 +157,8 @@ def event_from_json(data: object) -> Event | None:
         return None
     if not texts["cwd"]:
         return None
+    files = file_changes(data.get("files"))
+    limit = len(files) if data["kind"] == "check" else MAX_FILES_PER_EVENT
     return Event(
         kind=data["kind"],
         session=safe_name(texts["session"]),
@@ -163,8 +166,9 @@ def event_from_json(data: object) -> Event | None:
         cwd=texts["cwd"],
         root=texts["root"] or texts["cwd"],
         prompt=texts["prompt"][:MAX_PROMPT_CHARS],
-        files=file_changes(data.get("files")),
+        files=files[:limit],
         channel=data.get("channel") is not False,
+        skipped_files=max(0, len(files) - limit),
     )
 
 
@@ -652,6 +656,12 @@ class Engine:
 
     def run(self) -> Result:
         kind = self.event.kind
+        if self.event.skipped_files:
+            self.notices.append(
+                f"Notice: did not check {self.event.skipped_files} more "
+                f"files: a hook call checks at most {MAX_FILES_PER_EVENT}. "
+                f"Run the check command on them."
+            )
         if kind == "session_start":
             prune_old_sessions(self.state_root)
         elif kind == "cleared":

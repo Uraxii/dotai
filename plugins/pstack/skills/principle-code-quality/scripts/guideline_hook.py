@@ -46,6 +46,11 @@ EXIT_BLOCK_FINDING = 1
 EXIT_MISSING_PATH = 3
 EXIT_USAGE = 64
 MAX_LOG_BYTES = 200_000
+OVERSIZE_MESSAGE = (
+    f"pstack guideline hook skipped this call: its input is larger than "
+    f"{MAX_PAYLOAD_BYTES // 1_000_000} MB, so code-quality guidelines were "
+    f"not checked."
+)
 FAILURE_MESSAGE = (
     "pstack guideline hook failed; code-quality guidelines were not checked "
     "for this call."
@@ -329,8 +334,11 @@ ADAPTERS: dict[str, Callable[[Payload], Neutral | None]] = {
 
 def run_hook(harness: str) -> int:
     raw = sys.stdin.buffer.read(MAX_PAYLOAD_BYTES + 1)
+    if len(raw) > MAX_PAYLOAD_BYTES:
+        print(json.dumps({"systemMessage": OVERSIZE_MESSAGE}))
+        return 0
     try:
-        payload = json.loads(raw) if len(raw) <= MAX_PAYLOAD_BYTES else None
+        payload = json.loads(raw)
     except ValueError:
         return 0
     if not isinstance(payload, dict):
