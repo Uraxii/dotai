@@ -81,6 +81,13 @@ with tempfile.TemporaryDirectory() as temp:
         runtime = vibesec.Runtime(home / "runtime", staged)
     assert runtime.proxy_args == ["--proxy", "http://LOCALHOST:3128"]
     print("PASS  ox-vibesec: lowercases only the forwarded proxy scheme")
+    with (
+        patch.object(runtime, "installed", return_value=["sh", vibesec.LAUNCHER]),
+        patch.object(vibesec.subprocess, "run") as run,
+    ):
+        runtime.run({}, home, "test-token")
+        assert run.call_args.kwargs["env"]["NODE_USE_ENV_PROXY"] == "1"
+    print("PASS  ox-vibesec: hook subprocess enables the environment for an unauthenticated proxy")
 
     proxy = "http://test-user:test-password@localhost:3128"
     with patch.dict(os.environ, {"HTTPS_PROXY": proxy}, clear=True):

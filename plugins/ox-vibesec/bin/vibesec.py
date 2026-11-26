@@ -51,7 +51,7 @@ class Runtime:
         self.proxy_args = []
         if url is not None and url.scheme == "http" and url.username is None and url.password is None:
             self.proxy_args = ["--proxy", "http:" + proxy.split(":", 1)[1]]
-        elif proxy:
+        if proxy or self.env.get("http_proxy") or self.env.get("HTTP_PROXY"):
             self.env["NODE_USE_ENV_PROXY"] = "1"
 
     def installed(self, key):
