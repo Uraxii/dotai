@@ -122,7 +122,10 @@ with tempfile.TemporaryDirectory() as temp:
     home = Path(temp)
     env = os.environ.copy()
     env.pop("OX_VIBESEC_API_KEY", None)
-    env.update(HOME=temp, DEVIN_PLUGIN_ROOT=str(plugin))
+    roots = ("PLUGIN_ROOT", "DEVIN_PLUGIN_ROOT", "CLAUDE_PLUGIN_ROOT")
+    for variable in roots:
+        env.pop(variable, None)
+    env.update(HOME=temp, PLUGIN_ROOT=str(plugin))
     for groups in hooks.values():
         command = groups[0]["hooks"][0]["command"]
         completed = subprocess.run(
@@ -133,24 +136,37 @@ with tempfile.TemporaryDirectory() as temp:
         assert not completed.stdout and not completed.stderr
     assert not list(home.iterdir())
 
-    for variable in ("DEVIN_PLUGIN_ROOT", "CLAUDE_PLUGIN_ROOT", "PLUGIN_ROOT"):
-        env.pop(variable, None)
-    command = hooks["SessionStart"][0]["hooks"][0]["command"].replace(
-        "/opt/.devin/plugins_cache/cache/", '"$HOME/cache/"',
-    )
-    missing = subprocess.run(command, shell=True, cwd=home, env=env, capture_output=True, text=True)
-    assert missing.returncode == 1
-    assert missing.stderr == "ox-vibesec: plugin root not found\n"
-
-    cache = home / "cache/github.com_Uraxii_dotai_plugins_ox-vibesec-test"
-    for revision, timestamp in (("zz-old", 1), ("aa-new", 2)):
-        script = cache / revision / "bin/hook.py"
+    command = hooks["SessionStart"][0]["hooks"][0]["command"]
+    for variable in roots:
+        script = home / variable / "bin/hook.py"
         script.parent.mkdir(parents=True)
-        script.write_text(f"print({revision!r})\n")
-        os.utime(script, (timestamp, timestamp))
-    newest = subprocess.run(command, shell=True, cwd=home, env=env, capture_output=True, text=True)
-    assert newest.returncode == 0 and newest.stdout == "aa-new\n" and not newest.stderr
-    print("PASS  ox-vibesec: cache fallback chooses the newest hook and reports a missing root")
+        script.write_text(f"print({variable!r})\n")
+        env[variable] = str(script.parents[1])
+    for variable in roots:
+        chosen = subprocess.run(command, shell=True, cwd=home, env=env, capture_output=True, text=True)
+        assert chosen.returncode == 0 and chosen.stdout == variable + "\n" and not chosen.stderr
+        env.pop(variable)
+
+    env["PATH"] = str(home)
+    missing = subprocess.run(command, shell=True, cwd=home, env=env, capture_output=True, text=True)
+    assert missing.returncode == 0 and not missing.stdout
+    assert missing.stderr == "ox-vibesec: plugin root not found\n"
+    launcher = home / "ox-vibesec-hook"
+    launcher.write_text('#!/bin/sh\nread -r payload\nprintf "%s:%s\\n" "$1" "$payload"\n')
+    launcher.chmod(0o755)
+    for event, groups in hooks.items():
+        command = groups[0]["hooks"][0]["command"]
+        chosen = subprocess.run(
+            command, shell=True, cwd=home, env=env, input="payload\n", capture_output=True, text=True,
+        )
+        assert chosen.returncode == 0 and chosen.stdout == f"{event}:payload\n" and not chosen.stderr
+    invalid = subprocess.run(
+        command, shell=True, cwd=home, env={**env, "PLUGIN_ROOT": str(home / "invalid")},
+        capture_output=True, text=True,
+    )
+    assert invalid.returncode == 0 and not invalid.stdout
+    assert invalid.stderr == "ox-vibesec: plugin root not found\n"
+    print("PASS  ox-vibesec: plugin root precedence, PATH fallback, and missing-root diagnostics")
 
     installer = b"fake installer"
     digest = hashlib.sha256(installer).hexdigest()
@@ -162,14 +178,12 @@ with tempfile.TemporaryDirectory() as temp:
             assert vibesec.verified_installer(staged, dest, env).read_bytes() == installer
             download.assert_not_called()
 
-        staged.unlink()
-
         def fetch(args, **kwargs):
             assert args[-1] == vibesec.INSTALLER_URL
             Path(args[args.index("-o") + 1]).write_bytes(installer)
 
         with patch.object(vibesec.subprocess, "run", side_effect=fetch) as download:
-            assert vibesec.verified_installer(staged, dest, env).read_bytes() == installer
+            assert vibesec.verified_installer(None, dest, env).read_bytes() == installer
             download.assert_called_once()
 
         staged.write_bytes(b"modified installer")
@@ -222,7 +236,7 @@ with tempfile.TemporaryDirectory() as temp:
     bare = home / "plugins/bare"
     bare.mkdir(parents=True)
     (bare / "hooks.json").write_text(json.dumps({"SessionStart": [{"hooks": [
-        {"type": "command", "command": 'echo "${DEVIN_PLUGIN_ROOT}"'},
+        {"type": "command", "command": 'echo "${PLUGIN_ROOT}" "${DEVIN_PLUGIN_ROOT}" "${CLAUDE_PLUGIN_ROOT}"'},
     ]}]}))
     wrapped = home / "plugins/wrapped"
     (wrapped / ".devin-plugin").mkdir(parents=True)

@@ -25,48 +25,16 @@ VibeSec, run the OX installer again. The installer adds the five entries to
 
 ## Devin
 
-Install this same plugin from the `plugins/ox-vibesec` directory. Make the
-personal VibeSec secret available to the hook process as `OX_VIBESEC_API_KEY`.
-The adapter needs Python 3, Bash, curl, and standard Linux utilities.
-It skips OX calls when the secret is absent.
-
-At session start, the adapter installs the OX runtime into a private home
-under `~/.local/state/ox-vibesec-devin/`. It sends the token on stdin.
-It does not install Claude Code or touch the user's Claude configuration.
-The runtime uses `ox-vibesec.s3.eu-west-1.amazonaws.com`, `nodejs.org`,
-and `api.cloud.ox.security`. It is separate from the OX MCP.
-
-No blueprint change is required. To stage the installer in a snapshot,
-append this to the existing `initialize` shell block:
-
-```bash
-(
-  set -euo pipefail
-  ox_dir="$HOME/.local/lib/ox-vibesec-devin"
-  ox_installer=$(mktemp)
-  trap 'rm -f "$ox_installer"' EXIT
-  curl -fsSL https://ox-vibesec.s3.eu-west-1.amazonaws.com/vibesec-installation/install.sh -o "$ox_installer"
-  printf '%s  %s\n' 51f97f30518e7ff3b48a8d90b404b243896bc5d24f9d8b074d68d9846d3e1a25 "$ox_installer" | sha256sum -c -
-  install -d -m 755 "$ox_dir"
-  install -m 644 "$ox_installer" "$ox_dir/install.sh"
-)
-```
-
-The adapter verifies the checksum with or without this step. It rejects a
-staged file that fails verification. The blueprint does not use the token.
-
-The hook commands use the runtime's plugin-root variable when set. Devin's
-public documentation does not specify a root variable for native command
-hooks. When none is set, the commands use the most recently modified
-matching hook in the Devin Cloud plugin cache. If no hook is found, they
-log `ox-vibesec: plugin root not found`.
+The adapter reads `OX_VIBESEC_API_KEY` and skips OX calls when the key is
+absent. It verifies the installer checksum before it installs the OX runtime.
+It does not install Claude Code or change the user's Claude configuration.
+The runtime is separate from the OX MCP.
 
 Devin forwards prompts, shell calls and results, and file edits with a
 path and replacement text or content. It does not forward patch-only
 edits or transcripts, or apply OX's suggested tool rewrites. Only enable
-it where your organization permits OX to receive this data. Startup
-can run in the background, so early events may be skipped. These hooks
-fail open and are not an enforcement boundary.
+it where your organization permits OX to receive this data. These hooks fail
+open and are not an enforcement boundary.
 
 ## Other harnesses
 

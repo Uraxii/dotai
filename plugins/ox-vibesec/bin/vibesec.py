@@ -14,7 +14,7 @@ LAUNCHER = Path(__file__).resolve().parents[1] / "hooks/ox"
 
 
 def verified_installer(staged, destination, env):
-    if staged.exists():
+    if staged is not None:
         destination.write_bytes(staged.read_bytes())
     else:
         subprocess.run(

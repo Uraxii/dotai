@@ -81,7 +81,7 @@ for manifest in "$root"/plugins/*/hooks.json "$root"/plugins/*/hooks/*.json; do
           fail - - "must map hook event names to arrays" "remove non-event keys and give each event an array value"
           continue
         fi
-        allowed="DEVIN_PLUGIN_ROOT CLAUDE_PLUGIN_ROOT PLUGIN_ROOT"
+        allowed="PLUGIN_ROOT DEVIN_PLUGIN_ROOT CLAUDE_PLUGIN_ROOT"
         events=.
       fi ;;
     hooks/claude-hooks.json | hooks/hooks.json) allowed=CLAUDE_PLUGIN_ROOT ;;

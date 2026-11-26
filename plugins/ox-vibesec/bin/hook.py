@@ -67,10 +67,10 @@ def run():
     payload = ox_payload(event, data, cwd)
     if not payload:
         return 0
-    home = Path.home()
+    installer = os.environ.get("OX_VIBESEC_INSTALLER")
     runtime = vibesec.Runtime(
-        home / ".local/state/ox-vibesec-devin/home",
-        home / ".local/lib/ox-vibesec-devin/install.sh",
+        Path.home() / ".local/state/ox-vibesec-devin/home",
+        Path(installer) if installer else None,
     )
     result = runtime.run(payload, cwd, key, initialize=event == "SessionStart")
     if result is None:
