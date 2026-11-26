@@ -66,8 +66,36 @@ for manifest in "$root"/plugins/*/hooks.json "$root"/plugins/*/hooks/*.json; do
   plugin_name=${manifest#"$root"/plugins/}
   plugin_name=${plugin_name%%/*}
   plugin=$root/plugins/$plugin_name
+  if ! jq empty "$manifest" 2>/dev/null; then
+    fail - - "is not valid JSON" "run jq . on it to find the syntax error"
+    continue
+  fi
+
+  events=.hooks
   case "${manifest#"$plugin"/}" in
-    hooks.json) allowed=PLUGIN_ROOT ;;
+    hooks.json)
+      if jq -e 'type == "object" and (.hooks | type == "object")' "$manifest" >/dev/null; then
+        allowed=PLUGIN_ROOT
+      else
+        if ! jq -e 'type == "object" and all(.[]; type == "array")' "$manifest" >/dev/null; then
+          fail - - "must map hook event names to arrays" "remove non-event keys and give each event an array value"
+          continue
+        fi
+        if ! jq -e '
+          def hook_entry: type == "object" and
+            (if .type == "prompt" then (.prompt | type == "string")
+             elif (has("type") | not) or .type == "command" then (.command | type == "string")
+             else false end);
+          all(.[][]; type == "object" and
+            (if has("hooks") then (.hooks | type == "array" and all(.[]; hook_entry))
+             else hook_entry end))
+        ' "$manifest" >/dev/null; then
+          fail - - "contains an invalid hook entry" "use command or prompt objects, or groups with a hooks array"
+          continue
+        fi
+        allowed="PLUGIN_ROOT DEVIN_PLUGIN_ROOT CLAUDE_PLUGIN_ROOT"
+        events=.
+      fi ;;
     hooks/claude-hooks.json | hooks/hooks.json) allowed=CLAUDE_PLUGIN_ROOT ;;
     # Codex sets both; pstack's script reads CLAUDE_PLUGIN_ROOT under Codex.
     hooks/codex-hooks.json) allowed="PLUGIN_ROOT CLAUDE_PLUGIN_ROOT" ;;
@@ -77,24 +105,29 @@ for manifest in "$root"/plugins/*/hooks.json "$root"/plugins/*/hooks/*.json; do
       continue
       ;;
   esac
-  if ! jq empty "$manifest" 2>/dev/null; then
-    fail - - "is not valid JSON" "run jq . on it to find the syntax error"
+  if ! commands=$(jq -r --arg events "$events" "$events"' | to_entries[] | .key as $e | .value[] | (.hooks // [.])[]
+    | select($events != "." or .type != "prompt")
+    | to_entries[] | select(.key | IN("command", "bash", "powershell", "commandWindows"))
+    | "\($e)\t\(.key)\t\(.value)"' "$manifest" 2>/dev/null); then
+    fail - - "cannot read hook commands" "check that events contain hook objects"
     continue
   fi
-
   while IFS=$'\t' read -r event field command; do
-    check "$event" "$field" "$command"
-  done < <(jq -r '.hooks | to_entries[] | .key as $e | .value[] | (.hooks // [.])[]
-    | to_entries[] | select(.key | IN("command", "bash", "powershell", "commandWindows"))
-    | "\($e)\t\(.key)\t\(.value)"' "$manifest")
+    [ -n "$field" ] && check "$event" "$field" "$command"
+  done <<< "$commands"
 
-  if [ "${manifest#"$plugin"/}" = hooks.json ]; then
+  if [ "${manifest#"$plugin"/}" = hooks.json ] && [ "$events" = .hooks ]; then
+    if ! pairs=$(jq -r '.hooks | to_entries[] | .key as $e | .value[]
+      | select(has("bash") != has("powershell"))
+      | if has("bash") then "\($e)\tbash\tpowershell" else "\($e)\tpowershell\tbash" end' "$manifest" 2>/dev/null); then
+      fail - - "cannot read Copilot hook command pairs" "check that events contain hook objects"
+      continue
+    fi
     while IFS=$'\t' read -r event has missing; do
+      [ -n "$missing" ] || continue
       fail "$event" "$missing" "is missing beside $has; Copilot runs bash on Linux and macOS, powershell on Windows" \
         "add a $missing command for the same hook"
-    done < <(jq -r '.hooks | to_entries[] | .key as $e | .value[]
-      | select(has("bash") != has("powershell"))
-      | if has("bash") then "\($e)\tbash\tpowershell" else "\($e)\tpowershell\tbash" end' "$manifest")
+    done <<< "$pairs"
   fi
 done
 
