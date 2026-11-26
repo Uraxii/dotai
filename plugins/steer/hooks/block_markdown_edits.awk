@@ -14,11 +14,15 @@
 
 BEGIN {
   mode = ENVIRON["MODE"]
-  if (mode == "payload" || mode == "submit") {
+  if (mode == "payload" || mode == "submit" || mode == "session") {
     text = ""
     while ((getline line) > 0) text = text line "\n"
     if (!jparse(text) || JT[""] != "object") exit 1
     session = safe_id("/session_id")
+    if (mode == "session") {
+      print session
+      exit 0
+    }
     prompt_id = safe_id("/prompt_id")
     if (mode == "submit") {
       if (!jis("/hook_event_name", "UserPromptSubmit") || session == "" || prompt_id == "" || JT["/prompt"] != "string") exit 1

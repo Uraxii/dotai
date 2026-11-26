@@ -86,6 +86,21 @@ expect_equal "an existing transcript without the first prompt still denies" deny
 first_write prompt-2
 expect_equal "another prompt cannot use the cached authorization check" "" "$STDOUT"
 
+end_command=$(wiring_commands claude "$config" SessionEnd)
+CLAUDE_CONFIG_DIR="$WORK/claude" run_wiring claude "$end_command" \
+  <<< '{"hook_event_name":"SessionEnd","session_id":"session-1","reason":"other"}'
+expect_equal "SessionEnd removes the stored prompt" absent \
+  "$([ -e "$WORK/claude/dotai-steer/session-1.json" ] && echo present || echo absent)"
+first_write prompt-3
+expect_equal "an ended session no longer uses its cached prompt" "" "$STDOUT"
+
+CLAUDE_CODE_SKIP_PROMPT_HISTORY=1 submit_prompt prompt-4 'synthetic opt-out marker'
+expect_equal "prompt history opt-out never stores the submitted prompt" absent \
+  "$([ -e "$WORK/claude/dotai-steer/session-1.json" ] && echo present || echo absent)"
+submit_prompt prompt-5 'fix the parser'
+CLAUDE_CODE_SKIP_PROMPT_HISTORY=1 first_write prompt-5
+expect_equal "prompt history opt-out ignores previously cached prompts" "" "$STDOUT"
+
 # The gate.
 decide /repo/src/parser.py "$(user_prompt 'fix the parser')"
 expect_equal "a non-markdown file allows" allow "$DECISION"

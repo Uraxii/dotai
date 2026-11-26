@@ -49,6 +49,16 @@ prompt_cache() {
   printf '%s/dotai-steer/%s.json\n' "$config" "$1"
 }
 
+skip_prompt_history=${CLAUDE_CODE_SKIP_PROMPT_HISTORY:-}
+case "${1:-}:$skip_prompt_history" in
+  --forget-prompt:*|--remember-prompt:1)
+    session=$(read_json session) || exit 0
+    cache=$(prompt_cache "$session") || exit 0
+    rm -f -- "$cache"
+    exit 0
+    ;;
+esac
+
 if [ "${1:-}" = --remember-prompt ]; then
   fields=$(read_json submit) || exit 0
   cache=$(prompt_cache "${fields%%$'\n'*}") || exit 0
@@ -130,7 +140,10 @@ if ! { path=$(absolute "$file" "$cwd") && [ -L "$path" ]; }; then
   in_project_allowed "$file" "$cwd" && exit 0
   in_harness_plans "$file" "$cwd" && exit 0
 fi
-cache=$(prompt_cache "$session")
+cache=
+if [ "$skip_prompt_history" != 1 ]; then
+  cache=$(prompt_cache "$session")
+fi
 [ -f "$transcript" ] || transcript=/dev/null
 FILE_NAME=$name PROMPT_CACHE=$cache PROMPT_ID=$prompt_id read_json transcript "$transcript" 2>/dev/null
 exit 0
