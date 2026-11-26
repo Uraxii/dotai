@@ -77,6 +77,11 @@ with tempfile.TemporaryDirectory() as temp:
                 raise AssertionError("accepted a modified installer")
             download.assert_not_called()
 
+    with patch.dict(os.environ, {"HTTPS_PROXY": "HTTP://LOCALHOST:3128"}, clear=True):
+        runtime = vibesec.Runtime(home / "runtime", staged)
+    assert runtime.proxy_args == ["--proxy", "http://LOCALHOST:3128"]
+    print("PASS  ox-vibesec: lowercases only the forwarded proxy scheme")
+
     proxy = "http://test-user:test-password@localhost:3128"
     with patch.dict(os.environ, {"HTTPS_PROXY": proxy}, clear=True):
         runtime = vibesec.Runtime(home / "runtime", staged)

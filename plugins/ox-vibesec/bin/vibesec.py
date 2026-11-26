@@ -47,7 +47,7 @@ class Runtime:
         url = urlsplit(proxy)
         self.proxy_args = []
         if url.scheme == "http" and url.username is None and url.password is None:
-            self.proxy_args = ["--proxy", proxy]
+            self.proxy_args = ["--proxy", "http:" + proxy.split(":", 1)[1]]
         elif proxy:
             self.env["NODE_USE_ENV_PROXY"] = "1"
 
