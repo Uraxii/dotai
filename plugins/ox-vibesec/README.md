@@ -25,6 +25,9 @@ VibeSec, run the OX installer again. The installer adds the five entries to
 
 ## Devin
 
+The host must set `PLUGIN_ROOT`, `DEVIN_PLUGIN_ROOT`, or `CLAUDE_PLUGIN_ROOT`
+to the plugin directory. Alternatively, make `bin/ox-vibesec-hook` available on `PATH`.
+
 The adapter reads `OX_VIBESEC_API_KEY` and skips OX calls when the key is
 absent. It verifies the installer checksum before it installs the OX runtime.
 It does not install Claude Code or change the user's Claude configuration.

@@ -147,6 +147,18 @@ with tempfile.TemporaryDirectory() as temp:
         assert chosen.returncode == 0 and chosen.stdout == variable + "\n" and not chosen.stderr
         env.pop(variable)
 
+    install_bin = home / "fresh install" / "bin"
+    install_bin.mkdir(parents=True)
+    (install_bin / "ox-vibesec-hook").symlink_to(plugin / "bin/ox-vibesec-hook")
+    installed = subprocess.run(
+        hooks["UserPromptSubmit"][0]["hooks"][0]["command"], shell=True, cwd=home,
+        env={**env, "PATH": f"{install_bin}:{env['PATH']}", "OX_VIBESEC_API_KEY": test_key},
+        input=json.dumps({**session, "prompt": "test"}), capture_output=True, text=True,
+    )
+    assert installed.returncode == 0 and not installed.stdout, installed
+    assert installed.stderr == "OX VibeSec runtime is not initialized; check skipped.\n", installed
+    print("PASS  ox-vibesec: packaged PATH launcher reaches the adapter without a plugin root")
+
     env["PATH"] = str(home)
     missing = subprocess.run(command, shell=True, cwd=home, env=env, capture_output=True, text=True)
     assert missing.returncode == 0 and not missing.stdout
