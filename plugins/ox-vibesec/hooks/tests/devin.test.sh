@@ -89,6 +89,13 @@ assert code == 0 and not stdout and not stderr
 runtime.assert_not_called()
 print("PASS  ox-vibesec: block decisions, key redaction, exec and edit mapping, PostToolUse, invalid session rejection")
 
+code, stdout, stderr, _ = adapter_call("PreToolUse", exec_event, None)
+assert code == 0 and not stdout
+assert stderr == "OX VibeSec runtime is not initialized; check skipped.\n"
+code, stdout, stderr, _ = adapter_call("SessionStart", session, None)
+assert code == 0 and not stdout and not stderr
+print("PASS  ox-vibesec: warns on uninitialized runtime without blocking")
+
 with tempfile.TemporaryDirectory() as temp:
     home = Path(temp)
     env = os.environ.copy()

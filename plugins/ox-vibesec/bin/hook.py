@@ -74,6 +74,8 @@ def run():
     )
     result = runtime.run(payload, cwd, key, initialize=event == "SessionStart")
     if result is None:
+        if event != "SessionStart":
+            print("OX VibeSec runtime is not initialized; check skipped.", file=sys.stderr)
         return 0
     if result.returncode == 2:
         print("OX VibeSec blocked this action.", file=sys.stderr)
