@@ -66,6 +66,15 @@ for tool in read exec; do
   expect_equal "Devin $tool allows a targeted read" "" "$STDOUT"
 done
 
+mkdir "$WORK/other"
+seq 1 500 >"$WORK/other/big.txt"
+exec_command=$(jq -r '.PreToolUse[] | select(.matcher == "^exec$") | .hooks[].command' "$config")
+workdir_input=$(jq -cn --arg cwd "$WORK" --arg workdir "$WORK/other" \
+  '{tool_name: "exec", cwd: $cwd, tool_input: {command: "cat big.txt", workdir: $workdir}}')
+run_wiring devin "$exec_command" <<<"$workdir_input"
+expect_equal "Devin exec blocks a large read in tool_input.workdir" block "$(jq -r '.decision' <<<"$STDOUT")"
+expect_contains "Devin exec reads tool_input.workdir before the 480-line fallback" "500-line file" "$(jq -r '.reason' <<<"$STDOUT")"
+
 # The launcher's batch half runs bash with a backslash-only path, which Git
 # Bash leaves as it is. On Linux a backslash is a plain filename character, so
 # the hook is copied to a file named like that Windows path, beside a directory

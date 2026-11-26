@@ -43,8 +43,9 @@ else
   command=$(field /tool_input/command)
 fi
 [ -z "$command" ] && exit 0
-if [ "$harness" = devin ] && [ -z "$cwd" ]; then
-  cwd=${DEVIN_PROJECT_DIR:-$PWD}
+if [ "$harness" = devin ]; then
+  workdir=$(field /tool_input/workdir)
+  cwd=${workdir:-${cwd:-${DEVIN_PROJECT_DIR:-$PWD}}}
 fi
 
 # Skip piped commands (cat file | grep) — those are targeted reads
