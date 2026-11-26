@@ -610,6 +610,15 @@ printf '%s\n' "$many" >"$PROJECT/many.py"
 cd "$PROJECT"
 capture env PATH="$HOOK_PATH" python3 -I "$ENGINE" check many.py
 expect_equal "check shows every finding" 400 "$(grep -c '^\[py.comprehension.one-for\] block' <<<"$STDOUT")"
+long="$(printf 'n%.0s' $(seq 160))"
+patch=$'*** Begin Patch\n*** Update File: many.py\n@@\n-x1 = [a for b in c for a in b]\n+x1 = [a for b in c for a in b]'
+for i in $(seq 49); do
+  printf 'x = 1\xff\n' >"$PROJECT/${long}_$i.py"
+  patch+=$'\n'"*** Update File: ${long}_$i.py"$'\n@@\n-x = 1\n+x = 2'
+done
+HARNESS=codex hook <<<"$(patch_payload PostToolUse "$patch")"
+expect_contains "a context full of notices still counts the findings" "more findings did not fit" "$(context)"
+expect_equal "and stays inside the size cap" yes "$([ "$(context | wc -c)" -le 9000 ] && echo yes)"
 
 new_case huge-guideline
 cp "$FIXTURES/py-comprehension-one-for.md" "$WORK/one-for.md"

@@ -542,8 +542,9 @@ class Engine:
         items.append(text)
         return True
 
-    def add_notices(self, items: list[str]) -> list[str]:
-        """Add every notice of this call; return those new to this agent.
+    def add_notices(self, items: list[str], reserve: int = 0) -> list[str]:
+        """Add every notice of this call, keeping `reserve` characters free
+        for what follows; return the notices new to this agent.
 
         A notice is one line, so it repeats on each call it applies to.
         Only the message to the user is sent once.
@@ -551,7 +552,7 @@ class Engine:
         unique = list(dict.fromkeys(self.notices))
         added = [
             notice for notice in unique
-            if self.add(items, notice, NOTICE_COUNT_CHARS)
+            if self.add(items, notice, reserve + NOTICE_COUNT_CHARS)
         ]
         if len(added) < len(unique):
             items.append(
@@ -583,7 +584,7 @@ class Engine:
                 f"Notice: {sum(dropped.values())} more findings did not fit "
                 f"in this message. Run the check command on {named} to see "
                 f"all of them."
-            )[:DROPPED_NOTICE_CHARS])
+            )[:DROPPED_NOTICE_CHARS - 2])
 
     def add_fulls(self, items: list[str]) -> None:
         """Add queued and new guidelines in full; keep what does not fit."""
@@ -623,7 +624,9 @@ class Engine:
         if kind == "pre_write":
             self.hits = []
         items = [] if kind == "check" else [CONTEXT_HEADER]
-        notices = self.add_notices(items)
+        notices = self.add_notices(
+            items, DROPPED_NOTICE_CHARS * bool(self.hits)
+        )
         self.add_hits(items)
         self.add_fulls(items)
         if kind == "check":
