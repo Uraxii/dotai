@@ -43,6 +43,13 @@ class Runtime:
             "no_proxy", "SSL_CERT_FILE", "NODE_EXTRA_CA_CERTS",
         ) if k in os.environ}
         self.env.update(HOME=str(home), TMPDIR=str(home / "tmp"))
+        proxy = self.env.get("https_proxy") or self.env.get("HTTPS_PROXY") or ""
+        url = urlsplit(proxy)
+        self.proxy_args = []
+        if url.scheme == "http" and url.username is None and url.password is None:
+            self.proxy_args = ["--proxy", proxy]
+        elif proxy:
+            self.env["NODE_USE_ENV_PROXY"] = "1"
 
     def installed(self, key):
         try:
@@ -71,10 +78,7 @@ class Runtime:
                 return command
             with tempfile.TemporaryDirectory(dir=tmp) as directory:
                 installer = verified_installer(self.staged, Path(directory) / "install.sh", self.env)
-                args = ["bash", str(installer), "--token-stdin", "--ide", "claude"]
-                proxy = self.env.get("HTTPS_PROXY") or self.env.get("https_proxy") or ""
-                if proxy.startswith("http://") and urlsplit(proxy).username is None:
-                    args += ["--proxy", proxy]
+                args = ["bash", str(installer), "--token-stdin", "--ide", "claude", *self.proxy_args]
                 result = subprocess.run(
                     args, input=key + "\n", text=True, capture_output=True,
                     env=self.env, cwd=self.home, timeout=78,

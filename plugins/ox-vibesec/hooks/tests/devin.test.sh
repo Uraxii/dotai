@@ -10,7 +10,7 @@ from pathlib import Path
 import subprocess
 import sys
 import tempfile
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 plugin = Path(sys.argv[1])
 sys.path.insert(0, str(plugin / "bin"))
@@ -72,5 +72,21 @@ with tempfile.TemporaryDirectory() as temp:
                 raise AssertionError("accepted a modified installer")
             download.assert_not_called()
 
-print("PASS  ox-vibesec: plugin-relative hooks, no-secret startup, edit mapping, staged/downloaded installer verification")
+    proxy = "http://test-user:test-password@localhost:3128"
+    with patch.dict(os.environ, {"HTTPS_PROXY": proxy}, clear=True):
+        runtime = vibesec.Runtime(home / "runtime", staged)
+    launcher = ["sh", vibesec.LAUNCHER]
+    with (
+        patch.object(vibesec, "verified_installer", return_value=dest),
+        patch.object(runtime, "installed", side_effect=[None, launcher]),
+        patch.object(vibesec.subprocess, "run", return_value=Mock(returncode=0)) as run,
+    ):
+        assert runtime.start("test-token") == launcher
+        args, kwargs = run.call_args
+        assert "--proxy" not in args[0] and all(proxy not in arg for arg in args[0])
+        assert kwargs["env"]["HTTPS_PROXY"] == proxy
+        assert kwargs["env"]["NODE_USE_ENV_PROXY"] == "1"
+        assert kwargs["input"] == "test-token\n"
+
+print("PASS  ox-vibesec: plugin-relative hooks, no-secret startup, edit mapping, installer verification, authenticated proxy environment")
 PY
