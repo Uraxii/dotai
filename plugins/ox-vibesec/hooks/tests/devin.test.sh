@@ -9,6 +9,7 @@ from io import StringIO
 import json
 import os
 from pathlib import Path
+import re
 import runpy
 import subprocess
 import sys
@@ -57,15 +58,37 @@ assert hook.ox_payload("PreToolUse", {
 
 test_key = "test-vibesec-secret"
 exec_event = {**session, "tool_name": "exec", "tool_input": {"command": "true"}}
+write_event = {**session, "tool_name": "write", "tool_input": {"path": "new file.py", "content": ""}}
+patch_event = {
+    **session, "tool_name": "apply_patch", "tool_use_id": "patch-id",
+    "tool_input": {"input": """*** Begin Patch
+*** Add File: new file.py
++first
++
++*** Delete File: literal.py
+*** Update File: existing.py
+@@
+-before
++after
+ context
+-old
++new
+@@ next section
++inserted
+*** End of File
+*** Delete File: obsolete.py
+*** End Patch
+"""},
+}
 
 
-def adapter_call(event, payload, result):
+def adapter_call(event, payload, result=None, *, results=None):
     stdout, stderr = StringIO(), StringIO()
     with (
         patch.dict(os.environ, {"OX_VIBESEC_API_KEY": test_key, "DEVIN_PROJECT_DIR": str(plugin)}),
         patch.object(sys, "argv", ["hook.py", event]),
         patch.object(sys, "stdin", StringIO(json.dumps(payload))),
-        patch.object(vibesec.Runtime, "run", return_value=result) as runtime,
+        patch.object(vibesec.Runtime, "run", return_value=result, side_effect=results) as runtime,
         redirect_stdout(stdout),
         redirect_stderr(stderr),
     ):
@@ -110,6 +133,47 @@ code, stdout, stderr, runtime = adapter_call("PreToolUse", {**exec_event, "sessi
 assert code == 0 and not stdout and not stderr
 runtime.assert_not_called()
 print("PASS  ox-vibesec: block decisions, key redaction, exec and edit mapping, PostToolUse, invalid session rejection")
+
+accepted = Mock(returncode=0, stdout="")
+for event in ("PreToolUse", "PostToolUse"):
+    response = {"tool_response": {"success": True, "output": "ok"}} if event == "PostToolUse" else {}
+    for name in ("exec", "edit", "write", "apply_patch"):
+        assert re.fullmatch(hooks[event][0]["matcher"], name)
+    code, stdout, stderr, runtime = adapter_call(event, {**write_event, **response}, accepted)
+    assert (code, stdout, stderr) == (0, "", "")
+    assert runtime.call_args.args[0]["tool_name"] == "Write"
+    assert runtime.call_args.args[0]["tool_input"] == {"file_path": "new file.py", "content": ""}
+    code, stdout, stderr, runtime = adapter_call(event, {**patch_event, **response}, accepted)
+    assert (code, stdout, stderr) == (0, "", "")
+    sent = [call.args[0] for call in runtime.call_args_list]
+    assert [payload["tool_use_id"] for payload in sent] == ["patch-id:1", "patch-id:2", "patch-id:3"]
+    assert [(p["tool_name"], p["tool_input"]) for p in sent] == [
+        ("Write", {"file_path": "new file.py", "content": "first\n\n*** Delete File: literal.py\n"}),
+        ("Edit", {"file_path": "existing.py", "old_string": "before\ncontext\nold",
+                  "new_string": "after\ncontext\nnew"}),
+        ("Edit", {"file_path": "existing.py", "old_string": "", "new_string": "inserted"}),
+    ]
+    assert all(payload["hook_event_name"] == event for payload in sent)
+    if response:
+        assert all(payload["tool_response"] == {"success": True, "stdout": "ok", "stderr": ""}
+                   for payload in sent)
+
+code, stdout, stderr, runtime = adapter_call("PreToolUse", patch_event, results=[
+    Mock(returncode=1), Mock(returncode=2, stderr=f"Blocked {test_key}\n"),
+])
+assert (code, stdout, stderr) == (2, "", "Blocked [redacted]\n")
+assert runtime.call_count == 2
+code, stdout, stderr, runtime = adapter_call("PreToolUse", patch_event, results=[
+    accepted,
+    vendor_reply({"permissionDecision": "deny", "permissionDecisionReason": "Second file"}),
+])
+assert code == 0 and json.loads(stdout) == {"decision": "block", "reason": "Second file"} and not stderr
+assert runtime.call_count == 2
+for invalid in ({"patch": patch_event["tool_input"]["input"]}, {"input": "*** Begin Patch"}):
+    code, stdout, stderr, runtime = adapter_call("PreToolUse", {**patch_event, "tool_input": invalid}, accepted)
+    assert (code, stdout, stderr) == (0, "", "")
+    runtime.assert_not_called()
+print("PASS  ox-vibesec: dispatches writes and patch hunks, and blocks on a later file")
 
 code, stdout, stderr, _ = adapter_call("PreToolUse", exec_event, None)
 assert code == 0 and not stdout

@@ -23,7 +23,7 @@
   ],
   "PreToolUse": [
     {
-      "matcher": "^(exec|edit)$",
+      "matcher": "^(exec|edit|write|apply_patch)$",
       "hooks": [
         {
           "type": "command",
@@ -35,7 +35,7 @@
   ],
   "PostToolUse": [
     {
-      "matcher": "^(exec|edit)$",
+      "matcher": "^(exec|edit|write|apply_patch)$",
       "hooks": [
         {
           "type": "command",

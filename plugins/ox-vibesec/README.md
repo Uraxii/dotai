@@ -41,11 +41,12 @@ On restricted networks, allow HTTPS access to these hosts:
 - `nodejs.org` for the Node.js runtime
 - `api.cloud.ox.security` for the OX API
 
-Devin forwards prompts, shell calls and results, and file edits with a
-path and replacement text or content. It does not forward patch-only
-edits or transcripts, or apply OX's suggested tool rewrites. Only enable
-it where your organization permits OX to receive this data. These hooks fail
-open and are not an enforcement boundary.
+Devin forwards prompts, shell calls and results, and supported file changes
+from `edit`, `write`, and `apply_patch`. Patches forward added file content
+and update hunks, not standalone file deletions. The adapter does not forward
+transcripts or apply OX's suggested tool rewrites. Only enable it where your
+organization permits OX to receive this data. These hooks fail open and are not
+an enforcement boundary.
 
 ## Other harnesses
 
