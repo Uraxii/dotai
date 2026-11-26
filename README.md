@@ -1,7 +1,7 @@
 # dotai
 
-Skills and agents for Claude Code, Codex, GitHub Copilot CLI, opencode, and
-Hermes, written in the open Agent Skills format. Eighteen plugins live under
+Skills and agents for Claude Code, Codex, GitHub Copilot CLI, Devin, opencode,
+and Hermes, written in the open Agent Skills format. Eighteen plugins live under
 `plugins/`, and each one installs on its own. `pstack` carries the shared
 machinery: the poteto-mode workflow, the principles, the playbooks, and the
 agent files. The other seventeen each cover one tool or one job. Only
@@ -30,7 +30,7 @@ agent files. The other seventeen each cover one tool or one job. Only
 | `asd-ste100` | Rewrite ambiguous English into ASD-STE100 Simplified Technical English so agents and readers cannot misread it. |
 | `gaming` | Install ANR FG frame generation into PC games through OptiScaler, with GPU spoofing and per-game recipes. |
 | `steer` | Harness hooks that steer agent behaviour, independent of any skill. |
-| `shunt` | Shunts large reads to small subagents and boilerplate generation to Portal AiKA to save main-agent context tokens. |
+| `shunt` | Delegate large reads to subagents to save main-agent context. |
 | `personal-instructions` | Inject a hand-edited instructions.md at session start and, where the harness has a subagent-start hook, subagent start. |
 
 <!-- dotai:plugins:end -->
@@ -53,7 +53,7 @@ installed only one of them.
 | `plugins/mpocock/hooks/` | `handoff-token-flag.sh` warns before context compaction and points the agent at the `handoff` skill, which ships in this same plugin. Plugin installation wires it for Claude Code and Codex. |
 | `plugins/ox-vibesec/hooks/` | `ox` runs OX Security's VibeSec hook, `~/.claude/hooks/ox_mind.js`, with the newest node under `~/.ox/node/`. OX's installer puts both there, and this repo does not copy them. `hooks.json` wires it for five Claude Code events. OX's `--status` check looks for that exact path. Plugin installation wires it for Claude Code only. See `plugins/ox-vibesec/README.md`. |
 | `plugins/pstack/hooks/` | `session-start.sh` injects the poteto-mode routing mandate at session start, wired by `hooks.json` (Claude Code), `codex-hooks.json` (Codex), and `copilot-hooks.json` (Copilot CLI, which also gets `pre-tool-use.sh`). A `session hook: off` line in the user's `pstack-models.md` sheet turns it off. See [Session-start reminder](#session-start-reminder). Add `.ai/` to the exclude config of your editor, LSP, and any semantic index: `.git/info/exclude` covers git, ripgrep, and fd, but an indexer that keeps its own ignore list walks the worktrees and ends up crawling six figures of files in a repo with a few hundred tracked ones. |
-| `plugins/steer/hooks/` | `opus_5_reduce_output.sh` is a Claude Code `Stop` hook that asks for a plain-English recap at the end of a turn on Opus 5 or Fable 5 that changed something. A turn that mutated nothing has nothing to recap, so it ends silently. Spawning a subagent counts as a mutation, because a delegate's own edits never reach this transcript. `block_markdown_edits.sh` is a Claude Code `PreToolUse` hook that denies `Write`, `Edit` and `MultiEdit` on `.md`, `.markdown` and `.mdx` files unless the file is inside the project's `.ai/` scratch folder (`<git top level>/.ai/`, so a worktree's own `.ai/` counts), is a plan file an agent harness writes (Claude Code's `$CLAUDE_CONFIG_DIR/plans/`, default `~/.claude/plans/`; Copilot CLI's `$COPILOT_HOME/session-state/<id>/plan.md`, default under `~/.copilot/`; Hermes' `<git top level>/.hermes/plans/`), or the user's latest prompt names the file or says "markdown" or ".md". A short "yes" or "go ahead" also unlocks, when the assistant's last message before it names the file. Inside a subagent the user's prompt in the main session still decides. Plugin installation wires both, and no other harness gets them. |
+| `plugins/steer/hooks/` | `opus_5_reduce_output.sh` is a Claude Code `Stop` hook that asks for a plain-English recap at the end of a turn on Opus 5 or Fable 5 that changed something. A turn that mutated nothing has nothing to recap, so it ends silently. Spawning a subagent counts as a mutation, because a delegate's own edits never reach this transcript. `block_markdown_edits.sh` is a Claude Code `PreToolUse` hook that denies `Write`, `Edit` and `MultiEdit` on `.md`, `.markdown` and `.mdx` files unless the file is inside the project's `.ai/` scratch folder (`<git top level>/.ai/`, so a worktree's own `.ai/` counts), is a plan file an agent harness writes (Claude Code's `$CLAUDE_CONFIG_DIR/plans/`, default `~/.claude/plans/`; Copilot CLI's `$COPILOT_HOME/session-state/<id>/plan.md`, default under `~/.copilot/`; Hermes' `<git top level>/.hermes/plans/`), or the user's latest prompt names the file or says "markdown" or ".md". A short "yes" or "go ahead" also unlocks, when the assistant's last message before it names the file. Inside a subagent the user's prompt in the main session still decides. Plugin installation wires both on Claude Code. On Devin, steer reminds the agent to ask before editing Markdown. It does not block edits or request a recap without a transcript. |
 
 ## Install
 
@@ -82,6 +82,14 @@ Copilot CLI:
 ```
 copilot plugin marketplace add Uraxii/dotai
 copilot plugin install <plugin>@Uraxii
+```
+
+Devin supports native setup for `shunt`, `steer`, and `personal-instructions`.
+Install each plugin separately in Customize with the source
+`Uraxii/dotai#plugins/<plugin>`, or use the CLI:
+
+```
+devin plugins install Uraxii/dotai#plugins/<plugin>
 ```
 
 Cursor and the other targets skills.sh lists:

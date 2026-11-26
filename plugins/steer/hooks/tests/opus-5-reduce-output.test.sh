@@ -66,7 +66,7 @@ expect_equal "the script is executable" yes "$([ -x "$HOOK" ] && echo yes || ech
 # Codex documents no turn-end event, and Copilot's agentStop envelope is
 # camelCase, so its stopHookActive loop guard would never trip.
 expect_equal "no Codex hooks file" absent "$([ -e "$PLUGIN_ROOT_DIR/hooks/codex-hooks.json" ] && echo present || echo absent)"
-expect_equal "no Copilot hooks file" absent "$([ -e "$PLUGIN_ROOT_DIR/hooks.json" ] && echo present || echo absent)"
+expect_json "Copilot has no registered hooks" '{}' "$(jq -c '.hooks' "$PLUGIN_ROOT_DIR/plugin.json")"
 expect_equal "the recap instruction has no em dash" absent "$([[ "$RECAP_INSTRUCTION" == *—* ]] && echo present || echo absent)"
 
 # The gate.

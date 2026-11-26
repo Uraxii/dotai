@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "printf '%s\\n' '{\"hookSpecificOutput\":{\"hookEventName\":\"UserPromptSubmit\",\"additionalContext\":\"Do not edit Markdown outside the .ai/ directory at the project root unless the user asks. Put scratch notes, plans, and handoffs in that directory.\"}}'",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

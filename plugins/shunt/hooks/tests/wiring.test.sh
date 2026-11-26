@@ -14,7 +14,8 @@ export PLUGIN_ROOT="$PLUGIN_ROOT_DIR" CLAUDE_PLUGIN_ROOT="$PLUGIN_ROOT_DIR"
 read_input=$(jq -cn --arg f "$WORK/big.txt" '{tool_input: {file_path: $f}, toolArgs: {path: $f}}')
 bash_input=$(jq -cn --arg c "cat $WORK/big.txt" '{tool_input: {command: $c}, toolArgs: {command: $c}}')
 
-for wiring in "claude hooks/claude-hooks.json PreToolUse 2" "codex hooks/codex-hooks.json PreToolUse 1" "copilot hooks.json preToolUse 2"; do
+copilot_config=$(jq -r '.hooks' "$PLUGIN_ROOT_DIR/plugin.json")
+for wiring in "claude hooks/claude-hooks.json PreToolUse 2" "codex hooks/codex-hooks.json PreToolUse 1" "copilot $copilot_config preToolUse 2"; do
   read -r harness config event expected_count <<<"$wiring"
   count=0
   while IFS= read -r command; do
@@ -39,6 +40,30 @@ for wiring in "claude hooks/claude-hooks.json PreToolUse 2" "codex hooks/codex-h
     expect_equal "$config Windows command denies a 480-line read: $command" deny \
       "$(jq -r '.permissionDecision // .hookSpecificOutput.permissionDecision' <<<"$STDOUT" 2>/dev/null)"
   done < <(windows_commands "$harness" "$PLUGIN_ROOT_DIR/$config" "$event")
+done
+
+# Devin supplies a project root and may omit cwd from the hook payload.
+config="$PLUGIN_ROOT_DIR/hooks.json"
+unset PLUGIN_ROOT CLAUDE_PLUGIN_ROOT
+export DEVIN_PLUGIN_ROOT="$PLUGIN_ROOT_DIR" DEVIN_PROJECT_DIR="$WORK"
+for tool in read exec; do
+  command=$(jq -r --arg m "^$tool\$" '.hooks.PreToolUse[] | select(.matcher == $m) | .hooks[].command' "$config")
+  case "$tool" in
+    read)
+      full='{"tool_name":"read","tool_input":{"path":"big.txt"}}'
+      targeted='{"tool_name":"read","tool_input":{"file_path":"big.txt","offset":24,"limit":12}}'
+      ;;
+    exec)
+      full='{"tool_name":"exec","tool_input":{"command":"cat big.txt"}}'
+      targeted='{"tool_name":"exec","tool_input":{"command":"sed -n '\''1,20p'\'' big.txt"}}'
+      ;;
+  esac
+  run_wiring devin "$command" <<<"$full"
+  expect_equal "Devin $tool exits 0" 0 "$STATUS"
+  expect_equal "Devin $tool blocks a full 480-line read" block "$(jq -r '.decision' <<<"$STDOUT")"
+  expect_contains "Devin $tool suggests bulk-reader" bulk-reader "$(jq -r '.reason' <<<"$STDOUT")"
+  run_wiring devin "$command" <<<"$targeted"
+  expect_equal "Devin $tool allows a targeted read" "" "$STDOUT"
 done
 
 # The launcher's batch half runs bash with a backslash-only path, which Git

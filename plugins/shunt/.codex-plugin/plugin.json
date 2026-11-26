@@ -1,7 +1,7 @@
 {
   "name": "shunt",
-  "version": "0.4.0",
-  "description": "Shunts large reads to small subagents and boilerplate generation to Portal AiKA to save main-agent context tokens.",
+  "version": "1.0.0",
+  "description": "Delegate large reads to subagents to save main-agent context.",
   "author": {
     "name": "Uraxii",
     "url": "https://github.com/Uraxii"
@@ -11,22 +11,20 @@
   "keywords": [
     "codex",
     "token-optimization",
-    "delegation",
-    "aika"
+    "delegation"
   ],
   "hooks": "./hooks/codex-hooks.json",
   "interface": {
     "displayName": "shunt",
-    "shortDescription": "Delegate large reads to subagents; generate boilerplate with AiKA.",
-    "longDescription": "A vendored, patched fork of Spotify's shunt plugin from portal-ai-plugins. Hooks block full large-file reads on Claude Code and Copilot CLI, and large Bash reads on Codex, then redirect agents to the bulk-reader skill. Small reader subagents return concise answers with line citations; chunked reads handle exact content and edits. Only code-writer needs Portal AiKA. See plugins/shunt/upstream-source.md for source and patch details.",
+    "shortDescription": "Delegate large reads to subagents.",
+    "longDescription": "A vendored, patched fork of Spotify's shunt plugin from portal-ai-plugins. Hooks block full large-file reads on Claude Code, Copilot CLI, and Devin, and large Bash reads on Codex. They redirect agents to the bulk-reader skill. Small reader subagents return concise answers with line citations; chunked reads handle exact content and edits. See plugins/shunt/upstream-source.md for source and patch details.",
     "developerName": "Uraxii",
     "category": "Developer Tools",
     "capabilities": [
       "Hooks"
     ],
     "defaultPrompt": [
-      "Use the bulk-reader skill to summarize this large file.",
-      "Delegate this boilerplate to the code-writer skill."
+      "Use the bulk-reader skill to summarize this large file."
     ]
   }
 }

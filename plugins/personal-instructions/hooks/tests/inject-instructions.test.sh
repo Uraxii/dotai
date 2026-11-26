@@ -93,9 +93,10 @@ SPACED_ROOT="$WORK/plugin root with spaces"
 make_plugin_root "$SPACED_ROOT" "$FIXTURE_TEXT" "$MAIN_FIXTURE_TEXT"
 export PLUGIN_ROOT="$SPACED_ROOT" CLAUDE_PLUGIN_ROOT="$SPACED_ROOT"
 cd "$WORK/elsewhere" || exit 1
+copilot_config=$(jq -r '.hooks' "$REAL_PLUGIN_ROOT/plugin.json")
 for wiring in "claude hooks/claude-hooks.json SessionStart SubagentStart" \
   "codex hooks/codex-hooks.json SessionStart SubagentStart" \
-  "copilot hooks.json sessionStart subagentStart"; do
+  "copilot $copilot_config sessionStart subagentStart"; do
   read -r harness config session_event subagent_event <<<"$wiring"
   expect_equal "$config wires exactly the two events" \
     "$(printf '%s\n' "$session_event" "$subagent_event" | sort | jq -Rsc 'split("\n") | map(select(. != ""))')" \
@@ -134,5 +135,12 @@ done
 
 expect_equal "claude SessionStart entries share one matcher" 1 \
   "$(jq '[.hooks.SessionStart[].matcher] | unique | length' "$REAL_PLUGIN_ROOT/hooks/claude-hooks.json")"
+
+expect_equal "Devin rule contains both instruction sources" \
+  "$(printf '%s\n\n%s' "$(sed 's/[[:blank:]]*$//' "$REAL_PLUGIN_ROOT/instructions.md")" \
+    "$(sed 's/[[:blank:]]*$//' "$REAL_PLUGIN_ROOT/$MAIN_FILE")")" \
+  "$(sed '1,2d' "$REAL_PLUGIN_ROOT/AGENTS.md")"
+expect_equal "Devin does not discover a root injection hook" no \
+  "$([ -e "$REAL_PLUGIN_ROOT/hooks.json" ] && echo yes || echo no)"
 
 finish

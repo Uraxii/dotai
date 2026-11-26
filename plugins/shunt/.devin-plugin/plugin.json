@@ -1,0 +1,5 @@
+{
+  "name": "shunt",
+  "version": "1.0.0",
+  "description": "Delegate large reads to a small subagent."
+}

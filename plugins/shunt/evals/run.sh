@@ -1,29 +1,16 @@
 #!/bin/bash
-# Test runner for shunt evals: hook routing decisions + token savings benchmarks
+# Test runner for shunt hook routing and deny reasons.
 #
 # Usage:
-#   bash evals/run.sh              # hooks only (no Portal access needed)
-#   bash evals/run.sh --benchmark  # hooks + token savings (requires portal-cli auth)
-#   bash evals/run.sh --all        # every eval suite
+#   bash evals/run.sh
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-PLUGIN_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 FIXTURES="$SCRIPT_DIR/.fixtures"
-BENCHMARKS="$SCRIPT_DIR/benchmarks.json"
 PASSED=0
 FAILED=0
 TOTAL=0
-RUN_HOOKS=true
-RUN_BENCHMARK=false
-
-for arg in "$@"; do
-  case "$arg" in
-    --benchmark) RUN_BENCHMARK=true ;;
-    --all)       RUN_BENCHMARK=true ;;
-  esac
-done
 
 generate_fixture() {
   local path="$1" lines="$2"
@@ -147,10 +134,7 @@ run_suite() {
   rm -rf "$FIXTURES"
 }
 
-# ── Transport suite ──
-
-# Runs as a child process: the suite stubs portal-cli, and that stub must not
-# leak into the benchmarks below, which need the real one.
+# Run a shell eval suite and add its counts to ours.
 run_shell_suite() {
   local suite="$1" label="$2"
   echo ""
@@ -179,136 +163,15 @@ run_shell_suite() {
   TOTAL=$((TOTAL + p + f))
 }
 
-# ── Benchmark helpers ──
-
-token_estimate() {
-  echo $(( (${#1} + 3) / 4 ))
-}
-
-run_benchmark_code_write() {
-  local idx="$1"
-  local spec reference context_corpus
-
-  spec=$(jq -r ".benchmarks[$idx].spec" "$BENCHMARKS")
-  reference="$SCRIPT_DIR/$(jq -r ".benchmarks[$idx].reference" "$BENCHMARKS")"
-
-  context_corpus=""
-  while IFS= read -r p; do
-    context_corpus="$context_corpus$(cat "$SCRIPT_DIR/$p")"
-  done < <(jq -r ".benchmarks[$idx].context_files[]" "$BENCHMARKS")
-
-  # Run code-write with --target so output goes to disk
-  local target_file="${TMPDIR:-/tmp}/shunt-codegen-output.ts"
-  "$PLUGIN_DIR/scripts/code-write" --spec "$spec" --reference "$reference" --target "$target_file" 2>/dev/null || true
-
-  local generated=""
-  [ -f "$target_file" ] && generated=$(cat "$target_file")
-
-  # Without shunt: Claude reads context files + generates code as output tokens
-  # Output tokens cost ~5x input tokens, so we weight them accordingly
-  local input_tokens output_tokens without_tokens
-  input_tokens=$(token_estimate "$context_corpus")
-  output_tokens=$(token_estimate "$generated")
-  without_tokens=$(( input_tokens + output_tokens * 5 ))
-
-  # With shunt: Claude sends a short spec, code goes to disk, Claude sees nothing
-  local with_tokens=0
-
-  rm -f "$target_file"
-  echo "0 $without_tokens $with_tokens"
-}
-
-run_benchmarks() {
-  # shellcheck source=../scripts/lib/aika.sh
-  . "$PLUGIN_DIR/scripts/lib/aika.sh"
-  if ! shunt_preflight; then
-    printf "\n\033[33mSkipping benchmarks: portal-cli or jq not available\033[0m\n"
-    return
-  fi
-
-  local count
-  count=$(jq '.benchmarks | length' "$BENCHMARKS")
-
-  echo ""
-  echo "Token savings benchmark"
-  echo "────────────────────────────────────────────────────────────────────────────────"
-
-  local total_without=0 total_with=0
-  declare -a rows
-
-  for ((i = 0; i < count; i++)); do
-    local name btype
-    name=$(jq -r ".benchmarks[$i].name" "$BENCHMARKS")
-    btype=$(jq -r ".benchmarks[$i].type" "$BENCHMARKS")
-
-    printf "  \033[2mRunning [%s] %s...\033[0m\n" "$btype" "$name"
-
-    local total_lines without_tokens with_tokens
-    if [ "$btype" = "code-write" ]; then
-      read -r total_lines without_tokens with_tokens <<< "$(run_benchmark_code_write "$i")"
-    else
-      continue
-    fi
-
-    local pct=0
-    if [ "$without_tokens" -gt 0 ]; then
-      pct=$(( (without_tokens - with_tokens) * 100 / without_tokens ))
-    fi
-
-    total_without=$(( total_without + without_tokens ))
-    total_with=$(( total_with + with_tokens ))
-
-    local file_info
-    if [ "$total_lines" -gt 0 ]; then
-      file_info="${total_lines} lines"
-    else
-      file_info="codegen"
-    fi
-
-    rows+=("$name|$file_info|$without_tokens|$with_tokens|$pct")
-  done
-
-  echo ""
-  printf "  %-25s  %10s  %14s  %14s  %8s\n" "Scenario" "Input" "Without shunt" "With shunt" "Savings"
-  printf "  %-25s  %10s  %14s  %14s  %8s\n" "─────────────────────────" "──────────" "──────────────" "──────────────" "────────"
-
-  for r in "${rows[@]}"; do
-    IFS='|' read -r name file_info without_tokens with_tokens pct <<< "$r"
-    local color='\033[32m'
-    [ "$pct" -lt 80 ] && color='\033[36m'
-    [ "$pct" -lt 50 ] && color='\033[31m'
-    printf "  %-25s  %10s  %11s tk  %11s tk  ${color}%5s%%\033[0m\n" \
-      "$name" "$file_info" "$without_tokens" "$with_tokens" "$pct"
-  done
-
-  printf "  %-25s  %10s  %14s  %14s  %8s\n" "─────────────────────────" "──────────" "──────────────" "──────────────" "────────"
-
-  local total_pct=0
-  if [ "$total_without" -gt 0 ]; then
-    total_pct=$(( (total_without - total_with) * 100 / total_without ))
-  fi
-
-  printf "  \033[1m%-25s  %10s  %11s tk  %11s tk  \033[32m%5s%%\033[0m\n" \
-    "Total" "" "$total_without" "$total_with" "$total_pct"
-  echo ""
-  printf "  \033[2mToken estimate: chars / 4. Output tokens weighted 5x (Opus pricing).\033[0m\n"
-  printf "  \033[2mCode-write: without = read files + generate code, with = code written to disk.\033[0m\n"
-}
-
 # ── Main ──
 
 run_suite "$SCRIPT_DIR/../hooks/check-file-size" "$SCRIPT_DIR/hook-evals.json" "Read hook (check-file-size)"
 run_suite "$SCRIPT_DIR/../hooks/check-bash-read" "$SCRIPT_DIR/bash-hook-evals.json" "Bash hook (check-bash-read)"
 run_shell_suite reason-evals.sh "Deny reasons and chunked reads"
-run_shell_suite transport-evals.sh "Transport (scripts/lib/aika.sh, stubbed portal-cli)"
 
 echo ""
 echo "════════════════════════════════════════════════════════════════"
 printf "Total: \033[32m%d passed\033[0m, \033[31m%d failed\033[0m, %d total\n" "$PASSED" "$FAILED" "$TOTAL"
-
-if [ "$RUN_BENCHMARK" = true ]; then
-  run_benchmarks
-fi
 
 echo ""
 [ "$FAILED" -gt 0 ] && exit 1
