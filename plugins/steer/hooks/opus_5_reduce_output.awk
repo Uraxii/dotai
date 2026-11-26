@@ -12,6 +12,13 @@
 # needs is malformed.
 
 BEGIN {
+  mode = ENVIRON["MODE"]
+  if (mode == "stop_guard") {
+    text = ""
+    while ((getline line) > 0) text = text line "\n"
+    if (jparse(text) && JT["/stop_hook_active"] == "false") print "inactive"
+    exit
+  }
   if (ENVIRON["MODE"] == "payload") {
     text = ""
     while ((getline line) > 0) text = text line "\n"
@@ -41,13 +48,29 @@ BEGIN {
   model = "-"
 }
 
+mode == "codex" || mode == "copilot" {
+  if (jparse($0) && JT[""] == "object") {
+    if (mode == "codex") codex_event()
+    else copilot_event()
+  }
+  next
+}
+
 # Only entries typed user or assistant can bound the turn or carry tool
 # calls. The turn is the tail after the last real user prompt, so the lines
 # are read back from the end.
 index($0, "\"user\"") || index($0, "\"assistant\"") { LINES[++line_count] = $0 }
 
 END {
-  if (ENVIRON["MODE"] == "payload") exit
+  if (mode == "payload" || mode == "stop_guard") exit
+  if (mode == "codex") {
+    if (current_turn && mutated) print "mutated"
+    exit
+  }
+  if (mode == "copilot") {
+    if (mutated && latest_turn != "" && latest_turn == assistant_turn) print model
+    exit
+  }
   for (i = line_count; i >= 1 && !(model_found && prompt_seen); i--) {
     if (prompt_seen && !index(LINES[i], "\"assistant\"")) continue
     if (!jparse(LINES[i]) || JT[""] != "object" || jtruthy("/isSidechain")) continue
@@ -70,6 +93,39 @@ END {
   if (prompt_seen && broken_turn) exit 1
   print model
   print (!prompt_seen ? "unknown" : mutated ? "mutated" : "clean")
+}
+
+function codex_event(    name, args) {
+  if (jis("/type", "event_msg") && (jis("/payload/type", "task_started") || jis("/payload/type", "turn_started"))) {
+    current_turn = jget("/payload/turn_id") == ENVIRON["TURN_ID"]
+    mutated = 0
+  }
+  if (!current_turn || !jis("/type", "response_item")) return
+  if (!jis("/payload/type", "function_call") && !jis("/payload/type", "custom_tool_call")) return
+  name = jget("/payload/name")
+  args = jget("/payload/arguments")
+  if (name ~ /^(apply_patch|spawn_agent|multi_agent_v1\.spawn_agent|send_input)$/) mutated = 1
+  else if (name ~ /^(exec_command|shell_command|local_shell)$/ && jparse(args) && command_mutates(jget("/cmd") jget("/command"))) mutated = 1
+}
+
+function copilot_event(    kind, name) {
+  kind = jget("/type")
+  if (kind == "user.message") {
+    interaction = jget("/data/interactionId")
+    model = latest_turn = assistant_turn = ""
+    mutated = 0
+  }
+  if (interaction == "") return
+  if (kind == "assistant.message" && jget("/data/interactionId") == interaction) {
+    assistant_turn = jget("/data/turnId")
+    model = jget("/data/model")
+  } else if (kind == "assistant.turn_start" && jget("/data/interactionId") == interaction) {
+    latest_turn = jget("/data/turnId")
+  } else if (kind == "tool.execution_start" && assistant_turn != "" && jget("/data/turnId") == assistant_turn) {
+    name = jget("/data/toolName")
+    if (name ~ /^(edit|create|apply_patch|task)$/) mutated = 1
+    else if (name ~ /^(bash|powershell)$/ && command_mutates(jget("/data/arguments/command"))) mutated = 1
+  }
 }
 
 # Agent, Task and SendMessage count as mutations because a delegate's own

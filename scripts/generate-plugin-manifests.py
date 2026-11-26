@@ -367,7 +367,8 @@ PLUGINS: list[dict[str, object]] = [
     {
         "name": "steer",
         "version": "1.4.2",
-        "hooks": ["claude", "devin"],
+        "hooks": ["claude", "codex", "copilot", "devin"],
+        "copilot_hook_path": "hooks/copilot-hooks.json",
         "devin_manifest": {
             "description": "Remind Devin when to ask before editing Markdown.",
         },
@@ -378,6 +379,7 @@ PLUGINS: list[dict[str, object]] = [
         "short": "Harness hooks independent of skills.",
         "long": (
             "Claude Code checks Markdown edits and requests a recap when appropriate. "
+            "Codex and Copilot CLI request a recap after an Opus 5 turn that changed something. "
             "Devin does not provide a transcript to plugin hooks. Its "
             "UserPromptSubmit hook reminds the agent to ask before editing Markdown. "
             "It does not block edits or request a recap."

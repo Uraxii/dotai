@@ -38,7 +38,6 @@
 DEFAULT_LOG_MAX_BYTES=1000000
 DEFAULT_MODEL_PATTERN='opus-5|fable'
 
-# A prompt, not config. Keep it short; it is injected on every turn.
 RECAP_INSTRUCTION='Write a plain recap in a few sentences about what changed and why it matters. Do not write a report, headers, or structured output. The reader has not seen the code, so use no paths, identifiers, line numbers, or code blocks. Leave out caveats and next steps unless something is broken or unfinished.'
 
 hooks_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd) || exit 0
@@ -75,7 +74,50 @@ quote_pattern() {
   fi
 }
 
-payload_fields=$(read_json payload 2>/dev/null <<<"$(cat)")
+request_recap() {
+  printf '{"decision": "block", "reason": "%s"}\n' "$RECAP_INSTRUCTION"
+}
+
+stop_field() {
+  LC_ALL=C JSON_MODE=get JSON_PATH="$1" awk -f "$hooks_dir/hook-json.awk" <<<"$payload"
+}
+
+opus_5_model() (
+  shopt -s nocasematch
+  [[ "$1" =~ ^(claude-)?opus-5([.-][0-9]+)*(-latest)?$ ]]
+)
+
+stop_recap() {
+  local harness="$1" transcript model turn_id
+  [ "$(read_json stop_guard <<<"$payload")" = inactive ] || return 0
+  case "$harness" in
+    devin)
+      opus_5_model "$(stop_field /model)" && request_recap
+      ;;
+    codex)
+      model=$(stop_field /model)
+      opus_5_model "$model" || return 0
+      turn_id=$(stop_field /turn_id)
+      transcript=$(stop_field /transcript_path)
+      [ -n "$turn_id" ] && [ -f "$transcript" ] || return 0
+      [ "$(TURN_ID="$turn_id" read_json codex "$transcript")" = mutated ] && request_recap
+      ;;
+    copilot)
+      transcript=$(stop_field /transcriptPath)
+      [ -f "$transcript" ] || return 0
+      model=$(read_json copilot "$transcript") || return 0
+      opus_5_model "$model" && request_recap
+      ;;
+  esac
+  return 0
+}
+
+payload=$(cat)
+if [ "${1:-}" = --harness ]; then
+  stop_recap "${2:-}"
+  exit 0
+fi
+payload_fields=$(read_json payload 2>/dev/null <<<"$payload")
 payload_status=$?
 [ "$payload_status" = 1 ] && exit 0
 stop_hook_active=${payload_fields%%$'\n'*}
@@ -123,5 +165,5 @@ case "$turn" in
   *) log "fired  model=$model -> BLOCK (requesting recap)" ;;
 esac
 
-printf '{"decision": "block", "reason": "%s"}\n' "$RECAP_INSTRUCTION"
+request_recap
 exit 0

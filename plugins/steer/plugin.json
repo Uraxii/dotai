@@ -6,5 +6,5 @@
     "name": "Uraxii",
     "url": "https://github.com/Uraxii"
   },
-  "hooks": {}
+  "hooks": "./hooks/copilot-hooks.json"
 }

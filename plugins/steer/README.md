@@ -2,11 +2,11 @@
 
 # steer
 
-Claude Code checks Markdown edits and requests a recap when appropriate. Devin does not provide a transcript to plugin hooks. Its UserPromptSubmit hook reminds the agent to ask before editing Markdown. It does not block edits or request a recap.
+Claude Code checks Markdown edits and requests a recap when appropriate. Codex and Copilot CLI request a recap after an Opus 5 turn that changed something. Devin does not provide a transcript to plugin hooks. Its UserPromptSubmit hook reminds the agent to ask before editing Markdown. It does not block edits or request a recap.
 
 ## Hooks
 
-Ships hooks for `claude`, `devin`. Plugin installation wires them.
+Ships hooks for `claude`, `codex`, `copilot`, `devin`. Plugin installation wires them.
 
 ## Install
 
