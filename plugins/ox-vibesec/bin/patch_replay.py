@@ -65,7 +65,10 @@ def seek(lines, pattern, start, eof=False):
     if not pattern:
         return start
     end = len(lines) - len(pattern)
-    start = max(start, end) if eof else start
+    if eof and end > start:
+        match = seek(lines, pattern, end)
+        if match is not None:
+            return match
     for normalize in (lambda line: line, str.rstrip, str.strip, lambda line: line.strip().translate(PUNCTUATION)):
         expected = [normalize(line) for line in pattern]
         for index in range(start, end + 1):

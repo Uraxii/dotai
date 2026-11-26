@@ -77,9 +77,8 @@ def ox_payloads(event, data, cwd):
     try:
         writes = patch_writes(text, cwd, post=post)
     except (OSError, ValueError):
-        writes = []
-    if not writes:
         print("OX VibeSec could not parse patch; check skipped.", file=sys.stderr)
+        return []
     payloads = []
     for index, write in enumerate(writes, 1):
         payload = ox_payload(event, {**data, "tool_name": "write", "tool_input": write}, cwd)

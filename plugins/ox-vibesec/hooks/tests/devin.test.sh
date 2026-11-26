@@ -184,8 +184,6 @@ assert runtime.call_count == 2
 for invalid, warning in (
     ({"patch": patch_event["tool_input"]["input"]}, ""),
     ({"input": "*** Begin Patch"}, "OX VibeSec could not parse patch; check skipped.\n"),
-    ({"input": "*** Begin Patch\n*** Delete File: obsolete.py\n*** End Patch"},
-     "OX VibeSec could not parse patch; check skipped.\n"),
     ({"input": patch_event["tool_input"]["input"].replace("-before", "-not present")},
      "OX VibeSec could not parse patch; check skipped.\n"),
     ({"input": "*** Begin Patch\n*** Update File: existing.py\n@@\n*** End Patch"},
@@ -197,6 +195,38 @@ for invalid, warning in (
     assert (code, stdout, stderr) == (0, "", warning)
     runtime.assert_not_called()
 print("PASS  ox-vibesec: dispatches full-file patch writes and blocks on a later file")
+
+delete_patch = {
+    **patch_event,
+    "tool_input": {"input": "*** Begin Patch\n*** Delete File: obsolete.py\n*** End Patch"},
+}
+(root / "obsolete.py").touch()
+for event in ("PreToolUse", "PostToolUse"):
+    response = {}
+    if event == "PostToolUse":
+        (root / "obsolete.py").unlink()
+        response = {"tool_response": {"success": True}}
+    code, stdout, stderr, runtime = adapter_call(event, {**delete_patch, **response}, accepted, cwd=root)
+    assert (code, stdout, stderr) == (0, "", "")
+    runtime.assert_not_called()
+print("PASS  ox-vibesec: skips delete-only patches without a warning")
+
+eof_patch = {
+    **patch_event,
+    "tool_input": {
+        "input": "*** Begin Patch\n*** Update File: eof.txt\n@@\n c\n-d\n+D\n*** End of File\n*** End Patch",
+    },
+}
+for before, after in (
+    ("a\nb\nc\nd\n\n", "a\nb\nc\nD\n\n"),
+    ("c\nd\nc\nd\n", "c\nd\nc\nD\n"),
+):
+    (root / "eof.txt").write_text(before)
+    code, stdout, stderr, runtime = adapter_call("PreToolUse", eof_patch, accepted, cwd=root)
+    assert (code, stdout, stderr) == (0, "", "")
+    runtime.assert_called_once()
+    assert runtime.call_args.args[0]["tool_input"] == {"file_path": "eof.txt", "content": after}
+print("PASS  ox-vibesec: prefers EOF matches and falls back to searching earlier lines")
 
 manifest_patch = {
     **patch_event,
