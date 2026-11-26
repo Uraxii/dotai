@@ -9,6 +9,7 @@ from io import StringIO
 import json
 import os
 from pathlib import Path
+import runpy
 import subprocess
 import sys
 import tempfile
@@ -23,6 +24,14 @@ manifest = json.loads((plugin / ".devin-plugin/plugin.json").read_text())
 assert manifest["skills"] == []
 assert (plugin / "skills/update/SKILL.md").is_file()
 print("PASS  ox-vibesec: Devin disables skill loading; Claude updater remains bundled")
+
+repo = plugin.parents[1]
+generator = runpy.run_path(str(repo / "scripts/generate-plugin-manifests.py"))
+ox = next(entry for entry in generator["PLUGINS"] if entry["name"] == "ox-vibesec")
+with patch.dict(ox, {"version": "2.0.0"}):
+    files = generator["wanted_files"](repo)
+    assert json.loads(files[Path("plugins/ox-vibesec/.devin-plugin/plugin.json")])["version"] == "2.0.0"
+print("PASS  ox-vibesec: Devin manifest version comes from the generator")
 
 hooks = json.loads((plugin / "hooks.json").read_text())
 session = {"session_id": "devin-test"}

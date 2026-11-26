@@ -213,12 +213,15 @@ PLUGINS: list[dict[str, object]] = [
         ],
     },
     {
-        # Claude Code loads hooks/hooks.json without a manifest key, and OX's
-        # --status check looks for that exact path, so no "hooks" entry here.
+        # Claude Code loads hooks/hooks.json implicitly. OX --status checks that exact path.
         "name": "ox-vibesec",
         "version": "1.2.0",
         "harnesses": ["claude"],
         "hooks": ["devin"],
+        "devin_manifest": {
+            "description": "Run OX VibeSec security guidance and tool checks in Devin.",
+            "skills": [],
+        },
         "description": (
             "Wire the OX Security VibeSec hooks and its status and login "
             "commands through a plugin instead of settings.json."
@@ -742,6 +745,12 @@ def wanted_files(root: Path) -> dict[Path, str]:
             files[plugin_root / ".codex-plugin/plugin.json"] = render(
                 codex_manifest(plugin)
             )
+        if "devin_manifest" in plugin:
+            files[plugin_root / ".devin-plugin/plugin.json"] = render({
+                "name": plugin["name"],
+                "version": version_of(plugin),
+                **plugin["devin_manifest"],
+            })
     return files
 
 
