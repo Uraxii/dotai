@@ -189,5 +189,23 @@ with tempfile.TemporaryDirectory() as temp:
     assert runtime.env["NODE_USE_ENV_PROXY"] == "1"
     print("PASS  ox-vibesec: proxy passwords with brackets reach the Node environment fallback")
 
+    lint = plugin.parents[1] / "scripts/lint-hook-references.sh"
+    bare = home / "plugins/bare"
+    bare.mkdir(parents=True)
+    (bare / "hooks.json").write_text(json.dumps({"SessionStart": [{"hooks": [
+        {"type": "command", "command": 'echo "${DEVIN_PLUGIN_ROOT}"'},
+    ]}]}))
+    wrapped = home / "plugins/wrapped"
+    (wrapped / ".devin-plugin").mkdir(parents=True)
+    (wrapped / ".devin-plugin/plugin.json").write_text("{}")
+    (wrapped / "hooks.json").write_text(json.dumps({
+        "version": 1, "hooks": {"preToolUse": [{"bash": "true"}]},
+    }))
+    result = subprocess.run(["bash", lint, "--root", home], capture_output=True, text=True)
+    assert result.returncode == 1 and not result.stderr, result
+    assert "is missing beside bash" in result.stdout, result.stdout
+    assert "2 commands checked, 1 failed" in result.stdout, result.stdout
+    print("PASS  ox-vibesec: hook lint distinguishes bare and wrapped schemas regardless of manifest")
+
 print("PASS  ox-vibesec: plugin-relative hooks, no-secret startup, edit mapping, installer verification, authenticated proxy environment")
 PY

@@ -66,14 +66,19 @@ for manifest in "$root"/plugins/*/hooks.json "$root"/plugins/*/hooks/*.json; do
   plugin_name=${manifest#"$root"/plugins/}
   plugin_name=${plugin_name%%/*}
   plugin=$root/plugins/$plugin_name
+  if ! jq empty "$manifest" 2>/dev/null; then
+    fail - - "is not valid JSON" "run jq . on it to find the syntax error"
+    continue
+  fi
+
   events=.hooks
   case "${manifest#"$plugin"/}" in
     hooks.json)
-      if [ -f "$plugin/.devin-plugin/plugin.json" ]; then
+      if jq -e 'type == "object" and (.hooks | type == "object")' "$manifest" >/dev/null; then
+        allowed=PLUGIN_ROOT
+      else
         allowed="DEVIN_PLUGIN_ROOT CLAUDE_PLUGIN_ROOT PLUGIN_ROOT"
         events=.
-      else
-        allowed=PLUGIN_ROOT
       fi ;;
     hooks/claude-hooks.json | hooks/hooks.json) allowed=CLAUDE_PLUGIN_ROOT ;;
     # Codex sets both; pstack's script reads CLAUDE_PLUGIN_ROOT under Codex.
@@ -84,11 +89,6 @@ for manifest in "$root"/plugins/*/hooks.json "$root"/plugins/*/hooks/*.json; do
       continue
       ;;
   esac
-  if ! jq empty "$manifest" 2>/dev/null; then
-    fail - - "is not valid JSON" "run jq . on it to find the syntax error"
-    continue
-  fi
-
   while IFS=$'\t' read -r event field command; do
     check "$event" "$field" "$command"
   done < <(jq -r "$events"' | to_entries[] | .key as $e | .value[] | (.hooks // [.])[]
