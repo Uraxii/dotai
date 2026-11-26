@@ -296,7 +296,10 @@ with tempfile.TemporaryDirectory() as temp:
     assert "must map hook event names to arrays" in result.stdout, result.stdout
     print("PASS  ox-vibesec: hook lint rejects non-array values in bare event maps")
 
-    for entry in ("not-a-hook", {"hooks": ["not-a-hook"]}, {"hooks": {"command": "true"}}, {"command": False}):
+    for entry in (
+        "not-a-hook", {"hooks": ["not-a-hook"]}, {"hooks": {"command": "true"}}, {"command": False},
+        {"type": "command"}, {"type": "prompt"}, {"type": "prompt", "prompt": False}, {"type": "other"},
+    ):
         (bare / "hooks.json").write_text(json.dumps({"SessionStart": [entry]}))
         result = subprocess.run(["bash", lint, "--root", home], capture_output=True, text=True)
         assert result.returncode == 1 and not result.stderr, result
@@ -307,6 +310,17 @@ with tempfile.TemporaryDirectory() as temp:
     assert result.returncode == 1 and not result.stderr, result
     assert "cannot read hook commands" in result.stdout and "1 commands checked, 1 failed" in result.stdout
     print("PASS  ox-vibesec: hook lint rejects invalid entries and reports command extraction failures")
+
+    (wrapped / "hooks.json").write_text(json.dumps({"hooks": {}}))
+    (bare / "hooks.json").write_text(json.dumps({"UserPromptSubmit": [{"hooks": [
+        {"type": "prompt", "prompt": "Check the request"},
+        {"type": "prompt", "prompt": "Check again", "command": 'echo "${UNKNOWN_PLUGIN_ROOT}"'},
+        {"type": "command", "command": "true"},
+    ]}]}))
+    result = subprocess.run(["bash", lint, "--root", home], capture_output=True, text=True)
+    assert result.returncode == 0 and not result.stderr, result
+    assert "1 commands checked, 0 failed" in result.stdout, result.stdout
+    print("PASS  ox-vibesec: hook lint skips prompt hooks and still checks commands")
 
 print("PASS  ox-vibesec: plugin-relative hooks, no-secret startup, edit mapping, installer verification, authenticated proxy environment")
 PY

@@ -82,12 +82,15 @@ for manifest in "$root"/plugins/*/hooks.json "$root"/plugins/*/hooks/*.json; do
           continue
         fi
         if ! jq -e '
-          def command_hook: type == "object" and (.command | type == "string");
+          def hook_entry: type == "object" and
+            (if .type == "prompt" then (.prompt | type == "string")
+             elif (has("type") | not) or .type == "command" then (.command | type == "string")
+             else false end);
           all(.[][]; type == "object" and
-            (if has("hooks") then (.hooks | type == "array" and all(.[]; command_hook))
-             else command_hook end))
+            (if has("hooks") then (.hooks | type == "array" and all(.[]; hook_entry))
+             else hook_entry end))
         ' "$manifest" >/dev/null; then
-          fail - - "contains an invalid hook entry" "use command objects or groups with a hooks array of command objects"
+          fail - - "contains an invalid hook entry" "use command or prompt objects, or groups with a hooks array"
           continue
         fi
         allowed="PLUGIN_ROOT DEVIN_PLUGIN_ROOT CLAUDE_PLUGIN_ROOT"
@@ -102,7 +105,8 @@ for manifest in "$root"/plugins/*/hooks.json "$root"/plugins/*/hooks/*.json; do
       continue
       ;;
   esac
-  if ! commands=$(jq -r "$events"' | to_entries[] | .key as $e | .value[] | (.hooks // [.])[]
+  if ! commands=$(jq -r --arg events "$events" "$events"' | to_entries[] | .key as $e | .value[] | (.hooks // [.])[]
+    | select($events != "." or .type != "prompt")
     | to_entries[] | select(.key | IN("command", "bash", "powershell", "commandWindows"))
     | "\($e)\t\(.key)\t\(.value)"' "$manifest" 2>/dev/null); then
     fail - - "cannot read hook commands" "check that events contain hook objects"
