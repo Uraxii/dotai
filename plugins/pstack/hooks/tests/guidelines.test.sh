@@ -453,8 +453,15 @@ capture timeout 5 env PATH="$HOOK_PATH" PSTACK_GUIDELINES_DIR="$WORK/not-a-direc
 expect_json "the engine does not stall on a log that is a FIFO" \
   '{"systemMessage": "pstack guideline hook failed; code-quality guidelines were not checked for this call."}' "$STDOUT"
 rm "$WORK/data/guideline-state/errors.log"
+UNREADABLE='{"systemMessage": "pstack guideline hook skipped this call: its input is not a UTF-8 JSON object, so code-quality guidelines were not checked."}'
 hook <<<'not json'
-expect_equal "a malformed payload says nothing" "0:" "$STATUS:$STDOUT"
+expect_json "a malformed payload is named" "$UNREADABLE" "$STDOUT"
+hook <<<'[]'
+expect_json "a payload that is not an object is named" "$UNREADABLE" "$STDOUT"
+printf '{"hook_event_name": "PreToolUse", "content": "\xff"}' >"$WORK/bad.json"
+hook <"$WORK/bad.json"
+expect_json "a payload that is not UTF-8 is named" "$UNREADABLE" "$STDOUT"
+rm "$WORK/bad.json"
 hook <<<'{"hook_event_name": "PreToolUse", "tool_name": "Write", "cwd": 7, "tool_input": {"file_path": ["a.py"], "content": 3}}'
 expect_equal "a payload with wrong types says nothing" "0:" "$STATUS:$STDOUT"
 
@@ -639,7 +646,7 @@ for i in $(seq 50); do spread+=$'\n'"*** Add File: clean$i.py"$'\n+x = 1'; done
 spread+=$'\n*** Add File: last.py\n+x = [a for b in c for a in b]'
 HARNESS=codex hook <<<"$(patch_payload PreToolUse "$spread")"
 expect_contains "files past the per-call limit are counted" \
-  "Notice: did not check 1 more files: a hook call checks at most 50. Run the check command on them." "$(context)"
+  "Notice: did not check 1 more files: a hook call checks at most 50. Run the check command on last.py." "$(context)"
 for i in $(seq 50); do echo 'x = 1' >"clean$i.py"; done
 capture env PATH="$HOOK_PATH" python3 -I "$ENGINE" check clean*.py missing51.py
 expect_contains "check has no file limit" "Notice: did not check missing51.py: no such file" "$STDOUT"

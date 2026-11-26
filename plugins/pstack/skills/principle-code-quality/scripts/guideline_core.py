@@ -95,7 +95,7 @@ class Event(NamedTuple):
     prompt: str = ""
     files: tuple[FileChange, ...] = ()
     channel: bool = True
-    skipped_files: int = 0
+    skipped: tuple[str, ...] = ()
 
 
 class Result(NamedTuple):
@@ -168,7 +168,7 @@ def event_from_json(data: object) -> Event | None:
         prompt=texts["prompt"][:MAX_PROMPT_CHARS],
         files=files[:limit],
         channel=data.get("channel") is not False,
-        skipped_files=max(0, len(files) - limit),
+        skipped=tuple(change.path for change in files[limit:]),
     )
 
 
@@ -296,19 +296,24 @@ def new_hits(after: list[Hit], before: list[Hit]) -> list[Hit]:
 def dropped_notice(dropped: dict[str, int]) -> str:
     """Count the findings that did not fit and name whole files to check,
     within DROPPED_NOTICE_CHARS less its separator."""
-    head = (
+    return name_files(
         f"Notice: {sum(dropped.values())} more findings did not fit in "
-        f"this message. Run the check command on "
+        f"this message. Run the check command on ",
+        list(dropped), " to see all of them.", "the edited files",
     )
-    tail = " to see all of them."
-    files = list(dropped)
+
+
+def name_files(head: str, files: list[str], tail: str, fallback: str) -> str:
+    """Join head, the first whole file paths that fit, and tail, within
+    DROPPED_NOTICE_CHARS less its separator; use `fallback` when no path
+    fits."""
     for shown in range(min(len(files), DROPPED_FILES_NAMED), 0, -1):
         others = len(files) - shown
         named = ", ".join(files[:shown])
         named += f" and {others} more files" * (others > 0)
         if len(head + named + tail) <= DROPPED_NOTICE_CHARS - 2:
             return head + named + tail
-    return head + "the edited files" + tail
+    return head + fallback + tail
 
 
 class Engine:
@@ -656,12 +661,14 @@ class Engine:
 
     def run(self) -> Result:
         kind = self.event.kind
-        if self.event.skipped_files:
-            self.notices.append(
-                f"Notice: did not check {self.event.skipped_files} more "
+        if self.event.skipped:
+            self.notices.append(name_files(
+                f"Notice: did not check {len(self.event.skipped)} more "
                 f"files: a hook call checks at most {MAX_FILES_PER_EVENT}. "
-                f"Run the check command on them."
-            )
+                f"Run the check command on ",
+                list(self.event.skipped), ".", "the files after the "
+                f"first {MAX_FILES_PER_EVENT} in this edit",
+            ))
         if kind == "session_start":
             prune_old_sessions(self.state_root)
         elif kind == "cleared":

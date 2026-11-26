@@ -51,6 +51,10 @@ OVERSIZE_MESSAGE = (
     f"{MAX_PAYLOAD_BYTES // 1_000_000} MB, so code-quality guidelines were "
     f"not checked."
 )
+UNREADABLE_MESSAGE = (
+    "pstack guideline hook skipped this call: its input is not a UTF-8 "
+    "JSON object, so code-quality guidelines were not checked."
+)
 FAILURE_MESSAGE = (
     "pstack guideline hook failed; code-quality guidelines were not checked "
     "for this call."
@@ -340,8 +344,9 @@ def run_hook(harness: str) -> int:
     try:
         payload = json.loads(raw)
     except ValueError:
-        return 0
+        payload = None
     if not isinstance(payload, dict):
+        print(json.dumps({"systemMessage": UNREADABLE_MESSAGE}))
         return 0
     event = event_from_json(ADAPTERS[harness](payload))
     if event is None:
