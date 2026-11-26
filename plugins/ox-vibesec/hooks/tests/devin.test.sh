@@ -142,6 +142,11 @@ with tempfile.TemporaryDirectory() as temp:
         script.parent.mkdir(parents=True)
         script.write_text(f"print({variable!r})\n")
         env[variable] = str(script.parents[1])
+    chosen = subprocess.run(
+        command, shell=True, cwd=home, env={**env, "PLUGIN_ROOT": str(home / "invalid")},
+        capture_output=True, text=True,
+    )
+    assert chosen.returncode == 0 and chosen.stdout == "DEVIN_PLUGIN_ROOT\n" and not chosen.stderr
     for variable in roots:
         chosen = subprocess.run(command, shell=True, cwd=home, env=env, capture_output=True, text=True)
         assert chosen.returncode == 0 and chosen.stdout == variable + "\n" and not chosen.stderr
@@ -174,11 +179,10 @@ with tempfile.TemporaryDirectory() as temp:
         assert chosen.returncode == 0 and chosen.stdout == f"{event}:payload\n" and not chosen.stderr
     invalid = subprocess.run(
         command, shell=True, cwd=home, env={**env, "PLUGIN_ROOT": str(home / "invalid")},
-        capture_output=True, text=True,
+        input="fallback\n", capture_output=True, text=True,
     )
-    assert invalid.returncode == 0 and not invalid.stdout
-    assert invalid.stderr == "ox-vibesec: plugin root not found\n"
-    print("PASS  ox-vibesec: plugin root precedence, PATH fallback, and missing-root diagnostics")
+    assert invalid.returncode == 0 and invalid.stdout == f"{event}:fallback\n" and not invalid.stderr
+    print("PASS  ox-vibesec: root precedence, stale-root recovery, PATH fallback, and missing-root diagnostics")
 
     installer = b"fake installer"
     digest = hashlib.sha256(installer).hexdigest()

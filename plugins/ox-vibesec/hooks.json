@@ -4,7 +4,7 @@
       "hooks": [
         {
           "type": "command",
-          "command": "root=\"${PLUGIN_ROOT:-${DEVIN_PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-}}}\"; if [ -n \"$root\" ] && [ -f \"$root/bin/hook.py\" ]; then exec python3 -B \"$root/bin/hook.py\" SessionStart; elif [ -z \"$root\" ] && command -v ox-vibesec-hook >/dev/null 2>&1; then exec ox-vibesec-hook SessionStart; fi; printf '%s\\n' 'ox-vibesec: plugin root not found' >&2; exit 0",
+          "command": "for root in \"${PLUGIN_ROOT:-}\" \"${DEVIN_PLUGIN_ROOT:-}\" \"${CLAUDE_PLUGIN_ROOT:-}\"; do if [ -n \"$root\" ] && [ -f \"$root/bin/hook.py\" ]; then exec python3 -B \"$root/bin/hook.py\" SessionStart; fi; done; if command -v ox-vibesec-hook >/dev/null 2>&1; then exec ox-vibesec-hook SessionStart; fi; printf '%s\\n' 'ox-vibesec: plugin root not found' >&2; exit 0",
           "timeout": 120
         }
       ]
@@ -15,7 +15,7 @@
       "hooks": [
         {
           "type": "command",
-          "command": "root=\"${PLUGIN_ROOT:-${DEVIN_PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-}}}\"; if [ -n \"$root\" ] && [ -f \"$root/bin/hook.py\" ]; then exec python3 -B \"$root/bin/hook.py\" UserPromptSubmit; elif [ -z \"$root\" ] && command -v ox-vibesec-hook >/dev/null 2>&1; then exec ox-vibesec-hook UserPromptSubmit; fi; printf '%s\\n' 'ox-vibesec: plugin root not found' >&2; exit 0",
+          "command": "for root in \"${PLUGIN_ROOT:-}\" \"${DEVIN_PLUGIN_ROOT:-}\" \"${CLAUDE_PLUGIN_ROOT:-}\"; do if [ -n \"$root\" ] && [ -f \"$root/bin/hook.py\" ]; then exec python3 -B \"$root/bin/hook.py\" UserPromptSubmit; fi; done; if command -v ox-vibesec-hook >/dev/null 2>&1; then exec ox-vibesec-hook UserPromptSubmit; fi; printf '%s\\n' 'ox-vibesec: plugin root not found' >&2; exit 0",
           "timeout": 25
         }
       ]
@@ -27,7 +27,7 @@
       "hooks": [
         {
           "type": "command",
-          "command": "root=\"${PLUGIN_ROOT:-${DEVIN_PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-}}}\"; if [ -n \"$root\" ] && [ -f \"$root/bin/hook.py\" ]; then exec python3 -B \"$root/bin/hook.py\" PreToolUse; elif [ -z \"$root\" ] && command -v ox-vibesec-hook >/dev/null 2>&1; then exec ox-vibesec-hook PreToolUse; fi; printf '%s\\n' 'ox-vibesec: plugin root not found' >&2; exit 0",
+          "command": "for root in \"${PLUGIN_ROOT:-}\" \"${DEVIN_PLUGIN_ROOT:-}\" \"${CLAUDE_PLUGIN_ROOT:-}\"; do if [ -n \"$root\" ] && [ -f \"$root/bin/hook.py\" ]; then exec python3 -B \"$root/bin/hook.py\" PreToolUse; fi; done; if command -v ox-vibesec-hook >/dev/null 2>&1; then exec ox-vibesec-hook PreToolUse; fi; printf '%s\\n' 'ox-vibesec: plugin root not found' >&2; exit 0",
           "timeout": 25
         }
       ]
@@ -39,7 +39,7 @@
       "hooks": [
         {
           "type": "command",
-          "command": "root=\"${PLUGIN_ROOT:-${DEVIN_PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-}}}\"; if [ -n \"$root\" ] && [ -f \"$root/bin/hook.py\" ]; then exec python3 -B \"$root/bin/hook.py\" PostToolUse; elif [ -z \"$root\" ] && command -v ox-vibesec-hook >/dev/null 2>&1; then exec ox-vibesec-hook PostToolUse; fi; printf '%s\\n' 'ox-vibesec: plugin root not found' >&2; exit 0",
+          "command": "for root in \"${PLUGIN_ROOT:-}\" \"${DEVIN_PLUGIN_ROOT:-}\" \"${CLAUDE_PLUGIN_ROOT:-}\"; do if [ -n \"$root\" ] && [ -f \"$root/bin/hook.py\" ]; then exec python3 -B \"$root/bin/hook.py\" PostToolUse; fi; done; if command -v ox-vibesec-hook >/dev/null 2>&1; then exec ox-vibesec-hook PostToolUse; fi; printf '%s\\n' 'ox-vibesec: plugin root not found' >&2; exit 0",
           "timeout": 25
         }
       ]
