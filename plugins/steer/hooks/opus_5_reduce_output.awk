@@ -108,7 +108,7 @@ function codex_event(    name, args) {
   else if (name ~ /^(exec_command|shell_command|local_shell)$/ && jparse(args) && command_mutates(jget("/cmd") jget("/command"))) mutated = 1
 }
 
-function copilot_event(    kind, name) {
+function copilot_event(    kind, name, command) {
   kind = jget("/type")
   if (kind == "user.message") {
     interaction = jget("/data/interactionId")
@@ -123,8 +123,10 @@ function copilot_event(    kind, name) {
     latest_turn = jget("/data/turnId")
   } else if (kind == "tool.execution_start" && assistant_turn != "" && jget("/data/turnId") == assistant_turn) {
     name = jget("/data/toolName")
+    command = jget("/data/arguments/command")
     if (name ~ /^(edit|create|apply_patch|task)$/) mutated = 1
-    else if (name ~ /^(bash|powershell)$/ && command_mutates(jget("/data/arguments/command"))) mutated = 1
+    else if (name == "str_replace_editor" && command ~ /^(str_replace|insert|create|undo_edit)$/) mutated = 1
+    else if (name ~ /^(bash|powershell)$/ && command_mutates(command, name)) mutated = 1
   }
 }
 
@@ -143,12 +145,12 @@ function tool_use(block,    name) {
 # Bash is classified by a DENYLIST of mutating shapes, not an allowlist of
 # safe ones: a wrong skip costs one missing recap, while a wrong recap is the
 # bug this gate exists to fix. So an unknown command reads as clean.
-function command_mutates(command,    n, i, segment) {
+function command_mutates(command, shell,    n, i, segment) {
   gsub(/&&|\|\||;|\||\n/, "\034", command)
   n = split(command, SEGMENTS, "\034")
   for (i = 1; i <= n; i++) {
     segment = without_discards(SEGMENTS[i])
-    if (redirects_to_file(segment) || segment_mutates(segment)) return 1
+    if (redirects_to_file(segment) || segment_mutates(segment, shell)) return 1
   }
   return 0
 }
@@ -183,12 +185,13 @@ function redirects_to_file(s,    p, len, next_char) {
   return 0
 }
 
-function segment_mutates(segment,    n, start, program, i, p, k, parts, argument_count) {
+function segment_mutates(segment, shell,    n, start, program, i, p, k, parts, argument_count) {
   n = shell_words(segment)
-  start = 1
+  start = (shell == "powershell" && WORDS[1] == "&") ? 2 : 1
   while (start <= n && (basename(WORDS[start]) in COMMAND_WRAPPERS || index(WORDS[start], "="))) start++
   if (start > n) return 0
   program = basename(WORDS[start])
+  if (shell == "powershell" && tolower(program) ~ /^(set|add|clear)-content$|^out-file$|^(new|remove|copy|move|rename|set|clear)-item$/) return 1
   if (program in MUTATING_COMMANDS) return 1
   if (program in IN_PLACE_EDITORS) {
     for (i = start + 1; i <= n; i++) if (substr(WORDS[i], 1, 2) == "-i") return 1

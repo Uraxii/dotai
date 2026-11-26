@@ -110,6 +110,30 @@ for spec in 'claude-opus-5 touch block' 'claude-opus-5 cat allow' 'claude-fable-
     expect_equal "Copilot skips $model $action" "" "$STDOUT"
   fi
 done
+copilot_tool_turn() {
+  jq -cn --arg tool "$1" --arg cmd "$2" '
+    {type:"user.message",data:{interactionId:"current"}},
+    {type:"assistant.turn_start",data:{interactionId:"current",turnId:"0"}},
+    {type:"assistant.message",data:{interactionId:"current",turnId:"0",model:"claude-opus-5"}},
+    {type:"tool.execution_start",data:{turnId:"0",toolName:$tool,arguments:{command:$cmd,path:"changed.txt"}}}' \
+    >"$WORK/copilot.jsonl"
+  run_wiring copilot "$copilot_stop" <<<"$copilot_payload"
+}
+for operation in str_replace insert create undo_edit; do
+  copilot_tool_turn str_replace_editor "$operation"
+  expect_json "Copilot editor $operation asks for a recap" "$BLOCK" "$STDOUT"
+done
+copilot_tool_turn str_replace_editor view
+expect_equal "Copilot editor view does not ask for a recap" "" "$STDOUT"
+for command in 'sEt-CoNtEnT changed.txt new' 'Add-Content changed.txt new' "'new' | Out-File changed.txt" \
+  'New-Item changed.txt' 'Remove-Item changed.txt'; do
+  copilot_tool_turn powershell "$command"
+  expect_json "Copilot PowerShell mutation asks for a recap: $command" "$BLOCK" "$STDOUT"
+done
+copilot_tool_turn powershell 'Get-Content changed.txt | Select-String new'
+expect_equal "Copilot PowerShell reads do not ask for a recap" "" "$STDOUT"
+copilot_tool_turn bash 'Set-Content changed.txt new'
+expect_equal "a PowerShell cmdlet name does not change Bash classification" "" "$STDOUT"
 unset PLUGIN_ROOT
 
 for model in claude-opus-5-1 claude-sonnet-5 claude-fable-5 ''; do
