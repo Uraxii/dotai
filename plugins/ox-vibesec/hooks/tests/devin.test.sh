@@ -98,5 +98,13 @@ with tempfile.TemporaryDirectory() as temp:
         assert kwargs["env"]["NODE_USE_ENV_PROXY"] == "1"
         assert kwargs["input"] == "test-token\n"
 
+    proxy_with_bracket = "http://test-user:test[password@localhost:3128"
+    with patch.dict(os.environ, {"HTTPS_PROXY": proxy_with_bracket}, clear=True):
+        runtime = vibesec.Runtime(home / "runtime", staged)
+    assert runtime.proxy_args == []
+    assert runtime.env["HTTPS_PROXY"] == proxy_with_bracket
+    assert runtime.env["NODE_USE_ENV_PROXY"] == "1"
+    print("PASS  ox-vibesec: proxy passwords with brackets reach the Node environment fallback")
+
 print("PASS  ox-vibesec: plugin-relative hooks, no-secret startup, edit mapping, installer verification, authenticated proxy environment")
 PY

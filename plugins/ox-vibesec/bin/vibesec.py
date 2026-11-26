@@ -44,9 +44,12 @@ class Runtime:
         ) if k in os.environ}
         self.env.update(HOME=str(home), TMPDIR=str(home / "tmp"))
         proxy = self.env.get("https_proxy") or self.env.get("HTTPS_PROXY") or ""
-        url = urlsplit(proxy)
+        try:
+            url = urlsplit(proxy)
+        except ValueError:
+            url = None
         self.proxy_args = []
-        if url.scheme == "http" and url.username is None and url.password is None:
+        if url is not None and url.scheme == "http" and url.username is None and url.password is None:
             self.proxy_args = ["--proxy", "http:" + proxy.split(":", 1)[1]]
         elif proxy:
             self.env["NODE_USE_ENV_PROXY"] = "1"
