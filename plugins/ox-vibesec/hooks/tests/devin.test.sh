@@ -208,6 +208,20 @@ with tempfile.TemporaryDirectory() as temp:
         assert run.call_args.kwargs["env"]["NODE_USE_ENV_PROXY"] == "1"
     print("PASS  ox-vibesec: hook subprocess enables the environment for an unauthenticated proxy")
 
+    proxy = "http://localhost:3128"
+    for bypass in ("api.cloud.ox.security", "API.CLOUD.OX.SECURITY:443", ".ox.security", "*.ox.security", "*"):
+        with patch.dict(os.environ, {"HTTPS_PROXY": proxy, "NO_PROXY": bypass}, clear=True):
+            runtime = vibesec.Runtime(home / "runtime", staged)
+        assert runtime.proxy_args == []
+        assert runtime.env["NO_PROXY"] == bypass
+        assert runtime.env["NODE_USE_ENV_PROXY"] == "1"
+    with patch.dict(os.environ, {
+        "HTTPS_PROXY": proxy, "NO_PROXY": "*", "no_proxy": ".other.example, api.cloud.ox.security:80",
+    }, clear=True):
+        runtime = vibesec.Runtime(home / "runtime", staged)
+    assert runtime.proxy_args == ["--proxy", proxy]
+    print("PASS  ox-vibesec: leaves OX API proxy bypass to the vendor runtime when NO_PROXY matches")
+
     proxy = "http://test-user:test-password@localhost:3128"
     with patch.dict(os.environ, {"HTTPS_PROXY": proxy}, clear=True):
         runtime = vibesec.Runtime(home / "runtime", staged)
