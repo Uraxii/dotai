@@ -30,6 +30,7 @@ to the plugin directory. Alternatively, make `bin/ox-vibesec-hook` available on 
 
 The adapter reads `OX_VIBESEC_API_KEY` and skips OX calls when the key is
 absent. It verifies the installer checksum before it installs the OX runtime.
+`OX_VIBESEC_INSTALLER` can specify a local installer file. If the file is missing, the adapter warns and downloads the installer.
 It does not install Claude Code or change the user's Claude configuration.
 The runtime is separate from the OX MCP.
 

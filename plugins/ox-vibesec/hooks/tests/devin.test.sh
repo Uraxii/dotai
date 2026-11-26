@@ -202,6 +202,13 @@ with tempfile.TemporaryDirectory() as temp:
             assert vibesec.verified_installer(None, dest, env).read_bytes() == installer
             download.assert_called_once()
 
+        warning = StringIO()
+        with redirect_stderr(warning), patch.object(vibesec.subprocess, "run", side_effect=fetch) as download:
+            assert vibesec.verified_installer(home / "missing.sh", dest, env).read_bytes() == installer
+            download.assert_called_once()
+        assert warning.getvalue() == "OX_VIBESEC_INSTALLER file not found; downloading the installer.\n"
+        print("PASS  ox-vibesec: missing staged installer warns and downloads")
+
         staged.write_bytes(b"modified installer")
         with patch.object(vibesec.subprocess, "run") as download:
             try:

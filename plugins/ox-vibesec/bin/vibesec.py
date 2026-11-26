@@ -3,6 +3,7 @@ import hashlib
 import json
 import os
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
 from urllib.request import proxy_bypass_environment
@@ -15,13 +16,19 @@ LAUNCHER = Path(__file__).resolve().parents[1] / "hooks/ox"
 
 
 def verified_installer(staged, destination, env):
+    contents = None
     if staged is not None:
-        destination.write_bytes(staged.read_bytes())
-    else:
+        try:
+            contents = staged.read_bytes()
+        except FileNotFoundError:
+            print("OX_VIBESEC_INSTALLER file not found; downloading the installer.", file=sys.stderr)
+    if contents is None:
         subprocess.run(
             ["curl", "-fsSL", "--max-time", "15", "-o", str(destination), INSTALLER_URL],
             env=env, check=True, capture_output=True, timeout=17,
         )
+    else:
+        destination.write_bytes(contents)
     if hashlib.sha256(destination.read_bytes()).hexdigest() != INSTALLER_SHA256:
         raise RuntimeError("OX installer checksum mismatch")
     return destination
