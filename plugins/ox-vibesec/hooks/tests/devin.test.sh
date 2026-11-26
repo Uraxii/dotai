@@ -296,5 +296,17 @@ with tempfile.TemporaryDirectory() as temp:
     assert "must map hook event names to arrays" in result.stdout, result.stdout
     print("PASS  ox-vibesec: hook lint rejects non-array values in bare event maps")
 
+    for entry in ("not-a-hook", {"hooks": ["not-a-hook"]}, {"hooks": {"command": "true"}}, {"command": False}):
+        (bare / "hooks.json").write_text(json.dumps({"SessionStart": [entry]}))
+        result = subprocess.run(["bash", lint, "--root", home], capture_output=True, text=True)
+        assert result.returncode == 1 and not result.stderr, result
+        assert "contains an invalid hook entry" in result.stdout, result.stdout
+    (bare / "hooks.json").write_text(json.dumps({"SessionStart": [{"command": "true"}]}))
+    (wrapped / "hooks.json").write_text(json.dumps({"hooks": {"preToolUse": ["not-a-hook"]}}))
+    result = subprocess.run(["bash", lint, "--root", home], capture_output=True, text=True)
+    assert result.returncode == 1 and not result.stderr, result
+    assert "cannot read hook commands" in result.stdout and "1 commands checked, 1 failed" in result.stdout
+    print("PASS  ox-vibesec: hook lint rejects invalid entries and reports command extraction failures")
+
 print("PASS  ox-vibesec: plugin-relative hooks, no-secret startup, edit mapping, installer verification, authenticated proxy environment")
 PY

@@ -81,6 +81,15 @@ for manifest in "$root"/plugins/*/hooks.json "$root"/plugins/*/hooks/*.json; do
           fail - - "must map hook event names to arrays" "remove non-event keys and give each event an array value"
           continue
         fi
+        if ! jq -e '
+          def command_hook: type == "object" and (.command | type == "string");
+          all(.[][]; type == "object" and
+            (if has("hooks") then (.hooks | type == "array" and all(.[]; command_hook))
+             else command_hook end))
+        ' "$manifest" >/dev/null; then
+          fail - - "contains an invalid hook entry" "use command objects or groups with a hooks array of command objects"
+          continue
+        fi
         allowed="PLUGIN_ROOT DEVIN_PLUGIN_ROOT CLAUDE_PLUGIN_ROOT"
         events=.
       fi ;;
@@ -93,19 +102,28 @@ for manifest in "$root"/plugins/*/hooks.json "$root"/plugins/*/hooks/*.json; do
       continue
       ;;
   esac
-  while IFS=$'\t' read -r event field command; do
-    check "$event" "$field" "$command"
-  done < <(jq -r "$events"' | to_entries[] | .key as $e | .value[] | (.hooks // [.])[]
+  if ! commands=$(jq -r "$events"' | to_entries[] | .key as $e | .value[] | (.hooks // [.])[]
     | to_entries[] | select(.key | IN("command", "bash", "powershell", "commandWindows"))
-    | "\($e)\t\(.key)\t\(.value)"' "$manifest")
+    | "\($e)\t\(.key)\t\(.value)"' "$manifest" 2>/dev/null); then
+    fail - - "cannot read hook commands" "check that events contain hook objects"
+    continue
+  fi
+  while IFS=$'\t' read -r event field command; do
+    [ -n "$field" ] && check "$event" "$field" "$command"
+  done <<< "$commands"
 
   if [ "${manifest#"$plugin"/}" = hooks.json ] && [ "$events" = .hooks ]; then
+    if ! pairs=$(jq -r '.hooks | to_entries[] | .key as $e | .value[]
+      | select(has("bash") != has("powershell"))
+      | if has("bash") then "\($e)\tbash\tpowershell" else "\($e)\tpowershell\tbash" end' "$manifest" 2>/dev/null); then
+      fail - - "cannot read Copilot hook command pairs" "check that events contain hook objects"
+      continue
+    fi
     while IFS=$'\t' read -r event has missing; do
+      [ -n "$missing" ] || continue
       fail "$event" "$missing" "is missing beside $has; Copilot runs bash on Linux and macOS, powershell on Windows" \
         "add a $missing command for the same hook"
-    done < <(jq -r '.hooks | to_entries[] | .key as $e | .value[]
-      | select(has("bash") != has("powershell"))
-      | if has("bash") then "\($e)\tbash\tpowershell" else "\($e)\tpowershell\tbash" end' "$manifest")
+    done <<< "$pairs"
   fi
 done
 
