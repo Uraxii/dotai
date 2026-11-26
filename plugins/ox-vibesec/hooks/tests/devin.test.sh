@@ -122,7 +122,10 @@ with tempfile.TemporaryDirectory() as temp:
     home = Path(temp)
     env = os.environ.copy()
     env.pop("OX_VIBESEC_API_KEY", None)
-    env.update(HOME=temp, DEVIN_PLUGIN_ROOT=str(plugin))
+    roots = ("PLUGIN_ROOT", "DEVIN_PLUGIN_ROOT", "CLAUDE_PLUGIN_ROOT")
+    for variable in roots:
+        env.pop(variable, None)
+    env.update(HOME=temp, PLUGIN_ROOT=str(plugin))
     for groups in hooks.values():
         command = groups[0]["hooks"][0]["command"]
         completed = subprocess.run(
@@ -133,24 +136,53 @@ with tempfile.TemporaryDirectory() as temp:
         assert not completed.stdout and not completed.stderr
     assert not list(home.iterdir())
 
-    for variable in ("DEVIN_PLUGIN_ROOT", "CLAUDE_PLUGIN_ROOT", "PLUGIN_ROOT"):
-        env.pop(variable, None)
-    command = hooks["SessionStart"][0]["hooks"][0]["command"].replace(
-        "/opt/.devin/plugins_cache/cache/", '"$HOME/cache/"',
-    )
-    missing = subprocess.run(command, shell=True, cwd=home, env=env, capture_output=True, text=True)
-    assert missing.returncode == 1
-    assert missing.stderr == "ox-vibesec: plugin root not found\n"
-
-    cache = home / "cache/github.com_Uraxii_dotai_plugins_ox-vibesec-test"
-    for revision, timestamp in (("zz-old", 1), ("aa-new", 2)):
-        script = cache / revision / "bin/hook.py"
+    command = hooks["SessionStart"][0]["hooks"][0]["command"]
+    for variable in roots:
+        script = home / variable / "bin/hook.py"
         script.parent.mkdir(parents=True)
-        script.write_text(f"print({revision!r})\n")
-        os.utime(script, (timestamp, timestamp))
-    newest = subprocess.run(command, shell=True, cwd=home, env=env, capture_output=True, text=True)
-    assert newest.returncode == 0 and newest.stdout == "aa-new\n" and not newest.stderr
-    print("PASS  ox-vibesec: cache fallback chooses the newest hook and reports a missing root")
+        script.write_text(f"print({variable!r})\n")
+        env[variable] = str(script.parents[1])
+    chosen = subprocess.run(
+        command, shell=True, cwd=home, env={**env, "PLUGIN_ROOT": str(home / "invalid")},
+        capture_output=True, text=True,
+    )
+    assert chosen.returncode == 0 and chosen.stdout == "DEVIN_PLUGIN_ROOT\n" and not chosen.stderr
+    for variable in roots:
+        chosen = subprocess.run(command, shell=True, cwd=home, env=env, capture_output=True, text=True)
+        assert chosen.returncode == 0 and chosen.stdout == variable + "\n" and not chosen.stderr
+        env.pop(variable)
+
+    install_bin = home / "fresh install" / "bin"
+    install_bin.mkdir(parents=True)
+    (install_bin / "ox-vibesec-hook").symlink_to(plugin / "bin/ox-vibesec-hook")
+    installed = subprocess.run(
+        hooks["UserPromptSubmit"][0]["hooks"][0]["command"], shell=True, cwd=home,
+        env={**env, "PATH": f"{install_bin}:{env['PATH']}", "OX_VIBESEC_API_KEY": test_key},
+        input=json.dumps({**session, "prompt": "test"}), capture_output=True, text=True,
+    )
+    assert installed.returncode == 0 and not installed.stdout, installed
+    assert installed.stderr == "OX VibeSec runtime is not initialized; check skipped.\n", installed
+    print("PASS  ox-vibesec: packaged PATH launcher reaches the adapter without a plugin root")
+
+    env["PATH"] = str(home)
+    missing = subprocess.run(command, shell=True, cwd=home, env=env, capture_output=True, text=True)
+    assert missing.returncode == 0 and not missing.stdout
+    assert missing.stderr == "ox-vibesec: plugin root not found\n"
+    launcher = home / "ox-vibesec-hook"
+    launcher.write_text('#!/bin/sh\nread -r payload\nprintf "%s:%s\\n" "$1" "$payload"\n')
+    launcher.chmod(0o755)
+    for event, groups in hooks.items():
+        command = groups[0]["hooks"][0]["command"]
+        chosen = subprocess.run(
+            command, shell=True, cwd=home, env=env, input="payload\n", capture_output=True, text=True,
+        )
+        assert chosen.returncode == 0 and chosen.stdout == f"{event}:payload\n" and not chosen.stderr
+    invalid = subprocess.run(
+        command, shell=True, cwd=home, env={**env, "PLUGIN_ROOT": str(home / "invalid")},
+        input="fallback\n", capture_output=True, text=True,
+    )
+    assert invalid.returncode == 0 and invalid.stdout == f"{event}:fallback\n" and not invalid.stderr
+    print("PASS  ox-vibesec: root precedence, stale-root recovery, PATH fallback, and missing-root diagnostics")
 
     installer = b"fake installer"
     digest = hashlib.sha256(installer).hexdigest()
@@ -162,15 +194,20 @@ with tempfile.TemporaryDirectory() as temp:
             assert vibesec.verified_installer(staged, dest, env).read_bytes() == installer
             download.assert_not_called()
 
-        staged.unlink()
-
         def fetch(args, **kwargs):
             assert args[-1] == vibesec.INSTALLER_URL
             Path(args[args.index("-o") + 1]).write_bytes(installer)
 
         with patch.object(vibesec.subprocess, "run", side_effect=fetch) as download:
-            assert vibesec.verified_installer(staged, dest, env).read_bytes() == installer
+            assert vibesec.verified_installer(None, dest, env).read_bytes() == installer
             download.assert_called_once()
+
+        warning = StringIO()
+        with redirect_stderr(warning), patch.object(vibesec.subprocess, "run", side_effect=fetch) as download:
+            assert vibesec.verified_installer(home / "missing.sh", dest, env).read_bytes() == installer
+            download.assert_called_once()
+        assert warning.getvalue() == "OX_VIBESEC_INSTALLER file not found; downloading the installer.\n"
+        print("PASS  ox-vibesec: missing staged installer warns and downloads")
 
         staged.write_bytes(b"modified installer")
         with patch.object(vibesec.subprocess, "run") as download:
@@ -184,7 +221,7 @@ with tempfile.TemporaryDirectory() as temp:
 
     with patch.dict(os.environ, {"HTTPS_PROXY": "HTTP://LOCALHOST:3128"}, clear=True):
         runtime = vibesec.Runtime(home / "runtime", staged)
-    assert runtime.proxy_args == ["--proxy", "http://LOCALHOST:3128"]
+    assert runtime.env["HTTPS_PROXY"] == "http://LOCALHOST:3128"
     print("PASS  ox-vibesec: lowercases only the forwarded proxy scheme")
     with (
         patch.object(runtime, "installed", return_value=["sh", vibesec.LAUNCHER]),
@@ -194,35 +231,94 @@ with tempfile.TemporaryDirectory() as temp:
         assert run.call_args.kwargs["env"]["NODE_USE_ENV_PROXY"] == "1"
     print("PASS  ox-vibesec: hook subprocess enables the environment for an unauthenticated proxy")
 
-    proxy = "http://test-user:test-password@localhost:3128"
-    with patch.dict(os.environ, {"HTTPS_PROXY": proxy}, clear=True):
-        runtime = vibesec.Runtime(home / "runtime", staged)
-    launcher = ["sh", vibesec.LAUNCHER]
-    with (
-        patch.object(vibesec, "verified_installer", return_value=dest),
-        patch.object(runtime, "installed", side_effect=[None, launcher]),
-        patch.object(vibesec.subprocess, "run", return_value=Mock(returncode=0)) as run,
+    proxy = "http://localhost:3128"
+    for bypass in (
+        "api.cloud.ox.security", "API.CLOUD.OX.SECURITY:443", ".ox.security",
+        "ox.security", "cloud.ox.security", ".ox.security:443",
     ):
-        assert runtime.start("test-token") == launcher
-        args, kwargs = run.call_args
-        assert "--proxy" not in args[0] and all(proxy not in arg for arg in args[0])
-        assert kwargs["env"]["HTTPS_PROXY"] == proxy
-        assert kwargs["env"]["NODE_USE_ENV_PROXY"] == "1"
-        assert kwargs["input"] == "test-token\n"
+        with patch.dict(os.environ, {"HTTPS_PROXY": proxy, "NO_PROXY": bypass}, clear=True):
+            runtime = vibesec.Runtime(home / "runtime", staged)
+        assert runtime.env["NO_PROXY"] == bypass
+        assert runtime.env["no_proxy"] == f"{bypass},api.cloud.ox.security:443"
+        assert runtime.env["NODE_USE_ENV_PROXY"] == "1"
+    with patch.dict(os.environ, {"HTTPS_PROXY": proxy, "NO_PROXY": "*"}, clear=True):
+        runtime = vibesec.Runtime(home / "runtime", staged)
+    assert runtime.env["NO_PROXY"] == "*" and "no_proxy" not in runtime.env
+    for bypass in ("*.ox.security", ".other.example, api.cloud.ox.security:80"):
+        with patch.dict(os.environ, {
+            "HTTPS_PROXY": proxy, "NO_PROXY": "*", "no_proxy": bypass,
+        }, clear=True):
+            runtime = vibesec.Runtime(home / "runtime", staged)
+        assert runtime.env["no_proxy"] == bypass
+    with patch.dict(os.environ, {
+        "HTTPS_PROXY": proxy, "NO_PROXY": "ox.security", "no_proxy": "",
+    }, clear=True):
+        runtime = vibesec.Runtime(home / "runtime", staged)
+    assert "api.cloud.ox.security:443" in runtime.env["no_proxy"].split(","), runtime.env["no_proxy"]
+    print("PASS  ox-vibesec: empty lowercase no_proxy inherits the API bypass")
+    print("PASS  ox-vibesec: preserves NO_PROXY suffix bypasses for the OX installer")
+
+    launcher = ["sh", vibesec.LAUNCHER]
+    for proxy, lowercase in (
+        ("http://localhost:3128", {}),
+        ("http://test-user:test-password@localhost:3128", {
+            "https_proxy": "http://localhost:3129", "http_proxy": "", "no_proxy": "",
+        }),
+    ):
+        uppercase = {"HTTPS_PROXY": proxy, "HTTP_PROXY": proxy, "NO_PROXY": ".other.example"}
+        with patch.dict(os.environ, {**uppercase, **lowercase}, clear=True):
+            runtime = vibesec.Runtime(home / "runtime", staged)
+        with (
+            patch.object(vibesec, "verified_installer", return_value=dest),
+            patch.object(runtime, "installed", side_effect=[None, launcher]),
+            patch.object(vibesec.subprocess, "run", return_value=Mock(returncode=0)) as run,
+        ):
+            assert runtime.start("test-token") == launcher
+            args, kwargs = run.call_args
+            assert "--proxy" not in args[0] and all(proxy not in arg for arg in args[0])
+            for name, value in uppercase.items():
+                assert kwargs["env"][name] == value
+                assert kwargs["env"][name.lower()] == (lowercase.get(name.lower()) or value)
+            assert kwargs["env"]["NODE_USE_ENV_PROXY"] == "1"
+            assert kwargs["input"] == "test-token\n"
+    print("PASS  ox-vibesec: installer mirrors uppercase proxy variables without overriding lowercase")
 
     proxy_with_bracket = "http://test-user:test[password@localhost:3128"
     with patch.dict(os.environ, {"HTTPS_PROXY": proxy_with_bracket}, clear=True):
         runtime = vibesec.Runtime(home / "runtime", staged)
-    assert runtime.proxy_args == []
     assert runtime.env["HTTPS_PROXY"] == proxy_with_bracket
     assert runtime.env["NODE_USE_ENV_PROXY"] == "1"
     print("PASS  ox-vibesec: proxy passwords with brackets reach the Node environment fallback")
+
+    runtime_home = home / "runtime with spaces"
+    vendor_hook = runtime_home / ".claude/hooks/ox_mind.js"
+    vendor_hook.parent.mkdir(parents=True)
+    vendor_hook.touch()
+    (vendor_hook.parent.parent / ".ox.json").write_text(json.dumps({"access_token": "test-token"}))
+    nodes = {}
+    for version, mode in (("v24.9", 0o755), ("v24.10", 0o644)):
+        node = runtime_home / f".ox/node/{version}/bin/node"
+        node.parent.mkdir(parents=True)
+        node.write_text(f"#!/bin/sh\necho {version}\n")
+        node.chmod(mode)
+        nodes[version] = node
+    runtime = vibesec.Runtime(runtime_home, None)
+    assert runtime.installed("test-token") == ["sh", vibesec.LAUNCHER]
+    result = runtime.run({}, home, "test-token")
+    assert result.returncode == 0 and result.stdout == "v24.9\n" and not result.stderr
+    nodes["v24.10"].chmod(0o755)
+    result = runtime.run({}, home, "test-token")
+    assert result.returncode == 0 and result.stdout == "v24.10\n" and not result.stderr
+    for node in nodes.values():
+        node.chmod(0o644)
+    assert runtime.run({}, home, "test-token") is None
+    print("PASS  ox-vibesec: readiness and launcher resolve the newest executable Node")
 
     lint = plugin.parents[1] / "scripts/lint-hook-references.sh"
     bare = home / "plugins/bare"
     bare.mkdir(parents=True)
     (bare / "hooks.json").write_text(json.dumps({"SessionStart": [{"hooks": [
-        {"type": "command", "command": 'echo "${DEVIN_PLUGIN_ROOT}"'},
+        {"type": "command", "command": 'echo "${PLUGIN_ROOT}" "${DEVIN_PLUGIN_ROOT}" "${CLAUDE_PLUGIN_ROOT}"'},
     ]}]}))
     wrapped = home / "plugins/wrapped"
     (wrapped / ".devin-plugin").mkdir(parents=True)
@@ -243,6 +339,32 @@ with tempfile.TemporaryDirectory() as temp:
     assert result.returncode == 1 and not result.stderr, result
     assert "must map hook event names to arrays" in result.stdout, result.stdout
     print("PASS  ox-vibesec: hook lint rejects non-array values in bare event maps")
+
+    for entry in (
+        "not-a-hook", {"hooks": ["not-a-hook"]}, {"hooks": {"command": "true"}}, {"command": False},
+        {"type": "command"}, {"type": "prompt"}, {"type": "prompt", "prompt": False}, {"type": "other"},
+    ):
+        (bare / "hooks.json").write_text(json.dumps({"SessionStart": [entry]}))
+        result = subprocess.run(["bash", lint, "--root", home], capture_output=True, text=True)
+        assert result.returncode == 1 and not result.stderr, result
+        assert "contains an invalid hook entry" in result.stdout, result.stdout
+    (bare / "hooks.json").write_text(json.dumps({"SessionStart": [{"command": "true"}]}))
+    (wrapped / "hooks.json").write_text(json.dumps({"hooks": {"preToolUse": ["not-a-hook"]}}))
+    result = subprocess.run(["bash", lint, "--root", home], capture_output=True, text=True)
+    assert result.returncode == 1 and not result.stderr, result
+    assert "cannot read hook commands" in result.stdout and "1 commands checked, 1 failed" in result.stdout
+    print("PASS  ox-vibesec: hook lint rejects invalid entries and reports command extraction failures")
+
+    (wrapped / "hooks.json").write_text(json.dumps({"hooks": {}}))
+    (bare / "hooks.json").write_text(json.dumps({"UserPromptSubmit": [{"hooks": [
+        {"type": "prompt", "prompt": "Check the request"},
+        {"type": "prompt", "prompt": "Check again", "command": 'echo "${UNKNOWN_PLUGIN_ROOT}"'},
+        {"type": "command", "command": "true"},
+    ]}]}))
+    result = subprocess.run(["bash", lint, "--root", home], capture_output=True, text=True)
+    assert result.returncode == 0 and not result.stderr, result
+    assert "1 commands checked, 0 failed" in result.stdout, result.stdout
+    print("PASS  ox-vibesec: hook lint skips prompt hooks and still checks commands")
 
 print("PASS  ox-vibesec: plugin-relative hooks, no-secret startup, edit mapping, installer verification, authenticated proxy environment")
 PY

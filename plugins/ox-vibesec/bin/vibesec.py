@@ -3,24 +3,32 @@ import hashlib
 import json
 import os
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
-from urllib.parse import urlsplit
+from urllib.request import proxy_bypass_environment
 
 
 INSTALLER_URL = "https://ox-vibesec.s3.eu-west-1.amazonaws.com/vibesec-installation/install.sh"
 INSTALLER_SHA256 = "51f97f30518e7ff3b48a8d90b404b243896bc5d24f9d8b074d68d9846d3e1a25"
+OX_API_ENDPOINT = "api.cloud.ox.security:443"
 LAUNCHER = Path(__file__).resolve().parents[1] / "hooks/ox"
 
 
 def verified_installer(staged, destination, env):
-    if staged.exists():
-        destination.write_bytes(staged.read_bytes())
-    else:
+    contents = None
+    if staged is not None:
+        try:
+            contents = staged.read_bytes()
+        except FileNotFoundError:
+            print("OX_VIBESEC_INSTALLER file not found; downloading the installer.", file=sys.stderr)
+    if contents is None:
         subprocess.run(
             ["curl", "-fsSL", "--max-time", "15", "-o", str(destination), INSTALLER_URL],
             env=env, check=True, capture_output=True, timeout=17,
         )
+    else:
+        destination.write_bytes(contents)
     if hashlib.sha256(destination.read_bytes()).hexdigest() != INSTALLER_SHA256:
         raise RuntimeError("OX installer checksum mismatch")
     return destination
@@ -43,16 +51,15 @@ class Runtime:
             "no_proxy", "SSL_CERT_FILE", "NODE_EXTRA_CA_CERTS",
         ) if k in os.environ}
         self.env.update(HOME=str(home), TMPDIR=str(home / "tmp"))
-        proxy = self.env.get("https_proxy") or self.env.get("HTTPS_PROXY") or ""
-        try:
-            url = urlsplit(proxy)
-        except ValueError:
-            url = None
-        self.proxy_args = []
-        if url is not None and url.scheme == "http" and url.username is None and url.password is None:
-            self.proxy_args = ["--proxy", "http:" + proxy.split(":", 1)[1]]
-        if proxy or self.env.get("http_proxy") or self.env.get("HTTP_PROXY"):
-            self.env["NODE_USE_ENV_PROXY"] = "1"
+        for name in ("https_proxy", "HTTPS_PROXY", "http_proxy", "HTTP_PROXY"):
+            if proxy := self.env.get(name):
+                scheme, separator, rest = proxy.partition("://")
+                if separator and scheme.lower() in ("http", "https"):
+                    self.env[name] = scheme.lower() + separator + rest
+                self.env["NODE_USE_ENV_PROXY"] = "1"
+        no_proxy = self.env.get("no_proxy") or self.env.get("NO_PROXY", "")
+        if no_proxy != "*" and proxy_bypass_environment(OX_API_ENDPOINT, {"no": no_proxy}):
+            self.env["no_proxy"] = f"{no_proxy},{OX_API_ENDPOINT}"
 
     def installed(self, key):
         try:
@@ -61,11 +68,11 @@ class Runtime:
             return None
         if not isinstance(auth, dict) or auth.get("access_token") != key:
             return None
-        if not (self.home / ".claude/hooks/ox_mind.js").is_file():
-            return None
-        if not any(os.access(p, os.X_OK) for p in self.home.glob(".ox/node/v*/bin/node")):
-            return None
-        return ["sh", LAUNCHER]
+        command = ["sh", LAUNCHER]
+        result = subprocess.run(
+            [*command, "--check-runtime"], env=self.env, capture_output=True, timeout=20,
+        )
+        return command if result.returncode == 0 else None
 
     def start(self, key):
         self.home.mkdir(parents=True, exist_ok=True)
@@ -79,12 +86,17 @@ class Runtime:
             command = self.installed(key)
             if command:
                 return command
+            env = self.env.copy()
+            for name in ("HTTPS_PROXY", "HTTP_PROXY", "NO_PROXY"):
+                lowercase = name.lower()
+                if name in env and not env.get(lowercase):
+                    env[lowercase] = env[name]
             with tempfile.TemporaryDirectory(dir=tmp) as directory:
-                installer = verified_installer(self.staged, Path(directory) / "install.sh", self.env)
-                args = ["bash", str(installer), "--token-stdin", "--ide", "claude", *self.proxy_args]
+                installer = verified_installer(self.staged, Path(directory) / "install.sh", env)
+                args = ["bash", str(installer), "--token-stdin", "--ide", "claude"]
                 result = subprocess.run(
                     args, input=key + "\n", text=True, capture_output=True,
-                    env=self.env, cwd=self.home, timeout=78,
+                    env=env, cwd=self.home, timeout=78,
                 )
             command = self.installed(key) if result.returncode == 0 else None
             if not command:
