@@ -78,7 +78,8 @@ def run():
             print("OX VibeSec runtime is not initialized; check skipped.", file=sys.stderr)
         return 0
     if result.returncode == 2:
-        print("OX VibeSec blocked this action.", file=sys.stderr)
+        reason = result.stderr.strip().replace(key, "[redacted]")
+        print(reason or "OX VibeSec blocked this action.", file=sys.stderr)
         return 2
     if result.returncode:
         raise RuntimeError("hook")

@@ -70,8 +70,13 @@ runtime.assert_called_once_with({
     "tool_name": "Bash", "tool_input": {"command": "true"},
 }, plugin, test_key, initialize=False)
 
-code, stdout, stderr, _ = adapter_call("PreToolUse", exec_event, Mock(returncode=2))
+code, stdout, stderr, _ = adapter_call("PreToolUse", exec_event, Mock(returncode=2, stderr="  \n"))
 assert code == 2 and not stdout and stderr == "OX VibeSec blocked this action.\n"
+code, stdout, stderr, _ = adapter_call(
+    "PreToolUse", exec_event, Mock(returncode=2, stderr=f"Vendor blocked {test_key}\n"),
+)
+assert code == 2 and not stdout and stderr == "Vendor blocked [redacted]\n"
+print("PASS  ox-vibesec: forwards redacted exit-code-2 reason or a generic fallback")
 
 post_event = {**exec_event, "tool_response": {"success": True, "output": "out", "error": "err"}}
 context = {"hookEventName": "PostToolUse", "additionalContext": f"Guidance {test_key}"}
