@@ -26,7 +26,7 @@ VibeSec, run the OX installer again. The installer adds the five entries to
 ## Devin
 
 Install this same plugin from the `plugins/ox-vibesec` directory. Make the
-personal VibeSec secret available to the hook process as `OX_API_KEY`.
+personal VibeSec secret available to the hook process as `OX_VIBESEC_API_KEY`.
 The adapter needs Python 3, Bash, curl, and standard Linux utilities.
 It skips OX calls when the secret is absent.
 

@@ -57,7 +57,7 @@ def ox_payload(event, data, cwd):
 
 def run():
     event = sys.argv[1]
-    key = os.environ.get("OX_API_KEY", "").strip()
+    key = os.environ.get("OX_VIBESEC_API_KEY", "").strip()
     if not key:
         return 0
     data = json.load(sys.stdin)

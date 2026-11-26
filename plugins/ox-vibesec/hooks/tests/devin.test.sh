@@ -35,7 +35,7 @@ assert hook.ox_payload("PreToolUse", {
 with tempfile.TemporaryDirectory() as temp:
     home = Path(temp)
     env = os.environ.copy()
-    env.pop("OX_API_KEY", None)
+    env.pop("OX_VIBESEC_API_KEY", None)
     env.update(HOME=temp, DEVIN_PLUGIN_ROOT=str(plugin))
     for groups in hooks.values():
         command = groups[0]["hooks"][0]["command"]
