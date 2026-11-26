@@ -3,7 +3,9 @@ set -euo pipefail
 
 plugin=$(cd "$(dirname "$0")/../.." && pwd)
 python3 -B - "$plugin" <<'PY'
+from contextlib import redirect_stderr, redirect_stdout
 import hashlib
+from io import StringIO
 import json
 import os
 from pathlib import Path
@@ -31,6 +33,61 @@ assert hook.ox_payload("PreToolUse", {
 assert hook.ox_payload("PreToolUse", {
     **session, "tool_name": "edit", "tool_input": {"path": "test.py", "patch": "ignored"},
 }, plugin) is None
+assert hook.ox_payload("PreToolUse", {
+    **session, "tool_name": "edit",
+    "tool_input": {"path": "test.py", "old_string": "before", "new_string": "after"},
+}, plugin)["tool_input"] == {"file_path": "test.py", "old_string": "before", "new_string": "after"}
+
+test_key = "test-vibesec-secret"
+exec_event = {**session, "tool_name": "exec", "tool_input": {"command": "true"}}
+
+
+def adapter_call(event, payload, result):
+    stdout, stderr = StringIO(), StringIO()
+    with (
+        patch.dict(os.environ, {"OX_VIBESEC_API_KEY": test_key, "DEVIN_PROJECT_DIR": str(plugin)}),
+        patch.object(sys, "argv", ["hook.py", event]),
+        patch.object(sys, "stdin", StringIO(json.dumps(payload))),
+        patch.object(vibesec.Runtime, "run", return_value=result) as runtime,
+        redirect_stdout(stdout),
+        redirect_stderr(stderr),
+    ):
+        code = hook.run()
+    return code, stdout.getvalue(), stderr.getvalue(), runtime
+
+
+def vendor_reply(output):
+    return Mock(returncode=0, stdout=json.dumps({"hookSpecificOutput": output}))
+
+
+code, stdout, stderr, runtime = adapter_call("PreToolUse", exec_event, vendor_reply({
+    "permissionDecision": "deny", "permissionDecisionReason": f"Blocked {test_key}",
+}))
+assert code == 0 and not stderr
+assert json.loads(stdout) == {"decision": "block", "reason": "Blocked [redacted]"}
+runtime.assert_called_once_with({
+    "hook_event_name": "PreToolUse", "session_id": session["session_id"], "cwd": str(plugin),
+    "tool_name": "Bash", "tool_input": {"command": "true"},
+}, plugin, test_key, initialize=False)
+
+code, stdout, stderr, _ = adapter_call("PreToolUse", exec_event, Mock(returncode=2))
+assert code == 2 and not stdout and stderr == "OX VibeSec blocked this action.\n"
+
+post_event = {**exec_event, "tool_response": {"success": True, "output": "out", "error": "err"}}
+context = {"hookEventName": "PostToolUse", "additionalContext": f"Guidance {test_key}"}
+code, stdout, stderr, runtime = adapter_call("PostToolUse", post_event, vendor_reply(context))
+assert code == 0 and not stderr
+assert json.loads(stdout) == {"hookSpecificOutput": {
+    "hookEventName": "PostToolUse", "additionalContext": "Guidance [redacted]",
+}}
+assert runtime.call_args.args[0]["tool_response"] == {"success": True, "stdout": "out", "stderr": "err"}
+code, stdout, stderr, _ = adapter_call("PreToolUse", exec_event, vendor_reply(context))
+assert code == 0 and not stdout and not stderr
+
+code, stdout, stderr, runtime = adapter_call("PreToolUse", {**exec_event, "session_id": "../bad"}, None)
+assert code == 0 and not stdout and not stderr
+runtime.assert_not_called()
+print("PASS  ox-vibesec: block decisions, key redaction, exec and edit mapping, PostToolUse, invalid session rejection")
 
 with tempfile.TemporaryDirectory() as temp:
     home = Path(temp)
