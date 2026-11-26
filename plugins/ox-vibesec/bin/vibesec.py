@@ -50,7 +50,7 @@ class Runtime:
                 if separator and scheme.lower() in ("http", "https"):
                     self.env[name] = scheme.lower() + separator + rest
                 self.env["NODE_USE_ENV_PROXY"] = "1"
-        no_proxy = self.env.get("no_proxy", self.env.get("NO_PROXY", ""))
+        no_proxy = self.env.get("no_proxy") or self.env.get("NO_PROXY", "")
         if no_proxy != "*" and proxy_bypass_environment(OX_API_ENDPOINT, {"no": no_proxy}):
             self.env["no_proxy"] = f"{no_proxy},{OX_API_ENDPOINT}"
 
@@ -81,8 +81,9 @@ class Runtime:
                 return command
             env = self.env.copy()
             for name in ("HTTPS_PROXY", "HTTP_PROXY", "NO_PROXY"):
-                if name in env:
-                    env.setdefault(name.lower(), env[name])
+                lowercase = name.lower()
+                if name in env and not env.get(lowercase):
+                    env[lowercase] = env[name]
             with tempfile.TemporaryDirectory(dir=tmp) as directory:
                 installer = verified_installer(self.staged, Path(directory) / "install.sh", env)
                 args = ["bash", str(installer), "--token-stdin", "--ide", "claude"]

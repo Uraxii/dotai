@@ -243,8 +243,12 @@ with tempfile.TemporaryDirectory() as temp:
         }, clear=True):
             runtime = vibesec.Runtime(home / "runtime", staged)
         assert runtime.env["no_proxy"] == bypass
-    with patch.dict(os.environ, {"NO_PROXY": "ox.security", "no_proxy": ""}, clear=True):
-        assert vibesec.Runtime(home / "runtime", staged).env["no_proxy"] == ""
+    with patch.dict(os.environ, {
+        "HTTPS_PROXY": proxy, "NO_PROXY": "ox.security", "no_proxy": "",
+    }, clear=True):
+        runtime = vibesec.Runtime(home / "runtime", staged)
+    assert "api.cloud.ox.security:443" in runtime.env["no_proxy"].split(","), runtime.env["no_proxy"]
+    print("PASS  ox-vibesec: empty lowercase no_proxy inherits the API bypass")
     print("PASS  ox-vibesec: preserves NO_PROXY suffix bypasses for the OX installer")
 
     launcher = ["sh", vibesec.LAUNCHER]
@@ -267,7 +271,7 @@ with tempfile.TemporaryDirectory() as temp:
             assert "--proxy" not in args[0] and all(proxy not in arg for arg in args[0])
             for name, value in uppercase.items():
                 assert kwargs["env"][name] == value
-                assert kwargs["env"][name.lower()] == lowercase.get(name.lower(), value)
+                assert kwargs["env"][name.lower()] == (lowercase.get(name.lower()) or value)
             assert kwargs["env"]["NODE_USE_ENV_PROXY"] == "1"
             assert kwargs["input"] == "test-token\n"
     print("PASS  ox-vibesec: installer mirrors uppercase proxy variables without overriding lowercase")
