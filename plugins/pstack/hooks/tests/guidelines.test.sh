@@ -619,6 +619,16 @@ done
 HARNESS=codex hook <<<"$(patch_payload PostToolUse "$patch")"
 expect_contains "a context full of notices still counts the findings" "more findings did not fit" "$(context)"
 expect_equal "and stays inside the size cap" yes "$([ "$(context | wc -c)" -le 9000 ] && echo yes)"
+wide="$(printf 'w%.0s' $(seq 220))"
+added=$'*** Begin Patch'
+for name in a b c; do
+  added+=$'\n'"*** Add File: $name$wide.py"$'\n'"$(sed 's/^/+/' <<<"$many")"
+done
+HARNESS=codex hook <<<"$(patch_payload PreToolUse "$added${patch#\*\*\* Begin Patch}")"
+expect_contains "a denial with dropped findings counts the notices left out" "more notices did not fit" "$(reason)"
+expect_equal "and stays inside the size cap" yes "$([ "$(reason | wc -c)" -le 9000 ] && echo yes)"
+expect_contains "the dropped-findings notice names only whole files" \
+  "Run the check command on a$wide.py, b$wide.py and 1 more files to see all of them." "$(reason)"
 
 new_case huge-guideline
 cp "$FIXTURES/py-comprehension-one-for.md" "$WORK/one-for.md"

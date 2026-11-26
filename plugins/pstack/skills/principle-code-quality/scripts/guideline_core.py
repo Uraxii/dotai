@@ -289,6 +289,24 @@ def new_hits(after: list[Hit], before: list[Hit]) -> list[Hit]:
     return added
 
 
+def dropped_notice(dropped: dict[str, int]) -> str:
+    """Count the findings that did not fit and name whole files to check,
+    within DROPPED_NOTICE_CHARS less its separator."""
+    head = (
+        f"Notice: {sum(dropped.values())} more findings did not fit in "
+        f"this message. Run the check command on "
+    )
+    tail = " to see all of them."
+    files = list(dropped)
+    for shown in range(min(len(files), DROPPED_FILES_NAMED), 0, -1):
+        others = len(files) - shown
+        named = ", ".join(files[:shown])
+        named += f" and {others} more files" * (others > 0)
+        if len(head + named + tail) <= DROPPED_NOTICE_CHARS - 2:
+            return head + named + tail
+    return head + "the edited files" + tail
+
+
 class Engine:
     """One hook call: reads state, handles the event, writes state."""
 
@@ -555,15 +573,17 @@ class Engine:
             if self.add(items, notice, reserve + NOTICE_COUNT_CHARS)
         ]
         if len(added) < len(unique):
-            items.append(
+            self.add(items, (
                 f"Notice: {len(unique) - len(added)} more notices did not fit "
                 f"in this message."
-            )
+            ), reserve)
         new = [notice for notice in added if notice not in self.state.notices]
         self.state.notices += new
         return new
 
-    def add_hits(self, items: list[str]) -> None:
+    def add_hits(self, items: list[str], reserve: int = 0) -> None:
+        """Add each hit in full, or as its rule and line when the full
+        text does not fit; keep `reserve` characters free after them."""
         ordered = sorted(self.hits, key=lambda hit: (
             hit.severity != "block", hit.rel, hit.finding.line,
             hit.guideline.id,
@@ -571,20 +591,14 @@ class Engine:
         dropped: dict[str, int] = {}
         for hit in ordered:
             repeated = self.suppressed(hit.guideline.id)
-            if self.add(items, self.hit_item(hit), DROPPED_NOTICE_CHARS):
+            kept = DROPPED_NOTICE_CHARS + reserve
+            if self.add(items, self.hit_item(hit), kept):
                 if not repeated:
                     self.state.sent[hit.guideline.id] = self.state.prompt
-            elif not self.add(items, self.hit_head(hit), DROPPED_NOTICE_CHARS):
+            elif not self.add(items, self.hit_head(hit), kept):
                 dropped[hit.rel] = dropped.get(hit.rel, 0) + 1
         if dropped:
-            named = ", ".join(list(dropped)[:DROPPED_FILES_NAMED])
-            others = len(dropped) - DROPPED_FILES_NAMED
-            named += f" and {others} more files" * (others > 0)
-            items.append((
-                f"Notice: {sum(dropped.values())} more findings did not fit "
-                f"in this message. Run the check command on {named} to see "
-                f"all of them."
-            )[:DROPPED_NOTICE_CHARS - 2])
+            self.add(items, dropped_notice(dropped), reserve)
 
     def add_fulls(self, items: list[str]) -> None:
         """Add queued and new guidelines in full; keep what does not fit."""
@@ -615,7 +629,7 @@ class Engine:
         if self.blocked and kind == "pre_write":
             self.queue_fulls()
             items = [DENY_HEADER]
-            self.add_hits(items)
+            self.add_hits(items, NOTICE_COUNT_CHARS * bool(self.notices))
             self.add_notices(items)
             return Result(deny="\n\n".join(items))
         if not self.event.channel:
