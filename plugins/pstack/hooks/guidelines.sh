@@ -49,6 +49,7 @@ exec 3>&-
 [ "$status" -eq 0 ] && exit 0
 
 log="$data/guideline-state/errors.log"
+details=''
 (
   umask 077
   mkdir -p "$data/guideline-state" || exit
@@ -59,6 +60,6 @@ log="$data/guideline-state/errors.log"
   [ -L "$log" ] && exit
   [ -f "$log" ] && [ "$(wc -c <"$log")" -gt 200000 ] && : >"$log"
   printf '%s %s exit %s\n%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$harness" "$status" "$errors" >>"$log"
-) 2>/dev/null
-printf '{"systemMessage":"pstack guideline hook failed; code-quality guidelines were not checked for this call. Details: %s"}\n' "$(json_text "$log")"
+) 2>/dev/null && details=" Details: $(json_text "$log")"
+printf '{"systemMessage":"pstack guideline hook failed; code-quality guidelines were not checked for this call.%s"}\n' "$details"
 exit 0

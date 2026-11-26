@@ -43,6 +43,8 @@ DENY_HEADER = (
 UNAVAILABLE_LABEL = "warn (detector unavailable)"
 RESEND_AFTER_PROMPTS = 20
 MAX_TEXT_CHARS = 9000
+DROPPED_NOTICE_CHARS = 600
+DROPPED_FILES_NAMED = 3
 MAX_CONTENT_CHARS = 1_000_000
 MAX_PROMPT_CHARS = 100_000
 MAX_FILES_PER_EVENT = 50
@@ -338,7 +340,8 @@ class Engine:
                 self.report_unbuilt(file.rel, change.problem)
             return file
         if self.event.kind == "check":
-            self.notices.append(f"Notice: did not check {change.path}: {file}")
+            reason = change.problem or file
+            self.notices.append(f"Notice: did not check {change.path}: {reason}")
         return None
 
     def report_unbuilt(self, rel: str, problem: str) -> None:
@@ -512,10 +515,11 @@ class Engine:
             return f"{head} (guidance sent earlier)"
         return f"{head}\n{hit.guideline.body}"
 
-    def add(self, items: list[str], text: str) -> bool:
-        """Append the item when the whole text stays under the size cap."""
+    def add(self, items: list[str], text: str, reserve: int = 0) -> bool:
+        """Append the item when the whole text, plus `reserve` characters
+        kept free, stays under the size cap."""
         used = sum(len(item) + 2 for item in items)
-        if used + len(text) > MAX_TEXT_CHARS:
+        if used + len(text) + reserve > MAX_TEXT_CHARS:
             return False
         items.append(text)
         return True
@@ -542,16 +546,19 @@ class Engine:
         dropped: dict[str, int] = {}
         for hit in ordered:
             repeated = self.suppressed(hit.guideline.id)
-            if not self.add(items, self.hit_item(hit)):
+            if not self.add(items, self.hit_item(hit), DROPPED_NOTICE_CHARS):
                 dropped[hit.rel] = dropped.get(hit.rel, 0) + 1
             elif not repeated:
                 self.state.sent[hit.guideline.id] = self.state.prompt
         if dropped:
-            items.append(
+            named = ", ".join(list(dropped)[:DROPPED_FILES_NAMED])
+            others = len(dropped) - DROPPED_FILES_NAMED
+            named += f" and {others} more files" * (others > 0)
+            items.append((
                 f"Notice: {sum(dropped.values())} more findings did not fit "
-                f"in this message. Run the check command on "
-                f"{', '.join(dropped)} to see all of them."
-            )
+                f"in this message. Run the check command on {named} to see "
+                f"all of them."
+            )[:DROPPED_NOTICE_CHARS])
 
     def add_fulls(self, items: list[str]) -> None:
         """Add queued and new guidelines in full; keep what does not fit."""

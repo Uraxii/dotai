@@ -182,8 +182,13 @@ def run_code_quality(executable: str, target: Target) -> RunResult:
 
 def ruff_arguments(target: Target) -> list[str]:
     codes = ",".join(sorted(target.codes))
-    if ruff_config(target.path, target.root) is not None:
-        return ["--force-exclude", "--extend-select", codes]
+    config = ruff_config(target.path, target.root)
+    if config is not None:
+        # Replace ruff's default excludes (dist, _build, ...) unless the
+        # project sets its own, so only the project's choices skip a file.
+        own = "exclude" in ruff_lint_tables(config)[0]
+        defaults = [] if own else ["--exclude", ".git"]
+        return ["--force-exclude", *defaults, "--extend-select", codes]
     length = str(line_length(target.root))
     return ["--isolated", "--line-length", length, "--select", codes]
 

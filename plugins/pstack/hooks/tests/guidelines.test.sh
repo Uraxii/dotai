@@ -205,6 +205,8 @@ expect_contains "a file that is not UTF-8 is named" \
   "Notice: did not check pages.py: it is not UTF-8 text, so PostToolUse checks it" "$(context)"
 hook <<<"$(tool_payload PostToolUse Edit pages.py '{}')"
 expect_contains "and named again after the write" "Notice: did not check pages.py: it is not UTF-8 text" "$(context)"
+hook <<<"$(write pages.py "$PAGES")"
+expect_equal "a Write over a file that is not UTF-8 is still checked" deny "$(decision)"
 
 new_case non-code
 hook <<<"$(write notes.md "$PAGES")"
@@ -262,8 +264,15 @@ hook RUFF_JSON="$F403_ROW" <<<"$(write src/app.py 'from os import *
 expect_equal "a rule the project ignores does not block" "" "$(decision)"
 expect_equal "a rule the project ignores gives no finding" "" "$(grep -F py.import.no-star <<<"$STDOUT")"
 expect_equal "ruff runs with the project config, without the ignored rule" \
-  "check --force-exclude --extend-select S101 --output-format json --stdin-filename $PROJECT/src/app.py -" \
+  "check --force-exclude --exclude .git --extend-select S101 --output-format json --stdin-filename $PROJECT/src/app.py -" \
   "$(cat "$WORK/ruff.args")"
+printf 'exclude = ["gen"]\n[lint]\nignore = ["F403"]\n' >"$PROJECT/ruff.toml"
+hook RUFF_JSON="$F403_ROW" <<<"$(write src/dist/app.py 'from os import *
+')"
+expect_equal "a project that sets exclude keeps it, with no ruff defaults replaced" \
+  "check --force-exclude --extend-select S101 --output-format json --stdin-filename $PROJECT/src/dist/app.py -" \
+  "$(tail -n 1 "$WORK/ruff.args")"
+printf '[lint]\nignore = ["F403"]\n' >"$PROJECT/ruff.toml"
 hook RUFF_JSON="$F403_ROW" <<<"$(tool_payload PostToolUse Write src/app.py '{}')"
 expect_equal "the ignored rule stays quiet after the write" "" "$(grep -F py.import.no-star <<<"$STDOUT")"
 cp -r "$FIXTURES" "$WORK/two-detectors"
@@ -403,6 +412,13 @@ expect_equal "an engine failure exits 0" 0 "$STATUS"
 expect_json "an engine failure tells the user and does not deny" \
   "{\"systemMessage\": \"pstack guideline hook failed; code-quality guidelines were not checked for this call. Details: $WORK/data/guideline-state/errors.log\"}" "$STDOUT"
 expect_contains "the failure is logged" "NotADirectoryError" "$(cat "$WORK/data/guideline-state/errors.log")"
+HARNESS=bogus hook <<<'{}'
+expect_json "a wrapper-caught failure names the log it wrote" \
+  "{\"systemMessage\": \"pstack guideline hook failed; code-quality guidelines were not checked for this call. Details: $WORK/data/guideline-state/errors.log\"}" "$STDOUT"
+ln -s "$WORK/data" "$WORK/data-link"
+HARNESS=bogus hook CLAUDE_PLUGIN_DATA="$WORK/data-link" <<<'{}'
+expect_json "a wrapper that refuses a symlinked data directory names no log" \
+  '{"systemMessage": "pstack guideline hook failed; code-quality guidelines were not checked for this call."}' "$STDOUT"
 rm "$WORK/data/guideline-state/errors.log"
 : >"$WORK/victim"
 ln -s "$WORK/victim" "$WORK/data/guideline-state/errors.log"
@@ -539,6 +555,10 @@ expect_equal "check exits 3 on a missing path" 3 "$STATUS"
 expect_contains "check names the missing path" "Notice: did not check gone.py: no such file" "$STDOUT"
 expect_contains "check names an excluded path" \
   "Notice: did not check build/b.py: it is in a dependency or build directory" "$STDOUT"
+capture env PATH="$HOOK_PATH" python3 -I "$ENGINE" check build nope.txt
+expect_equal "check exits 3 on a directory" 3 "$STATUS"
+expect_contains "check names a directory" "Notice: did not check build: it is a directory" "$STDOUT"
+expect_contains "check names a missing file of any type" "Notice: did not check nope.txt: no such file" "$STDOUT"
 capture env PATH="$HOOK_PATH" python3 -I "$ENGINE" --harness unknown </dev/null
 expect_equal "a usage error never exits 2, which Codex reads as a block" 64 "$STATUS"
 

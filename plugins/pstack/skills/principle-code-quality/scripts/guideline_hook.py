@@ -181,7 +181,8 @@ def claude_tool_event(payload: Payload, base: Neutral) -> Neutral | None:
         return {"kind": "post_write", "files": [written(raw, disk)]}
     if name != "PreToolUse":
         return None
-    after = None if disk.problem else pending_write(tool, tool_input, disk.text)
+    known = tool == "Write" or not disk.problem
+    after = pending_write(tool, tool_input, disk.text) if known else None
     if after is None:
         return {"kind": "pre_write", "files": [unbuilt(raw, disk)]}
     change = {"path": raw, "before": disk.text, "after": after}
@@ -348,9 +349,13 @@ def run_hook(harness: str) -> int:
 def check(paths: Sequence[str]) -> int:
     """Print guidelines and findings for files; exit 1 on a block hit."""
     cwd = os.getcwd()
-    missing = [path for path in paths if not (Path(cwd) / path).is_file()]
+    problems = {
+        path: "it is a directory" if (Path(cwd) / path).is_dir()
+        else "no such file"
+        for path in paths if not (Path(cwd) / path).is_file()
+    }
     files = [
-        {"path": path, "problem": "no such file"} if path in missing
+        {"path": path, "problem": problems[path]} if path in problems
         else written(path, read_disk(path, cwd, cwd))
         for path in paths
     ]
@@ -364,7 +369,7 @@ def check(paths: Sequence[str]) -> int:
     print(result.context)
     if result.deny is not None:
         return EXIT_BLOCK_FINDING
-    return EXIT_MISSING_PATH if missing else 0
+    return EXIT_MISSING_PATH if problems else 0
 
 
 def log_failure(harness: str) -> Path:
