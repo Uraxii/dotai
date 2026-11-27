@@ -24,6 +24,7 @@ MANIFESTS = {
 }
 DONE = "DOTAI_SMOKE_OK"
 RECAP = "Write a plain recap in a few sentences"
+CODEX_FIXTURE_CALL = "call_smoke"
 
 
 def plugins_for(harness):
@@ -130,7 +131,7 @@ class Model(BaseHTTPRequestHandler):
         first = step == 1 and bool(self.server.command)
         if first:
             item = {
-                "type": "function_call", "id": "fc_smoke", "call_id": "call_smoke",
+                "type": "function_call", "id": "fc_smoke", "call_id": CODEX_FIXTURE_CALL,
                 "name": "exec_command", "arguments": json.dumps({"cmd": self.server.command}),
             }
         else:
@@ -228,6 +229,14 @@ def check(ok, description):
     print(f"PASS {description}", flush=True)
 
 
+def codex_fixture_output(requests):
+    for request in reversed(requests):
+        for item in reversed(json.loads(request).get("input", [])):
+            if item.get("type") == "function_call_output" and item.get("call_id") == CODEX_FIXTURE_CALL:
+                return str(item.get("output", ""))[-2000:]
+    return "No tool result reached the local model stub."
+
+
 def copilot_observer(scratch):
     path = scratch / "stop-observer"
     path.mkdir()
@@ -315,6 +324,8 @@ def offline_smoke(harness, plugins, scratch, env, cwd):
             target = cwd / f"{model}.txt"
             observation.unlink(missing_ok=True)
             requests = offline_run(harness, plugins, env, cwd, model, f"touch {target.name}")
+            if harness == "codex" and not target.is_file():
+                raise RuntimeError(f"codex: {model} could not write the fixture\n{codex_fixture_output(requests)}")
             check(target.is_file(), f"{harness}: {model} wrote the fixture")
             actual = sum(RECAP in req for req in requests)
             if copilot_stop:
