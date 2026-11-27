@@ -93,9 +93,10 @@ SPACED_ROOT="$WORK/plugin root with spaces"
 make_plugin_root "$SPACED_ROOT" "$FIXTURE_TEXT" "$MAIN_FIXTURE_TEXT"
 export PLUGIN_ROOT="$SPACED_ROOT" CLAUDE_PLUGIN_ROOT="$SPACED_ROOT"
 cd "$WORK/elsewhere" || exit 1
+copilot_config=$(jq -r '.hooks' "$REAL_PLUGIN_ROOT/plugin.json")
 for wiring in "claude hooks/claude-hooks.json SessionStart SubagentStart" \
   "codex hooks/codex-hooks.json SessionStart SubagentStart" \
-  "copilot hooks.json sessionStart subagentStart"; do
+  "copilot $copilot_config sessionStart subagentStart"; do
   read -r harness config session_event subagent_event <<<"$wiring"
   expect_equal "$config wires exactly the two events" \
     "$(printf '%s\n' "$session_event" "$subagent_event" | sort | jq -Rsc 'split("\n") | map(select(. != ""))')" \
@@ -134,5 +135,73 @@ done
 
 expect_equal "claude SessionStart entries share one matcher" 1 \
   "$(jq '[.hooks.SessionStart[].matcher] | unique | length' "$REAL_PLUGIN_ROOT/hooks/claude-hooks.json")"
+
+expect_equal "Devin rule contains both instruction sources" \
+  "$(printf '%s\n\n%s' "$(sed 's/[[:blank:]]*$//' "$REAL_PLUGIN_ROOT/instructions.md")" \
+    "$(sed 's/[[:blank:]]*$//' "$REAL_PLUGIN_ROOT/$MAIN_FILE")")" \
+  "$(sed '1,2d' "$REAL_PLUGIN_ROOT/AGENTS.md")"
+expect_equal "Devin does not discover a root injection hook" no \
+  "$([ -e "$REAL_PLUGIN_ROOT/hooks.json" ] && echo yes || echo no)"
+
+capture python3 -B - "$REAL_PLUGIN_ROOT/../.." "$WORK" <<'PY'
+from contextlib import redirect_stdout
+from io import StringIO
+from pathlib import Path
+import runpy
+import sys
+
+repo, work = map(Path, sys.argv[1:])
+generator = runpy.run_path(str(repo / "scripts/generate-plugin-manifests.py"))
+for name in (None, "instructions.md", "main-agent-instructions.md"):
+    root = work / ("generate-" + (name or "no-sources"))
+    plugin = root / "plugins/personal-instructions"
+    plugin.mkdir(parents=True)
+    (root / "README.md").write_text((repo / "README.md").read_text())
+    if name:
+        (plugin / name).write_text("# Only available rules\n")
+    with redirect_stdout(StringIO()):
+        assert generator["main"]([], root=root) == 0
+    rule = plugin / "AGENTS.md"
+    if name:
+        assert rule.read_text().splitlines()[2:] == ["# Only available rules"]
+    else:
+        assert not rule.exists()
+PY
+expect_equal "Devin generator handles missing instruction sources" 0 "$STATUS"
+expect_equal "Devin generator reports no errors for missing sources" "" "$STDERR"
+
+capture python3 -B - "$REAL_PLUGIN_ROOT/../.." "$WORK" <<'PY'
+from contextlib import redirect_stdout
+from io import StringIO
+from pathlib import Path
+import runpy
+from shutil import copytree, ignore_patterns
+import sys
+
+repo, work = map(Path, sys.argv[1:])
+generator = runpy.run_path(str(repo / "scripts/generate-plugin-manifests.py"))
+root = work / "stale-rule"
+copytree(repo, root, ignore=ignore_patterns(".git", ".fixtures"))
+plugin = root / "plugins/personal-instructions"
+rule = plugin / "AGENTS.md"
+(plugin / "instructions.md").unlink()
+(plugin / "main-agent-instructions.md").unlink()
+original = rule.read_bytes()
+output = StringIO()
+with redirect_stdout(output):
+    assert generator["main"](["--check"], root=root) == 2
+    assert "generated Devin rules have no instruction sources" in output.getvalue()
+    assert "plugins/personal-instructions/AGENTS.md" in output.getvalue()
+    assert rule.read_bytes() == original
+    assert generator["main"]([], root=root) == 0
+    assert not rule.exists()
+    assert generator["main"](["--check"], root=root) == 0
+    rule.write_text("# Handwritten rules\n")
+    assert generator["main"](["--check"], root=root) == 0
+    assert generator["main"]([], root=root) == 0
+    assert rule.read_text() == "# Handwritten rules\n"
+PY
+expect_equal "Devin generator flags and removes stale generated rules but preserves handwritten rules" 0 "$STATUS"
+expect_equal "stale rule checks report no unexpected errors" "" "$STDERR"
 
 finish

@@ -21,11 +21,11 @@ field() {
 deny() {
   local reason
   reason=$(LC_ALL=C JSON_MODE=quote JSON_TEXT="$1" awk -f "$hooks_dir/hook-json.awk")
-  if [ "$harness" = copilot ]; then
-    printf '{"permissionDecision":"deny","permissionDecisionReason":%s}\n' "$reason"
-  else
-    printf '{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":%s}}\n' "$reason"
-  fi
+  case "$harness" in
+    copilot) printf '{"permissionDecision":"deny","permissionDecisionReason":%s}\n' "$reason" ;;
+    devin) printf '{"decision":"block","reason":%s}\n' "$reason" ;;
+    *) printf '{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":%s}}\n' "$reason" ;;
+  esac
 }
 
 input=$(cat)
@@ -35,16 +35,24 @@ harness=claude
 if [ "${1:-}" = "--harness" ]; then
   harness="${2:-}"
 fi
-case "$harness" in claude|codex|copilot) ;; *) exit 0 ;; esac
+case "$harness" in claude|codex|copilot|devin) ;; *) exit 0 ;; esac
 
-if [ "$harness" = copilot ]; then
-  file_path=$(field /path /toolArgs)
-  offset=$(field /view_range /toolArgs)
-  limit="$offset"
-else
-  file_path=$(field /tool_input/file_path)
-  offset=$(field /tool_input/offset)
-  limit=$(field /tool_input/limit)
+case "$harness" in
+  copilot)
+    file_path=$(field /path /toolArgs)
+    offset=$(field /view_range /toolArgs)
+    limit="$offset"
+    ;;
+  *)
+    file_path=$(field /tool_input/file_path)
+    offset=$(field /tool_input/offset)
+    limit=$(field /tool_input/limit)
+    ;;
+esac
+if [ "$harness" = devin ]; then
+  [ -n "$file_path" ] || file_path=$(field /tool_input/path)
+  [ -n "$file_path" ] || exit 0
+  [ -n "$cwd" ] || cwd=${DEVIN_PROJECT_DIR:-$PWD}
 fi
 
 # Allow targeted reads (offset or limit set) — Claude already knows what it needs
@@ -81,6 +89,9 @@ reason="$reason Read it in chunks of at most ${MIN_LINES} lines until you have r
 case "$harness" in
   claude)
     reason="$reason Use Read with offset and limit (start with offset=1, limit=${MIN_LINES}, then advance offset by ${MIN_LINES})."
+    ;;
+  devin)
+    reason="$reason Use read with offset and limit (start with offset=1, limit=${MIN_LINES}, then advance offset by ${MIN_LINES})."
     ;;
   copilot)
     reason="$reason Use view with view_range [start, end] (inclusive; start with [1, ${MIN_LINES}], then continue at $((MIN_LINES + 1)))."

@@ -42,6 +42,7 @@ check() {
       "point it at a file in ${plugin#"$root"/}/hooks/"
   done < <({
     grep -oE 'PLUGIN_ROOT\}?[/\]hooks[/\][A-Za-z0-9._-]+' <<<"$command"
+    grep -oE '\$root/hooks/[A-Za-z0-9._-]+' <<<"$command"
     grep -oE 'run-hook\.cmd"? +[^ ;"]+' <<<"$command"
   } | sed -E 's/.*[/\ ]//')
 
@@ -99,7 +100,12 @@ for manifest in "$root"/plugins/*/hooks.json "$root"/plugins/*/hooks/*.json; do
     hooks/claude-hooks.json | hooks/hooks.json) allowed=CLAUDE_PLUGIN_ROOT ;;
     # Codex sets both; pstack's script reads CLAUDE_PLUGIN_ROOT under Codex.
     hooks/codex-hooks.json) allowed="PLUGIN_ROOT CLAUDE_PLUGIN_ROOT" ;;
-    hooks/copilot-hooks.json) allowed=COPILOT_PLUGIN_ROOT ;;
+    hooks/copilot-hooks.json)
+      if jq -e '.hooks == "./hooks/copilot-hooks.json"' "$plugin/plugin.json" >/dev/null 2>&1; then
+        allowed=PLUGIN_ROOT
+      else
+        allowed=COPILOT_PLUGIN_ROOT
+      fi ;;
     *)
       fail - - "is not a hook manifest name this lint knows" "rename it, or teach scripts/lint-hook-references.sh its harness"
       continue
@@ -116,7 +122,7 @@ for manifest in "$root"/plugins/*/hooks.json "$root"/plugins/*/hooks/*.json; do
     [ -n "$field" ] && check "$event" "$field" "$command"
   done <<< "$commands"
 
-  if [ "${manifest#"$plugin"/}" = hooks.json ] && [ "$events" = .hooks ]; then
+  if [ "$allowed" = PLUGIN_ROOT ]; then
     if ! pairs=$(jq -r '.hooks | to_entries[] | .key as $e | .value[]
       | select(has("bash") != has("powershell"))
       | if has("bash") then "\($e)\tbash\tpowershell" else "\($e)\tpowershell\tbash" end' "$manifest" 2>/dev/null); then

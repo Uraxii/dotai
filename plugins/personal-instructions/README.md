@@ -2,7 +2,7 @@
 
 # personal-instructions
 
-Reads the plugin's instructions.md at session start and subagent start and adds it to context in Claude Code, Codex, and Copilot CLI. Edit that one file to change your rules in all three. Rules only the main agent should get go in main-agent-instructions.md, which is injected at session start only. Fresh subagents do not get it; forked subagents inherit it from the parent's history.
+Reads the plugin's instructions.md at session start and subagent start and adds it to context in Claude Code, Codex, and Copilot CLI. Edit that file to change your shared rules. Rules only the main agent should get go in main-agent-instructions.md, which is injected at session start only. Fresh subagents do not get it; forked subagents inherit it from the parent's history. Devin uses one always-on rule made from both files, with no separate main-agent scope. Run `python3 scripts/generate-plugin-manifests.py` after editing either file.
 
 ## Hooks
 
@@ -29,6 +29,12 @@ Copilot CLI:
 ```
 copilot plugin marketplace add Uraxii/dotai
 copilot plugin install personal-instructions@Uraxii
+```
+
+Devin CLI:
+
+```
+devin plugins install Uraxii/dotai#plugins/personal-instructions
 ```
 
 For other harnesses, see the [repository README](https://github.com/Uraxii/dotai#install).
