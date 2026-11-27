@@ -1,7 +1,7 @@
 {
   "name": "shunt",
-  "version": "0.4.0",
-  "description": "Shunts large reads to small subagents and boilerplate generation to Portal AiKA to save main-agent context tokens.",
+  "version": "1.0.0",
+  "description": "Delegate large reads to subagents to save main-agent context.",
   "author": {
     "name": "Uraxii",
     "url": "https://github.com/Uraxii"

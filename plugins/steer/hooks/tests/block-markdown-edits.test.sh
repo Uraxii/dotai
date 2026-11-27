@@ -58,6 +58,49 @@ while IFS= read -r command; do
     "$(jq -r '.hookSpecificOutput.permissionDecision' <<<"$STDOUT" 2>/dev/null)"
 done < <(wiring_commands claude "$config" PreToolUse)
 
+submit_command=$(wiring_commands claude "$config" UserPromptSubmit)
+write_command=$(wiring_commands claude "$config" PreToolUse)
+submit_prompt() {
+  CLAUDE_CONFIG_DIR="$WORK/claude" run_wiring claude "$submit_command" \
+    <<<"$(jq -cn --arg id "$1" --arg prompt "$2" \
+      '{hook_event_name:"UserPromptSubmit",session_id:"session-1",prompt_id:$id,prompt:$prompt}')"
+}
+first_write() {
+  CLAUDE_CONFIG_DIR="$WORK/claude" run_wiring claude "$write_command" \
+    <<<"$(jq -cn --arg id "$1" --arg t "$WORK/not-flushed.jsonl" \
+      '{hook_event_name:"PreToolUse",tool_name:"Write",session_id:"session-1",prompt_id:$id,
+        tool_input:{file_path:"/repo/guide.md"},transcript_path:$t}')"
+}
+submit_prompt prompt-1 'fix the parser'
+first_write prompt-1
+expect_equal "first unrequested Write is denied without a flushed transcript" deny \
+  "$(jq -r '.hookSpecificOutput.permissionDecision' <<<"$STDOUT")"
+submit_prompt prompt-2 $'fix the parser\nUpdate guide.md as well'
+first_write prompt-2
+expect_equal "first requested Write allows without a flushed transcript" "" "$STDOUT"
+printf '%s\n' "$(assistant)" >"$WORK/not-flushed.jsonl"
+submit_prompt prompt-3 'fix the parser'
+first_write prompt-3
+expect_equal "an existing transcript without the first prompt still denies" deny \
+  "$(jq -r '.hookSpecificOutput.permissionDecision' <<<"$STDOUT")"
+first_write prompt-2
+expect_equal "another prompt cannot use the cached authorization check" "" "$STDOUT"
+
+end_command=$(wiring_commands claude "$config" SessionEnd)
+CLAUDE_CONFIG_DIR="$WORK/claude" run_wiring claude "$end_command" \
+  <<< '{"hook_event_name":"SessionEnd","session_id":"session-1","reason":"other"}'
+expect_equal "SessionEnd removes the stored prompt" absent \
+  "$([ -e "$WORK/claude/dotai-steer/session-1.json" ] && echo present || echo absent)"
+first_write prompt-3
+expect_equal "an ended session no longer uses its cached prompt" "" "$STDOUT"
+
+CLAUDE_CODE_SKIP_PROMPT_HISTORY=1 submit_prompt prompt-4 'synthetic opt-out marker'
+expect_equal "prompt history opt-out never stores the submitted prompt" absent \
+  "$([ -e "$WORK/claude/dotai-steer/session-1.json" ] && echo present || echo absent)"
+submit_prompt prompt-5 'fix the parser'
+CLAUDE_CODE_SKIP_PROMPT_HISTORY=1 first_write prompt-5
+expect_equal "prompt history opt-out ignores previously cached prompts" "" "$STDOUT"
+
 # The gate.
 decide /repo/src/parser.py "$(user_prompt 'fix the parser')"
 expect_equal "a non-markdown file allows" allow "$DECISION"
@@ -223,5 +266,15 @@ decide_payload '{"tool_input": {"file_path": 7}, "transcript_path": "/x"}'
 expect_equal "a non-string file_path allows" allow "$DECISION"
 decide /repo/guide.md "not json"$'\n'"{ also not json"
 expect_equal "an unparseable transcript allows" allow "$DECISION"
+
+devin_command=$(jq -r '.UserPromptSubmit[].hooks[].command' "$PLUGIN_ROOT_DIR/hooks.json")
+run_wiring devin "$devin_command" <<< '{"hook_event_name":"UserPromptSubmit","prompt":"Fix the parser","session_id":"session-1","prompt_id":"prompt-1"}'
+expect_equal "Devin prompt without a transcript exits 0" 0 "$STATUS"
+expect_equal "Devin prompt adds context rather than blocking" "UserPromptSubmit null" \
+  "$(jq -r '"\(.hookSpecificOutput.hookEventName) \(.decision)"' <<<"$STDOUT")"
+expect_contains "Devin asks for permission before changing Markdown" "unless the user asks" \
+  "$(jq -r '.hookSpecificOutput.additionalContext' <<<"$STDOUT")"
+expect_contains "Devin directs scratch notes to .ai/" ".ai/" \
+  "$(jq -r '.hookSpecificOutput.additionalContext' <<<"$STDOUT")"
 
 finish

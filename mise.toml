@@ -1,3 +1,44 @@
+min_version = "2026.10.25"
+
 [tools]
-# The code-quality guideline hooks need Python 3.11 or later.
-python = "3.12"
+python = "3.12.12"
+node = "24.22.2"
+jq = "1.8.1"
+"aqua:rhysd/actionlint" = "1.7.11"
+
+[tasks.test]
+description = "Run plugin hook tests and Shunt evals"
+run = "bash scripts/run-hook-tests.sh"
+
+[tasks."check:manifests"]
+description = "Check generated plugin files"
+run = "python3 scripts/generate-plugin-manifests.py --check"
+
+[tasks."lint:hooks"]
+description = "Check hook commands and manifest references"
+run = "bash scripts/lint-hook-references.sh"
+
+[tasks."lint:workflows"]
+description = "Lint GitHub Actions workflows"
+run = "actionlint"
+
+[tasks.ci]
+description = "Run the deterministic repository checks (test includes hook lint)"
+depends = ["test", "check:manifests", "lint:workflows"]
+
+[tasks."smoke:claude"]
+description = "Run Claude Code against a local model stub"
+run = "python3 -m unittest discover -s scripts/smoke -p 'test_claude_*.py' -v"
+env = { DOTAI_SMOKE_CLAUDE_PACKAGE = "@anthropic-ai/claude-code@2.1.332" }
+
+[tasks."smoke:codex"]
+description = "Run Codex against a local model stub"
+run = "mise exec npm:@openai/codex@0.172.0 -- python3 -m unittest discover -s scripts/smoke -p 'test_codex_*.py' -v"
+
+[tasks."smoke:copilot"]
+description = "Run GitHub Copilot CLI against a local model stub"
+run = "mise exec npm:@github/copilot@1.0.116 -- python3 -m unittest discover -s scripts/smoke -p 'test_copilot_*.py' -v"
+
+[tasks."smoke:devin"]
+description = "Run the optional authenticated Devin CLI smoke"
+run = "python3 -m unittest discover -s scripts/smoke -p 'test_devin_*.py' -v"

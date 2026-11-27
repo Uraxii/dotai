@@ -2,11 +2,11 @@
 
 # steer
 
-Installs harness hooks that steer agent behaviour without being coupled to a skill.
+Claude Code checks Markdown edits and requests a recap when appropriate. Codex and Copilot CLI default to recaps after Opus 5 or Fable turns that changed something. Devin does not provide a transcript to plugin hooks. Its UserPromptSubmit hook reminds the agent to ask before editing Markdown. It does not block edits or request a recap.
 
 ## Hooks
 
-Ships hooks under `hooks/` for `claude`. Plugin installation wires them.
+Ships hooks for `claude`, `codex`, `copilot`, `devin`. Plugin installation wires them.
 
 ## Install
 
@@ -29,6 +29,12 @@ Copilot CLI:
 ```
 copilot plugin marketplace add Uraxii/dotai
 copilot plugin install steer@Uraxii
+```
+
+Devin CLI:
+
+```
+devin plugins install Uraxii/dotai#plugins/steer
 ```
 
 For other harnesses, see the [repository README](https://github.com/Uraxii/dotai#install).

@@ -2,8 +2,18 @@
 # OX's installer keeps the hook and its pinned node outside this plugin, and a
 # reinstall can change the node version directory, so resolve both per call.
 script="$HOME/.claude/hooks/ox_mind.js"
-node=$(ls -d "$HOME"/.ox/node/v*/bin/node 2>/dev/null | sort -V | tail -n 1)
-if [ -z "$node" ] || [ ! -x "$node" ] || [ ! -f "$script" ]; then
+node=$(
+  for candidate in "$HOME"/.ox/node/v*/bin/node; do
+    if [ -f "$candidate" ] && [ -x "$candidate" ]; then
+      printf '%s\n' "$candidate"
+    fi
+  done | sort -V | tail -n 1
+)
+if [ "$1" = --check-runtime ]; then
+  [ -n "$node" ] && [ -f "$script" ]
+  exit $?
+fi
+if [ -z "$node" ] || [ ! -f "$script" ]; then
   echo "ox-vibesec: OX VibeSec is not installed on this machine; see https://docs.ox.security/vibesec/installing-vibesec" >&2
   exit 0
 fi

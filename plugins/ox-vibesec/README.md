@@ -1,5 +1,7 @@
 # ox-vibesec
 
+## Claude Code
+
 This plugin connects the OX Security VibeSec hooks to Claude Code. It adds the
 hooks for five events: SessionStart, UserPromptSubmit, PreToolUse, PostToolUse,
 and PostToolUseFailure. It also adds three commands: `/ox-vibesec:status`,
@@ -20,3 +22,36 @@ those five entries. If you do not, each hook runs two times.
 When VibeSec runs as a plugin, its hourly self-updater is off. To update
 VibeSec, run the OX installer again. The installer adds the five entries to
 `~/.claude/settings.json` again, so delete them again.
+
+## Devin
+
+The host must set `PLUGIN_ROOT`, `DEVIN_PLUGIN_ROOT`, or `CLAUDE_PLUGIN_ROOT`
+to the plugin directory. Alternatively, make `bin/ox-vibesec-hook` available on `PATH`.
+
+The adapter reads `OX_VIBESEC_API_KEY` and skips OX calls when the key is
+absent. It verifies the installer checksum before it installs the OX runtime.
+`OX_VIBESEC_INSTALLER` can specify a local installer file. If the file is missing, the adapter warns and downloads the installer.
+It does not install Claude Code or change the user's Claude configuration.
+The runtime is separate from the OX MCP.
+
+The adapter requires Python 3 and Bash. It uses curl to download the installer.
+On restricted networks, allow HTTPS access to these hosts:
+
+- `ox-vibesec.s3.eu-west-1.amazonaws.com` for the installer and bootstrap
+- `nodejs.org` for the Node.js runtime
+- `api.cloud.ox.security` for the OX API
+
+Devin forwards prompts, shell calls and results, and file edits with a
+path and replacement text or content. It does not forward patch-only
+edits or transcripts, or apply OX's suggested tool rewrites. Only enable
+it where your organization permits OX to receive this data. These hooks fail
+open and are not an enforcement boundary.
+
+## Other harnesses
+
+`hooks/ox` is the common launcher for the OX hook. The Python runtime in
+`bin/vibesec.py` manages an isolated installation and invokes that launcher.
+To add a harness, register its lifecycle hooks and translate its event and
+response formats in an adapter like `bin/hook.py`. Use a private runtime
+home for that harness. Claude Code continues to use the vendor payload
+directly and does not need Python.

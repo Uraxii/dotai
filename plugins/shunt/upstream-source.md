@@ -30,9 +30,10 @@ Both hooks now follow the current `PreToolUse` hook output schema:
   Git for Windows ships awk but not jq.
 
 `evals/run.sh` treats empty stdout as `allow` and the matching deny envelope
-as `block`. The hook accepts `--harness claude|codex|copilot`: Claude and
+as `block`. The hook accepts `--harness claude|codex|copilot|devin`: Claude and
 Codex use Claude-shaped input and `hookSpecificOutput`; Copilot decodes its
 camelCase `toolArgs`, including a JSON string, and uses a flat deny object.
+Devin reads `tool_input` and emits a top-level `decision: "block"`.
 Copilot `view_range`, including `[1, -1]`, is treated like Claude `offset` or
 `limit`, so it shares the existing offset/limit bypass. The eval fixtures cover
 the envelope shapes as well as routing decisions.
@@ -41,7 +42,7 @@ Both read guards resolve relative paths from the session cwd before allowing
 files under an exact `.handoffs` or `handoffs` directory segment through,
 regardless of line count. Agents need the full handoff to resume work.
 This exception covers Read/view and `cat`, `head`, `tail`, `less`, and `more`
-on Claude Code, Codex, and Copilot CLI. A filename such as `handoffs.txt` or
+on Claude Code, Codex, Copilot CLI, and Devin. A filename such as `handoffs.txt` or
 a directory such as `myhandoffs` still follows the size guard. The eval runner
 creates parent directories for nested fixtures to exercise these paths.
 
@@ -50,16 +51,9 @@ Both guards check this after cwd resolution using portable shell patterns,
 so `.handoffs/../big.md` still follows the size guard without requiring
 GNU `realpath -m`. Each hook has an eval covering this traversal.
 
-The bulk-reader and code-writer skills named their scripts as
-`${CLAUDE_PLUGIN_ROOT}/scripts/...`. Copilot does not set that variable in
-the agent's shell, so the command exited 127 there. Both skills now name
-the script relative to the skill's base directory, which Claude Code and
-Copilot both print when they load a skill.
-
-Everything else (the rest of the skill text, the AiKA transport,
-the offset/limit bypass, the `head -n 5` parser gap) is unchanged from
-upstream and out of scope for this patch. Upstream issues #18 and #20 are not
-addressed here. The hook-cwd part of upstream #21 is handled.
+The offset/limit bypass and the `head -n 5` parser gap are unchanged from
+upstream. Upstream issues #18 and #20 are not addressed here. The hook-cwd
+part of upstream #21 is handled.
 
 ## 0.3.0: subagent reads (dotai-4cy)
 
@@ -72,7 +66,7 @@ or targeted and chunked reads when none is available. The main agent
 re-reads only the exact cited lines before editing.
 
 Both deny reasons lead with delegation for understanding and questions,
-without checking Portal availability. Exact content and edits retain the
+for large files. Exact content and edits retain the
 chunk instructions introduced in f1491ab. Claude PreToolUse `agent_id`
 switches to chunk-only guidance. Copilot 1.0.95 has no subagent identity
 in the observed hook input; its shared
@@ -80,10 +74,7 @@ reason and every reader prompt say not to delegate again when already the
 reader. No assumed Copilot identity field is used.
 
 Deleted `scripts/bulk-read`, its benchmark runner and scenarios, and the
-reader mode pin from documentation and transport evals. `scripts/code-write`
-and its required AiKA transport remain on Portal. Prerequisites and generated
-manifests now describe that split. The earlier note about the rest of the
-skill text and transport being unchanged applies to the initial patch only.
+reader mode pin.
 
 Local schema probe: Copilot CLI 1.0.95's `definitions/explore.agent.yaml`
 selects `[gpt-5.6-luna, gpt-5.4-mini]` with low reasoning effort and read tools.

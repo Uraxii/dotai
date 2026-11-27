@@ -213,11 +213,15 @@ PLUGINS: list[dict[str, object]] = [
         ],
     },
     {
-        # Claude Code loads hooks/hooks.json without a manifest key, and OX's
-        # --status check looks for that exact path, so no "hooks" entry here.
+        # Claude Code loads hooks/hooks.json implicitly. OX --status checks that exact path.
         "name": "ox-vibesec",
-        "version": "1.2.0",
+        "version": "1.3.0",
         "harnesses": ["claude"],
+        "hooks": ["devin"],
+        "devin_manifest": {
+            "description": "Run OX VibeSec security guidance and tool checks in Devin.",
+            "skills": [],
+        },
         "description": (
             "Wire the OX Security VibeSec hooks and its status and login "
             "commands through a plugin instead of settings.json."
@@ -362,16 +366,23 @@ PLUGINS: list[dict[str, object]] = [
     },
     {
         "name": "steer",
-        "version": "1.4.1",
-        "hooks": ["claude"],
+        "version": "1.4.2",
+        "hooks": ["claude", "codex", "copilot", "devin"],
+        "copilot_hook_path": "hooks/copilot-hooks.json",
+        "devin_manifest": {
+            "description": "Remind Devin when to ask before editing Markdown.",
+        },
         "skills": False,
         "description": (
             "Harness hooks that steer agent behaviour, independent of any skill."
         ),
         "short": "Harness hooks independent of skills.",
         "long": (
-            "Installs harness hooks that steer agent behaviour without being "
-            "coupled to a skill."
+            "Claude Code checks Markdown edits and requests a recap when appropriate. "
+            "Codex and Copilot CLI default to recaps after Opus 5 or Fable turns that changed something. "
+            "Devin does not provide a transcript to plugin hooks. Its "
+            "UserPromptSubmit hook reminds the agent to ask before editing Markdown. "
+            "It does not block edits or request a recap."
         ),
         "keywords": ["harness", "hooks"],
         "prompts": [
@@ -380,34 +391,39 @@ PLUGINS: list[dict[str, object]] = [
     },
     {
         "name": "shunt",
-        "version": "0.4.0",
+        "version": "1.0.0",
         "marketplace_version": True,
-        "hooks": ["claude", "codex", "copilot"],
+        "hooks": ["claude", "codex", "copilot", "devin"],
+        "copilot_hook_path": "hooks/copilot-hooks.json",
+        "devin_manifest": {
+            "description": "Delegate large reads to a small subagent.",
+        },
         "skills": False,
-        "description": (
-            "Shunts large reads to small subagents and boilerplate generation "
-            "to Portal AiKA to save main-agent context tokens."
-        ),
-        "short": "Delegate large reads to subagents; generate boilerplate with AiKA.",
+        "description": "Delegate large reads to subagents to save main-agent context.",
+        "short": "Delegate large reads to subagents.",
         "long": (
             "A vendored, patched fork of Spotify's shunt plugin from "
             "portal-ai-plugins. Hooks block full large-file reads on Claude "
-            "Code and Copilot CLI, and large Bash reads on Codex, then "
+            "Code, Copilot CLI, and Devin, and large Bash reads on Codex. They "
             "redirect agents to the bulk-reader skill. Small reader subagents "
             "return concise answers with line citations; chunked reads handle "
-            "exact content and edits. Only code-writer needs Portal AiKA. See "
+            "exact content and edits. See "
             "plugins/shunt/upstream-source.md for source and patch details."
         ),
-        "keywords": ["token-optimization", "delegation", "aika"],
+        "keywords": ["token-optimization", "delegation"],
         "prompts": [
             "Use the bulk-reader skill to summarize this large file.",
-            "Delegate this boilerplate to the code-writer skill.",
         ],
     },
     {
         "name": "personal-instructions",
-        "version": "1.0.8",
+        "version": "1.0.9",
         "hooks": ["claude", "codex", "copilot"],
+        "copilot_hook_path": "hooks/copilot-hooks.json",
+        "devin_manifest": {
+            "description": "Load personal instructions as an always-on Devin rule.",
+        },
+        "devin_rule_sources": ["instructions.md", "main-agent-instructions.md"],
         "skills": False,
         "description": (
             "Inject a hand-edited instructions.md at session start and, where "
@@ -417,11 +433,13 @@ PLUGINS: list[dict[str, object]] = [
         "long": (
             "Reads the plugin's instructions.md at session start and subagent "
             "start and adds it to context in Claude Code, Codex, and Copilot "
-            "CLI. Edit that one file to change your rules in all three. "
+            "CLI. Edit that file to change your shared rules. "
             "Rules only the main agent should get go in "
             "main-agent-instructions.md, which is injected at session start "
             "only. Fresh subagents do not get it; forked subagents inherit "
-            "it from the parent's history."
+            "it from the parent's history. Devin uses one always-on rule made "
+            "from both files, with no separate main-agent scope. Run "
+            "`python3 scripts/generate-plugin-manifests.py` after editing either file."
         ),
         "keywords": ["harness", "hooks", "instructions"],
         "prompts": [
@@ -449,7 +467,17 @@ def claude_agent_paths(plugin: dict[str, object], root: Path = REPOSITORY_ROOT) 
 
 
 def hook_wiring_paths(plugin: dict[str, object]) -> dict[str, Path]:
-    return HOOK_WIRING_PATHS
+    paths = HOOK_WIRING_PATHS.copy()
+    if copilot_path := plugin.get("copilot_hook_path"):
+        paths["copilot"] = Path(str(copilot_path))
+    if "devin_manifest" not in plugin:
+        return paths
+    if paths["copilot"] == Path("hooks.json"):
+        if "copilot" in plugin.get("hooks", []):
+            raise ValueError(f"{plugin['name']}: copilot and devin hooks both use hooks.json")
+        del paths["copilot"]
+    paths["devin"] = Path("hooks.json")
+    return paths
 
 
 def core_manifest(plugin: dict[str, object]) -> dict[str, object]:
@@ -622,7 +650,7 @@ def skills_of(plugin: dict[str, object], root: Path) -> list[dict[str, str]]:
     ]
 
 
-def install_section(plugin: dict[str, object]) -> str:
+def install_section(plugin: dict[str, object], *, include_devin: bool = False) -> str:
     name = plugin["name"]
     blocks = []
     if on_harness(plugin, "claude"):
@@ -639,6 +667,11 @@ def install_section(plugin: dict[str, object]) -> str:
         blocks.append(
             "Copilot CLI:\n\n```\ncopilot plugin marketplace add Uraxii/dotai\n"
             f"copilot plugin install {name}@Uraxii\n```"
+        )
+    if include_devin and "devin_manifest" in plugin:
+        blocks.append(
+            "Devin CLI:\n\n```\n"
+            f"devin plugins install Uraxii/dotai#plugins/{name}\n```"
         )
     return "## Install\n\n" + "\n\n".join(blocks) + (
         "\n\nFor other harnesses, see the "
@@ -674,11 +707,12 @@ def plugin_readme(plugin: dict[str, object], root: Path) -> str:
         parts.append(f"## Skills\n\n| Skill | What it does |\n|---|---|\n{rows}")
     if plugin.get("hooks"):
         harnesses = ", ".join(f"`{h}`" for h in plugin["hooks"])
+        location = "" if "devin" in plugin["hooks"] else " under `hooks/`"
         parts.append(
-            f"## Hooks\n\nShips hooks under `hooks/` for {harnesses}. "
+            f"## Hooks\n\nShips hooks{location} for {harnesses}. "
             "Plugin installation wires them."
         )
-    parts += [install_section(plugin), source_section(f"plugins/{name}")]
+    parts += [install_section(plugin, include_devin=True), source_section(f"plugins/{name}")]
     return "\n\n".join(parts) + "\n"
 
 
@@ -724,6 +758,10 @@ def wanted_files(root: Path) -> dict[Path, str]:
         if "copilot" in plugin.get("agents", []):
             copilot["agents"] = "./agents/copilot/"
         if on_harness(plugin, "copilot"):
+            if copilot_path := plugin.get("copilot_hook_path"):
+                copilot["hooks"] = f"./{copilot_path}"
+            elif "devin" in plugin.get("hooks", []):
+                copilot["hooks"] = {}
             files[plugin_root / "plugin.json"] = render(copilot)
         files[plugin_root / ".claude-plugin/plugin.json"] = render(
             claude_manifest(plugin, root)
@@ -736,6 +774,22 @@ def wanted_files(root: Path) -> dict[Path, str]:
             files[plugin_root / ".codex-plugin/plugin.json"] = render(
                 codex_manifest(plugin)
             )
+        if "devin_manifest" in plugin:
+            files[plugin_root / ".devin-plugin/plugin.json"] = render({
+                "name": plugin["name"],
+                "version": version_of(plugin),
+                **plugin["devin_manifest"],
+            })
+        if sources := plugin.get("devin_rule_sources"):
+            sections = []
+            for source in sources:
+                try:
+                    text = (root / plugin_root / source).read_text()
+                except FileNotFoundError:
+                    continue
+                sections.append("\n".join(line.rstrip() for line in text.splitlines()).strip())
+            if sections:
+                files[plugin_root / "AGENTS.md"] = "\n\n".join([GENERATED_NOTE, *sections]) + "\n"
     return files
 
 
@@ -750,6 +804,22 @@ def stale_manifests(root: Path) -> list[Path]:
         ):
             if not on_harness(plugin, harness) and (root / plugin_root / manifest).is_file():
                 stale.append(plugin_root / manifest)
+    return stale
+
+
+def stale_devin_rules(root: Path, files: dict[Path, str]) -> list[Path]:
+    stale = []
+    marker = GENERATED_NOTE.encode("utf-8")
+    for plugin in PLUGINS:
+        if not plugin.get("devin_rule_sources"):
+            continue
+        relative = Path("plugins") / str(plugin["name"]) / "AGENTS.md"
+        rule = root / relative
+        if relative in files or rule.is_symlink() or not rule.is_file():
+            continue
+        with rule.open("rb") as stream:
+            if stream.read(len(marker)) == marker:
+                stale.append(relative)
     return stale
 
 
@@ -868,6 +938,7 @@ def main(arguments: list[str] | None = None, root: Path = REPOSITORY_ROOT) -> in
     )
     options = parser.parse_args(arguments)
     files = wanted_files(root)
+    stale_rules = stale_devin_rules(root, files)
 
     if options.check:
         changed = drifted(files, root)
@@ -875,7 +946,7 @@ def main(arguments: list[str] | None = None, root: Path = REPOSITORY_ROOT) -> in
         undeclared_wiring = undeclared_hook_wiring(root)
         stale = stale_manifests(root)
         versions = unversioned_skills(root)
-        if not changed and not missing_wiring and not undeclared_wiring and not stale and not versions:
+        if not (changed or missing_wiring or undeclared_wiring or stale or stale_rules or versions):
             print(f"{len(files)} generated files are up to date.")
             return 0
         if changed:
@@ -895,6 +966,10 @@ def main(arguments: list[str] | None = None, root: Path = REPOSITORY_ROOT) -> in
             print("These manifests are for a harness the plugin opted out of; delete them:")
             for relative in stale:
                 print(f"  {relative}")
+        if stale_rules:
+            print("These generated Devin rules have no instruction sources; regenerate to remove them:")
+            for relative in stale_rules:
+                print(f"  {relative}")
         if versions:
             print("These skills need a metadata.version change:")
             for problem in versions:
@@ -904,6 +979,9 @@ def main(arguments: list[str] | None = None, root: Path = REPOSITORY_ROOT) -> in
     changed = write(files, root)
     for relative in changed:
         print(f"wrote {relative}")
+    for relative in stale_rules:
+        (root / relative).unlink()
+        print(f"removed {relative}")
     print(f"{len(files)} generated files, {len(changed)} rewritten.")
     return 0
 
