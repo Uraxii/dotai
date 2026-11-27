@@ -132,3 +132,11 @@ Scratch paths named in those notes (under `/tmp/...`) are gone; ignore them.
 - Manifests chain `python3 -I || python -I || py -3 -I || notice/true`; wrapper has a catch-all (exit 0 + systemMessage) and makes the data dir 0700.
 - Announcement follows VibeSec's pattern (user: "Follow VibeSec's pattern."): exact first line `pstack code quality: <ids> guidelines provided`; ANNOUNCE_CHARS 1500, reserved only once a call issues a guideline body.
 - guidelines.test.py 160/160; mise run test 171/171. Fresh review of 0bddba1..ea0c273 pending.
+
+## Update: reviews of ea0c273 and 2bd48f3 fixed (2bd48f3, d114d19); Markdown approved (a46313c)
+- Announcement names exactly the issued IDs; add() reserves len(announcement(issued + new)). ANNOUNCE_CHARS removed.
+- Unix commands: `for python in python3 python3.14..python3.11 python; do "$python" -I guidelines.py <h> 2>/dev/null && exit 0; done; notice|true` (no stdin buffering: `cat` may be off PATH). Codex Windows: `hooks/guidelines.cmd <h> [start]`, untested on Windows.
+- Wrapper sets umask 077; Codex gets systemMessage too; notices shrink context cap by 60 so the omitted-count line fits; inconclusive old-file scan gives a notice.
+- User said "Yes, markdown.": detectors filled from guideline-mapping.md (no sonar:), cs.async.no-blocking now global, keywords/exclude added, `scripts/guideline_references.py` generates references/*.md (unittest checks), SKILL.md 1.1.0.
+- mise run ci green: guidelines.test.py 175/175, hook total 171/171, unittest 15 OK, manifests current.
+- Final fresh review of 90b0211..a46313c: session dd9f3aa4b48c4964a57c3f60bd0e76bd. Then PR to develop (do not merge).
