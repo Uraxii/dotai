@@ -28,16 +28,17 @@ depends = ["test", "check:manifests", "lint:workflows"]
 
 [tasks."smoke:claude"]
 description = "Run Claude Code against a local model stub"
-run = "python3 scripts/smoke-harness.py claude --npm-package @anthropic-ai/claude-code@2.1.332"
+run = "python3 -m unittest discover -s scripts/smoke -p 'test_claude_*.py' -v"
+env = { DOTAI_SMOKE_CLAUDE_PACKAGE = "@anthropic-ai/claude-code@2.1.332" }
 
 [tasks."smoke:codex"]
 description = "Run Codex against a local model stub"
-run = "mise exec npm:@openai/codex@0.172.0 -- python3 scripts/smoke-harness.py codex"
+run = "mise exec npm:@openai/codex@0.172.0 -- python3 -m unittest discover -s scripts/smoke -p 'test_codex_*.py' -v"
 
 [tasks."smoke:copilot"]
 description = "Run GitHub Copilot CLI against a local model stub"
-run = "mise exec npm:@github/copilot@1.0.116 -- python3 scripts/smoke-harness.py copilot"
+run = "mise exec npm:@github/copilot@1.0.116 -- python3 -m unittest discover -s scripts/smoke -p 'test_copilot_*.py' -v"
 
 [tasks."smoke:devin"]
 description = "Run the optional authenticated Devin CLI smoke"
-run = "python3 scripts/smoke-harness.py devin"
+run = "python3 -m unittest discover -s scripts/smoke -p 'test_devin_*.py' -v"

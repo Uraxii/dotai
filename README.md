@@ -82,6 +82,14 @@ checks first-tool Markdown writes. If Copilot starts `agentStop` before saving
 its transcript, the probe skips the live recap assertion and replays the
 recorded event against the saved transcript.
 
+Each smoke test has its own file in `scripts/smoke/`. The mise tasks discover
+the files for each CLI with Python's `unittest` runner. To run one test, pass
+its file to Python with that CLI on your path. For example:
+
+```sh
+mise exec npm:@openai/codex@0.172.0 -- python3 scripts/smoke/test_codex_shunt_large_read.py -v
+```
+
 `mise run smoke:devin` skips unless `DEVIN_SMOKE_CREDENTIALS_FILE` is set.
 To opt in, install the [Devin CLI](https://docs.devin.ai/cli/reference/commands.md),
 run `devin auth login`, and set the variable to the path of the resulting

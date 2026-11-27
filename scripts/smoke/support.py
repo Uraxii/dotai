@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""Exercise the installed plugin hooks through real CLI sessions."""
+"""Set up isolated CLI sessions and local model stubs for smoke tests."""
 
-import argparse
+import atexit
+from functools import cache
 import json
 import os
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -12,9 +13,10 @@ import subprocess
 import sys
 import tempfile
 from threading import Thread
+import unittest
 
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 PLUGINS = ("shunt", "steer", "personal-instructions")
 MANIFESTS = {
     "claude": ".claude-plugin/plugin.json",
@@ -223,12 +225,6 @@ def offline_run(harness, plugins, env, cwd, model, command=None, *, markdown=Non
     return [json.dumps(body, ensure_ascii=False) for body in stub.requests]
 
 
-def check(ok, description):
-    if not ok:
-        raise RuntimeError(description)
-    print(f"PASS {description}", flush=True)
-
-
 def codex_fixture_output(requests):
     for request in reversed(requests):
         for item in reversed(json.loads(request).get("input", [])):
@@ -259,153 +255,61 @@ def observe_copilot_stop():
         }), file=stream)
 
 
-def check_copilot_recap(steer, env, cwd, model, expected, actual):
-    path = Path(env["HOME"]) / "stop-probe.jsonl"
-    observations = [json.loads(line) for line in path.read_text().splitlines()]
-    check(bool(observations), "copilot: observed agentStop")
-    if actual == expected and (expected or observations[0]["transcript_exists"]):
-        check(True, f"copilot: {model} turn receives {expected} recap continuation(s)")
-        return
-    if actual or observations[0]["transcript_exists"]:
-        check(False, f"copilot: {model} received {actual} recap continuation(s), expected {expected}")
-
+def replay_copilot_stop(steer, env, cwd, payload):
     manifest = json.loads((steer / "plugin.json").read_text())
     hooks = json.loads((steer / manifest["hooks"]).read_text())
-    commands = hooks["hooks"]["agentStop"]
-    payload = observations[0]["payload"]
-    check(Path(payload["transcriptPath"]).is_file(), "copilot: saved the transcript after agentStop")
-    print(f"SKIP copilot: {model} live recap assertion (agentStop ran before the transcript existed)")
-    output = [
+    return [
         cli(["bash", "-c", hook["bash"]], {**env, "PLUGIN_ROOT": str(steer)}, cwd,
-            payload=json.dumps(payload)) for hook in commands
+            payload=json.dumps(payload)) for hook in hooks["hooks"]["agentStop"]
     ]
-    check(sum(RECAP in result for result in output) == expected,
-          f"copilot: {model} agentStop replay requests {expected} recap continuation(s)")
 
 
-def offline_smoke(harness, plugins, scratch, env, cwd):
-    if harness == "codex":
-        codex_home = Path(env["HOME"]) / ".codex"
-        codex_home.mkdir()
-        env["CODEX_HOME"] = str(codex_home)
-        if plugins:
-            codex_install(plugins, scratch, env, cwd)
-
-    def events(plugin):
-        return hook_events(harness, plugins[plugin]) if plugin in plugins else ()
-
-    has_shunt = any(name.lower() == "pretooluse" for name in events("shunt"))
-    has_stop = any(name.lower() in ("stop", "agentstop") for name in events("steer"))
-    has_instructions = any(name.lower() == "sessionstart" for name in events("personal-instructions"))
-    copilot_stop = harness == "copilot" and has_stop
-    observation = Path(env["HOME"]) / "stop-probe.jsonl"
-    if copilot_stop:
-        plugins = {**plugins, "stop-observer": copilot_observer(scratch)}
-    (cwd / "large.txt").write_text("large read fixture\n" * 500)
-    requests = offline_run(harness, plugins, env, cwd, "claude-fable-5",
-                           "cat large.txt" if has_shunt else None)
-    if has_shunt:
-        check(any("bulk-reader" in req and "500-line file" in req for req in requests),
-              f"{harness}: Shunt denied the 500-line read")
-    if has_instructions:
-        for name in ("instructions.md", "main-agent-instructions.md"):
-            source = plugins["personal-instructions"] / name
-            marker = next((line for line in source.read_text().splitlines()
-                           if line.startswith(("## ", "- "))), None)
-            check(marker and any(marker in req for req in requests),
-                  f"{harness}: Personal Instructions injected {name}")
-    if has_stop:
-        if copilot_stop:
-            check_copilot_recap(plugins["steer"], env, cwd, "read-only Fable", 0,
-                                sum(RECAP in req for req in requests))
-        else:
-            check(not any(RECAP in req for req in requests), f"{harness}: a read-only Fable turn skips recap")
-        for model, expected in (("claude-opus-5", 1), ("claude-fable-5", 1), ("claude-sonnet-5", 0)):
-            target = cwd / f"{model}.txt"
-            observation.unlink(missing_ok=True)
-            requests = offline_run(harness, plugins, env, cwd, model, f"touch {target.name}")
-            if harness == "codex" and not target.is_file():
-                raise RuntimeError(f"codex: {model} could not write the fixture\n{codex_fixture_output(requests)}")
-            check(target.is_file(), f"{harness}: {model} wrote the fixture")
-            actual = sum(RECAP in req for req in requests)
-            if copilot_stop:
-                check_copilot_recap(plugins["steer"], env, cwd, model, expected, actual)
-            else:
-                check(actual == expected,
-                      f"{harness}: {model} mutation receives {expected} recap continuation(s)")
-    if harness == "claude" and "PreToolUse" in events("steer"):
-        target = cwd / "smoke.md"
-        offline_run(harness, plugins, env, cwd, "claude-sonnet-5", markdown=target,
-                    prompt="Report the test status. Do not change any files.")
-        check(not target.exists(), "claude: Steer denied an unrequested first-tool Markdown write")
-        offline_run(harness, plugins, env, cwd, "claude-sonnet-5", markdown=target,
-                    prompt="Please write to smoke.md.")
-        check(target.is_file(), "claude: Steer allowed an explicitly requested Markdown write")
-    for available, label in ((has_shunt, "Shunt large-read hook"), (has_stop, "Steer Stop"),
-                             (has_instructions, "Personal Instructions session hook")):
-        if not available:
-            print(f"SKIP {harness}: no {label} in this checkout")
+@cache
+def install_claude(package):
+    directory = tempfile.TemporaryDirectory(prefix="dotai-smoke-claude-")
+    atexit.register(directory.cleanup)
+    home = Path(directory.name)
+    prefix = home / "npm"
+    cli(["npm", "install", "--global", "--prefix", str(prefix), "--no-audit", "--no-fund",
+         f"--allow-scripts={package.rsplit('@', 1)[0]}", package],
+        {"PATH": os.environ["PATH"], "HOME": str(home)}, home)
+    return str(prefix / "bin")
 
 
-def devin_smoke(plugins, env, cwd, credentials):
-    if not plugins:
-        print("SKIP devin: no native smoke plugins in this checkout")
-        return
-    data_home = Path(env["HOME"]) / ".local/share"
-    dest = data_home / "devin/credentials.toml"
-    dest.parent.mkdir(parents=True, mode=0o700)
-    with open(dest, "xb", opener=lambda path, flags: os.open(path, flags, 0o600)) as target:
-        target.write(Path(credentials).read_bytes())
-    env["XDG_DATA_HOME"] = str(data_home)
-    cli(["devin", "auth", "--process-model", "in-process", "status"], env, cwd, private=True)
-    for name, plugin in plugins.items():
-        cli(["devin", "plugins", "install", "--local", "--yes",
-             "--process-model", "in-process", str(plugin)], env, cwd, private=True)
-        print(f"PASS devin: installed {name} locally")
-    loaded = cli(["devin", "plugins", "list"], env, cwd, private=True)
-    check(all(name in loaded for name in plugins), "devin: native plugins appear in the isolated install list")
-    output = cli(["devin", "--process-model", "in-process", "--respect-workspace-trust", "false",
-                  "-p", f"Do not use tools. Reply with exactly {DONE}."],
-                 env, cwd, private=True, timeout=120)
-    check(DONE in output, "devin: authenticated headless prompt completed with the native plugins installed")
+class SmokeTestCase(unittest.TestCase):
+    def setUp(self):
+        directory = self.enterContext(tempfile.TemporaryDirectory(prefix="dotai-smoke-"))
+        self.scratch = Path(directory)
+        self.home = self.scratch / "home"
+        self.cwd = self.scratch / "workspace"
+        self.home.mkdir()
+        self.cwd.mkdir()
+        self.env = {"PATH": os.environ["PATH"], "HOME": str(self.home)}
+        self.plugins = plugins_for(self.harness)
+        if self.harness == "claude" and (package := os.getenv("DOTAI_SMOKE_CLAUDE_PACKAGE")):
+            self.env["PATH"] = install_claude(package) + os.pathsep + self.env["PATH"]
+        if not shutil.which(self.harness, path=self.env["PATH"]):
+            self.fail(f"{self.harness} CLI is not on PATH")
+        if self.harness == "codex":
+            codex_home = self.home / ".codex"
+            codex_home.mkdir()
+            self.env["CODEX_HOME"] = str(codex_home)
+            if self.plugins:
+                codex_install(self.plugins, self.scratch, self.env, self.cwd)
+
+    def require_hook(self, plugin, event):
+        if plugin not in self.plugins or not any(
+            name.lower() == event.lower() for name in hook_events(self.harness, self.plugins[plugin])
+        ):
+            self.skipTest(f"No {plugin} {event} hook in this checkout")
+
+    def run_turn(self, model="claude-fable-5", command=None, **kwargs):
+        return offline_run(self.harness, self.plugins, self.env, self.cwd, model, command, **kwargs)
 
 
-def main():
-    if sys.argv[1:] == ["copilot-stop-observer"]:
-        observe_copilot_stop()
-        return
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("harness", choices=MANIFESTS)
-    parser.add_argument("--npm-package", help="install this CLI into the temporary smoke home")
-    args = parser.parse_args()
-    harness = args.harness
-    credentials = os.getenv("DEVIN_SMOKE_CREDENTIALS_FILE")
-    if harness == "devin" and not credentials:
-        print("SKIP devin: set DEVIN_SMOKE_CREDENTIALS_FILE to enable authenticated smoke")
-        return
-    if not args.npm_package and not shutil.which(harness):
-        parser.exit(1, f"ERROR: {harness} CLI is not on PATH\n")
-    plugins = plugins_for(harness)
-    with tempfile.TemporaryDirectory(prefix="dotai-smoke-") as directory:
-        scratch = Path(directory)
-        home, cwd = scratch / "home", scratch / "workspace"
-        home.mkdir()
-        cwd.mkdir()
-        env = {"PATH": os.environ["PATH"], "HOME": str(home)}
-        try:
-            if args.npm_package:
-                prefix = home / "npm"
-                cli(["npm", "install", "--global", "--prefix", str(prefix), "--no-audit", "--no-fund",
-                     f"--allow-scripts={args.npm_package.rsplit('@', 1)[0]}",
-                     args.npm_package], env, cwd)
-                env["PATH"] = str(prefix / "bin") + os.pathsep + env["PATH"]
-            if harness == "devin":
-                devin_smoke(plugins, env, cwd, credentials)
-            else:
-                offline_smoke(harness, plugins, scratch, env, cwd)
-        except (RuntimeError, OSError, subprocess.TimeoutExpired) as error:
-            parser.exit(1, f"ERROR: {error}\n")
+def instruction_marker(source):
+    return next((line for line in source.read_text().splitlines() if line.startswith(("## ", "- "))), "")
 
 
-if __name__ == "__main__":
-    main()
+if __name__ == "__main__" and sys.argv[1:] == ["copilot-stop-observer"]:
+    observe_copilot_stop()
