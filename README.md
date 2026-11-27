@@ -58,6 +58,48 @@ installed only one of them.
 Codex and Copilot CLI also run Steer's recap hook at turn end. On these two
 harnesses the hook defaults to Opus 5 or Fable turns that changed something.
 
+## Test
+
+Install [mise](https://mise.jdx.dev/) and use a shell with Bash, Git, awk, and
+standard Unix utilities. The CI runners use Ubuntu 24.04.
+
+```sh
+mise trust
+mise install
+mise run ci
+mise run smoke:claude
+mise run smoke:codex
+mise run smoke:copilot
+```
+
+`ci` runs the hook tests, Shunt evals, manifest check, and workflow lint.
+You can also run `test`, `check:manifests`, `lint:hooks`, and `lint:workflows`
+individually. The smoke tasks install pinned CLIs through mise. They use a
+temporary home and workspace and a model stub on loopback. They check Shunt's
+large-read denial, Personal Instructions, and Steer's one-time recap on an
+Opus 5 or Fable mutation, with read-only and other-model controls. Claude also
+checks first-tool Markdown writes. If Copilot starts `agentStop` before saving
+its transcript, the probe skips the live recap assertion and replays the
+recorded event against the saved transcript.
+
+Each smoke test has its own file in `scripts/smoke/`. The mise tasks discover
+the files for each CLI with Python's `unittest` runner. To run one test, pass
+its file to Python with that CLI on your path. For example:
+
+```sh
+mise exec npm:@openai/codex@0.172.0 -- python3 scripts/smoke/test_codex_shunt_large_read.py -v
+```
+
+`mise run smoke:devin` skips unless `DEVIN_SMOKE_CREDENTIALS_FILE` is set.
+To opt in, install the [Devin CLI](https://docs.devin.ai/cli/reference/commands.md),
+run `devin auth login`, and set the variable to the path of the resulting
+[`credentials.toml`](https://docs.devin.ai/cli/enterprise/devin-auth.md#credentials-file-location).
+Keep that file outside the checkout and do not share or commit it. The task
+copies it into a temporary home, installs the plugins with `--local`, and
+runs a live headless prompt. GitHub Actions runs the checks and smoke matrix on
+pull requests and pushes to `develop` or `main`. The workflow uses no model
+credentials, skips authenticated Devin, and does not publish plugins.
+
 ## Install
 
 Every plugin installs the same way. Replace `<plugin>` with a name from the
