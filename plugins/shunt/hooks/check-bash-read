@@ -72,7 +72,7 @@ fi
   /*|[A-Za-z]:[/\\]*) ;;
   *) file_path="$cwd/$file_path" ;;
 esac
-case "/$file_path" in
+case "/$(printf %s "$file_path" | tr '\\' /)" in
   */../*) ;;
   */.handoffs/*|*/handoffs/*) exit 0 ;;
 esac
