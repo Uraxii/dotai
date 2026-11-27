@@ -45,7 +45,6 @@ UNAVAILABLE_LABEL = "warn (detector unavailable)"
 RESEND_AFTER_PROMPTS = 20
 MAX_TEXT_CHARS = 9000
 DROPPED_NOTICE_CHARS = 600
-ANNOUNCE_CHARS = 1500
 NOTICE_COUNT_CHARS = 60
 DROPPED_FILES_NAMED = 3
 MAX_CONTENT_CHARS = 1_000_000
@@ -314,17 +313,12 @@ ANNOUNCE_PREFIX = (
 
 
 def announcement(issued: list[str]) -> str:
-    """The exact line the agent prints so the user sees which guidelines
-    this call issued, within ANNOUNCE_CHARS less its separator."""
-    noun = "guideline" if len(issued) == 1 else "guidelines"
-    for shown in range(len(issued), 0, -1):
-        others = len(issued) - shown
-        named = ", ".join(issued[:shown])
-        named += f" and {others} more" * (others > 0)
-        text = f"{ANNOUNCE_PREFIX}pstack code quality: {named} {noun} provided"
-        if len(text) <= ANNOUNCE_CHARS - 2:
-            return text
-    return f"{ANNOUNCE_PREFIX}pstack code quality: {len(issued)} {noun} provided"
+    """The exact line the agent prints so the user sees every guideline
+    this call issued."""
+    unique = list(dict.fromkeys(issued))
+    noun = "guideline" if len(unique) == 1 else "guidelines"
+    named = ", ".join(unique)
+    return f"{ANNOUNCE_PREFIX}pstack code quality: {named} {noun} provided"
 
 
 def name_files(head: str, files: list[str], tail: str, fallback: str) -> str:
@@ -587,14 +581,16 @@ class Engine:
 
     def add(
         self, items: list[str], text: str, reserve: int = 0,
-        issues: bool = False,
+        issues: str | None = None,
     ) -> bool:
         """Append the item when the whole text, plus `reserve` characters
         kept free, stays under the size cap. Once this call issues a
-        guideline, ANNOUNCE_CHARS more stay free for the announcement."""
+        guideline (`issues` names one), the announcement that names every
+        issued guideline must fit too."""
         used = sum(len(item) + 2 for item in items)
-        announced = issues or bool(self.issued)
-        reserve += ANNOUNCE_CHARS * (announced and self.cap != sys.maxsize)
+        issued = [*self.issued, *([issues] if issues else [])]
+        if issued and self.cap != sys.maxsize:
+            reserve += len(announcement(issued)) + 2
         if used + len(text) + reserve > self.cap:
             return False
         items.append(text)
@@ -632,7 +628,8 @@ class Engine:
         for hit in ordered:
             repeated = self.suppressed(hit.guideline.id)
             kept = DROPPED_NOTICE_CHARS + reserve
-            if self.add(items, self.hit_item(hit), kept, not repeated):
+            issues = None if repeated else hit.guideline.id
+            if self.add(items, self.hit_item(hit), kept, issues):
                 if not repeated:
                     self.state.sent[hit.guideline.id] = self.state.prompt
                     self.issued.append(hit.guideline.id)
@@ -652,7 +649,7 @@ class Engine:
                 continue
             label = queued[guideline_id] or guideline.label
             text = f"[{guideline_id}] {label}\n{guideline.body}"
-            if self.add(items, text, issues=True):
+            if self.add(items, text, issues=guideline_id):
                 self.state.sent[guideline_id] = self.state.prompt
                 self.issued.append(guideline_id)
             else:
@@ -696,9 +693,9 @@ class Engine:
 
     def announce(self, items: list[str]) -> None:
         """Ask the agent to tell the user which guidelines this call
-        issued; add() keeps ANNOUNCE_CHARS free for it."""
+        issued; add() keeps room for it."""
         if self.issued:
-            items.insert(1, announcement(list(dict.fromkeys(self.issued))))
+            items.insert(1, announcement(self.issued))
 
     def run(self) -> Result:
         kind = self.event.kind

@@ -98,11 +98,7 @@ def log_failure(data, harness, status, errors):
     or into a file that is not a regular file.
     """
     state = os.path.join(data, "guideline-state")
-    old_mask = os.umask(0o077)
-    try:
-        os.makedirs(state, exist_ok=True)
-    finally:
-        os.umask(old_mask)
+    os.makedirs(state, exist_ok=True)
     user = os.getuid() if hasattr(os, "getuid") else None
     for directory in (data, state):
         info = os.lstat(directory)
@@ -126,6 +122,7 @@ def log_failure(data, harness, status, errors):
 
 def main(arguments):
     harness = arguments[0] if arguments else ""
+    os.umask(0o077)
     python = find_python()
     if python is None:
         no_python()

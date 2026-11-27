@@ -8,6 +8,7 @@ Usage: python3 plugins/pstack/hooks/tests/guidelines.test.py (Python 3.11+)
 
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -607,8 +608,9 @@ def wired(config, event, key="command"):
 
 
 def chain(harness, last="true"):
-    path = '"${CLAUDE_PLUGIN_ROOT}/hooks/guidelines.py"'
-    return " || ".join([f"{python} -I {path} {harness}" for python in ("python3", "python", "py -3")] + [last])
+    return ('for python in python3 python3.14 python3.13 python3.12 python3.11 python; do '
+            'command -v "$python" >/dev/null 2>&1 && '
+            f'exec "$python" -I "${{CLAUDE_PLUGIN_ROOT}}/hooks/guidelines.py" {harness}; done; {last}')
 
 
 NO_PYTHON_JSON = json.dumps({"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": PYTHON_NOTICE},
@@ -642,9 +644,19 @@ SHADOW.mkdir()
 (SHADOW / "json.py").write_text('raise ImportError("shadowed")\n')
 c.run(CLAUDE_COMMAND, json.dumps(c.write("pages.py", PAGES)), {"PYTHONPATH": str(SHADOW)})
 expect_equal("the wired command ignores PYTHONPATH", "deny", c.decision())
+ONLY_312 = WORK / "only-python312"
+ONLY_312.mkdir()
+(ONLY_312 / "python3.12").symlink_to(sys.executable)
+c.run(CLAUDE_COMMAND, json.dumps(c.write("pages.py", PAGES)), {"PATH": str(ONLY_312)})
+expect_equal("the wired command finds a versioned python3.12", "deny", c.decision())
+ENGINE_DATA = WORK / "engine-data"
+c.run(CLAUDE_START, json.dumps(c.session_start("startup")), {"CLAUDE_PLUGIN_DATA": str(ENGINE_DATA)})
+expect_equal("the engine's new data folders are private to the user", ["0o700", "0o700"],
+             [oct(path.stat().st_mode & 0o777) for path in (ENGINE_DATA, ENGINE_DATA / "guideline-state")])
 
 CODEX_COMMAND = chain("codex")
-CODEX_WINDOWS = 'py -3 -I "${CLAUDE_PLUGIN_ROOT}/hooks/guidelines.py" codex'
+CODEX_START = chain("codex", f"printf '%s\\n' '{NO_PYTHON_JSON}'")
+CODEX_WINDOWS = '"${CLAUDE_PLUGIN_ROOT}/hooks/guidelines.cmd" codex'
 for event, matcher, timeout in (
     ("PreToolUse", "apply_patch", 10), ("PostToolUse", "apply_patch", 15), ("UserPromptSubmit", None, 5),
 ):
@@ -652,11 +664,40 @@ for event, matcher, timeout in (
                  wired("codex-hooks.json", event))
     expect_equal(f"Codex {event} Windows wiring", [{"matcher": matcher, "hooks": [[CODEX_WINDOWS, timeout]]}],
                  wired("codex-hooks.json", event, "commandWindows"))
+expect_equal("Codex SessionStart wiring", [{"matcher": "startup|resume|clear|compact", "hooks": [[CODEX_START, 5]]}],
+             wired("codex-hooks.json", "SessionStart"))
+expect_equal("Codex SessionStart Windows wiring",
+             [{"matcher": "startup|resume|clear|compact", "hooks": [[CODEX_WINDOWS + " start", 5]]}],
+             wired("codex-hooks.json", "SessionStart", "commandWindows"))
 for group in wired("codex-hooks.json", "PreToolUse"):
     for command, _ in group["hooks"]:
         c.run(command, json.dumps(c.patch("PreToolUse", "*** Begin Patch\n*** Add File: wired.py\n" + "".join(
             f"+{row}\n" for row in PAGES.splitlines()) + "*** End Patch")))
 expect_equal("the wired Codex command denies the flattening comprehension", "deny", c.decision())
+
+MANY = WORK / "many-guidelines"
+MANY.mkdir()
+for number in range(60):
+    guideline(f"py-many-rule-{number:02d}-with-a-long-name.md", f"Rule {number} body text that is long enough. " * 3,
+              f"id: py.many.rule-{number:02d}-with-a-long-name", "languages: python", "scope: global",
+              "severity: warn", "enabled: true", "detectors:", folder=MANY)
+c = Case("many")
+c.hook(c.write("plain.py", "x = 1\n"), PSTACK_GUIDELINES_DIR=str(MANY))
+issued = re.findall(r"^\[([^\]]+)\]", c.context(), re.MULTILINE)
+named = re.search(r"pstack code quality: (.*) guidelines provided$", c.context(), re.MULTILINE).group(1).split(", ")
+expect_equal("the announcement names every guideline the call issued", issued, named)
+expect_equal("and the call issued some but not all of them", True, 0 < len(issued) < 60)
+expect_equal("and stays inside the size cap", True, len(c.context()) <= 9000)
+NOISY = WORK / "noisy-guidelines"
+shutil.copytree(FIXTURES, NOISY)
+for number in range(45):
+    (NOISY / f"invalid-guideline-file-with-a-rather-long-name-{number:02d}.md").write_text("---\nid: bad\n---\nBody.\n")
+c = Case("noisy")
+c.hook(c.write("pages.py", EXPLICIT_LOOP), PSTACK_GUIDELINES_DIR=str(NOISY))
+out = json.loads(c.stdout)
+expect_equal("the user's notice and the context stay inside the size cap together", True,
+             len(out["systemMessage"]) + len(out["hookSpecificOutput"]["additionalContext"]) <= 9000)
+expect_contains("and the notice counts what it left out", "more notices; the agent has them.", out["systemMessage"])
 
 ADD_PAGES = "*** Begin Patch\n*** Add File: pages.py\n" + "".join(f"+{row}\n" for row in PAGES.splitlines()) + "*** End Patch"
 c = Case("codex-add")
@@ -775,7 +816,7 @@ for i in range(1, 50):
     patch += f"\n*** Update File: {long}_{i}.py\n@@\n-x = 1\n+x = 2"
 c.hook(c.patch("PostToolUse", patch), harness="codex")
 expect_contains("a context full of notices still counts the findings", "more findings did not fit", c.context())
-expect_equal("and stays inside the size cap", True, len(c.context()) < 9000)
+expect_equal("and stays inside the size cap", True, len(c.context()) <= 9000)
 wide = "w" * 220
 added = "*** Begin Patch" + "".join(
     f"\n*** Add File: {name}{wide}.py\n" + "\n".join(f"+{row}" for row in MANY) for name in "abc")

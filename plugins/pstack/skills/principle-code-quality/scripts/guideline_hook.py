@@ -30,7 +30,7 @@ SCRIPTS = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPTS))  # python -I leaves the script dir out
 
 from guideline_core import (  # noqa: E402
-    MAX_CONTENT_CHARS, Config, Result, default_data_directory,
+    MAX_CONTENT_CHARS, MAX_TEXT_CHARS, Config, Result, default_data_directory,
     event_from_json, handle, resolve_in_root,
 )
 from guideline_files import language_of, load_extensions  # noqa: E402
@@ -325,8 +325,23 @@ def hook_output(
         "hookEventName": event_name, "additionalContext": result.context,
     }}
     if result.notice and show_notice:
-        output["systemMessage"] = result.notice
+        output["systemMessage"] = fit_notice(
+            result.notice, MAX_TEXT_CHARS - len(result.context)
+        )
     return output
+
+
+def fit_notice(notice: str, room: int) -> str:
+    """Keep the notice lines that fit in `room` characters; count the rest.
+    The agent's context holds every notice."""
+    lines = notice.split("\n")
+    for kept in range(len(lines), -1, -1):
+        rest = len(lines) - kept
+        tail = [f"Notice: {rest} more notices; the agent has them."] * (rest > 0)
+        text = "\n".join(lines[:kept] + tail)
+        if len(text) <= room or kept == 0:
+            return text
+    return notice
 
 
 ADAPTERS: dict[str, Callable[[Payload], Neutral | None]] = {
