@@ -309,9 +309,7 @@ def codex_event(payload: Payload) -> Neutral | None:
     return {**base, **event} if event else None
 
 
-def hook_output(
-    result: Result, event_name: str, show_notice: bool
-) -> Neutral | None:
+def hook_output(result: Result, event_name: str) -> Neutral | None:
     """Render a result in the output shape Claude Code and Codex share."""
     if result.deny is not None:
         return {"hookSpecificOutput": {
@@ -324,10 +322,9 @@ def hook_output(
     output: Neutral = {"hookSpecificOutput": {
         "hookEventName": event_name, "additionalContext": result.context,
     }}
-    if result.notice and show_notice:
-        output["systemMessage"] = fit_notice(
-            result.notice, MAX_TEXT_CHARS - len(result.context)
-        )
+    notice = fit_notice(result.notice or "", MAX_TEXT_CHARS - len(result.context))
+    if notice:
+        output["systemMessage"] = notice
     return output
 
 
@@ -339,9 +336,9 @@ def fit_notice(notice: str, room: int) -> str:
         rest = len(lines) - kept
         tail = [f"Notice: {rest} more notices; the agent has them."] * (rest > 0)
         text = "\n".join(lines[:kept] + tail)
-        if len(text) <= room or kept == 0:
+        if len(text) <= room:
             return text
-    return notice
+    return ""
 
 
 ADAPTERS: dict[str, Callable[[Payload], Neutral | None]] = {
@@ -371,7 +368,7 @@ def run_hook(harness: str) -> int:
         output: Neutral | None = result._asdict()
     else:
         name = text_of(payload.get("hook_event_name"))
-        output = hook_output(result, name, show_notice=harness == "claude")
+        output = hook_output(result, name)
     if output is not None:
         print(json.dumps(output))
     return 0

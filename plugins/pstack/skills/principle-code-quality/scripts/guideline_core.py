@@ -499,11 +499,19 @@ class Engine:
         failed: set[str] = set()
         if change.before is not None and hits:
             old, failed = self.scan(file, change.before, quiet=True)
-        added = [
+        blocking = [
             hit for hit in new_hits(hits, old)
             if hit.guideline.severity == "block"
-            and hit.finding.tool not in failed
         ]
+        added = [hit for hit in blocking if hit.finding.tool not in failed]
+        unproven = sorted({
+            hit.finding.tool for hit in blocking if hit.finding.tool in failed
+        })
+        if unproven:
+            self.notices.append(
+                f"Notice: {', '.join(unproven)} could not check the current "
+                f"{file.rel}, so its findings in this edit are warnings."
+            )
         if added and change.before_problem:
             self.notices.append(
                 f"Notice: could not read the current {file.rel}: "
@@ -678,6 +686,8 @@ class Engine:
         if kind == "pre_write":
             self.hits = []
         items = [] if kind == "check" else [CONTEXT_HEADER]
+        if kind != "check" and self.notices:
+            self.cap -= NOTICE_COUNT_CHARS
         notices = self.add_notices(
             items, DROPPED_NOTICE_CHARS * bool(self.hits)
         )

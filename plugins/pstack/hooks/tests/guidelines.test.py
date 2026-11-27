@@ -344,6 +344,12 @@ expect_equal("a Write over a file that is not UTF-8 does not deny", "", c.decisi
 expect_contains("but is still checked, and its findings are warnings",
                 "Notice: could not read the current pages.py: it is not UTF-8 text, so its findings are warnings.",
                 c.context())
+c.file("pages.py", "def invalid(\n")
+c.hook(c.write("pages.py", PAGES))
+expect_equal("a Write over a file the detector cannot parse does not deny", "", c.decision())
+expect_contains("and says the block check was inconclusive",
+                "Notice: code_quality could not check the current pages.py, so its findings in this edit are warnings.",
+                c.context())
 c.file("run", "#!/usr/bin/env python3\nx = 0\n")
 c.hook(c.tool("PreToolUse", "Edit", "run", {"old_string": "not here", "new_string": "y = 1"}))
 expect_contains("an unbuilt edit to an extensionless script is named",
@@ -609,8 +615,8 @@ def wired(config, event, key="command"):
 
 def chain(harness, last="true"):
     return ('for python in python3 python3.14 python3.13 python3.12 python3.11 python; do '
-            'command -v "$python" >/dev/null 2>&1 && '
-            f'exec "$python" -I "${{CLAUDE_PLUGIN_ROOT}}/hooks/guidelines.py" {harness}; done; {last}')
+            '"$python" -I "${CLAUDE_PLUGIN_ROOT}/hooks/guidelines.py" '
+            f'{harness} 2>/dev/null && exit 0; done; {last}')
 
 
 NO_PYTHON_JSON = json.dumps({"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": PYTHON_NOTICE},
@@ -649,6 +655,17 @@ ONLY_312.mkdir()
 (ONLY_312 / "python3.12").symlink_to(sys.executable)
 c.run(CLAUDE_COMMAND, json.dumps(c.write("pages.py", PAGES)), {"PATH": str(ONLY_312)})
 expect_equal("the wired command finds a versioned python3.12", "deny", c.decision())
+BROKEN = WORK / "broken-python3"
+BROKEN.mkdir()
+(BROKEN / "python3").write_text("#!/no/such/interpreter\n")
+(BROKEN / "python3").chmod(0o755)
+(BROKEN / "python3.12").symlink_to(sys.executable)
+c.run(CLAUDE_COMMAND, json.dumps(c.write("pages.py", PAGES)), {"PATH": f"{BROKEN}:/usr/bin:/bin"})
+expect_equal("a python3 that cannot start falls through to the next Python", "deny", c.decision())
+(BROKEN / "python3").write_text("#!/bin/sh\ncat >/dev/null\nexit 2\n")
+c.run(CLAUDE_COMMAND, json.dumps(c.write("pages.py", PAGES)), {"PATH": f"{BROKEN}:/usr/bin:/bin"})
+expect_equal("a python3 that reads the input and exits 2 does not deny; the next Python fails open visibly",
+             [0, True], [c.status, "guideline hook" in c.message()])
 ENGINE_DATA = WORK / "engine-data"
 c.run(CLAUDE_START, json.dumps(c.session_start("startup")), {"CLAUDE_PLUGIN_DATA": str(ENGINE_DATA)})
 expect_equal("the engine's new data folders are private to the user", ["0o700", "0o700"],
@@ -698,6 +715,12 @@ out = json.loads(c.stdout)
 expect_equal("the user's notice and the context stay inside the size cap together", True,
              len(out["systemMessage"]) + len(out["hookSpecificOutput"]["additionalContext"]) <= 9000)
 expect_contains("and the notice counts what it left out", "more notices; the agent has them.", out["systemMessage"])
+c = Case("noisy-codex")
+c.hook(c.session_start("startup"), harness="codex", PSTACK_GUIDELINES_DIR=str(NOISY))
+out = json.loads(c.stdout)
+expect_contains("Codex also shows notices to the user", "Notice: skipped invalid guideline file", out.get("systemMessage", ""))
+expect_equal("and stays inside the size cap with them", True,
+             len(out["systemMessage"]) + len(out["hookSpecificOutput"]["additionalContext"]) <= 9000)
 
 ADD_PAGES = "*** Begin Patch\n*** Add File: pages.py\n" + "".join(f"+{row}\n" for row in PAGES.splitlines()) + "*** End Patch"
 c = Case("codex-add")
