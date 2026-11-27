@@ -90,15 +90,16 @@ its file to Python with that CLI on your path. For example:
 mise exec npm:@openai/codex@0.172.0 -- python3 scripts/smoke/test_codex_shunt_large_read.py -v
 ```
 
-`mise run smoke:devin` skips unless `DEVIN_SMOKE_CREDENTIALS_FILE` is set.
+`mise run smoke:devin` runs only locally and skips unless
+`DEVIN_SMOKE_CREDENTIALS_FILE` is set.
 To opt in, install the [Devin CLI](https://docs.devin.ai/cli/reference/commands.md),
 run `devin auth login`, and set the variable to the path of the resulting
 [`credentials.toml`](https://docs.devin.ai/cli/enterprise/devin-auth.md#credentials-file-location).
 Keep that file outside the checkout and do not share or commit it. The task
 copies it into a temporary home, installs the plugins with `--local`, and
-runs a live headless prompt. GitHub Actions runs the checks and smoke matrix on
-pull requests and pushes to `develop` or `main`. The workflow uses no model
-credentials, skips authenticated Devin, and does not publish plugins.
+runs a live headless prompt. GitHub Actions runs the checks and the Claude,
+Codex, and Copilot smoke tests on pull requests and pushes to `develop` or
+`main`. The workflow uses no model credentials and does not publish plugins.
 
 ## Install
 
