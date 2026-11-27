@@ -69,7 +69,7 @@ fi
 
 [ -z "$file_path" ] && exit 0
 [ -n "$cwd" ] && case "$file_path" in
-  /*) ;;
+  /*|[A-Za-z]:[/\\]*) ;;
   *) file_path="$cwd/$file_path" ;;
 esac
 case "/$file_path" in

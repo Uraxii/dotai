@@ -61,7 +61,7 @@ if [ -n "$offset" ] || [ -n "$limit" ]; then
 fi
 
 [ -n "$cwd" ] && case "$file_path" in
-  /*) ;;
+  /*|[A-Za-z]:[/\\]*) ;;
   *) file_path="$cwd/$file_path" ;;
 esac
 
