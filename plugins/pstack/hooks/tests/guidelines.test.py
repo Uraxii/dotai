@@ -104,12 +104,10 @@ import os, sys, time
 if sys.argv[1:] == ["--version"]:
     print(os.environ.get("RUFF_VERSION", "ruff 0.16.9"))
     sys.exit(0)
-if "--show-settings" in sys.argv:
-    print(os.environ.get("RUFF_SETTINGS", ""))
-    sys.exit(0)
 with open(os.path.join(os.environ["WORK"], "ruff.args"), "a") as args:
     args.write(" ".join(sys.argv[1:]) + "\\n")
-sys.stdin.read()
+with open(os.path.join(os.environ["WORK"], "ruff.stdin"), "w") as text:
+    text.write(sys.stdin.read())
 time.sleep(float(os.environ.get("RUFF_SLEEP") or 0))
 if os.environ.get("RUFF_STDERR"):
     print(os.environ["RUFF_STDERR"], file=sys.stderr)
@@ -813,6 +811,21 @@ c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: demo.py\n@@\n-x 
                              "*** End of File\n*** End Patch"), harness="codex")
 expect_contains("an End of File hunk changes the last match", "code_quality:CQ001 at demo.py:2", c.reason())
 
+c.file("demo.py", '"""\n"""')
+c.hook(c.patch("PreToolUse", '*** Begin Patch\n*** Update File: demo.py\n@@\n-"""\n+from os import *\n+"""\n'
+                             "*** End of File\n*** End Patch"), harness="codex")
+expect_equal("an End of File hunk on a file with no final newline changes its last line, as Codex does",
+             '"""\nfrom os import *\n"""\n', (WORK / "ruff.stdin").read_text())
+c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: demo.py\n@@\n+from os import *\n*** End Patch"),
+       harness="codex")
+expect_equal("an insertion-only hunk goes after the last line of a file with no final newline",
+             '"""\n"""\nfrom os import *\n', (WORK / "ruff.stdin").read_text())
+c.file("demo.py", "# release \u2014 notes\npass\n")
+c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: demo.py\n@@ # release - notes\n-pass\n"
+                             "+from os import *\n*** End Patch"), harness="codex")
+expect_equal("an anchor matches with Unicode dashes read as ASCII, as Codex does",
+             "# release \u2014 notes\nfrom os import *\n", (WORK / "ruff.stdin").read_text())
+
 c = Case("comment-only")
 c.file("pages.py", PAGES)
 c.hook(c.write("pages.py", PAGES.replace("(path)))", "(path)))  # one page per path")))
@@ -821,6 +834,10 @@ c.file("app.ts", "var x = 1\n")
 c.file("eslint.config.js", "export default [];\n")
 c.hook(c.write("app.ts", "var x = 1 // counter\n"), ESLINT_JSON=NO_VAR_ROW)
 expect_equal("in TypeScript too", "", c.decision())
+c.file("app.js", "/* intro\n * original */ var item = 1;\n")
+c.hook(c.write("app.js", "/* intro\n * revised */ var item = 1;\n"),
+       ESLINT_JSON='[{"messages":[{"ruleId":"no-var","line":2,"severity":2}]}]')
+expect_equal("and when the comment opened on an earlier line", "", c.decision())
 
 c = Case("eslint-project-warns")
 c.file("eslint.config.js", "export default [];\n")
@@ -841,6 +858,18 @@ expect_equal("a rule the project ignores with ALL but selects again still denies
 expect_equal("ignored rules are left to ruff's own config, not selected",
              f"check --verbose --force-exclude --preview --output-format json --stdin-filename {c.project}/app.py -",
              c.args().splitlines()[-1])
+
+c = Case("ruff-extends")
+c.file("ruff.toml", 'extend = "base.toml"\n')
+c.file("base.toml", '[lint]\nignore = ["F403"]\n')
+c.hook(c.write("app.py", "from os import *\n"))
+expect_lacks("a rule ignored in a config the project extends is left to ruff", "F403", c.args().splitlines()[-1])
+c.file("ruff.toml", 'extend = "base.toml"\npreview = false\n')
+c.hook(c.write("app.py", "x = 1\n"))
+expect_lacks("a project that sets preview keeps its setting", "--preview", c.args().splitlines()[-1])
+c.hook(c.write("app.py", "x = [a for b in c for a in b]\n"))
+expect_lacks("a Python edit names no C# tool", "roslyn", c.stdout)
+expect_lacks("or GDScript tool", "gdlint", c.stdout)
 
 c = Case("ruff-python-only")
 c.file("eslint.config.js", "export default [];\n")

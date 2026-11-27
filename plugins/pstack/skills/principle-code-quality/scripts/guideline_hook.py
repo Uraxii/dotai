@@ -253,14 +253,25 @@ def hunks(body: Sequence[str]) -> Iterator[Hunk]:
         yield hunk
 
 
+CODEX_PUNCTUATION = str.maketrans({
+    **dict.fromkeys("\u2010\u2011\u2012\u2013\u2014\u2015\u2212", "-"),
+    **dict.fromkeys("\u2018\u2019\u201a\u201b", "'"),
+    **dict.fromkeys("\u201c\u201d\u201e\u201f", '"'),
+    **dict.fromkeys(
+        "\u00a0\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009"
+        "\u200a\u202f\u205f\u3000", " ",
+    ),
+})
 LINE_MATCHES: tuple[Callable[[str], str], ...] = (
     lambda line: line, str.rstrip, str.strip,
+    lambda line: line.strip().translate(CODEX_PUNCTUATION),
 )
 
 
 def find_lines(lines: list[str], wanted: list[str], start: int) -> int | None:
     """Find the context the way Codex does: exact, then without trailing
-    whitespace, then without any surrounding whitespace."""
+    whitespace, then without any surrounding whitespace, then with Unicode
+    dashes, quotes and spaces read as ASCII."""
     last = len(lines) - len(wanted)
     for normalize in LINE_MATCHES:
         target = [normalize(line) for line in wanted]
@@ -271,11 +282,22 @@ def find_lines(lines: list[str], wanted: list[str], start: int) -> int | None:
     return None
 
 
+def find_hunk(
+    lines: list[str], hunk: Hunk, old: list[str], cursor: int
+) -> int | None:
+    """Codex looks for an End of File hunk at the end of the file only."""
+    start = len(lines) - len(old) if hunk.at_end else cursor
+    return find_lines(lines, old, max(start, 0))
+
+
 def apply_update(current: str, body: Sequence[str]) -> str | None:
     """Apply the hunks in memory the way Codex does; None when a hunk or
-    its anchor does not match the file."""
+    its anchor does not match the file. Codex works on the lines without
+    a final empty one and always ends the file with a newline."""
     ending = "\r\n" if "\r\n" in current else "\n"
     lines = current.split(ending)
+    if lines[-1] == "":
+        lines.pop()
     cursor = 0
     for hunk in hunks(body):
         if hunk.anchor:
@@ -286,16 +308,19 @@ def apply_update(current: str, body: Sequence[str]) -> str | None:
         old = [line[1:] for line in hunk.rows if line[0] in " -"]
         new = [line[1:] for line in hunk.rows if line[0] in " +"]
         if not old:
-            index: int | None = len(lines) - 1
-        elif hunk.at_end:
-            index = find_lines(lines, old, max(cursor, len(lines) - len(old) - 1))
-        else:
-            index = find_lines(lines, old, cursor)
+            at = len(lines) - 1 if lines and lines[-1] == "" else len(lines)
+            lines[at:at] = new
+            continue
+        index = find_hunk(lines, hunk, old, cursor)
+        if index is None and old[-1] == "":
+            old = old[:-1]
+            new = new[:-1] if new and new[-1] == "" else new
+            index = find_hunk(lines, hunk, old, cursor)
         if index is None:
             return None
         lines[index:index + len(old)] = new
         cursor = index + len(new)
-    return ending.join(lines)
+    return ending.join(lines) + ending
 
 
 def patch_change(file: PatchFile, base: Neutral) -> Neutral:

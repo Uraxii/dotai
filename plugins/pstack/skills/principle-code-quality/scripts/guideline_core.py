@@ -64,6 +64,7 @@ COMMENT_MARKERS = {
     "python": ("#",), "gdscript": ("#",), "typescript": ("//", "/*"),
     "javascript": ("//", "/*"), "csharp": ("//", "/*"),
 }
+BLOCK_COMMENT = re.compile(r"/\*.*?\*/")
 SHEBANG_LANGUAGES = {"python": "python", "node": "javascript"}
 UNSAFE_NAME_CHARS = re.compile(r"[^A-Za-z0-9_-]")
 
@@ -265,8 +266,11 @@ class Hit(NamedTuple):
     def identity(self, language: str) -> tuple[str, str, str]:
         """The finding and its line's code, so a comment-only edit to a
         line that already broke the rule does not count as new."""
+        markers = COMMENT_MARKERS.get(language, ())
         code = self.text
-        for marker in COMMENT_MARKERS.get(language, ()):
+        if "/*" in markers:
+            code = BLOCK_COMMENT.sub(" ", code).rsplit("*/", 1)[-1]
+        for marker in markers:
             code = code.split(marker, 1)[0]
         return (self.finding.tool, self.finding.code, code.strip())
 

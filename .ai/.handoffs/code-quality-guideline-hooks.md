@@ -149,3 +149,11 @@ Scratch paths named in those notes (under `/tmp/...`) are gone; ignore them.
 - ESLint ids match exactly (`matches_code`); ruff runs only on Python (`runs_on`); ruff gets `--preview`; only successful tool probes are cached.
 - Detector codes: complexipy:CC001, tsc:TS1294, roslyn:CA1502, mypy strict replaced with mypy error codes. SKILL.md says manual `check` needs Python 3.11+.
 - mise run ci green: guidelines.test.py 191/191, hook total 171/171, unittest OK, manifests current. The 9 ruff findings in scripts/ predate this branch's last change and are not in CI.
+
+## Update: review 663a734b findings fixed
+- Ruff: codes the project selects or ignores anywhere in its `extend` chain are not added to `--extend-select`; ruff decides. A `preview` key anywhere in the chain drops `--preview`.
+- Comment identity also drops `/* ... */` spans and text up to a closing `*/` (block comment opened on an earlier line).
+- Codex apply: drops the final empty line like Codex, EOF hunks search only at the end, insertion-only hunks append, trailing-empty-context retry, result ends with a newline; Unicode punctuation pass in line matching.
+- `guidelines.cmd` uses `call` so .bat/.cmd Python shims return control (untested on Windows).
+- No-runner tools carry languages, so a Python edit names no roslyn/gdlint. `ts.enum.no-enum` uses `keywords: enum` instead of tsc:TS1294.
+- mise run ci green: guidelines.test.py 199/199, hook total 171/171.

@@ -4,6 +4,7 @@ languages: typescript
 scope: contextual
 severity: warn
 enabled: true
-detectors: tsc:TS1294
+detectors:
+keywords: enum
 ---
 No `enum`. Use an `as const` object or a union of literal types.

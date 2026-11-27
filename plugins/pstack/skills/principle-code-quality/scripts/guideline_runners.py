@@ -29,6 +29,8 @@ ESLINT_CONFIG_PATTERN = re.compile(
     r"^(eslint\.config\.[cm]?[jt]s|\.eslintrc(\.(js|cjs|json|ya?ml))?)$"
 )
 IGNORE_KEYS = ("ignore", "extend-ignore")
+SELECT_KEYS = ("select", "extend-select")
+RUFF_EXTENDS_MAX = 10
 PER_FILE_KEYS = ("per-file-ignores", "extend-per-file-ignores")
 EDITORCONFIG_LINE_LENGTH = re.compile(
     r"^\s*max_line_length\s*=\s*(\d+)\s*$", re.MULTILINE
@@ -111,6 +113,28 @@ def as_strings(value: object) -> list[str]:
     return [item for item in value if isinstance(item, str)]
 
 
+def ruff_chain(config: Path) -> Iterator[Path]:
+    """The config, then each config it `extend`s, as ruff loads them."""
+    seen: set[Path] = set()
+    current: Path | None = config
+    while current is not None and current not in seen and (
+        len(seen) < RUFF_EXTENDS_MAX
+    ):
+        seen.add(current)
+        yield current
+        tables = ruff_lint_tables(current)
+        extend = tables[0].get("extend") if tables else None
+        current = (
+            (current.parent / extend).resolve()
+            if isinstance(extend, str) else None
+        )
+
+
+def ruff_tables(config: Path) -> Iterator[Mapping[str, object]]:
+    for linked in ruff_chain(config):
+        yield from ruff_lint_tables(linked)
+
+
 class RuffIgnores(NamedTuple):
     everywhere: frozenset[str]
     this_file: frozenset[str]
@@ -125,7 +149,7 @@ def ruff_ignored(path: Path, root: Path) -> RuffIgnores:
     rel = path.relative_to(config.parent).as_posix()
     everywhere: set[str] = set()
     this_file: set[str] = set()
-    for table in ruff_lint_tables(config):
+    for table in ruff_tables(config):
         for key in IGNORE_KEYS:
             everywhere.update(as_strings(table.get(key)))
         for key in PER_FILE_KEYS:
@@ -209,14 +233,26 @@ def run_code_quality(executable: str, target: Target) -> RunResult:
 
 
 def ruff_arguments(target: Target) -> list[str]:
+    """Select the guideline codes the project's config does not name, so a
+    code it selects or ignores, in any config it extends, is ruff's call."""
     codes = ",".join(sorted(target.codes))
-    if ruff_config(target.path, target.root) is not None:
-        ignored = ruff_ignored(target.path, target.root).everywhere
+    config = ruff_config(target.path, target.root)
+    if config is not None:
+        tables = list(ruff_tables(config))
+        named = frozenset(
+            selector for table in tables
+            for key in (*SELECT_KEYS, *IGNORE_KEYS)
+            for selector in as_strings(table.get(key))
+        )
         added = ",".join(sorted(
-            code for code in target.codes if not selected_by(code, ignored)
+            code for code in target.codes if not selected_by(code, named)
         ))
-        return ["--verbose", "--force-exclude", "--preview",
-                *(["--extend-select", added] if added else [])]
+        preview = any("preview" in table for table in tables)
+        return [
+            "--verbose", "--force-exclude",
+            *([] if preview else ["--preview"]),
+            *(["--extend-select", added] if added else []),
+        ]
     length = str(line_length(target.root))
     return [
         "--isolated", "--preview", "--line-length", length, "--select", codes,
@@ -292,10 +328,14 @@ RUNNERS: dict[str, Runner] = {
         Runner("eslint", SCRIPT_LANGUAGES, ("--version",), r"^v\d",
                run_eslint),
         *(
-            Runner(tool, frozenset(), (), "", None)
-            for tool in (
-                "mypy", "pylint", "lizard", "complexipy", "opengrep",
-                "semgrep", "gdlint", "roslyn", "stylecop", "godot", "tsc",
+            Runner(tool, frozenset(languages), (), "", None)
+            for tool, languages in (
+                ("mypy", {"python"}), ("pylint", {"python"}),
+                ("complexipy", {"python"}), ("lizard", ()),
+                ("opengrep", ()), ("semgrep", ()),
+                ("gdlint", {"gdscript"}), ("godot", {"gdscript"}),
+                ("roslyn", {"csharp"}), ("stylecop", {"csharp"}),
+                ("tsc", {"typescript"}),
             )
         ),
     )
@@ -303,8 +343,8 @@ RUNNERS: dict[str, Runner] = {
 
 
 def runs_on(tool: str, language: str) -> bool:
-    """False when the tool's runner checks only other languages. A tool
-    with no runner still "runs", so its notice is shown."""
+    """False when the tool checks only other languages. A tool with no
+    runner yet still "runs" on its languages, so its notice is shown."""
     runner = RUNNERS.get(tool)
     return runner is None or not runner.languages or (
         language in runner.languages
