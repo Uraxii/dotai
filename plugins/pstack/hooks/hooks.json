@@ -10,7 +10,7 @@
           },
           {
             "type": "command",
-            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/guidelines.sh\" claude",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/guidelines.py\" claude",
             "timeout": 5
           }
         ]
@@ -21,7 +21,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/guidelines.sh\" claude",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/guidelines.py\" claude",
             "timeout": 5
           }
         ]
@@ -33,7 +33,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/guidelines.sh\" claude",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/guidelines.py\" claude",
             "timeout": 10
           }
         ]
@@ -45,7 +45,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/guidelines.sh\" claude",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/guidelines.py\" claude",
             "timeout": 15
           }
         ]

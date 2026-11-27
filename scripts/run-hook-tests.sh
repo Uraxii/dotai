@@ -4,7 +4,8 @@
 # drifted apart.
 #
 # Usage: scripts/run-hook-tests.sh
-# Needs bash and jq for the tests; the hooks themselves need only bash and awk.
+# Needs bash and jq for the shell tests, and Python 3.11 or later for the
+# Python tests (mise.toml installs it).
 
 root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 failed=0
@@ -24,6 +25,9 @@ done
 
 for test in "$root"/plugins/*/hooks/tests/*.test.sh; do
   bash "$test" || failed=1
+done
+for test in "$root"/plugins/*/hooks/tests/*.test.py; do
+  python3 "$test" || failed=1
 done
 bash "$root/plugins/shunt/evals/run.sh" 2>&1 | grep -E 'FAIL|^Total'
 [ "${PIPESTATUS[0]}" = 0 ] || failed=1

@@ -45,6 +45,7 @@ UNAVAILABLE_LABEL = "warn (detector unavailable)"
 RESEND_AFTER_PROMPTS = 20
 MAX_TEXT_CHARS = 9000
 DROPPED_NOTICE_CHARS = 600
+ANNOUNCE_CHARS = 400
 NOTICE_COUNT_CHARS = 60
 DROPPED_FILES_NAMED = 3
 MAX_CONTENT_CHARS = 1_000_000
@@ -303,6 +304,20 @@ def dropped_notice(dropped: dict[str, int]) -> str:
     )
 
 
+def announcement(issued: list[str]) -> str:
+    """The line that asks the agent to announce the issued guidelines,
+    within ANNOUNCE_CHARS less its separator."""
+    head = "Tell the user in chat, in one line, that pstack issued "
+    for shown in range(len(issued), 0, -1):
+        others = len(issued) - shown
+        named = ", ".join(issued[:shown])
+        named += f" and {others} more" * (others > 0)
+        text = f"{head}these guidelines: {named}."
+        if len(text) <= ANNOUNCE_CHARS - 2:
+            return text
+    return f"{head}{len(issued)} guidelines."
+
+
 def name_files(head: str, files: list[str], tail: str, fallback: str) -> str:
     """Join head, the first whole file paths that fit, and tail, within
     DROPPED_NOTICE_CHARS less its separator; use `fallback` when no path
@@ -338,7 +353,11 @@ class Engine:
         self.hits: list[Hit] = []
         self.fulls: dict[str, str] = {}
         self.blocked = False
-        self.cap = sys.maxsize if event.kind == "check" else MAX_TEXT_CHARS
+        self.cap = (
+            sys.maxsize if event.kind == "check"
+            else MAX_TEXT_CHARS - ANNOUNCE_CHARS
+        )
+        self.issued: list[str] = []
 
     def classify(self, raw: str, content: str | None) -> CodeFile | str:
         """Describe a payload path, or say why no guideline covers it."""
@@ -604,6 +623,7 @@ class Engine:
             if self.add(items, self.hit_item(hit), kept):
                 if not repeated:
                     self.state.sent[hit.guideline.id] = self.state.prompt
+                    self.issued.append(hit.guideline.id)
             elif not self.add(items, self.hit_head(hit), kept):
                 dropped[hit.rel] = dropped.get(hit.rel, 0) + 1
         if dropped:
@@ -622,6 +642,7 @@ class Engine:
             text = f"[{guideline_id}] {label}\n{guideline.body}"
             if self.add(items, text):
                 self.state.sent[guideline_id] = self.state.prompt
+                self.issued.append(guideline_id)
             else:
                 self.state.pending.append(guideline_id)
 
@@ -640,6 +661,7 @@ class Engine:
             items = [DENY_HEADER]
             self.add_hits(items, NOTICE_COUNT_CHARS * bool(self.notices))
             self.add_notices(items)
+            self.announce(items)
             return Result(deny="\n\n".join(items))
         if not self.event.channel:
             self.queue_fulls()
@@ -657,7 +679,14 @@ class Engine:
             return Result(text if self.blocked else None, text)
         if len(items) == 1:
             return Result()
+        self.announce(items)
         return Result(None, "\n\n".join(items), "\n".join(notices) or None)
+
+    def announce(self, items: list[str]) -> None:
+        """Ask the agent to tell the user which guidelines this call
+        issued; the cap keeps ANNOUNCE_CHARS free for it."""
+        if self.issued:
+            items.insert(1, announcement(list(dict.fromkeys(self.issued))))
 
     def run(self) -> Result:
         kind = self.event.kind

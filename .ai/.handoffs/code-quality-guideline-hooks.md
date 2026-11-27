@@ -104,8 +104,8 @@ Scratch paths named in those notes (under `/tmp/...`) are gone; ignore them.
 
 ## Commands
 
-    bash plugins/pstack/hooks/tests/guidelines.test.sh
-    bash scripts/run-hook-tests.sh
+    mise exec -- python3 plugins/pstack/hooks/tests/guidelines.test.py
+    mise exec -- bash scripts/run-hook-tests.sh
     (cd plugins/pstack/skills/principle-code-quality/scripts && python3 -m unittest)
     python3 scripts/generate-plugin-manifests.py --check
 
@@ -117,3 +117,12 @@ Scratch paths named in those notes (under `/tmp/...`) are gone; ignore them.
 - `skills:skill-quality` before editing SKILL.md or the guideline files.
 - `open-code-review:delegate-review` before merge.
 - `pstack:write-pr` when opening the PR.
+
+## Progress (review-fix loop closed)
+
+- Review-fix chain on `feature/code-quality-guideline-hooks`: 257cab4, d85f6c2, 0f30926, 24fa503, 1fb60e6, 88f65a7, dddb160, b2b38ee (pushed).
+- Fresh review of b2b38ee: 0 blocking, 0 non-blocking (`.ai/review/review-b2b38ee.md`).
+- Tests on Python 3.12 (mise): guidelines.test.sh 140/140, all hook suites 188/188, unittest 13 OK, ruff clean. System python3 is 3.10 and fails the unit tests.
+- User asked: build everything in Python; announce issued guidelines in chat; mise and the Devin blueprint install Python.
+- Done: `hooks/guidelines.py` replaces `guidelines.sh` (runs on any Python 3.6+, finds a 3.11+ for the engine, same fail-open log rules); manifests run `python3 .../guidelines.py` (Windows `py -3`). `guidelines.test.py` replaces the shell suite (153 pass). Each context or deny that issues guideline bodies has a line asking the agent to tell the user the IDs (`announcement()` in guideline_core.py; 400 chars reserved from the cap; `check` has none). `mise.toml` pins Python 3.12; the repo blueprint installs it.
+- Next: detectors: values, SKILL.md, references/*.md decision, manifests, PR to develop. All edit Markdown outside `.ai/`, which waits for user approval ("markdown").
