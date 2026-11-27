@@ -4,6 +4,6 @@ languages: gdscript
 scope: contextual
 severity: warn
 enabled: true
-detectors:
+detectors: godot:untyped_declaration
 ---
 Put type hints on all vars, params, and returns. Keep static typing mode on.

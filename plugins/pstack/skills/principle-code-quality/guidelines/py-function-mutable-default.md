@@ -4,6 +4,6 @@ languages: python
 scope: contextual
 severity: block
 enabled: true
-detectors:
+detectors: ruff:B006
 ---
 No mutable default arguments such as `def f(x=[])`. Default to `None` and build the value inside the function.

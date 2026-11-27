@@ -146,6 +146,14 @@ class GuidelineLintTest(unittest.TestCase):
         result = run("--parse-only")
         self.assertEqual((result.returncode, result.stdout), (0, ""))
 
+    def test_references_match_the_guideline_files(self) -> None:
+        result = subprocess.run(
+            [sys.executable, "-I", str(SCRIPT.with_name("guideline_references.py")),
+             "--check"],
+            capture_output=True, text=True, check=False,
+        )
+        self.assertEqual((result.returncode, result.stdout), (0, ""))
+
 
 if __name__ == "__main__":
     unittest.main()

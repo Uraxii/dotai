@@ -4,6 +4,6 @@ languages: typescript
 scope: contextual
 severity: warn
 enabled: true
-detectors:
+detectors: eslint:@typescript-eslint/prefer-nullish-coalescing
 ---
 Use `??` instead of `||` for defaults.

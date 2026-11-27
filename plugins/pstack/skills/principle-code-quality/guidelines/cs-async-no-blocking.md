@@ -1,7 +1,7 @@
 ---
 id: cs.async.no-blocking
 languages: csharp
-scope: contextual
+scope: global
 severity: warn
 enabled: true
 detectors:

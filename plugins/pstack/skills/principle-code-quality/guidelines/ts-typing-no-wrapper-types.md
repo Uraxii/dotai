@@ -4,6 +4,6 @@ languages: typescript
 scope: contextual
 severity: warn
 enabled: true
-detectors:
+detectors: eslint:@typescript-eslint/no-wrapper-object-types, eslint:@typescript-eslint/no-unsafe-function-type
 ---
 No `Object`, `Function`, or `String` types. Use the lowercase primitives.

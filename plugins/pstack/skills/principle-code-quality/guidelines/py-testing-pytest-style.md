@@ -4,6 +4,6 @@ languages: python
 scope: contextual
 severity: warn
 enabled: true
-detectors:
+detectors: ruff:PT009, ruff:PT027
 ---
 Follow `pytest` conventions. Give tests a `test_` prefix, and use fixtures instead of `setUp`.

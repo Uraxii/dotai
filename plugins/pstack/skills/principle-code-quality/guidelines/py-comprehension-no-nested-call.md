@@ -4,6 +4,6 @@ languages: python
 scope: contextual
 severity: warn
 enabled: true
-detectors:
+detectors: code_quality:CQ002
 ---
 No `f(g(x))` inside a comprehension; name the inner result first.

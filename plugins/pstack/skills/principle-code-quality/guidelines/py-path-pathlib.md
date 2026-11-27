@@ -4,6 +4,6 @@ languages: python
 scope: contextual
 severity: warn
 enabled: true
-detectors:
+detectors: ruff:PTH
 ---
 Use `pathlib` instead of `os.path`.

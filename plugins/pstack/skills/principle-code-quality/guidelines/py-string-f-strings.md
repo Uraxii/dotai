@@ -4,6 +4,6 @@ languages: python
 scope: contextual
 severity: warn
 enabled: true
-detectors:
+detectors: ruff:UP031, ruff:UP032
 ---
 Use f-strings. Prefer them over `.format()`, and `.format()` over `%`.

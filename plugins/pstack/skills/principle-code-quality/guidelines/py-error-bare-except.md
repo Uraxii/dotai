@@ -4,6 +4,6 @@ languages: python
 scope: contextual
 severity: block
 enabled: true
-detectors:
+detectors: ruff:E722
 ---
 No bare `except:`. Catch the specific exception and handle it explicitly, per the surrounding context.

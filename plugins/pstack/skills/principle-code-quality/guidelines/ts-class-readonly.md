@@ -4,6 +4,6 @@ languages: typescript
 scope: contextual
 severity: warn
 enabled: true
-detectors:
+detectors: eslint:@typescript-eslint/prefer-readonly
 ---
 Mark properties `readonly` when they should not change.

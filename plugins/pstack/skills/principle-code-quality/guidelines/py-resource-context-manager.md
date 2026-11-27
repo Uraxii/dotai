@@ -4,6 +4,6 @@ languages: python
 scope: contextual
 severity: warn
 enabled: true
-detectors:
+detectors: ruff:SIM115, pylint:R1732
 ---
 Open every resource (files, locks, connections) in a `with` context manager.

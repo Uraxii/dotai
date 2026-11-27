@@ -4,6 +4,6 @@ languages: python, typescript, javascript, csharp, gdscript
 scope: global
 severity: warn
 enabled: true
-detectors:
+detectors: ruff:ERA001
 ---
 Delete commented-out code instead of keeping it as a comment.

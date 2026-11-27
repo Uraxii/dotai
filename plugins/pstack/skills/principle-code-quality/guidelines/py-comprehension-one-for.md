@@ -4,6 +4,7 @@ languages: python
 scope: contextual
 severity: block
 enabled: true
-detectors:
+detectors: code_quality:CQ001
+keywords: list comprehension, flatten
 ---
 One `for` per comprehension. Use a loop or `itertools.chain.from_iterable`.
