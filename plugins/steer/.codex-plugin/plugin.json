@@ -1,6 +1,6 @@
 {
   "name": "steer",
-  "version": "1.4.1",
+  "version": "1.4.2",
   "description": "Harness hooks that steer agent behaviour, independent of any skill.",
   "author": {
     "name": "Uraxii",
@@ -13,13 +13,16 @@
     "harness",
     "hooks"
   ],
+  "hooks": "./hooks/codex-hooks.json",
   "interface": {
     "displayName": "steer",
     "shortDescription": "Harness hooks independent of skills.",
-    "longDescription": "Installs harness hooks that steer agent behaviour without being coupled to a skill.",
+    "longDescription": "Claude Code checks Markdown edits and requests a recap when appropriate. Codex and Copilot CLI default to recaps after Opus 5 or Fable turns that changed something. Devin does not provide a transcript to plugin hooks. Its UserPromptSubmit hook reminds the agent to ask before editing Markdown. It does not block edits or request a recap.",
     "developerName": "Uraxii",
     "category": "Developer Tools",
-    "capabilities": [],
+    "capabilities": [
+      "Hooks"
+    ],
     "defaultPrompt": [
       "Install the steer harness hooks."
     ]

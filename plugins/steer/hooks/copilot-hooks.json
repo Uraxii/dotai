@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "hooks": {
+    "agentStop": [
+      {
+        "type": "command",
+        "bash": "bash \"${PLUGIN_ROOT}/hooks/opus_5_reduce_output.sh\" --harness copilot",
+        "powershell": "& \"$env:PLUGIN_ROOT\\hooks\\run-hook.cmd\" opus_5_reduce_output.sh --harness copilot; exit $LASTEXITCODE",
+        "timeoutSec": 10
+      }
+    ]
+  }
+}

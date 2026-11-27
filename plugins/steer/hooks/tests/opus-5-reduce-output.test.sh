@@ -63,11 +63,101 @@ expect_equal "the Stop hook runs the script with bash" 'bash "${CLAUDE_PLUGIN_RO
   "$(jq -r '.hooks.Stop[0].hooks[0].command' "$config")"
 expect_equal "the Stop hook timeout is 10 s" 10 "$(jq '.hooks.Stop[0].hooks[0].timeout' "$config")"
 expect_equal "the script is executable" yes "$([ -x "$HOOK" ] && echo yes || echo no)"
-# Codex documents no turn-end event, and Copilot's agentStop envelope is
-# camelCase, so its stopHookActive loop guard would never trip.
-expect_equal "no Codex hooks file" absent "$([ -e "$PLUGIN_ROOT_DIR/hooks/codex-hooks.json" ] && echo present || echo absent)"
-expect_equal "no Copilot hooks file" absent "$([ -e "$PLUGIN_ROOT_DIR/hooks.json" ] && echo present || echo absent)"
 expect_equal "the recap instruction has no em dash" absent "$([[ "$RECAP_INSTRUCTION" == *—* ]] && echo present || echo absent)"
+
+export PLUGIN_ROOT="$PLUGIN_ROOT_DIR"
+codex_path=$(jq -r '.hooks' "$PLUGIN_ROOT_DIR/.codex-plugin/plugin.json")
+codex_stop=$(wiring_commands codex "$PLUGIN_ROOT_DIR/$codex_path" Stop)
+for shell_command in "touch changed.txt" "cat changed.txt"; do
+  jq -cn --arg cmd "$shell_command" '
+    {type:"event_msg", payload:{type:"task_started",turn_id:"current"}},
+    {type:"response_item",payload:{type:"function_call",name:"exec_command",arguments:({cmd:$cmd}|tojson)}}' >"$WORK/codex.jsonl"
+  codex_payload=$(jq -cn --arg t "$WORK/codex.jsonl" '{model:"claude-opus-5-1",turn_id:"current",transcript_path:$t,stop_hook_active:false}')
+  run_wiring codex "$codex_stop" <<<"$codex_payload"
+  if [[ "$shell_command" == touch* ]]; then
+    expect_json "Codex Opus 5 mutating turn asks for one recap" "$BLOCK" "$STDOUT"
+    fable_payload=$(jq '.model = "claude-FABLE-5"' <<<"$codex_payload")
+    run_wiring codex "$codex_stop" <<<"$fable_payload"
+    expect_json "Codex Fable mutating turn asks for one recap" "$BLOCK" "$STDOUT"
+    CLEAN_RECAP_MODEL_PATTERN=opus-5 run_wiring codex "$codex_stop" <<<"$fable_payload"
+    expect_equal "Codex respects the shared model pattern override" "" "$STDOUT"
+    for change in '.model = "claude-sonnet-5"' '.stop_hook_active = true' '.turn_id = "new-turn"' 'del(.model)'; do
+      run_wiring codex "$codex_stop" <<<"$(jq "$change" <<<"$codex_payload")"
+      expect_equal "Codex skips $change" "" "$STDOUT"
+    done
+  else
+    expect_equal "Codex Opus 5 read-only turn stays silent" "" "$STDOUT"
+  fi
+done
+
+copilot_path=$(jq -r '.hooks' "$PLUGIN_ROOT_DIR/plugin.json")
+copilot_stop=$(wiring_commands copilot "$PLUGIN_ROOT_DIR/$copilot_path" agentStop)
+copilot_payload=$(jq -cn --arg t "$WORK/copilot.jsonl" '{transcriptPath:$t,stop_hook_active:false}')
+for spec in 'claude-opus-5 touch block' 'claude-opus-5 cat allow' 'claude-fable-5 touch block' 'claude-fable-5 cat allow' 'unknown touch allow'; do
+  read -r model action expected <<<"$spec"
+  jq -cn --arg model "$model" --arg cmd "$action changed.txt" '
+    {type:"user.message",data:{interactionId:"current"}},
+    {type:"assistant.turn_start",data:{interactionId:"current",turnId:"0"}},
+    {type:"assistant.message",data:{interactionId:"current",turnId:"0",model:$model}},
+    {type:"tool.execution_start",data:{turnId:"0",toolName:"bash",arguments:{command:$cmd}}},
+    {type:"assistant.turn_end",data:{turnId:"0"}},
+    {type:"assistant.turn_start",data:{interactionId:"current",turnId:"1"}},
+    {type:"assistant.message",data:{interactionId:"current",turnId:"1",model:$model}}' >"$WORK/copilot.jsonl"
+  run_wiring copilot "$copilot_stop" <<<"$copilot_payload"
+  if [ "$expected" = block ]; then
+    expect_json "Copilot $model mutating turn asks for one recap" "$BLOCK" "$STDOUT"
+    run_wiring copilot "$copilot_stop" <<<"$(jq '.stop_hook_active = true' <<<"$copilot_payload")"
+    expect_equal "Copilot never repeats a blocked Stop" "" "$STDOUT"
+    jq -cn '{type:"user.message",data:{interactionId:"next"}}' >>"$WORK/copilot.jsonl"
+    run_wiring copilot "$copilot_stop" <<<"$copilot_payload"
+    expect_equal "Copilot does not use the previous interaction's model" "" "$STDOUT"
+  else
+    expect_equal "Copilot skips $model $action" "" "$STDOUT"
+  fi
+done
+copilot_tool_turn() {
+  jq -cn --arg tool "$1" --arg cmd "$2" '
+    {type:"user.message",data:{interactionId:"current"}},
+    {type:"assistant.turn_start",data:{interactionId:"current",turnId:"0"}},
+    {type:"assistant.message",data:{interactionId:"current",turnId:"0",model:"claude-opus-5"}},
+    {type:"tool.execution_start",data:{turnId:"0",toolName:$tool,arguments:{command:$cmd,path:"changed.txt"}}}' \
+    >"$WORK/copilot.jsonl"
+  run_wiring copilot "$copilot_stop" <<<"$copilot_payload"
+}
+for operation in str_replace insert create undo_edit; do
+  copilot_tool_turn str_replace_editor "$operation"
+  expect_json "Copilot editor $operation asks for a recap" "$BLOCK" "$STDOUT"
+done
+copilot_tool_turn str_replace_editor view
+expect_equal "Copilot editor view does not ask for a recap" "" "$STDOUT"
+for command in 'sEt-CoNtEnT changed.txt new' 'Add-Content changed.txt new' "'new' | Out-File changed.txt" \
+  'New-Item changed.txt' 'Remove-Item changed.txt'; do
+  copilot_tool_turn powershell "$command"
+  expect_json "Copilot PowerShell mutation asks for a recap: $command" "$BLOCK" "$STDOUT"
+done
+copilot_tool_turn powershell 'Get-Content changed.txt | Select-String new'
+expect_equal "Copilot PowerShell reads do not ask for a recap" "" "$STDOUT"
+copilot_tool_turn bash 'Set-Content changed.txt new'
+expect_equal "a PowerShell cmdlet name does not change Bash classification" "" "$STDOUT"
+unset PLUGIN_ROOT
+
+for model in claude-opus-5-1 claude-sonnet-5 claude-fable-5 ''; do
+  input=$(jq -cn --arg m "$model" '{stop_hook_active:false,model:$m,extra:"do not log this"}')
+  capture env HOME="$WORK" STEER_DEVIN_STOP_DIAGNOSTICS=1 TEST_API_KEY=do-not-log \
+    python3 "$HOOKS_DIR/devin-stop-recap.py" <<<"$input"
+  if [[ "$model" = claude-opus-5-1 || "$model" = claude-fable-5 ]]; then
+    expect_json "unwired Devin hook requests a recap for $model" "$BLOCK" "$STDOUT"
+  else
+    expect_equal "unwired Devin hook skips model '$model'" "" "$STDOUT"
+  fi
+done
+capture env HOME="$WORK" python3 "$HOOKS_DIR/devin-stop-recap.py" \
+  <<< '{"stop_hook_active":true,"model":"claude-opus-5"}'
+expect_equal "unwired Devin hook honors the loop guard" "" "$STDOUT"
+diagnostic="$WORK/steer-devin-stop.jsonl"
+expect_equal "Devin diagnostics redact arbitrary payload and environment values" \
+  '["[REDACTED]","[REDACTED]","claude-opus-5-1"]' \
+  "$(head -n 1 "$diagnostic" | jq -c '[.stdin.extra,.env.TEST_API_KEY,.stdin.model]')"
 
 # The gate.
 decide_turn work "$(working_turn)"

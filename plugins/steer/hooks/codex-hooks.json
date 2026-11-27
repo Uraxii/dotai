@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${PLUGIN_ROOT}/hooks/opus_5_reduce_output.sh\" --harness codex",
+            "commandWindows": "\"${PLUGIN_ROOT}/hooks/run-hook.cmd\" opus_5_reduce_output.sh --harness codex",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}
