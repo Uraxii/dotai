@@ -34,12 +34,15 @@ EDITORCONFIG_LINE_LENGTH = re.compile(
     r"^\s*max_line_length\s*=\s*(\d+)\s*$", re.MULTILINE
 )
 SKIPPED_FOR_BUDGET = "budget"
+ESLINT_ERROR = 2
 
 
 class Finding(NamedTuple):
     tool: str
     code: str
     line: int
+    blocks: bool = True
+    """False when the project's own config makes this finding a warning."""
 
 
 class RunResult(NamedTuple):
@@ -108,24 +111,44 @@ def as_strings(value: object) -> list[str]:
     return [item for item in value if isinstance(item, str)]
 
 
-def ruff_ignored(path: Path, root: Path) -> frozenset[str]:
-    """Rule selectors the project's ruff config ignores for this file."""
+class RuffIgnores(NamedTuple):
+    everywhere: frozenset[str]
+    this_file: frozenset[str]
+
+
+def ruff_ignored(path: Path, root: Path) -> RuffIgnores:
+    """Rule selectors the project's ruff config ignores: in its ignore
+    lists, and in per-file ignores that match this file."""
     config = ruff_config(path, root)
     if config is None:
-        return frozenset()
+        return RuffIgnores(frozenset(), frozenset())
     rel = path.relative_to(config.parent).as_posix()
-    ignored: set[str] = set()
+    everywhere: set[str] = set()
+    this_file: set[str] = set()
     for table in ruff_lint_tables(config):
         for key in IGNORE_KEYS:
-            ignored.update(as_strings(table.get(key)))
+            everywhere.update(as_strings(table.get(key)))
         for key in PER_FILE_KEYS:
             per_file = table.get(key)
             if not isinstance(per_file, dict):
                 continue
             for glob, codes in per_file.items():
                 if glob_matches(rel, str(glob)):
-                    ignored.update(as_strings(codes))
-    return frozenset(ignored)
+                    this_file.update(as_strings(codes))
+    return RuffIgnores(frozenset(everywhere), frozenset(this_file))
+
+
+def selected_by(code: str, selectors: frozenset[str]) -> bool:
+    return any(
+        selector == "ALL" or code.startswith(selector)
+        for selector in selectors
+    )
+
+
+def matches_code(tool: str, found: str, selector: str) -> bool:
+    """Ruff codes match by prefix (`PTH` selects PTH123); other tools'
+    rule ids match exactly."""
+    return found.startswith(selector) if tool == "ruff" else found == selector
 
 
 def project_disables(tool: str, code: str, path: Path, root: Path) -> bool:
@@ -134,10 +157,9 @@ def project_disables(tool: str, code: str, path: Path, root: Path) -> bool:
         # shortcut: only ruff's ignore lists are read, add a reader per
         # tool when another one stores them in a format stdlib can parse.
         return False
-    return any(
-        selector == "ALL" or code.startswith(selector)
-        for selector in ruff_ignored(path, root)
-    )
+    # A code in the ignore lists is left to ruff: it is not added to the
+    # selection, so ruff reports it only if a more specific select keeps it.
+    return selected_by(code, ruff_ignored(path, root).this_file)
 
 
 def line_length(root: Path) -> int:
@@ -169,9 +191,9 @@ RUFF_EXCLUDED_PROBLEM = (
 )
 
 
-def wanted(code: object, codes: frozenset[str]) -> bool:
+def wanted(tool: str, code: object, codes: frozenset[str]) -> bool:
     return isinstance(code, str) and any(
-        code.startswith(selector) for selector in codes
+        matches_code(tool, code, selector) for selector in codes
     )
 
 
@@ -189,9 +211,16 @@ def run_code_quality(executable: str, target: Target) -> RunResult:
 def ruff_arguments(target: Target) -> list[str]:
     codes = ",".join(sorted(target.codes))
     if ruff_config(target.path, target.root) is not None:
-        return ["--verbose", "--force-exclude", "--extend-select", codes]
+        ignored = ruff_ignored(target.path, target.root).everywhere
+        added = ",".join(sorted(
+            code for code in target.codes if not selected_by(code, ignored)
+        ))
+        return ["--verbose", "--force-exclude", "--preview",
+                *(["--extend-select", added] if added else [])]
     length = str(line_length(target.root))
-    return ["--isolated", "--line-length", length, "--select", codes]
+    return [
+        "--isolated", "--preview", "--line-length", length, "--select", codes,
+    ]
 
 
 def run_ruff(executable: str, target: Target) -> RunResult:
@@ -207,7 +236,7 @@ def run_ruff(executable: str, target: Target) -> RunResult:
         rows = json.loads(process.stdout)
         findings = tuple(
             Finding("ruff", row["code"], int(row["location"]["row"]))
-            for row in rows if wanted(row["code"], target.codes)
+            for row in rows if wanted("ruff", row["code"], target.codes)
         )
         unparsed = any(row["code"] in (None, "invalid-syntax") for row in rows)
     except (ValueError, TypeError, KeyError):
@@ -239,9 +268,12 @@ def run_eslint(executable: str, target: Target) -> RunResult:
         messages = json.loads(process.stdout)[0]["messages"]
         unparsed = any(message.get("fatal") for message in messages)
         findings = tuple(
-            Finding("eslint", message["ruleId"], int(message["line"]))
+            Finding(
+                "eslint", message["ruleId"], int(message["line"]),
+                blocks=message.get("severity") == ESLINT_ERROR,
+            )
             for message in messages
-            if wanted(message.get("ruleId"), target.codes)
+            if wanted("eslint", message.get("ruleId"), target.codes)
         )
     except (ValueError, TypeError, KeyError, IndexError, AttributeError):
         return NOT_UNDERSTOOD
@@ -268,6 +300,15 @@ RUNNERS: dict[str, Runner] = {
         ),
     )
 }
+
+
+def runs_on(tool: str, language: str) -> bool:
+    """False when the tool's runner checks only other languages. A tool
+    with no runner still "runs", so its notice is shown."""
+    runner = RUNNERS.get(tool)
+    return runner is None or not runner.languages or (
+        language in runner.languages
+    )
 
 
 def locate(tool: str, root: Path) -> str | None:
@@ -319,7 +360,7 @@ def run_one(tool: str, detection: Detection) -> RunResult:
     executable, problem = detection.probes.get(tool) or probe(
         runner, detection.target.root
     )
-    if not problem.startswith("timed out"):
+    if not problem:
         detection.probes[tool] = [executable, problem]
     if problem or runner.run is None:
         return RunResult(None, problem)

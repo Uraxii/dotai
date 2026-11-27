@@ -104,6 +104,9 @@ import os, sys, time
 if sys.argv[1:] == ["--version"]:
     print(os.environ.get("RUFF_VERSION", "ruff 0.16.9"))
     sys.exit(0)
+if "--show-settings" in sys.argv:
+    print(os.environ.get("RUFF_SETTINGS", ""))
+    sys.exit(0)
 with open(os.path.join(os.environ["WORK"], "ruff.args"), "a") as args:
     args.write(" ".join(sys.argv[1:]) + "\\n")
 sys.stdin.read()
@@ -382,14 +385,14 @@ c = Case("exclude")
 c.hook(c.write("tests/test_app.py", "assert x\n"))
 c.hook(c.write("src/app.py", "assert x\n"))
 expect_equal("an excluded guideline's detector is not selected", (
-    f"check --isolated --line-length 80 --select F403 --output-format json --stdin-filename {c.project}/tests/test_app.py -\n"
-    f"check --isolated --line-length 80 --select F403,S101 --output-format json --stdin-filename {c.project}/src/app.py -"),
+    f"check --isolated --preview --line-length 80 --select F403 --output-format json --stdin-filename {c.project}/tests/test_app.py -\n"
+    f"check --isolated --preview --line-length 80 --select F403,S101 --output-format json --stdin-filename {c.project}/src/app.py -"),
     c.args())
 
 c = Case("disabled")
 c.hook(c.write("src/app.py", 'print("x")\n'), RUFF_JSON='[{"code":"T201","location":{"row":1}}]')
 expect_equal("a disabled guideline's detector is not selected",
-             f"check --isolated --line-length 80 --select F403,S101 --output-format json --stdin-filename {c.project}/src/app.py -",
+             f"check --isolated --preview --line-length 80 --select F403,S101 --output-format json --stdin-filename {c.project}/src/app.py -",
              c.args())
 expect_lacks("a disabled guideline is never delivered", "py.logging.no-print", c.stdout)
 
@@ -408,29 +411,29 @@ c.file(".ruff.toml", "[lint]\n")
 c.hook(c.write("src/app.py", "from os import *\n"), RUFF_JSON=F403_ROW)
 expect_equal(".ruff.toml wins over ruff.toml, as in ruff", "deny", c.decision())
 (c.project / ".ruff.toml").unlink()
-c.hook(c.write("src/app.py", "from os import *\n"), RUFF_JSON=F403_ROW)
+c.hook(c.write("src/app.py", "from os import *\n"))
 expect_equal("a rule the project ignores does not block", "", c.decision())
 expect_lacks("a rule the project ignores gives no finding", "py.import.no-star", c.stdout)
 expect_equal("ruff runs with the project config, without the ignored rule",
-             f"check --verbose --force-exclude --extend-select S101 --output-format json --stdin-filename {c.project}/src/app.py -",
+             f"check --verbose --force-exclude --preview --extend-select S101 --output-format json --stdin-filename {c.project}/src/app.py -",
              c.args().splitlines()[-1])
 c.hook(c.write("src/dist/app.py", "assert x\n"), RUFF_JSON=F403_ROW,
        RUFF_STDERR='DEBUG Ignored path via `exclude`: "src/dist"')
 expect_equal("a file ruff's config excludes does not deny", "", c.decision())
 expect_contains("and the user is told ruff skipped it",
-                "Notice: ruff skips this file under its exclude settings (the project's or ruff's defaults), so detectors ruff:S101 did not run.",
+                "Notice: ruff skips this file under its exclude settings (the project's or ruff's defaults), so detectors ruff:F403, ruff:S101 did not run.",
                 c.context())
-c.hook(c.tool("PostToolUse", "Write", "src/app.py"), RUFF_JSON=F403_ROW)
+c.hook(c.tool("PostToolUse", "Write", "src/app.py"))
 expect_lacks("the ignored rule stays quiet after the write", "py.import.no-star", c.stdout)
 two = WORK / "two-detectors"
 shutil.copytree(FIXTURES, two)
 no_star = two / "py-import-no-star.md"
 no_star.write_text(no_star.read_text().replace("detectors: ruff:F403\n", "detectors: ruff:F403, code_quality:CQ001\n"))
 (two / "py-comprehension-one-for.md").unlink()
-c.hook(c.write("src/two.py", "x = [a for b in c for a in b]\n"), PSTACK_GUIDELINES_DIR=str(two), RUFF_JSON=F403_ROW)
+c.hook(c.write("src/two.py", "x = [a for b in c for a in b]\n"), PSTACK_GUIDELINES_DIR=str(two))
 expect_contains("an ignored detector leaves the guideline's other detectors on",
                 "[py.import.no-star] block: code_quality:CQ001 at src/two.py:1", c.reason())
-expect_lacks("the ignored detector gives no finding", "ruff:F403 at", c.reason())
+expect_lacks("ruff is not asked to select the ignored detector", "F403", c.args().splitlines()[-1])
 
 c = Case("project-pyproject")
 c.file("pyproject.toml", '[tool.ruff.lint.per-file-ignores]\n"src/*" = ["F403"]\n')
@@ -476,7 +479,7 @@ expect_contains("the TypeScript guideline follows as a warning", "[ts.binding.no
 expect_equal("missing eslint never denies", "", c.decision())
 install_stub("eslint", ESLINT_STUB)
 
-NO_VAR_ROW = '[{"messages":[{"ruleId":"no-var","line":1}]}]'
+NO_VAR_ROW = '[{"messages":[{"ruleId":"no-var","line":1,"severity":2}]}]'
 c = Case("eslint-no-config")
 c.hook(c.write("a.ts", "var x = 1\n"), ESLINT_JSON=NO_VAR_ROW)
 expect_contains("eslint does not run without a project config",
@@ -586,13 +589,14 @@ expect_equal("a payload with wrong types says nothing", "0:", f"{c.status}:{c.st
 
 c = Case("no-python")
 PYTHON_NOTICE = "Notice: code-quality guideline hooks need Python 3.11 or later; none was found, so no guideline checks run in this session."
+CALL_NOTICE = "Notice: code-quality guideline hooks need Python 3.11 or later; none was found, so this call was not checked."
 OLD_PYTHON = ("import runpy, sys; sys.version_info = (3, 10); sys.argv = [sys.argv[1], 'claude']; "
               "runpy.run_path(sys.argv[0], run_name='__main__')")
 c.run([sys.executable, "-c", OLD_PYTHON, str(HOOK)], json.dumps(c.session_start("startup")), {"PATH": str(EMPTY)})
 expect_equal("without Python 3.11 the session start tells the user", PYTHON_NOTICE, c.message())
 expect_equal("and tells the agent", PYTHON_NOTICE, c.context())
 c.run([sys.executable, "-c", OLD_PYTHON, str(HOOK)], json.dumps(c.write("pages.py", PAGES)), {"PATH": str(EMPTY)})
-expect_equal("without Python 3.11 other hooks stay quiet", "0:", f"{c.status}:{c.stdout}")
+expect_equal("without Python 3.11 other hooks tell the user each call", [0, CALL_NOTICE], [c.status, c.message()])
 (BIN / "python3.11").symlink_to(sys.executable)
 c.run([sys.executable, "-c", OLD_PYTHON, str(HOOK)], json.dumps(c.write("pages.py", PAGES)))
 expect_equal("an old python3 hands the call to a newer Python on PATH", "deny", c.decision())
@@ -613,15 +617,23 @@ def wired(config, event, key="command"):
     return found
 
 
-def chain(harness, last="true"):
-    return ('for python in python3 python3.14 python3.13 python3.12 python3.11 python; do '
-            '"$python" -I "${CLAUDE_PLUGIN_ROOT}/hooks/guidelines.py" '
-            f'{harness} 2>/dev/null && exit 0; done; {last}')
-
-
+PROBE = "import sys; sys.exit(sys.version_info < (3, 6))"
 NO_PYTHON_JSON = json.dumps({"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": PYTHON_NOTICE},
                              "systemMessage": PYTHON_NOTICE})
-CLAUDE_START = chain("claude", f"printf '%s\\n' '{NO_PYTHON_JSON}'")
+
+
+CALL_JSON = json.dumps({"systemMessage": CALL_NOTICE})
+
+
+def chain(harness, last=CALL_JSON):
+    return ('for python in python3 python3.14 python3.13 python3.12 python3.11 python; do '
+            f"if \"$python\" -I -c '{PROBE}' </dev/null >/dev/null 2>&1; then "
+            f'"$python" -I "${{CLAUDE_PLUGIN_ROOT}}/hooks/guidelines.py" {harness} 2>/dev/null '
+            f"|| printf '%s\\n' '{json.dumps({'systemMessage': FAILURE_TEXT})}'; exit 0; fi; done; "
+            f"printf '%s\\n' '{last}'")
+
+
+CLAUDE_START = chain("claude", NO_PYTHON_JSON)
 CLAUDE_COMMAND = chain("claude")
 for event, matcher, timeout in (
     ("SessionStart", "startup|resume|clear|compact", 5), ("UserPromptSubmit", None, 5),
@@ -639,7 +651,8 @@ c.run(CLAUDE_START, json.dumps(c.session_start("startup")), {"PATH": str(EMPTY)}
 expect_equal("with no Python on PATH the wired session start tells the user", PYTHON_NOTICE, c.message())
 expect_equal("and tells the agent", PYTHON_NOTICE, c.context())
 c.run(CLAUDE_COMMAND, json.dumps(c.write("pages.py", PAGES)), {"PATH": str(EMPTY)})
-expect_equal("with no Python on PATH other wired hooks exit 0 quietly", "0:", f"{c.status}:{c.stdout}")
+expect_equal("with no Python on PATH other wired hooks exit 0 and tell the user", [0, CALL_NOTICE],
+             [c.status, c.message()])
 ONLY_PYTHON = WORK / "only-python"
 ONLY_PYTHON.mkdir()
 (ONLY_PYTHON / "python").symlink_to(sys.executable)
@@ -664,15 +677,26 @@ c.run(CLAUDE_COMMAND, json.dumps(c.write("pages.py", PAGES)), {"PATH": f"{BROKEN
 expect_equal("a python3 that cannot start falls through to the next Python", "deny", c.decision())
 (BROKEN / "python3").write_text("#!/bin/sh\ncat >/dev/null\nexit 2\n")
 c.run(CLAUDE_COMMAND, json.dumps(c.write("pages.py", PAGES)), {"PATH": f"{BROKEN}:/usr/bin:/bin"})
-expect_equal("a python3 that reads the input and exits 2 does not deny; the next Python fails open visibly",
-             [0, True], [c.status, "guideline hook" in c.message()])
+expect_equal("a python3 that fails the start check is skipped, and the payload reaches the next Python",
+             "deny", c.decision())
+(BROKEN / "python3").write_text("#!/bin/sh\nIFS= read -r data\nexit 17\n")
+c.run(CLAUDE_COMMAND, json.dumps(c.write("pages.py", PAGES)), {"PATH": f"{BROKEN}:/usr/bin:/bin"})
+expect_equal("a python3 that reads stdin and fails does not take the payload from the next Python",
+             "deny", c.decision())
+BROKEN_PLUGIN = WORK / "broken-plugin"
+(BROKEN_PLUGIN / "hooks").mkdir(parents=True)
+(BROKEN_PLUGIN / "hooks" / "guidelines.py").write_text("import no_such_module_for_the_hook\n")
+for command, payload in ((CLAUDE_START, c.session_start("startup")), (CLAUDE_COMMAND, c.write("pages.py", PAGES))):
+    c.run(command, json.dumps(payload), {"CLAUDE_PLUGIN_ROOT": str(BROKEN_PLUGIN)})
+    expect_equal(f"a wrapper that cannot start says the hook failed ({payload['hook_event_name']})",
+                 [0, FAILURE_TEXT], [c.status, c.message()])
 ENGINE_DATA = WORK / "engine-data"
 c.run(CLAUDE_START, json.dumps(c.session_start("startup")), {"CLAUDE_PLUGIN_DATA": str(ENGINE_DATA)})
 expect_equal("the engine's new data folders are private to the user", ["0o700", "0o700"],
              [oct(path.stat().st_mode & 0o777) for path in (ENGINE_DATA, ENGINE_DATA / "guideline-state")])
 
 CODEX_COMMAND = chain("codex")
-CODEX_START = chain("codex", f"printf '%s\\n' '{NO_PYTHON_JSON}'")
+CODEX_START = chain("codex", NO_PYTHON_JSON)
 CODEX_WINDOWS = '"${CLAUDE_PLUGIN_ROOT}/hooks/guidelines.cmd" codex'
 for event, matcher, timeout in (
     ("PreToolUse", "apply_patch", 10), ("PostToolUse", "apply_patch", 15), ("UserPromptSubmit", None, 5),
@@ -770,6 +794,67 @@ c.hook(c.patch("PreToolUse", """*** Begin Patch
 *** End Patch"""), harness="codex")
 expect_contains("a Codex hunk matches past trailing whitespace and CRLF",
                 "[py.comprehension.one-for] block: code_quality:CQ001 at pages.py:2", c.reason())
+
+ANCHORED = """*** Begin Patch
+*** Update File: demo.py
+@@ def target():
+-    x = 0
++    x = [a for b in c for a in b]
+*** End Patch"""
+c = Case("codex-anchor")
+c.file("demo.py", 'def first():\n    x = 0\n\ndef target():\n    return """\n    x = 0\n    """\n')
+c.hook(c.patch("PreToolUse", ANCHORED), harness="codex")
+expect_equal("a Codex hunk goes after its @@ anchor, as Codex puts it", "", c.decision())
+c.hook(c.patch("PreToolUse", ANCHORED.replace("def target", "def missing")), harness="codex")
+expect_contains("a Codex anchor that is not in the file is named, not denied",
+                "Notice: did not check demo.py: could not build the text this edit leaves", c.context())
+c.file("demo.py", "x = 0\nx = 0\n")
+c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: demo.py\n@@\n-x = 0\n+x = [a for b in c for a in b]\n"
+                             "*** End of File\n*** End Patch"), harness="codex")
+expect_contains("an End of File hunk changes the last match", "code_quality:CQ001 at demo.py:2", c.reason())
+
+c = Case("comment-only")
+c.file("pages.py", PAGES)
+c.hook(c.write("pages.py", PAGES.replace("(path)))", "(path)))  # one page per path")))
+expect_equal("a comment added to a line that already broke a rule does not deny", "", c.decision())
+c.file("app.ts", "var x = 1\n")
+c.file("eslint.config.js", "export default [];\n")
+c.hook(c.write("app.ts", "var x = 1 // counter\n"), ESLINT_JSON=NO_VAR_ROW)
+expect_equal("in TypeScript too", "", c.decision())
+
+c = Case("eslint-project-warns")
+c.file("eslint.config.js", "export default [];\n")
+c.hook(c.write("a.ts", "var x = 1\n"), ESLINT_JSON=NO_VAR_ROW.replace('"severity":2', '"severity":1'))
+expect_equal("a rule the project's eslint config sets to warn does not deny", "", c.decision())
+c.file("a.ts", "var x = 1\n")
+c.hook(c.tool("PostToolUse", "Write", "a.ts"), ESLINT_JSON=NO_VAR_ROW.replace('"severity":2', '"severity":1'))
+expect_contains("and arrives as a warning", "[ts.binding.no-var] warn: eslint:no-var at a.ts:1", c.context())
+
+c.hook(c.write("b.ts", "var x = 1\n"), ESLINT_JSON='[{"messages":[{"ruleId":"no-var-requires","line":1,"severity":2}]}]')
+expect_equal("an eslint rule id matches exactly, not by prefix", ["", False],
+             [c.decision(), "no-var-requires" in c.stdout])
+
+c = Case("ruff-reselect")
+c.file("ruff.toml", '[lint]\nignore = ["ALL"]\nselect = ["F403"]\n')
+c.hook(c.write("app.py", "from os import *\n"), RUFF_JSON=F403_ROW)
+expect_equal("a rule the project ignores with ALL but selects again still denies", "deny", c.decision())
+expect_equal("ignored rules are left to ruff's own config, not selected",
+             f"check --verbose --force-exclude --preview --output-format json --stdin-filename {c.project}/app.py -",
+             c.args().splitlines()[-1])
+
+c = Case("ruff-python-only")
+c.file("eslint.config.js", "export default [];\n")
+(c.project / "app.js").write_text("")
+c.hook(c.tool("PostToolUse", "Write", "app.js"))
+expect_equal("ruff does not run on a JavaScript file", "", c.args())
+
+c = Case("tool-installed-later")
+(BIN / "ruff").unlink()
+c.hook(c.write("app.py", "from os import *\n"), RUFF_JSON=F403_ROW)
+expect_equal("missing ruff does not deny", "", c.decision())
+install_stub("ruff", RUFF_STUB)
+c.hook(c.write("app.py", "from os import *\n"), RUFF_JSON=F403_ROW)
+expect_equal("a tool installed later in the session is found on the next call", "deny", c.decision())
 
 c = Case("neutral")
 neutral = {"kind": "pre_write", "session": "n1", "agent": "main", "cwd": str(c.project), "root": str(c.project),

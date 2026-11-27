@@ -4,6 +4,6 @@ languages: typescript
 scope: contextual
 severity: warn
 enabled: true
-detectors: tsc:erasableSyntaxOnly
+detectors: tsc:TS1294
 ---
 No `enum`. Use an `as const` object or a union of literal types.

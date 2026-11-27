@@ -140,3 +140,12 @@ Scratch paths named in those notes (under `/tmp/...`) are gone; ignore them.
 - User said "Yes, markdown.": detectors filled from guideline-mapping.md (no sonar:), cs.async.no-blocking now global, keywords/exclude added, `scripts/guideline_references.py` generates references/*.md (unittest checks), SKILL.md 1.1.0.
 - mise run ci green: guidelines.test.py 175/175, hook total 171/171, unittest 15 OK, manifests current.
 - Final fresh review of 90b0211..a46313c: session dd9f3aa4b48c4964a57c3f60bd0e76bd. Then PR to develop (do not merge).
+
+## Update: review dd9f3aa4 findings fixed
+- Codex `@@ anchor` lines are found before the hunk; `*** End of File` hunks match the last copy; a missing anchor gives the "could not build" notice.
+- Finding identity drops trailing comments (`COMMENT_MARKERS`), so a comment-only edit to a violating line is not new.
+- Launcher: each candidate first runs a `-I -c` version probe with stdin from /dev/null; only the first that starts gets the payload. Wrapper failure prints a systemMessage; no Python prints a SessionStart notice or a per-call systemMessage. `guidelines.cmd` does the same (untested on Windows).
+- `Finding.blocks`: ESLint severity 1 is a warning. Ruff codes in the project's global ignore are not passed to `--extend-select`, so ruff's own config decides (ignore ALL + select F403 reports F403); per-file ignores still drop the detector.
+- ESLint ids match exactly (`matches_code`); ruff runs only on Python (`runs_on`); ruff gets `--preview`; only successful tool probes are cached.
+- Detector codes: complexipy:CC001, tsc:TS1294, roslyn:CA1502, mypy strict replaced with mypy error codes. SKILL.md says manual `check` needs Python 3.11+.
+- mise run ci green: guidelines.test.py 191/191, hook total 171/171, unittest OK, manifests current. The 9 ruff findings in scripts/ predate this branch's last change and are not in CI.

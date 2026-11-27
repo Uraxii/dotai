@@ -27,7 +27,7 @@ from guideline_files import (
 )
 from guideline_runners import (
     SKIPPED_FOR_BUDGET, Detection, Finding, Target, detect, glob_matches,
-    project_disables,
+    matches_code, project_disables, runs_on,
 )
 
 EXCLUDED_DIRECTORIES = frozenset({
@@ -60,6 +60,10 @@ EVENT_KINDS = frozenset({
 })
 MAIN_AGENT = "main"
 PATH_IN_PROMPT = re.compile(r"[\w./\\-]*\.\w+(?:\.\w+)*")
+COMMENT_MARKERS = {
+    "python": ("#",), "gdscript": ("#",), "typescript": ("//", "/*"),
+    "javascript": ("//", "/*"), "csharp": ("//", "/*"),
+}
 SHEBANG_LANGUAGES = {"python": "python", "node": "javascript"}
 UNSAFE_NAME_CHARS = re.compile(r"[^A-Za-z0-9_-]")
 
@@ -258,9 +262,13 @@ class Hit(NamedTuple):
     text: str
     severity: str = "warn"
 
-    @property
-    def identity(self) -> tuple[str, str, str]:
-        return (self.finding.tool, self.finding.code, self.text)
+    def identity(self, language: str) -> tuple[str, str, str]:
+        """The finding and its line's code, so a comment-only edit to a
+        line that already broke the rule does not count as new."""
+        code = self.text
+        for marker in COMMENT_MARKERS.get(language, ()):
+            code = code.split(marker, 1)[0]
+        return (self.finding.tool, self.finding.code, code.strip())
 
 
 def line_text(content: str, line: int) -> str:
@@ -275,19 +283,23 @@ def guideline_for(
     best: tuple[int, Guideline] | None = None
     for guideline in guidelines:
         for tool, code in guideline.detectors:
-            matches = tool == finding.tool and finding.code.startswith(code)
+            matches = tool == finding.tool and matches_code(
+                tool, finding.code, code
+            )
             if matches and (best is None or len(code) > best[0]):
                 best = (len(code), guideline)
     return best[1] if best else None
 
 
-def new_hits(after: list[Hit], before: list[Hit]) -> list[Hit]:
-    """Hits the edit adds: the multiset difference by line text."""
-    remaining = Counter(hit.identity for hit in before)
+def new_hits(
+    after: list[Hit], before: list[Hit], language: str
+) -> list[Hit]:
+    """Hits the edit adds: the multiset difference by line code."""
+    remaining = Counter(hit.identity(language) for hit in before)
     added = []
     for hit in after:
-        if remaining[hit.identity] > 0:
-            remaining[hit.identity] -= 1
+        if remaining[hit.identity(language)] > 0:
+            remaining[hit.identity(language)] -= 1
         else:
             added.append(hit)
     return added
@@ -469,7 +481,8 @@ class Engine:
         codes: dict[str, set[str]] = {}
         for guideline in file.guidelines:
             for tool, code in guideline.detectors:
-                codes.setdefault(tool, set()).add(code)
+                if runs_on(tool, file.language):
+                    codes.setdefault(tool, set()).add(code)
         target = Target(
             content, file.path, frozenset(), Path(self.event.root).resolve()
         )
@@ -500,8 +513,8 @@ class Engine:
         if change.before is not None and hits:
             old, failed = self.scan(file, change.before, quiet=True)
         blocking = [
-            hit for hit in new_hits(hits, old)
-            if hit.guideline.severity == "block"
+            hit for hit in new_hits(hits, old, file.language)
+            if hit.guideline.severity == "block" and hit.finding.blocks
         ]
         added = [hit for hit in blocking if hit.finding.tool not in failed]
         unproven = sorted({
@@ -539,7 +552,9 @@ class Engine:
         hits, _ = self.scan(file, change.after)
         if self.event.kind == "check":
             hits = [
-                hit._replace(severity=hit.guideline.severity) for hit in hits
+                hit._replace(severity=hit.guideline.severity)
+                if hit.finding.blocks else hit
+                for hit in hits
             ]
             self.blocked |= any(hit.severity == "block" for hit in hits)
         self.hits += hits

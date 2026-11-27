@@ -32,6 +32,10 @@ PYTHON_NOTICE = (
     "Notice: code-quality guideline hooks need Python 3.11 or later; none "
     "was found, so no guideline checks run in this session."
 )
+CALL_NOTICE = (
+    "Notice: code-quality guideline hooks need Python 3.11 or later; none "
+    "was found, so this call was not checked."
+)
 FAILURE_MESSAGE = (
     "pstack guideline hook failed; code-quality guidelines were not checked "
     "for this call."
@@ -60,12 +64,11 @@ def find_python():
 
 
 def no_python():
-    """Tell the agent and the user once, at session start."""
-    raw = sys.stdin.buffer.read()
+    """Tell the agent at session start, and the user on every call."""
     try:
-        payload = json.loads(raw)
+        payload = json.loads(sys.stdin.buffer.read())
     except ValueError:
-        return
+        payload = None
     if isinstance(payload, dict) and (
         payload.get("hook_event_name") == "SessionStart"
     ):
@@ -76,6 +79,8 @@ def no_python():
             },
             "systemMessage": PYTHON_NOTICE,
         }))
+    else:
+        print(json.dumps({"systemMessage": CALL_NOTICE}))
 
 
 def data_dir():

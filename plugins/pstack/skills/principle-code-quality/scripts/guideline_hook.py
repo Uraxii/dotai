@@ -41,7 +41,8 @@ SESSION_KINDS = {"clear": "cleared", "compact": "compacted"}
 PATCH_HEADER = re.compile(
     r"^\*\*\* (Add File|Update File|Delete File|Move to): (.+)$"
 )
-PATCH_MARKERS = ("*** Begin Patch", "*** End Patch", "*** End of File")
+PATCH_MARKERS = ("*** Begin Patch", "*** End Patch")
+END_OF_FILE = "*** End of File"
 EXIT_BLOCK_FINDING = 1
 EXIT_MISSING_PATH = 3
 EXIT_USAGE = 64
@@ -228,16 +229,27 @@ def parse_patch(patch: str) -> list[PatchFile]:
     return files
 
 
-def hunks(body: Sequence[str]) -> Iterator[list[str]]:
-    hunk: list[str] = []
+class Hunk(NamedTuple):
+    anchor: str
+    rows: list[str]
+    at_end: bool
+
+
+def hunks(body: Sequence[str]) -> Iterator[Hunk]:
+    """Split an Update File body at its `@@` lines. The text after `@@ `
+    is an anchor line that Codex finds before it looks for the hunk."""
+    hunk: Hunk | None = None
     for line in body:
         if line.startswith("@@"):
-            if hunk:
+            if hunk is not None:
                 yield hunk
-            hunk = []
+            hunk = Hunk(line[3:] if line.startswith("@@ ") else "", [], False)
+        elif line == END_OF_FILE:
+            hunk = (hunk or Hunk("", [], False))._replace(at_end=True)
         else:
-            hunk.append(line or " ")
-    if hunk:
+            hunk = hunk or Hunk("", [], False)
+            hunk.rows.append(line or " ")
+    if hunk is not None:
         yield hunk
 
 
@@ -260,14 +272,25 @@ def find_lines(lines: list[str], wanted: list[str], start: int) -> int | None:
 
 
 def apply_update(current: str, body: Sequence[str]) -> str | None:
-    """Apply the hunks in memory; None when one does not match the file."""
+    """Apply the hunks in memory the way Codex does; None when a hunk or
+    its anchor does not match the file."""
     ending = "\r\n" if "\r\n" in current else "\n"
     lines = current.split(ending)
     cursor = 0
     for hunk in hunks(body):
-        old = [line[1:] for line in hunk if line[0] in " -"]
-        new = [line[1:] for line in hunk if line[0] in " +"]
-        index = find_lines(lines, old, cursor) if old else len(lines) - 1
+        if hunk.anchor:
+            anchor = find_lines(lines, [hunk.anchor], cursor)
+            if anchor is None:
+                return None
+            cursor = anchor + 1
+        old = [line[1:] for line in hunk.rows if line[0] in " -"]
+        new = [line[1:] for line in hunk.rows if line[0] in " +"]
+        if not old:
+            index: int | None = len(lines) - 1
+        elif hunk.at_end:
+            index = find_lines(lines, old, max(cursor, len(lines) - len(old) - 1))
+        else:
+            index = find_lines(lines, old, cursor)
         if index is None:
             return None
         lines[index:index + len(old)] = new
