@@ -41,6 +41,9 @@ jobs:
         with:
           version: "2026.10.25"
           cache_key_prefix: mise-smoke-${{ matrix.harness }}
+      - name: Allow user namespaces for the Codex sandbox
+        if: matrix.harness == 'codex'
+        run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
       - run: mise run "smoke:$HARNESS"
         env:
           HARNESS: ${{ matrix.harness }}
