@@ -145,7 +145,11 @@ BLOCKED = f"Blocked: this edit adds code that breaks a block guideline. Fix it, 
 
 
 def announce(*ids):
-    return f"Tell the user in chat, in one line, that pstack issued these guidelines: {', '.join(ids)}."
+    noun = "guideline" if len(ids) == 1 else "guidelines"
+    return ("Start your next message to the user with this line exactly as written, on its own first line and with "
+            "nothing appended to it, so the developer can see which pstack code-quality guidelines were issued. This "
+            "printed line is all they need about guidelines, so there's no need to add, anywhere in your reply, which "
+            f"ones applied: pstack code quality: {', '.join(ids)} {noun} provided")
 
 
 PAGES_REASON = f"""{BLOCKED}
@@ -494,7 +498,7 @@ expect_equal("an unrelated prompt says nothing", "", c.stdout)
 c.hook(c.tool("PostToolUse", "Write", "pages.py"))
 expect_contains("inside the window the guidance is not repeated",
                 "[py.comprehension.no-nested-call] warn: code_quality:CQ002 at pages.py:1 (guidance sent earlier)", c.context())
-expect_lacks("and no guideline is announced again", "Tell the user", c.context())
+expect_lacks("and no guideline is announced again", "pstack code quality:", c.context())
 c.hook(c.prompt("hello SECRET-PROMPT-WORD"))
 c.hook(c.tool("PostToolUse", "Write", "pages.py"))
 expect_contains("after 20 prompts the guidance is sent again", f"at pages.py:1\n{NESTED_CALL}", c.context())

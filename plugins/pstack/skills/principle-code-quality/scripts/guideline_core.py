@@ -45,7 +45,7 @@ UNAVAILABLE_LABEL = "warn (detector unavailable)"
 RESEND_AFTER_PROMPTS = 20
 MAX_TEXT_CHARS = 9000
 DROPPED_NOTICE_CHARS = 600
-ANNOUNCE_CHARS = 400
+ANNOUNCE_CHARS = 1500
 NOTICE_COUNT_CHARS = 60
 DROPPED_FILES_NAMED = 3
 MAX_CONTENT_CHARS = 1_000_000
@@ -304,18 +304,27 @@ def dropped_notice(dropped: dict[str, int]) -> str:
     )
 
 
+ANNOUNCE_PREFIX = (
+    "Start your next message to the user with this line exactly as written, "
+    "on its own first line and with nothing appended to it, so the developer "
+    "can see which pstack code-quality guidelines were issued. This printed "
+    "line is all they need about guidelines, so there's no need to add, "
+    "anywhere in your reply, which ones applied: "
+)
+
+
 def announcement(issued: list[str]) -> str:
-    """The line that asks the agent to announce the issued guidelines,
-    within ANNOUNCE_CHARS less its separator."""
-    head = "Tell the user in chat, in one line, that pstack issued "
+    """The exact line the agent prints so the user sees which guidelines
+    this call issued, within ANNOUNCE_CHARS less its separator."""
+    noun = "guideline" if len(issued) == 1 else "guidelines"
     for shown in range(len(issued), 0, -1):
         others = len(issued) - shown
         named = ", ".join(issued[:shown])
         named += f" and {others} more" * (others > 0)
-        text = f"{head}these guidelines: {named}."
+        text = f"{ANNOUNCE_PREFIX}pstack code quality: {named} {noun} provided"
         if len(text) <= ANNOUNCE_CHARS - 2:
             return text
-    return f"{head}{len(issued)} guidelines."
+    return f"{ANNOUNCE_PREFIX}pstack code quality: {len(issued)} {noun} provided"
 
 
 def name_files(head: str, files: list[str], tail: str, fallback: str) -> str:
