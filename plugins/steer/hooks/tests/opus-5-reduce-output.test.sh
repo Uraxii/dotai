@@ -76,7 +76,12 @@ for shell_command in "touch changed.txt" "cat changed.txt"; do
   run_wiring codex "$codex_stop" <<<"$codex_payload"
   if [[ "$shell_command" == touch* ]]; then
     expect_json "Codex Opus 5 mutating turn asks for one recap" "$BLOCK" "$STDOUT"
-    for change in '.model = "claude-fable-5"' '.stop_hook_active = true' '.turn_id = "new-turn"' 'del(.model)'; do
+    fable_payload=$(jq '.model = "claude-FABLE-5"' <<<"$codex_payload")
+    run_wiring codex "$codex_stop" <<<"$fable_payload"
+    expect_json "Codex Fable mutating turn asks for one recap" "$BLOCK" "$STDOUT"
+    CLEAN_RECAP_MODEL_PATTERN=opus-5 run_wiring codex "$codex_stop" <<<"$fable_payload"
+    expect_equal "Codex respects the shared model pattern override" "" "$STDOUT"
+    for change in '.model = "claude-sonnet-5"' '.stop_hook_active = true' '.turn_id = "new-turn"' 'del(.model)'; do
       run_wiring codex "$codex_stop" <<<"$(jq "$change" <<<"$codex_payload")"
       expect_equal "Codex skips $change" "" "$STDOUT"
     done
@@ -88,7 +93,7 @@ done
 copilot_path=$(jq -r '.hooks' "$PLUGIN_ROOT_DIR/plugin.json")
 copilot_stop=$(wiring_commands copilot "$PLUGIN_ROOT_DIR/$copilot_path" agentStop)
 copilot_payload=$(jq -cn --arg t "$WORK/copilot.jsonl" '{transcriptPath:$t,stop_hook_active:false}')
-for spec in 'claude-opus-5 touch block' 'claude-opus-5 cat allow' 'claude-fable-5 touch allow' 'unknown touch allow'; do
+for spec in 'claude-opus-5 touch block' 'claude-opus-5 cat allow' 'claude-fable-5 touch block' 'claude-fable-5 cat allow' 'unknown touch allow'; do
   read -r model action expected <<<"$spec"
   jq -cn --arg model "$model" --arg cmd "$action changed.txt" '
     {type:"user.message",data:{interactionId:"current"}},
@@ -100,7 +105,7 @@ for spec in 'claude-opus-5 touch block' 'claude-opus-5 cat allow' 'claude-fable-
     {type:"assistant.message",data:{interactionId:"current",turnId:"1",model:$model}}' >"$WORK/copilot.jsonl"
   run_wiring copilot "$copilot_stop" <<<"$copilot_payload"
   if [ "$expected" = block ]; then
-    expect_json "Copilot Opus 5 mutating turn asks for one recap" "$BLOCK" "$STDOUT"
+    expect_json "Copilot $model mutating turn asks for one recap" "$BLOCK" "$STDOUT"
     run_wiring copilot "$copilot_stop" <<<"$(jq '.stop_hook_active = true' <<<"$copilot_payload")"
     expect_equal "Copilot never repeats a blocked Stop" "" "$STDOUT"
     jq -cn '{type:"user.message",data:{interactionId:"next"}}' >>"$WORK/copilot.jsonl"
@@ -140,8 +145,8 @@ for model in claude-opus-5-1 claude-sonnet-5 claude-fable-5 ''; do
   input=$(jq -cn --arg m "$model" '{stop_hook_active:false,model:$m,extra:"do not log this"}')
   capture env HOME="$WORK" STEER_DEVIN_STOP_DIAGNOSTICS=1 TEST_API_KEY=do-not-log \
     python3 "$HOOKS_DIR/devin-stop-recap.py" <<<"$input"
-  if [ "$model" = claude-opus-5-1 ]; then
-    expect_json "unwired Devin hook requests a recap for an explicit Opus 5 model" "$BLOCK" "$STDOUT"
+  if [[ "$model" = claude-opus-5-1 || "$model" = claude-fable-5 ]]; then
+    expect_json "unwired Devin hook requests a recap for $model" "$BLOCK" "$STDOUT"
   else
     expect_equal "unwired Devin hook skips model '$model'" "" "$STDOUT"
   fi

@@ -379,7 +379,7 @@ PLUGINS: list[dict[str, object]] = [
         "short": "Harness hooks independent of skills.",
         "long": (
             "Claude Code checks Markdown edits and requests a recap when appropriate. "
-            "Codex and Copilot CLI request a recap after an Opus 5 turn that changed something. "
+            "Codex and Copilot CLI default to recaps after Opus 5 or Fable turns that changed something. "
             "Devin does not provide a transcript to plugin hooks. Its "
             "UserPromptSubmit hook reminds the agent to ask before editing Markdown. "
             "It does not block edits or request a recap."

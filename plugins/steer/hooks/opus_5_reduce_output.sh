@@ -82,9 +82,25 @@ stop_field() {
   LC_ALL=C JSON_MODE=get JSON_PATH="$1" awk -f "$hooks_dir/hook-json.awk" <<<"$payload"
 }
 
-opus_5_model() (
+recap_model_matches() (
+  local model="$1" audit="${2:-}" matched
+  local pattern="${CLEAN_RECAP_MODEL_PATTERN:-$DEFAULT_MODEL_PATTERN}"
+  [ -n "$model" ] || [ "$audit" = audit ] || return 1
   shopt -s nocasematch
-  [[ "$1" =~ ^(claude-)?opus-5([.-][0-9]+)*(-latest)?$ ]]
+  [[ "$model" =~ $pattern ]] 2>/dev/null
+  matched=$?
+  if [ "$matched" = 2 ]; then
+    if [ "$audit" = audit ]; then
+      log "fired  CLEAN_RECAP_MODEL_PATTERN $(quote_pattern "$pattern") rejected (not a valid extended regular expression) -> using default $(quote_pattern "$DEFAULT_MODEL_PATTERN")"
+    fi
+    pattern=$DEFAULT_MODEL_PATTERN
+    [[ "$model" =~ $pattern ]] 2>/dev/null
+    matched=$?
+  fi
+  if [ "$matched" != 0 ] && [ "$audit" = audit ]; then
+    log "fired  model=$model -> allow (model does not match '$pattern')"
+  fi
+  return "$matched"
 )
 
 stop_recap() {
@@ -92,11 +108,11 @@ stop_recap() {
   [ "$(read_json stop_guard <<<"$payload")" = inactive ] || return 0
   case "$harness" in
     devin)
-      opus_5_model "$(stop_field /model)" && request_recap
+      recap_model_matches "$(stop_field /model)" && request_recap
       ;;
     codex)
       model=$(stop_field /model)
-      opus_5_model "$model" || return 0
+      recap_model_matches "$model" || return 0
       turn_id=$(stop_field /turn_id)
       transcript=$(stop_field /transcript_path)
       [ -n "$turn_id" ] && [ -f "$transcript" ] || return 0
@@ -106,7 +122,7 @@ stop_recap() {
       transcript=$(stop_field /transcriptPath)
       [ -f "$transcript" ] || return 0
       model=$(read_json copilot "$transcript") || return 0
-      opus_5_model "$model" && request_recap
+      recap_model_matches "$model" && request_recap
       ;;
   esac
   return 0
@@ -138,23 +154,7 @@ turn_fields=$(read_json transcript "$transcript" 2>/dev/null) || exit 0
 model=${turn_fields%%$'\n'*}
 turn=${turn_fields#*$'\n'}
 
-# CLEAN_RECAP_MODEL_PATTERN is a POSIX extended regex, matched ignoring case.
-pattern="${CLEAN_RECAP_MODEL_PATTERN:-$DEFAULT_MODEL_PATTERN}"
-shopt -s nocasematch
-[[ "$model" =~ $pattern ]] 2>/dev/null
-matched=$?
-if [ "$matched" = 2 ]; then
-  log "fired  CLEAN_RECAP_MODEL_PATTERN $(quote_pattern "$pattern") rejected (not a valid extended regular expression) -> using default $(quote_pattern "$DEFAULT_MODEL_PATTERN")"
-  pattern=$DEFAULT_MODEL_PATTERN
-  [[ "$model" =~ $pattern ]] 2>/dev/null
-  matched=$?
-fi
-shopt -u nocasematch
-
-if [ "$matched" != 0 ]; then
-  log "fired  model=$model -> allow (model does not match '$pattern')"
-  exit 0
-fi
+recap_model_matches "$model" audit || exit 0
 
 case "$turn" in
   unknown) log "fired  model=$model -> BLOCK (requesting recap; no user prompt found, turn boundary unknown)" ;;

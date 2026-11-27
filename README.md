@@ -56,7 +56,7 @@ installed only one of them.
 | `plugins/steer/hooks/` | `opus_5_reduce_output.sh` is a Claude Code `Stop` hook that asks for a plain-English recap at the end of a turn on Opus 5 or Fable 5 that changed something. A turn that mutated nothing has nothing to recap, so it ends silently. Spawning a subagent counts as a mutation, because a delegate's own edits never reach this transcript. `block_markdown_edits.sh` is a Claude Code `PreToolUse` hook that denies `Write`, `Edit` and `MultiEdit` on `.md`, `.markdown` and `.mdx` files unless the file is inside the project's `.ai/` scratch folder (`<git top level>/.ai/`, so a worktree's own `.ai/` counts), is a plan file an agent harness writes (Claude Code's `$CLAUDE_CONFIG_DIR/plans/`, default `~/.claude/plans/`; Copilot CLI's `$COPILOT_HOME/session-state/<id>/plan.md`, default under `~/.copilot/`; Hermes' `<git top level>/.hermes/plans/`), or the user's latest prompt names the file or says "markdown" or ".md". A short "yes" or "go ahead" also unlocks, when the assistant's last message before it names the file. Inside a subagent the user's prompt in the main session still decides. Plugin installation wires both on Claude Code. On Devin, steer reminds the agent to ask before editing Markdown. It does not block edits or request a recap without a transcript. |
 
 Codex and Copilot CLI also run Steer's recap hook at turn end. On these two
-harnesses the hook runs only for Opus 5 turns that changed something.
+harnesses the hook defaults to Opus 5 or Fable turns that changed something.
 
 ## Install
 
