@@ -127,3 +127,8 @@ Scratch paths named in those notes (under `/tmp/...`) are gone; ignore them.
 - Done: `hooks/guidelines.py` replaces `guidelines.sh` (runs on any Python 3.6+, finds a 3.11+ for the engine, same fail-open log rules); manifests run `python3 .../guidelines.py` (Windows `py -3`). `guidelines.test.py` replaces the shell suite (153 pass). Each context or deny that issues guideline bodies has a line asking the agent to tell the user the IDs (`announcement()` in guideline_core.py; 400 chars reserved from the cap; `check` has none). Merged develop (40fc24a); its `mise.toml` (Python 3.12.12, `mise run ci`) replaces mine; the repo blueprint also installs Python 3.12.
 - `mise run ci` fails only at check:manifests: principle-code-quality SKILL.md needs a metadata.version bump (Markdown, waits for approval).
 - Next: detectors: values, SKILL.md, references/*.md decision, manifests, PR to develop. All edit Markdown outside `.ai/`, which waits for user approval ("markdown").
+
+## Update: review of a4aaad2 fixed (dfef3e9, ea0c273)
+- Manifests chain `python3 -I || python -I || py -3 -I || notice/true`; wrapper has a catch-all (exit 0 + systemMessage) and makes the data dir 0700.
+- Announcement follows VibeSec's pattern (user: "Follow VibeSec's pattern."): exact first line `pstack code quality: <ids> guidelines provided`; ANNOUNCE_CHARS 1500, reserved only once a call issues a guideline body.
+- guidelines.test.py 160/160; mise run test 171/171. Fresh review of 0bddba1..ea0c273 pending.
