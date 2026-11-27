@@ -11,8 +11,8 @@
           },
           {
             "type": "command",
-            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/guidelines.py\" codex",
-            "commandWindows": "py -3 \"${CLAUDE_PLUGIN_ROOT}/hooks/guidelines.py\" codex",
+            "command": "python3 -I \"${CLAUDE_PLUGIN_ROOT}/hooks/guidelines.py\" codex || python -I \"${CLAUDE_PLUGIN_ROOT}/hooks/guidelines.py\" codex || py -3 -I \"${CLAUDE_PLUGIN_ROOT}/hooks/guidelines.py\" codex || printf '%s\\n' '{\"hookSpecificOutput\": {\"hookEventName\": \"SessionStart\", \"additionalContext\": \"Notice: code-quality guideline hooks need Python 3.11 or later; none was found, so no guideline checks run in this session.\"}, \"systemMessage\": \"Notice: code-quality guideline hooks need Python 3.11 or later; none was found, so no guideline checks run in this session.\"}'",
+            "commandWindows": "py -3 -I \"${CLAUDE_PLUGIN_ROOT}/hooks/guidelines.py\" codex",
             "timeout": 5
           }
         ]
@@ -23,8 +23,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/guidelines.py\" codex",
-            "commandWindows": "py -3 \"${CLAUDE_PLUGIN_ROOT}/hooks/guidelines.py\" codex",
+            "command": "python3 -I \"${CLAUDE_PLUGIN_ROOT}/hooks/guidelines.py\" codex || python -I \"${CLAUDE_PLUGIN_ROOT}/hooks/guidelines.py\" codex || py -3 -I \"${CLAUDE_PLUGIN_ROOT}/hooks/guidelines.py\" codex || true",
+            "commandWindows": "py -3 -I \"${CLAUDE_PLUGIN_ROOT}/hooks/guidelines.py\" codex",
             "timeout": 5
           }
         ]
@@ -36,8 +36,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/guidelines.py\" codex",
-            "commandWindows": "py -3 \"${CLAUDE_PLUGIN_ROOT}/hooks/guidelines.py\" codex",
+            "command": "python3 -I \"${CLAUDE_PLUGIN_ROOT}/hooks/guidelines.py\" codex || python -I \"${CLAUDE_PLUGIN_ROOT}/hooks/guidelines.py\" codex || py -3 -I \"${CLAUDE_PLUGIN_ROOT}/hooks/guidelines.py\" codex || true",
+            "commandWindows": "py -3 -I \"${CLAUDE_PLUGIN_ROOT}/hooks/guidelines.py\" codex",
             "timeout": 10
           }
         ]
@@ -49,8 +49,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/guidelines.py\" codex",
-            "commandWindows": "py -3 \"${CLAUDE_PLUGIN_ROOT}/hooks/guidelines.py\" codex",
+            "command": "python3 -I \"${CLAUDE_PLUGIN_ROOT}/hooks/guidelines.py\" codex || python -I \"${CLAUDE_PLUGIN_ROOT}/hooks/guidelines.py\" codex || py -3 -I \"${CLAUDE_PLUGIN_ROOT}/hooks/guidelines.py\" codex || true",
+            "commandWindows": "py -3 -I \"${CLAUDE_PLUGIN_ROOT}/hooks/guidelines.py\" codex",
             "timeout": 15
           }
         ]

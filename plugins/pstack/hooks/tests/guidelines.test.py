@@ -586,6 +586,12 @@ expect_equal("without Python 3.11 other hooks stay quiet", "0:", f"{c.status}:{c
 c.run([sys.executable, "-c", OLD_PYTHON, str(HOOK)], json.dumps(c.write("pages.py", PAGES)))
 expect_equal("an old python3 hands the call to a newer Python on PATH", "deny", c.decision())
 (BIN / "python3.11").unlink()
+c.run([sys.executable, "-c", OLD_PYTHON, str(HOOK)], "[" * 200000 + "]" * 200000, {"PATH": str(EMPTY)})
+expect_equal("a wrapper crash still exits 0 with a notice", "0:" + FAILURE_TEXT, f"{c.status}:{c.message()}")
+FRESH = WORK / "fresh-data"
+c.hook("{}", harness="bogus", CLAUDE_PLUGIN_DATA=str(FRESH))
+expect_equal("a new data folder is private to the user", ["0o700", "0o700"],
+             [oct(path.stat().st_mode & 0o777) for path in (FRESH, FRESH / "guideline-state")])
 
 
 def wired(config, event, key="command"):
@@ -596,21 +602,45 @@ def wired(config, event, key="command"):
     return found
 
 
-CLAUDE_COMMAND = 'python3 "${CLAUDE_PLUGIN_ROOT}/hooks/guidelines.py" claude'
+def chain(harness, last="true"):
+    path = '"${CLAUDE_PLUGIN_ROOT}/hooks/guidelines.py"'
+    return " || ".join([f"{python} -I {path} {harness}" for python in ("python3", "python", "py -3")] + [last])
+
+
+NO_PYTHON_JSON = json.dumps({"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": PYTHON_NOTICE},
+                             "systemMessage": PYTHON_NOTICE})
+CLAUDE_START = chain("claude", f"printf '%s\\n' '{NO_PYTHON_JSON}'")
+CLAUDE_COMMAND = chain("claude")
 for event, matcher, timeout in (
     ("SessionStart", "startup|resume|clear|compact", 5), ("UserPromptSubmit", None, 5),
     ("PreToolUse", "Write|Edit|MultiEdit", 10), ("PostToolUse", "Read|Write|Edit|MultiEdit", 15),
 ):
-    expect_equal(f"Claude Code {event} wiring", [{"matcher": matcher, "hooks": [[CLAUDE_COMMAND, timeout]]}],
+    command = CLAUDE_START if event == "SessionStart" else CLAUDE_COMMAND
+    expect_equal(f"Claude Code {event} wiring", [{"matcher": matcher, "hooks": [[command, timeout]]}],
                  wired("hooks.json", event))
 c = Case("wired")
 for group in wired("hooks.json", "PreToolUse"):
     for command, _ in group["hooks"]:
         c.run(command, json.dumps(c.write("pages.py", PAGES)))
 expect_equal("the wired Claude Code command denies the flattening comprehension", "deny", c.decision())
+c.run(CLAUDE_START, json.dumps(c.session_start("startup")), {"PATH": str(EMPTY)})
+expect_equal("with no Python on PATH the wired session start tells the user", PYTHON_NOTICE, c.message())
+expect_equal("and tells the agent", PYTHON_NOTICE, c.context())
+c.run(CLAUDE_COMMAND, json.dumps(c.write("pages.py", PAGES)), {"PATH": str(EMPTY)})
+expect_equal("with no Python on PATH other wired hooks exit 0 quietly", "0:", f"{c.status}:{c.stdout}")
+ONLY_PYTHON = WORK / "only-python"
+ONLY_PYTHON.mkdir()
+(ONLY_PYTHON / "python").symlink_to(sys.executable)
+c.run(CLAUDE_COMMAND, json.dumps(c.write("pages.py", PAGES)), {"PATH": str(ONLY_PYTHON)})
+expect_equal("the wired command falls back to python when python3 is missing", "deny", c.decision())
+SHADOW = WORK / "shadow"
+SHADOW.mkdir()
+(SHADOW / "json.py").write_text('raise ImportError("shadowed")\n')
+c.run(CLAUDE_COMMAND, json.dumps(c.write("pages.py", PAGES)), {"PYTHONPATH": str(SHADOW)})
+expect_equal("the wired command ignores PYTHONPATH", "deny", c.decision())
 
-CODEX_COMMAND = 'python3 "${CLAUDE_PLUGIN_ROOT}/hooks/guidelines.py" codex'
-CODEX_WINDOWS = 'py -3 "${CLAUDE_PLUGIN_ROOT}/hooks/guidelines.py" codex'
+CODEX_COMMAND = chain("codex")
+CODEX_WINDOWS = 'py -3 -I "${CLAUDE_PLUGIN_ROOT}/hooks/guidelines.py" codex'
 for event, matcher, timeout in (
     ("PreToolUse", "apply_patch", 10), ("PostToolUse", "apply_patch", 15), ("UserPromptSubmit", None, 5),
 ):

@@ -353,10 +353,7 @@ class Engine:
         self.hits: list[Hit] = []
         self.fulls: dict[str, str] = {}
         self.blocked = False
-        self.cap = (
-            sys.maxsize if event.kind == "check"
-            else MAX_TEXT_CHARS - ANNOUNCE_CHARS
-        )
+        self.cap = sys.maxsize if event.kind == "check" else MAX_TEXT_CHARS
         self.issued: list[str] = []
 
     def classify(self, raw: str, content: str | None) -> CodeFile | str:
@@ -579,10 +576,16 @@ class Engine:
             return f"{head} (guidance sent earlier)"
         return f"{head}\n{hit.guideline.body}"
 
-    def add(self, items: list[str], text: str, reserve: int = 0) -> bool:
+    def add(
+        self, items: list[str], text: str, reserve: int = 0,
+        issues: bool = False,
+    ) -> bool:
         """Append the item when the whole text, plus `reserve` characters
-        kept free, stays under the size cap."""
+        kept free, stays under the size cap. Once this call issues a
+        guideline, ANNOUNCE_CHARS more stay free for the announcement."""
         used = sum(len(item) + 2 for item in items)
+        announced = issues or bool(self.issued)
+        reserve += ANNOUNCE_CHARS * (announced and self.cap != sys.maxsize)
         if used + len(text) + reserve > self.cap:
             return False
         items.append(text)
@@ -620,7 +623,7 @@ class Engine:
         for hit in ordered:
             repeated = self.suppressed(hit.guideline.id)
             kept = DROPPED_NOTICE_CHARS + reserve
-            if self.add(items, self.hit_item(hit), kept):
+            if self.add(items, self.hit_item(hit), kept, not repeated):
                 if not repeated:
                     self.state.sent[hit.guideline.id] = self.state.prompt
                     self.issued.append(hit.guideline.id)
@@ -640,7 +643,7 @@ class Engine:
                 continue
             label = queued[guideline_id] or guideline.label
             text = f"[{guideline_id}] {label}\n{guideline.body}"
-            if self.add(items, text):
+            if self.add(items, text, issues=True):
                 self.state.sent[guideline_id] = self.state.prompt
                 self.issued.append(guideline_id)
             else:
@@ -684,7 +687,7 @@ class Engine:
 
     def announce(self, items: list[str]) -> None:
         """Ask the agent to tell the user which guidelines this call
-        issued; the cap keeps ANNOUNCE_CHARS free for it."""
+        issued; add() keeps ANNOUNCE_CHARS free for it."""
         if self.issued:
             items.insert(1, announcement(list(dict.fromkeys(self.issued))))
 

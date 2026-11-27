@@ -98,7 +98,11 @@ def log_failure(data, harness, status, errors):
     or into a file that is not a regular file.
     """
     state = os.path.join(data, "guideline-state")
-    os.makedirs(state, mode=0o700, exist_ok=True)
+    old_mask = os.umask(0o077)
+    try:
+        os.makedirs(state, exist_ok=True)
+    finally:
+        os.umask(old_mask)
     user = os.getuid() if hasattr(os, "getuid") else None
     for directory in (data, state):
         info = os.lstat(directory)
@@ -146,5 +150,17 @@ def main(arguments):
     return 0
 
 
+def guarded(arguments):
+    """Run main, and turn any failure into a notice and exit 0."""
+    try:
+        return main(arguments)
+    except BaseException:  # noqa: BLE001  a hook failure must never block
+        try:
+            print(json.dumps({"systemMessage": FAILURE_MESSAGE}))
+        except BaseException:  # noqa: BLE001, S110  stdout is gone
+            pass
+        return 0
+
+
 if __name__ == "__main__":
-    sys.exit(main(sys.argv[1:]))
+    sys.exit(guarded(sys.argv[1:]))
