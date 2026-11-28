@@ -123,13 +123,40 @@ expect_contains "a playbook with a stop predicate and a Reply line passes" "$dir
 
 dir=$(shaped playbook "${playbook/Done when/Finish}")
 run_hook "$shape" "$dir"
-expect_equal "a playbook with no stop predicate fails" 1 "$STATUS"
-expect_contains "the stop predicate is named" "FAIL  references/p.md: playbook has no stop predicate" "$STDOUT"
+expect_equal "a playbook with no stop predicate warns and passes" 0 "$STATUS"
+expect_contains "the stop predicate is named" "WARN  references/p.md: playbook has no stop predicate" "$STDOUT"
+for stop in Stop Stops Done Exit Exits Finish Finished Complete Completed End Ends '**Done**' $'The run is done\n'; do
+  dir=$(shaped playbook "${playbook/Done when/$stop when}")
+  run_hook "$shape" "$dir"
+  expect_equal "'$stop when' is a stop predicate" "0 " "$STATUS $STDOUT"
+done
 
 dir=$(shaped playbook "${playbook/\*\*Reply:\*\*/Report}")
 run_hook "$shape" "$dir"
-expect_equal "a playbook with no Reply line fails" 1 "$STATUS"
-expect_contains "the Reply line is named" "FAIL  references/p.md: playbook has no Reply line" "$STDOUT"
+expect_equal "a playbook with no Reply label fails" 1 "$STATUS"
+expect_contains "the Reply label is named" "FAIL  references/p.md: playbook has no Reply label" "$STDOUT"
+for reply in '**Reply**:' '- **Reply:**' '__Reply:__' 'Reply:' $'## Reply\n\n'; do
+  dir=$(shaped playbook "${playbook/\*\*Reply:\*\*/$reply}")
+  run_hook "$shape" "$dir"
+  expect_equal "'$reply' is a Reply label" "0 " "$STATUS $STDOUT"
+done
+dir=$(shaped playbook "${playbook/\*\*Reply:\*\* cause, fix./The reply names the cause.}")
+run_hook "$shape" "$dir"
+expect_equal "the word reply inside a sentence is not a label" 1 "$STATUS"
+
+dir=$(skill unclosed "$good" "Read [p](references/p.md) when a widget breaks.")
+printf -- '---\n\n# Title under a rule\n\nshape: playbook\n\n1. Fix it.\n' >"$dir/references/p.md"
+run_hook "$shape" "$dir"
+expect_equal "a shape line in a frontmatter that never closes is skipped" "0 " "$STATUS $STDOUT"
+printf -- 'Intro.\n\nshape: playbook\n\n1. Fix it.\n' >"$dir/references/p.md"
+run_hook "$shape" "$dir"
+expect_equal "a shape line with no frontmatter is skipped" "0 " "$STATUS $STDOUT"
+printf -- '---\ndescription: >-\n  Draws each\n  shape: playbook of it.\n---\n\n1. Fix it.\n' >"$dir/references/p.md"
+run_hook "$shape" "$dir"
+expect_equal "a shape line inside another value is skipped" "0 " "$STATUS $STDOUT"
+printf -- '---\nshape: playbook # the kind\n---\n\n1. Fix it.\n' >"$dir/references/p.md"
+run_hook "$shape" "$dir"
+expect_contains "a YAML comment after the shape is ignored" "FAIL  references/p.md: playbook has no Reply label" "$STDOUT"
 
 dir=$(shaped playbook "$playbook"$'\n3. Retry the build until it passes.')
 run_hook "$shape" "$dir"
@@ -141,10 +168,25 @@ expect_equal "a loop with a limit adds nothing" "0 " "$STATUS $STDOUT"
 dir=$(shaped playbook "$playbook"$'\nUse for "run until done". Not for one fix; see diagnose-loop.')
 run_hook "$shape" "$dir"
 expect_equal "loop words in quotes or in a hyphenated name add nothing" "0 " "$STATUS $STDOUT"
+for loop in '3. Run the test again.' $'## Retry policy\n' $'3. Retry the build until it passes,\n   at most 3 times.' \
+  '3. Repeat steps 1 and 2 at most <N> times, until the test passes.'; do
+  dir=$(shaped playbook "$loop"$'\n'"$playbook")
+  run_hook "$shape" "$dir"
+  expect_equal "'$loop' adds nothing" "0 " "$STATUS $STDOUT"
+done
+for loop in '3. Repeat steps 1 and 2 until the test passes.' '3. Retry until the cache is up to date.' \
+  '3. Loop to maximize coverage.' '3. Go back to step one.'; do
+  dir=$(shaped playbook "$loop"$'\n'"$playbook")
+  run_hook "$shape" "$dir"
+  expect_contains "'$loop' warns" "WARN  references/p.md: line 5 has a loop with no limit" "$STDOUT"
+done
 
 dir=$(shaped playbook "$playbook"$'\n'"$(printf '%s. Step.\n' $(seq 3 11))")
 run_hook "$shape" "$dir"
 expect_contains "a playbook over 10 steps warns" "playbook has 11 steps, over 10" "$STDOUT"
+dir=$(shaped playbook "$playbook"$'\n'"$(printf '%s. Step.\n' $(seq 3 10))")
+run_hook "$shape" "$dir"
+expect_equal "a playbook of 10 steps adds nothing" "0 " "$STATUS $STDOUT"
 
 router=$'- Use for "fix": read [fix](fix.md).\n- Use for "ship": read `references/ship.md`.\n\nDefault: ask which one.'
 dir=$(shaped router "$router")
@@ -155,13 +197,31 @@ expect_equal "a router whose routes exist and that has a default passes" "0 " "$
 rm "$dir/references/ship.md"
 run_hook "$shape" "$dir"
 expect_contains "a route to a missing file fails" "FAIL  references/p.md: line 6 routes to references/ship.md, which does not exist" "$STDOUT"
+rm "$dir/references/fix.md"
+printf '# Ship\n' >"$dir/references/ship.md"
+run_hook "$shape" "$dir"
+expect_contains "a Markdown-link route to a missing file fails" "FAIL  references/p.md: line 5 routes to fix.md, which does not exist" "$STDOUT"
+
+dir=$(shaped router "$router"$'\n\n- Update `CHANGELOG.md`. Write a route as `[name](name.md)`.\n- "two": read [two](my%20file.md).')
+printf '# Ref\n' >"$dir/references/fix.md"
+printf '# Ref\n' >"$dir/references/ship.md"
+printf '# Ref\n' >"$dir/references/my file.md"
+run_hook "$shape" "$dir"
+expect_equal "inline code and an encoded space in a route are read as links.sh reads them" "0 " "$STATUS $STDOUT"
 
 dir=$(shaped router "${router/Default: ask which one./Ask which one.}")
 printf '# Fix\n' >"$dir/references/fix.md"
 printf '# Ship\n' >"$dir/references/ship.md"
 run_hook "$shape" "$dir"
-expect_equal "a router with no default route fails" 1 "$STATUS"
-expect_contains "the default route is named" "FAIL  references/p.md: router has no default route" "$STDOUT"
+expect_equal "a router with no Default label fails" 1 "$STATUS"
+expect_contains "the Default label is named" "FAIL  references/p.md: router has no Default label" "$STDOUT"
+for default in '**Default:** ask.' '- Default route: ask.' $'## Default\n\nAsk.'; do
+  dir=$(shaped router "${router/Default: ask which one./$default}")
+  printf '# Fix\n' >"$dir/references/fix.md"
+  printf '# Ship\n' >"$dir/references/ship.md"
+  run_hook "$shape" "$dir"
+  expect_equal "'$default' is a Default label" "0 " "$STATUS $STDOUT"
+done
 
 dir=$(shaped flow "No steps.")
 run_hook "$shape" "$dir"
@@ -175,10 +235,16 @@ expect_equal "a file with no shape is skipped" "0 " "$STATUS $STDOUT"
 dir=$(skill meta "$good" "1. Fix it.")
 printf -- '---\nname: meta\ndescription: %s\nmetadata:\n  shape: playbook\n---\n\n1. Fix it.\n' "$good" >"$dir/SKILL.md"
 run_hook "$shape" "$dir"
-expect_contains "a shape under metadata in SKILL.md is checked" "FAIL  SKILL.md: playbook has no stop predicate" "$STDOUT"
+expect_contains "a shape under metadata in SKILL.md is checked" "FAIL  SKILL.md: playbook has no Reply label" "$STDOUT"
 
 for template in "$PLUGIN_ROOT_DIR"/skills/skill-quality/examples/*.md; do
   expect_contains "${template##*/} declares a shape" "shape: " "$(head -n 5 "$template")"
+  expect_equal "${template##*/} has 25 lines or fewer" "" "$(awk 'NR == 26 { print FILENAME }' "$template")"
+  dir=$(skill template "$good" "Read [p](references/p.md) when a widget breaks.")
+  cp "${template%/*}"/*.md "$dir/references/" # the router links its siblings
+  cp "$template" "$dir/references/p.md"
+  run_hook "$shape" "$dir"
+  expect_equal "${template##*/} passes the shape check" "0 " "$STATUS $(grep -F 'references/p.md' <<<"$STDOUT")"
 done
 run_hook "$shape" "$PLUGIN_ROOT_DIR/skills/skill-quality"
 expect_equal "the six templates pass the shape check" "0 6" "$STATUS $(ls "$PLUGIN_ROOT_DIR"/skills/skill-quality/examples/*.md | wc -l | tr -d ' ')"

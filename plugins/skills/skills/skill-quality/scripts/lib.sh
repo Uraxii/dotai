@@ -48,8 +48,12 @@ prose() {
 # and backticked file paths under a skill subdirectory, optionally after the
 # skill's own name. Placeholders and bare directories in backticks are skipped.
 targets() {
+  prose "$1" | cut -f2- | text_targets
+}
+# The same for the Markdown text on standard input.
+text_targets() {
   local text name=${dir##*/}
-  text=$(prose "$1" | cut -f2-)
+  text=$(cat)
   {
     sed -E 's/`[^`]*`//g' <<<"$text" | grep -oE '\]\((<[^>]+>|[^)[:space:]]+)' |
       sed -E 's/^\]\(<?//; s/>$//; s/#.*//; s/%20/ /g'

@@ -13,6 +13,7 @@ and to word each block.
 - [Optional blocks](#optional-blocks)
 - [Compose a playbook](#compose-a-playbook)
 - [Update a playbook](#update-a-playbook)
+- [The shape check](#the-shape-check)
 
 ## Regular skill or router
 
@@ -53,7 +54,9 @@ when only one other domain was present.
 
 ## Core blocks
 
-Each playbook uses all of these. Each entry gives when to use the block, a
+Each playbook uses each of these blocks whose "When" line applies to it.
+Trigger, Deliverable, Step with expected state, Stop predicate and Reply
+contract apply to every playbook. Each entry gives when to use the block, a
 wording pattern, the fields the block needs, and the source.
 
 ### Trigger
@@ -73,7 +76,9 @@ wording pattern, the fields the block needs, and the source.
 
 ### Step with expected state
 
-- When: every step.
+- When: every step, except a step in the wording of a Gate, Verify, Pause,
+  Branch, Bounded loop, Wait or Failure handler. That wording states its own
+  condition.
 - Wording: `<N>. <Verb> <object>. Expect <observable state or value>.`
 - Fields: one action, and the state after it. "Done" is not a state.
 - Source: Degani and Wiener checklist study, guideline 4; Agent Workflow
@@ -98,7 +103,7 @@ wording pattern, the fields the block needs, and the source.
 
 - When: every playbook. Loops and long runs need it most.
 - Wording: `Done when <predicate a reader or script can check>.`
-- Fields: one checkable predicate.
+- Fields: one checkable predicate. Do not join two with "and".
 - Source: MAST, where 12.4% of failures did not know when to stop; NASA PRL,
   where each step declares how it exits.
 
@@ -218,31 +223,69 @@ An agent can write a playbook only behind these checks. SkillsBench measured
 skills that agents wrote for themselves at 8.1 to 11.5 points below the
 baseline with no skill.
 
-1. Run the task without the playbook, and record the failure. If no failure
-   occurs, do not write the playbook.
-2. Use [Regular skill or router](#regular-skill-or-router) to choose the
-   kind of skill.
-3. Start from the nearest template in `examples/`. Each template has
+1. Run the task without the playbook, and record the failure. Expect a
+   recorded failure.
+2. If no failure occurs, stop and do not write the playbook. Otherwise, go
+   to step 3.
+3. Use [Regular skill or router](#regular-skill-or-router) to choose the
+   kind of skill. Expect one choice: regular or router.
+4. Start from the nearest template in `examples/`. Each template has
    `shape: playbook` or `shape: router` in its frontmatter. In a `SKILL.md`,
-   put the `shape:` line under `metadata:`.
-4. Name each building block that each step uses.
-5. Run `scripts/checks/playbook-shape.sh` on the skill directory. Expect no
+   put the `shape:` line under `metadata:`. Expect the `shape:` line in the
+   new file.
+5. Name each building block that each step uses. Expect a block name for
+   each step.
+6. Run `scripts/checks/playbook-shape.sh` on the skill directory. Expect no
    FAIL.
-6. Test the description, or the route lines of a router. Write about 20
+7. Test the description, or the route lines of a router. Write about 20
    queries. Half must trigger and half must not. Make the negative queries
-   near misses. Use 60% of the queries to tune and 40% to test. Select the
-   wording by the test score. Stop after 5 rounds.
-7. Run a paired test: the same prompts with the playbook and without it.
+   near misses. Use 60% of the queries to tune and 40% to test. Tune at most
+   5 rounds, until the test score stops rising. Select the wording by the
+   test score.
+8. Run a paired test: the same prompts with the playbook and without it.
    Give each assertion a descriptive name, and make each one objective. Flag
    each assertion that passes in both runs, because it does not measure the
-   playbook.
-8. Ask a person to approve the playbook before release.
+   playbook. Expect a pass rate for each run.
+9. Pause before release. Show the step 7 and step 8 results. Ask a person to
+   approve the playbook.
+
+Done when a person approves the playbook.
+
+**Reply:** the step 1 failure, the test score, the paired test result, and
+who approved.
 
 To update a skill that exists, keep its name. Copy the old version first, and
-use the copy as the baseline in step 7. The Anthropic skill authoring guide
+use the copy as the baseline in step 8. The Anthropic skill authoring guide
 uses the same trigger test and paired test.
 
 ## Update a playbook
 
 Edit one step at a time. Never rewrite the whole file. ACE measured a context
 that fell from 18,282 tokens to 122 after a full rewrite.
+
+## The shape check
+
+`scripts/checks/playbook-shape.sh` checks each file whose frontmatter has
+`shape: playbook` or `shape: router`. The frontmatter opens on line 1 and
+closes with `---`. In a `SKILL.md`, the line goes under `metadata:`. Text in
+code fences does not count.
+
+A label is a word at the start of a line. A list marker, a heading marker,
+and bold can come before it. The colon can be inside or outside the bold, or
+the label can end its line. Each of these is a Reply label: `**Reply:**`,
+`**Reply**:`, `- Reply:`, `## Reply`.
+
+- FAIL: a playbook has no `Reply` label.
+- FAIL: a router has no `Default` label.
+- FAIL: a list item in a router links to a `.md` file that does not exist.
+  The links are read as `scripts/checks/links.sh` reads them.
+- WARN: a playbook has no stop predicate. A stop predicate is one of stop,
+  stops, done, exit, exits, finish, finished, complete, completed, end, or
+  ends, followed by when, if, once, or after.
+- WARN: a list item or paragraph has a loop word and no limit. The loop
+  words are repeat, retry, retries, loop, iterate, until, go back, and keep
+  trying. A limit is at most, no more than, up to, max, or maximum before a
+  count, or a count before times, rounds, tries, or attempts. A count is a
+  number, a number word up to ten, or a `<placeholder>`.
+- WARN: a playbook has more than 10 numbered steps.
+- WARN: the shape is not `playbook` or `router`.

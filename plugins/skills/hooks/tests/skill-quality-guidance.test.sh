@@ -116,6 +116,55 @@ for wiring in "claude hooks/claude-hooks.json PostToolUse" "codex hooks/codex-ho
   expect_contains "$harness: Windows lint command reports the FAIL line" "references/nope.md does not resolve" "$(context)"
 done
 
+# Lint text is bounded: 200 bytes a line, 40 lines in all, with a notice.
+skill_f="$WORK/repo/skills/phi"
+clean_skill "$skill_f"
+mkdir -p "$skill_f/references"
+printf 'Read [p](references/p.md) when a widget breaks.\n' >>"$skill_f/SKILL.md"
+printf -- '---\nshape: %s\n---\n' "$(head -c 200000 /dev/zero | tr '\0' x)" >"$skill_f/references/p.md"
+run_hook "$hook" --harness claude --lint <<<"$(input claude s-big "$skill_f/SKILL.md")"
+expect_equal "a 200 KB shape value gives valid JSON" "0 valid" "$STATUS $(jq -e .hookSpecificOutput.additionalContext <<<"$STDOUT" >/dev/null && echo valid)"
+expect_contains "the long lint line is reported" "WARN  references/p.md: shape 'xxx" "$(context)"
+expect_equal "the longest lint line is cut to 200 bytes" 200 "$(context | grep -F "shape 'xxx" | LC_ALL=C awk '{ print length($0) }')"
+printf -- '---\nshape: none\n---\n' >"$skill_f/references/p.md"
+for i in $(seq 30); do printf '[x](gone%s.md)\n' "$i"; done >>"$skill_f/references/p.md"
+run_hook "$hook" --harness claude --lint <<<"$(input claude s-many "$skill_f/SKILL.md")"
+expect_equal "40 lint lines are kept" 20 "$(context | grep -c '^FAIL  references/p.md: link to gone')"
+expect_contains "the dropped lines get a notice" "[22 more lint lines are not shown." "$(context)"
+
+patch=$(printf '*** Begin Patch\n'; for i in $(seq 150); do printf '*** Add File: %s/skills/%s-%0250d/SKILL.md\n+x\n' "$WORK/repo" "$i" 0; done; printf '*** End Patch')
+run_hook "$hook" --harness codex <<<"$(jq -cn --arg c "$patch" '{session_id: "s-cap", tool_input: {command: $c}}')"
+expect_contains "a context over 32,000 bytes is cut with a notice" "[The rest of this context was cut at 32000 bytes.]" "$(context)"
+expect_equal "the cut context stays small" 1 "$(context | LC_ALL=C wc -c | awk '{ print ($1 <= 32100) }')"
+
+# The lint runs only on a skill directory whose SKILL.md exists.
+mkdir -p "$WORK/repo/skills/zeta"
+run_hook "$hook" --harness claude --lint <<<"$(input claude s-guard "$WORK/repo/skills/zeta/SKILL.md")"
+expect_equal "an edit that has not made the SKILL.md yet adds no lint line" "" "$(context | grep -F 'lint found these problems')"
+expect_contains "it still adds the guidance" "- $WORK/repo/skills/zeta" "$(context)"
+
+# A path that can leave the skill, or that holds a newline, is not a skill file.
+run_hook "$hook" --harness claude <<<"$(input claude s-dots "$skill_a/../../docs/out.md")"
+expect_equal "a path with a .. segment adds nothing" "" "$STDOUT"
+run_hook "$hook" --harness claude --lint <<<"$(input claude s-dots-lint "$skill_d/../../docs/out.md")"
+expect_equal "a path with a .. segment is not linted" "" "$STDOUT"
+run_hook "$hook" --harness claude <<<"$(input claude s-newline "$skill_a/SKILL.md"$'\n'"/x.md")"
+expect_equal "a path with a newline adds nothing" "" "$STDOUT"
+run_hook "$hook" --harness copilot --lint <<<"$(input copilot s-newline "$skill_d/SKILL.md"$'\n'"/x.md")"
+expect_equal "a copilot path with a newline is not linted" "" "$STDOUT"
+
+# With no session id, PreToolUse adds the guidance and PostToolUse does not.
+nosession=$(jq -cn --arg f "$skill_a/SKILL.md" '{tool_input: {file_path: $f}}')
+run_hook "$hook" --harness claude <<<"$nosession"
+expect_contains "no session: PreToolUse adds the guidance" "## Under-specified guidance" "$(context)"
+run_hook "$hook" --harness claude --lint <<<"$nosession"
+expect_equal "no session: PostToolUse on a clean skill adds nothing" "0 " "$STATUS $STDOUT"
+run_hook "$hook" --harness copilot --lint <<<"$(jq -cn --arg f "$skill_a/SKILL.md" '{toolArgs: ({path: $f} | tojson)}')"
+expect_contains "no session: Copilot, with no PreToolUse, adds the guidance" "## Under-specified guidance" "$(context)"
+
+(cd "$WORK/repo" && run_hook "$hook" --harness claude <<<'{"session_id": "s-nocwd", "tool_input": {"file_path": "skills/alpha/SKILL.md"}}' && context) >"$WORK/nocwd"
+expect_contains "a relative path with no cwd resolves against the current directory" "- ./skills/alpha" "$(cat "$WORK/nocwd")"
+
 claude_pre=$(wiring_commands claude "$PLUGIN_ROOT_DIR/hooks/claude-hooks.json" PreToolUse)
 claude_post=$(wiring_commands claude "$PLUGIN_ROOT_DIR/hooks/claude-hooks.json" PostToolUse)
 run_wiring claude "$claude_pre" <<<"$(input claude s-clean "$skill_a/SKILL.md")"
