@@ -513,7 +513,7 @@ def codex_tool_event(payload: Payload, base: Neutral) -> Neutral | None:
         # A moved symlink leaves its target, and the target's change, in place.
         moves_link = (
             file.action != "Delete File" and source != target
-            and os.path.islink(link)
+            and link not in unlinked and os.path.islink(link)
         )
         prior = changes.get(source) if moves_link else changes.pop(source, None)
         if file.action == "Delete File":

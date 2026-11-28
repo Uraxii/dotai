@@ -297,3 +297,6 @@ Scratch paths named in those notes (under `/tmp/...`) are gone; ignore them.
 
 ## Update: review d5b6e402 (7599419) finding fixed (0 blocking, 1 non-blocking)
 - Codex: a symlink moved after its target was updated in the same patch keeps the target's change (the move reads it, does not take it). Real Ruff repro: E722 in the target denies.
+
+## Update: review deb49024 (be05557) finding fixed (0 blocking, 1 non-blocking)
+- Codex: the moved-symlink rule applies only while the path is still the symlink (not after the patch deleted or moved it). Real Ruff repro: delete link, add file there, move it to an excluded folder: no deny.
