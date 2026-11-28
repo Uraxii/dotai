@@ -179,6 +179,38 @@ capture env MISE_CONFIG_DIR="$WORK/trust-setting" bash "$check" -C "$dir"
 expect_equal "a config trusted by the global trusted_config_paths setting passes" \
   "0 check-mise-setup.sh: $dir: 0 failed" "$STATUS ${STDOUT%$'\n'}"
 
+dir=$(repo paranoid)
+(cd "$dir" && MISE_PARANOID=1 mise trust -q </dev/null && MISE_PARANOID=1 mise trust -q mise-tasks/deploy </dev/null)
+capture env MISE_PARANOID=1 bash "$check" -C "$dir"
+expect_equal "in paranoid mode a file task stops the check with exit 2, because its trust is not listed" \
+  "2  check-mise-setup.sh: in paranoid mode the check cannot read the trust of $dir/mise-tasks/deploy on this machine" \
+  "$STATUS $STDOUT ${STDERR%$'\n'}"
+rm "$dir/mise-tasks/deploy"
+capture env MISE_PARANOID=1 bash "$check" -C "$dir"
+expect_equal "a config trusted in paranoid mode passes with MISE_PARANOID=1" \
+  "0 check-mise-setup.sh: $dir: 0 failed" "$STATUS ${STDOUT%$'\n'}"
+mkdir "$WORK/paranoid-config"
+printf '[settings]\nparanoid = true\n' >"$WORK/paranoid-config/config.toml"
+capture env MISE_CONFIG_DIR="$WORK/paranoid-config" bash "$check" -C "$dir"
+expect_equal "a config trusted in paranoid mode passes with paranoid = true in the global config" \
+  "0 check-mise-setup.sh: $dir: 0 failed" "$STATUS ${STDOUT%$'\n'}"
+printf '\n[tasks.edited]\ndescription = "{{ exec(command=\x27touch %s/pwned\x27) }}"\nrun = "true"\n' "$dir" >>"$dir/mise.toml"
+capture env MISE_PARANOID=1 bash "$check" -C "$dir"
+expect_equal "in paranoid mode a config edited after trust fails as not trusted" "1 FAIL  mise.toml: config is not trusted
+      fix: read the config, then run: mise trust mise.toml
+check-mise-setup.sh: $dir: 1 failed" "$STATUS ${STDOUT%$'\n'}"
+expect_equal "in paranoid mode the check runs no template exec() of an edited config" no \
+  "$([ -e "$dir/pwned" ] && echo yes || echo no)"
+
+dir=$(repo git-template)
+printf '\n[tasks.status]\ndescription = "{{ exec(command=\x27git status --short\x27) }}Show the status"\nrun = "true"\n' >>"$dir/mise.toml"
+# A new time on a tracked file makes git status refresh the index.
+touch -t 202001010000 "$dir/mise.lock"
+index=$(cksum <"$dir/.git/index")
+run_hook "$check" -C "$dir"
+expect_equal "a git status in a trusted template leaves the index of the repository as it was" \
+  "0 check-mise-setup.sh: $dir: 0 failed|$index" "$STATUS ${STDOUT%$'\n'}|$(cksum <"$dir/.git/index")"
+
 mkdir "$WORK/home"
 echo 'jq 1.8.1' >"$WORK/home/.tool-versions"
 cp -R "$WORK/good" "$WORK/home/proj"

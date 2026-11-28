@@ -21,6 +21,10 @@
 # (MISE_SAFE=1), so that a project config that is not trusted runs no template
 # exec(). The other calls load the config of the checked directory as mise
 # does, so a template exec() in a trusted config there does run, in the copy.
+# A git command in such a template sees the repository, and a git command that
+# writes, such as git add, writes to it, as in any mise command. In paranoid
+# mode, trust is per file and tied to its contents, so a directory is trusted
+# in the copy only if each of its config files is trusted in the repository.
 # It ignores each config above the checked directory, or above the monorepo
 # root. It still names a REPLACE_WITH_ placeholder in a local config of the
 # repository. It hides mise output, which can hold [env] values.
@@ -59,8 +63,10 @@ installs="MISE_DATA_DIR MISE_CACHE_DIR MISE_SYSTEM_DATA_DIR MISE_SHARED_INSTALL_
 # and system config, and from these two variables.
 keep_mise_variables $installs MISE_STATE_DIR MISE_CONFIG_DIR MISE_GLOBAL_CONFIG_FILE \
   MISE_SYSTEM_CONFIG_DIR MISE_SYSTEM_CONFIG_FILE MISE_TRUSTED_CONFIG_PATHS MISE_PARANOID
-# `mise trust --show` only reads. It is the one mise call in the repository.
+# `mise trust --show` and `mise settings get` only read. They are the only mise
+# calls in the repository. In paranoid mode, the list names config files.
 real_trust=$(mise trust --show 2>/dev/null </dev/null)
+paranoid=$(mise settings get paranoid 2>/dev/null </dev/null)
 in_real_trust() { # DIR STATUS: true if that list gives DIR that status. mise prints ~ for $HOME.
   local short=$1
   case $1 in "$HOME" | "$HOME"/*) short="~${1#"$HOME"}" ;; esac
@@ -93,10 +99,11 @@ local_config='(^|/)\.?mise[^/]*\.local\.toml$|(^|/)\.?mise/.*\.local\.toml$'
 # A template that calls git reads the repository, as it does outside the copy.
 printf 'gitdir: %s\n' "$gitdir" >"$copy/.git"
 cd "$copy/$subdir" || exit 2
-# mise loads no config from a ceiling path or from above it.
+# mise loads no config from a ceiling path or from above it. With no optional
+# locks, git status in the copy does not rewrite the index of the repository.
 export MISE_STATE_DIR="$scratch/state" MISE_CONFIG_DIR="$scratch/config" MISE_SYSTEM_CONFIG_DIR="$scratch/config" \
   MISE_GLOBAL_CONFIG_FILE="$scratch/config/config.toml" MISE_SYSTEM_CONFIG_FILE="$scratch/config/config.toml" \
-  MISE_CEILING_PATHS="$scratch"
+  MISE_CEILING_PATHS="$scratch" GIT_OPTIONAL_LOCKS=0
 
 fail() { # WHERE MESSAGE FIX
   printf 'FAIL  %s: %s\n      fix: %s\n' "$1" "$2" "$3"
@@ -113,29 +120,73 @@ finish() {
 # trust. A config above the directory fails only at the monorepo root. The
 # list comes from the copy, so a file that git ignores adds no config to it.
 # A process substitution is not a foreground command, so mise does not run in one.
-copy_trust=$(mise trust --show 2>/dev/null </dev/null)
+trust_paths() { # prints each path that `mise trust --show` lists in the copy
+  local line
+  mise trust --show 2>/dev/null </dev/null | while IFS= read -r line; do
+    line=${line%: *}
+    printf '%s\n' "${line/#\~/"$HOME"}"
+  done
+}
+copy_dirs=$(trust_paths)
+copy_files=
+if [ "$paranoid" = true ]; then
+  export MISE_PARANOID=1
+  copy_files=$(trust_paths)
+fi
+# Sets status to the trust of DIR in the repository, and untrusted to the
+# paths in the copy that are not trusted. Trusts in the copy what is trusted.
+trust_in_copy() { # DIR
+  local real=$worktree${1#"$copy"} file holder best
+  untrusted=("$1")
+  if [ "$paranoid" != true ]; then
+    status=unknown
+    in_real_trust "$real" untrusted && status=untrusted
+    in_real_trust "$real" trusted && status=trusted && quiet mise trust "$1"
+    return
+  fi
+  status=
+  untrusted=()
+  while IFS= read -r file; do
+    # A file belongs to the deepest listed directory that holds it.
+    best=
+    while IFS= read -r holder; do
+      [[ $file == "$holder"/* && ${#holder} -gt ${#best} ]] && best=$holder
+    done <<<"$copy_dirs"
+    [ "$best" = "$1" ] || continue
+    if in_real_trust "$worktree${file#"$copy"}" trusted; then
+      quiet mise trust "$file"
+      status=${status:-trusted}
+    elif in_real_trust "$worktree${file#"$copy"}" untrusted; then
+      status=untrusted
+      untrusted+=("$file")
+    elif [ "$status" != untrusted ]; then
+      status=unknown
+    fi
+  done <<<"$copy_files"
+  status=${status:-unknown}
+}
 root=
 found=0
-while IFS= read -r line; do
-  path=${line%: *}
-  path=${path/#\~/"$HOME"}
+while IFS= read -r path; do
+  [ -n "$path" ] || continue
   real=$worktree${path#"$copy"}
   [ "$path" = "$PWD" ] && found=1
   (cd "$path" && grep -rqsE '^monorepo_root *= *true' mise.toml .mise.toml mise .mise .config/mise.toml .config/mise) &&
     root=$path
-  if in_real_trust "$real" trusted; then
-    quiet mise trust "$path"
-    continue
-  fi
-  case $path in "$PWD") where=. ;; "$PWD"/*) where=${path#"$PWD"/} ;; "$root") where=$real ;; *) continue ;; esac
+  trust_in_copy "$path"
+  [ "$status" = trusted ] && continue
+  case $path in "$PWD" | "$PWD"/* | "$root") ;; *) continue ;; esac
   # A setting of this machine, such as override_config_filenames in a
   # .miserc.local.toml, can make mise read no config in this directory.
-  in_real_trust "$real" untrusted || {
+  [ "$status" = untrusted ] || {
     echo "check-mise-setup.sh: mise reads no config in $real on this machine, so its trust is not known" >&2
     exit 2
   }
-  fail "$where" "config is not trusted" "read the config, then run: mise trust $where"
-done < <(grep ': untrusted$' <<<"$copy_trust")
+  for item in "${untrusted[@]}"; do
+    case $item in "$PWD") where=. ;; "$PWD"/*) where=${item#"$PWD"/} ;; *) where=$worktree${item#"$copy"} ;; esac
+    fail "$where" "config is not trusted" "read the config, then run: mise trust $where"
+  done
+done <<<"$copy_dirs"
 # A config above the directory does not make it a mise repository.
 [ "$found" = 1 ] || fail . "no mise config found" "create mise.toml from the skill's templates/mise.toml"
 [ "$failed" = 0 ] || finish
@@ -153,6 +204,15 @@ if ! quiet mise config ls; then
   fail mise.toml "mise cannot load the config" \
     "run mise config ls to see why: TOML syntax, a min_version above this mise, or a required [env] value that is not set"
   finish
+fi
+# In paranoid mode a file task needs trust of its own, which `mise trust
+# --show` does not list. mise loads no file that is not trusted.
+if [ "$paranoid" = true ]; then
+  error=$(MISE_SAFE=$safe mise tasks ls --hidden --no-global 2>&1 >/dev/null </dev/null)
+  if [[ $error =~ Config\ files\ in\ (.*)\ are\ not\ trusted ]]; then
+    echo "check-mise-setup.sh: in paranoid mode the check cannot read the trust of $worktree${BASH_REMATCH[1]#"$copy"} on this machine" >&2
+    exit 2
+  fi
 fi
 
 while IFS= read -r file; do
