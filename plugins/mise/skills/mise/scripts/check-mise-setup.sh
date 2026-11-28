@@ -1,19 +1,29 @@
 #!/bin/bash
 # Checks the mise setup of a repository, or of one project in a monorepo.
 # Prints a FAIL line and a fix for each problem, then one summary line, and
-# exits 1 if there was a problem. It leaves the repository and the mise state
-# as they were: it never trusts a config, never installs a tool, and never
-# runs a task. In a monorepo it runs `mise tasks` in safe mode (MISE_SAFE=1),
-# so that a project config that is not trusted runs no template exec(). The
-# other calls load the config of the checked directory as mise does, so a
-# template exec() in a trusted config there does run. It ignores the global and
-# system config, except for the trust they give. It ignores each config above
-# the checked directory, or above the monorepo root, each MISE_<TOOL>_VERSION
-# variable, MISE_ENV, and each variable that changes the config file names. It
-# ignores each local config, such as mise.local.toml, in the checked directory
-# and in each directory up to the monorepo root, because a local config is
-# machine-local and not committed. It still names a REPLACE_WITH_ placeholder
-# in a local config. It hides mise output, which can hold [env] values.
+# exits 1 if there was a problem. Exits 2 if it cannot run: bad usage, no mise,
+# git or tar on PATH, or a directory that is not in a git work tree.
+#
+# It judges a clean copy of the repository, so that the result is the same on
+# each machine. The copy holds the files that git does not ignore: tracked
+# files as they are on disk, and new files that no .gitignore rule matches.
+# The check runs mise in the copy with no MISE_* variable from the caller,
+# except the ones that say where installed tools are, and with no global or
+# system config. A file that git ignores, such as mise.local.toml, is not in
+# the copy. A local config that git does not ignore fails the check and is
+# not in the copy.
+#
+# It leaves the repository and the mise state as they were: it never trusts a
+# config of the repository, never installs a tool, and never runs a task. It
+# reads the trust that this machine gives each config of the repository, and
+# trusts in the copy, in a mise state of its own, only a config that is
+# trusted there. In a monorepo it runs `mise tasks` in safe mode
+# (MISE_SAFE=1), so that a project config that is not trusted runs no template
+# exec(). The other calls load the config of the checked directory as mise
+# does, so a template exec() in a trusted config there does run, in the copy.
+# It ignores each config above the checked directory, or above the monorepo
+# root. It still names a REPLACE_WITH_ placeholder in a local config of the
+# repository. It hides mise output, which can hold [env] values.
 #
 # Usage: check-mise-setup.sh [-C DIR]
 
@@ -25,88 +35,116 @@ while [ $# -gt 0 ]; do
     *) usage ;;
   esac
 done
-command -v mise >/dev/null || { echo "check-mise-setup.sh: mise is not on PATH" >&2; exit 2; }
+for tool in mise git tar; do
+  command -v "$tool" >/dev/null || { echo "check-mise-setup.sh: $tool is not on PATH" >&2; exit 2; }
+done
 # mise prints real paths, so the directory must not be behind a symlink.
 cd -P "$dir" || exit 2
+here=$PWD
+worktree=$(git rev-parse --show-toplevel) && subdir=$(git rev-parse --show-prefix) &&
+  gitdir=$(git rev-parse --absolute-git-dir) ||
+  { echo "check-mise-setup.sh: $here is not in a git work tree" >&2; exit 2; }
 failed=0
-# A MISE_<TOOL>_VERSION variable replaces the request that the config makes.
-for name in $(compgen -e); do [[ $name == MISE_*_VERSION ]] && unset "$name"; done
-# MISE_ENV and MISE_PROFILE load a mise.<env>.toml that a plain run does not.
-# The filename variables make mise read other files than the committed ones.
-unset MISE_ENV MISE_PROFILE MISE_OVERRIDE_CONFIG_FILENAMES MISE_DEFAULT_CONFIG_FILENAME \
-  MISE_OVERRIDE_TOOL_VERSIONS_FILENAMES MISE_DEFAULT_TOOL_VERSIONS_FILENAME
-# `mise trust --show` only reads. It runs before the overrides below, so that
-# it sees the trust that the global trusted_config_paths setting gives.
-trust=$(mise trust --show 2>/dev/null)
+
+keep_mise_variables() { # NAME...: unsets each other MISE_* variable
+  local name
+  for name in $(compgen -e); do
+    [[ $name == MISE_* || $name == __MISE_* ]] && [[ " $* " != *" $name "* ]] && unset "$name"
+  done
+}
+# Where the installed tools and the download cache are, and no network if the
+# caller has none. The check must find the tools that are installed here.
+installs="MISE_DATA_DIR MISE_CACHE_DIR MISE_SYSTEM_DATA_DIR MISE_SHARED_INSTALL_DIRS MISE_OFFLINE"
+# The trust that this machine gives comes from the mise state, from the global
+# and system config, and from these two variables.
+keep_mise_variables $installs MISE_STATE_DIR MISE_CONFIG_DIR MISE_GLOBAL_CONFIG_FILE \
+  MISE_SYSTEM_CONFIG_DIR MISE_SYSTEM_CONFIG_FILE MISE_TRUSTED_CONFIG_PATHS MISE_PARANOID
+# `mise trust --show` only reads. It is the one mise call in the repository.
+real_trust=$(mise trust --show 2>/dev/null </dev/null)
+in_real_trust() { # DIR STATUS: true if that list gives DIR that status. mise prints ~ for $HOME.
+  local short=$1
+  case $1 in "$HOME" | "$HOME"/*) short="~${1#"$HOME"}" ;; esac
+  grep -qxF -e "$1: $2" -e "$short: $2" <<<"$real_trust"
+}
+keep_mise_variables $installs
 
 scratch=$(mktemp -d) || exit 2
 # Bash runs the EXIT trap on HUP, INT or TERM only when that signal has a trap.
 # Every mise command runs in the foreground, so the trap waits for it to end.
 trap 'rm -rf "$scratch"' EXIT
 trap 'exit 2' HUP INT TERM
-# Every mise command, also in safe mode, writes to the mise state. Under a
-# trusted monorepo root it writes a file that trusts every project. A copy of
-# the state keeps those writes out of the real state.
-state=${MISE_STATE_DIR:-${XDG_STATE_HOME:-$HOME/.local/state}/mise}
-mkdir "$scratch/state" "$scratch/config"
-[ -d "$state" ] && { cp -RP "$state/." "$scratch/state" || exit 2; }
-export MISE_STATE_DIR="$scratch/state" MISE_CONFIG_DIR="$scratch/config" \
-  MISE_GLOBAL_CONFIG_FILE="$scratch/config/config.toml" MISE_SYSTEM_CONFIG_FILE="$scratch/config/config.toml"
+scratch=$(cd -P "$scratch" && pwd) || exit 2
+copy=$scratch/repo
+mkdir -p "$scratch/state" "$scratch/config" "$copy/$subdir" && : >"$scratch/local" || exit 2
+# A config that mise reads for one machine. The playbook keeps it out of git.
+local_config='(^|/)\.?mise[^/]*\.local\.toml$|(^|/)\.?mise/.*\.local\.toml$'
+# tar copies a symbolic link as a link, and git lists no path below one.
+(cd "$worktree" && git ls-files -z --cached --others --exclude-standard |
+  while IFS= read -r -d '' file; do
+    # A deleted file and a submodule are in the list, and are not files.
+    [ -f "$file" ] || [ -L "$file" ] || continue
+    case $worktree/$file in "$scratch"/*) continue ;; esac
+    if [[ $file =~ $local_config ]]; then
+      [[ $file == "$subdir"* ]] && printf '%s\n' "${file#"$subdir"}" >>"$scratch/local"
+      continue
+    fi
+    printf '%s\0' "$file"
+  done | tar -cf - --null -T -) | tar -xf - -C "$copy" || exit 2
+# A template that calls git reads the repository, as it does outside the copy.
+printf 'gitdir: %s\n' "$gitdir" >"$copy/.git"
+cd "$copy/$subdir" || exit 2
+# mise loads no config from a ceiling path or from above it.
+export MISE_STATE_DIR="$scratch/state" MISE_CONFIG_DIR="$scratch/config" MISE_SYSTEM_CONFIG_DIR="$scratch/config" \
+  MISE_GLOBAL_CONFIG_FILE="$scratch/config/config.toml" MISE_SYSTEM_CONFIG_FILE="$scratch/config/config.toml" \
+  MISE_CEILING_PATHS="$scratch"
 
 fail() { # WHERE MESSAGE FIX
   printf 'FAIL  %s: %s\n      fix: %s\n' "$1" "$2" "$3"
   failed=$((failed + 1))
 }
-quiet() { "$@" >/dev/null 2>&1; }
+quiet() { "$@" >/dev/null 2>&1 </dev/null; }
 finish() {
-  printf 'check-mise-setup.sh: %s: %d failed\n' "$PWD" "$failed"
+  printf 'check-mise-setup.sh: %s: %d failed\n' "$here" "$failed"
   exit $((failed > 0))
 }
 
 # `mise run`, `exec` and `install` trust their config with no prompt, so a
 # config that is not trusted fails here, even one that mise loads without
-# trust. A config above the directory fails only at the monorepo root.
+# trust. A config above the directory fails only at the monorepo root. The
+# list comes from the copy, so a file that git ignores adds no config to it.
+# A process substitution is not a foreground command, so mise does not run in one.
+copy_trust=$(mise trust --show 2>/dev/null </dev/null)
 root=
 found=0
 while IFS= read -r line; do
   path=${line%: *}
   path=${path/#\~/"$HOME"}
+  real=$worktree${path#"$copy"}
   [ "$path" = "$PWD" ] && found=1
   (cd "$path" && grep -rqsE '^monorepo_root *= *true' mise.toml .mise.toml mise .mise .config/mise.toml .config/mise) &&
     root=$path
-  if [ "${line##*: }" = trusted ]; then
-    # Trust from a setting is not in the copy of the state, so the copy gets it.
+  if in_real_trust "$real" trusted; then
     quiet mise trust "$path"
     continue
   fi
-  case $path/ in "$PWD"/*) ;; *) [ "$path" = "$root" ] || continue ;; esac
-  where=${path#"$PWD"/}
-  [ "$path" = "$PWD" ] && where=.
+  case $path in "$PWD") where=. ;; "$PWD"/*) where=${path#"$PWD"/} ;; "$root") where=$real ;; *) continue ;; esac
+  # A setting of this machine, such as override_config_filenames in a
+  # .miserc.local.toml, can make mise read no config in this directory.
+  in_real_trust "$real" untrusted || {
+    echo "check-mise-setup.sh: mise reads no config in $real on this machine, so its trust is not known" >&2
+    exit 2
+  }
   fail "$where" "config is not trusted" "read the config, then run: mise trust $where"
-done < <(grep -E ': (trusted|untrusted)$' <<<"$trust")
+done < <(grep ': untrusted$' <<<"$copy_trust")
 # A config above the directory does not make it a mise repository.
 [ "$found" = 1 ] || fail . "no mise config found" "create mise.toml from the skill's templates/mise.toml"
 [ "$failed" = 0 ] || finish
-# mise loads no config from a ceiling path or from above it.
 top=${root:-$PWD}
-[ "$top" = / ] || export MISE_CEILING_PATHS="${top%/*}/"
-# mise loads the local configs from each directory between $PWD and $top. The
-# list replaces one from the caller, which could hide a committed config.
-ignored=
-d=$PWD
-while :; do
-  p=${d%/}
-  for file in "$p"/mise.local.toml "$p"/.mise.local.toml "$p"/mise.*.local.toml "$p"/.mise.*.local.toml \
-    "$p"/.config/mise.local.toml "$p"/.config/mise/config.local.toml "$p"/.config/mise/mise.local.toml \
-    "$p"/.mise/config.local.toml "$p"/mise/config.local.toml; do
-    [ -e "$file" ] && ignored+=${ignored:+:}$file
-  done
-  # $top is $PWD or a directory above it. The test for / ends the walk if it is not.
-  [ "$d" = "$top" ] || [ -z "$p" ] && break
-  d=${d%/*}
-  d=${d:-/}
-done
-export MISE_IGNORED_CONFIG_PATHS=$ignored
+export MISE_CEILING_PATHS="${top%/*}/"
+while IFS= read -r file; do
+  fail "$file" "git does not ignore this local config" \
+    "add it to .gitignore, and if git tracks it, run: git rm --cached $file"
+done <"$scratch/local"
 # Under a trusted monorepo root, mise trusts each project config, so `mise
 # tasks` runs in safe mode there. Safe mode drops [env].
 safe=${root:+1}
@@ -119,7 +157,7 @@ fi
 
 while IFS= read -r file; do
   fail "$file" "a REPLACE_WITH_ placeholder is left" "replace each REPLACE_WITH_ value"
-done < <(grep -rlsI REPLACE_WITH_ mise.toml .mise.toml mise.*.toml .mise.*.toml mise .mise \
+done < <(cd "$here" && grep -rlsI REPLACE_WITH_ mise.toml .mise.toml mise.*.toml .mise.*.toml mise .mise \
   .config/mise.toml .config/mise.*.toml .config/mise mise-tasks .mise-tasks)
 
 MISE_SAFE=$safe quiet mise tasks validate ||

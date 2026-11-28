@@ -1,6 +1,8 @@
 #!/bin/bash
 # check-mise-setup.sh passes a repository built from the templates and prints
 # the FAIL line of each check on a repository that breaks it. Runs offline.
+# Each repository is a git work tree, because the check reads a copy of the
+# files that git does not ignore.
 
 SKILL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # shellcheck source=../../../../../scripts/hook-test-assertions.sh
@@ -24,6 +26,14 @@ mkdir -p "$MISE_DATA_DIR/installs/jq/1.8.1/bin"
 printf '#!/bin/sh\necho jq-1.8.1\n' >"$MISE_DATA_DIR/installs/jq/1.8.1/bin/jq"
 chmod +x "$MISE_DATA_DIR/installs/jq/1.8.1/bin/jq"
 
+git_init() { # DIR: makes DIR the top of one git work tree, with the .gitignore of the playbook
+  case $1 in "$WORK"/*) ;; *) exit 1 ;; esac
+  # A copy of a repository brings its .git, and a project is not a work tree of its own.
+  rm -rf "$1/.git" "$1"/*/.git "$1"/*/*/.git
+  git init -q "$1"
+  printf '%s\n' mise.local.toml 'mise.*.local.toml' mise.local.lock .env >"$1/.gitignore"
+}
+
 instantiate() { # TEMPLATE: prints it with each placeholder filled in
   sed -e 's/REPLACE_WITH_TOOL/jq/; s/REPLACE_WITH_EXACT_VERSION/1.8.1/' \
     -e 's/REPLACE_WITH_LINT_COMMAND/echo lint-ran/; s/REPLACE_WITH_UNIT_TEST_COMMAND/echo unit-ran/' \
@@ -39,6 +49,10 @@ repo() { # NAME: writes a passing repository from the templates and prints its d
   chmod +x "$dir/mise-tasks/deploy"
   # mise lock needs the network, so the lockfile is written by hand.
   printf 'lockfile_version = 3\n\n[[tools.jq]]\nversion = "1.8.1"\nbackend = "aqua:jqlang/jq"\n' >"$dir/mise.lock"
+  git_init "$dir"
+  # A commit, so that most tests check tracked files that were changed or deleted.
+  git -C "$dir" add -A
+  git -C "$dir" -c user.name=test -c user.email=test@example.com -c commit.gpgsign=false commit -q -m init
   (cd "$dir" && mise trust -q)
   printf '%s\n' "$dir"
 }
@@ -93,6 +107,7 @@ dir="$WORK/test-tasks"
 mkdir -p "$dir/src"
 echo x >"$dir/src/a"
 { printf '[tasks."lint:code"]\ndescription = "Lint the code"\nrun = "echo lint-ran"\n\n'; instantiate test-tasks.toml; } >"$dir/mise.toml"
+git_init "$dir"
 (cd "$dir" && mise trust -q)
 run_hook "$check" -C "$dir"
 expect_equal "a repository with test-tasks.toml, no tools and no lockfile passes" \
@@ -111,6 +126,7 @@ in_repo "$dir" mise run ci
 expect_contains "a changed source runs test:unit again" "unit-ran" "$STDOUT"
 
 mkdir "$WORK/empty"
+git_init "$WORK/empty"
 run_hook "$check" -C "$WORK/empty"
 expect_equal "a directory with no config fails" "1" "$STATUS"
 expect_contains "the missing config is named" "FAIL  .: no mise config found" "$STDOUT"
@@ -133,6 +149,7 @@ dir="$WORK/trusted-parent/project"
 mkdir -p "$WORK/trusted-parent"
 cp -R "$WORK/no-ci-source" "$dir"
 printf '[tools]\njq = "1.8"\n\n[tasks.ci]\ndescription = "Run the parent ci"\nrun = "true"\n' >"$WORK/trusted-parent/mise.toml"
+git_init "$WORK/trusted-parent"
 for trusted in "$WORK/trusted-parent" "$dir"; do (cd "$trusted" && mise trust -q); done
 run_hook "$check" -C "$dir"
 expect_equal "a trusted config above the repository adds no tool and no ci task to the result" "1 FAIL  mise.toml: no ci task
@@ -148,6 +165,7 @@ dir="$WORK/untrusted-parent/project"
 mkdir -p "$WORK/untrusted-parent"
 cp -R "$WORK/good" "$dir"
 printf '[env]\nABOVE = "1"\n' >"$WORK/untrusted-parent/mise.toml"
+git_init "$WORK/untrusted-parent"
 (cd "$dir" && mise trust -q)
 run_hook "$check" -C "$dir"
 expect_equal "an untrusted config with [env] above the repository does not fail it" \
@@ -193,6 +211,7 @@ dir="$WORK/placeholders"
 mkdir -p "$dir/mise-tasks"
 cp "$SKILL_DIR/templates/mise.toml" "$dir/mise.toml"
 cp -p "$SKILL_DIR/templates/file-task" "$dir/mise-tasks/deploy"
+git_init "$dir"
 (cd "$dir" && mise trust -q)
 run_hook "$check" -C "$dir"
 expect_equal "the templates fail with their placeholders left in" 1 "$STATUS"
@@ -273,10 +292,10 @@ expect_equal "a mise.ci.toml is not checked without MISE_ENV" "0 check-mise-setu
 for file in .mise/config.local.toml .config/mise/mise.local.toml; do
   dir=$(repo "local-${file//\//-}")
   mkdir -p "$dir/${file%/*}"
-  printf '[tools]\njq = "1.7.1"\n' >"$dir/$file"
-  (cd "$dir" && mise trust -q "$file" </dev/null)
+  printf '[tools]\njq = "1.7.1"\n\n[env]\nLOCAL = "1"\n' >"$dir/$file"
+  echo "$file" >>"$dir/.gitignore"
   run_hook "$check" -C "$dir"
-  expect_equal "a tool request in $file does not fail a pinned repository" \
+  expect_equal "an untrusted $file that git ignores gives no trust failure and no tool failure" \
     "0 check-mise-setup.sh: $dir: 0 failed" "$STATUS ${STDOUT%$'\n'}"
 done
 
@@ -285,6 +304,7 @@ mkdir -p "$root/apps"
 printf 'monorepo_root = true\n\n[monorepo]\nconfig_roots = ["apps/web"]\n' >"$root/mise.toml"
 cp -R "$WORK/good" "$root/apps/web"
 dir="$root/apps/web"
+git_init "$root"
 (cd "$root" && mise trust -q </dev/null)
 (cd "$dir" && mise trust -q </dev/null)
 run_hook "$check" -C "$dir"
@@ -308,11 +328,56 @@ plain="$STATUS $STDOUT"
 capture env MISE_OVERRIDE_CONFIG_FILENAMES=other.toml bash "$check" -C "$dir"
 expect_equal "MISE_OVERRIDE_CONFIG_FILENAMES gives the result of a run without it" "$plain" "$STATUS $STDOUT"
 expect_contains "a plain run fails the committed latest" "FAIL  mise.toml: jq is requested as latest, not an exact version" "$plain"
+echo .miserc.local.toml >>"$dir/.gitignore"
+run_hook "$check" -C "$dir"
+plain="$STATUS $STDOUT"
+printf 'override_config_filenames = ["other.toml"]\n' >"$dir/.miserc.local.toml"
+run_hook "$check" -C "$dir"
+expect_equal "override_config_filenames in a .miserc.local.toml that git ignores does not hide a committed latest" \
+  "$plain" "$STATUS $STDOUT"
+printf 'override_config_filenames = ["absent.toml"]\n' >"$dir/.miserc.local.toml"
+run_hook "$check" -C "$dir"
+expect_equal "a .miserc.local.toml that hides each config from mise stops the check with exit 2 and no result" \
+  "2  check-mise-setup.sh: mise reads no config in $dir on this machine, so its trust is not known" \
+  "$STATUS $STDOUT ${STDERR%$'\n'}"
+
+dir="$WORK/env-ci"
+echo .miserc.local.toml >>"$dir/.gitignore"
+printf 'env = ["ci"]\n' >"$dir/.miserc.local.toml"
+run_hook "$check" -C "$dir"
+expect_equal "env in a .miserc.local.toml that git ignores does not load mise.ci.toml" \
+  "0 check-mise-setup.sh: $dir: 0 failed" "$STATUS ${STDOUT%$'\n'}"
+
+dir=$(repo local-not-ignored)
+printf '[tools]\njq = "1.7.1"\n' >"$dir/mise.local.toml"
+: >"$dir/.gitignore"
+run_hook "$check" -C "$dir"
+expect_equal "a mise.local.toml that git does not ignore fails, and adds no other failure" \
+  "1 FAIL  mise.local.toml: git does not ignore this local config
+      fix: add it to .gitignore, and if git tracks it, run: git rm --cached mise.local.toml
+check-mise-setup.sh: $dir: 1 failed" "$STATUS ${STDOUT%$'\n'}"
+
+dir="$WORK/untracked"
+mkdir "$dir"
+git_init "$dir"
+instantiate mise.toml | sed 's/^jq = "1.8.1"/jq = "1.8"/' >"$dir/mise.toml"
+(cd "$dir" && mise trust -q)
+run_hook "$check" -C "$dir"
+expect_contains "a new mise.toml that git does not track and does not ignore is checked" \
+  "FAIL  mise.toml: jq is requested as 1.8, not an exact version" "$STDOUT"
+
+dir="$WORK/not-git"
+mkdir "$dir"
+cp "$WORK/good/mise.toml" "$dir/mise.toml"
+run_hook "$check" -C "$dir"
+expect_equal "a directory that is not in a git work tree stops the check with exit 2" \
+  "2  check-mise-setup.sh: $dir is not in a git work tree" "$STATUS $STDOUT $(tail -n 1 <<<"${STDERR%$'\n'}")"
 
 dir="$WORK/dot-config"
 mkdir -p "$dir/.config/mise"
 printf '[settings]\nlockfile = true\n\n[tools]\njq = "1.8.1"\n\n[tasks.ci]\ndescription = "Run ci"\nrun = "true"\n' >"$dir/.config/mise/config.toml"
 printf 'lockfile_version = 3\n\n[[tools.jq]]\nversion = "1.8.1"\nbackend = "aqua:jqlang/jq"\n' >"$dir/.config/mise/mise.lock"
+git_init "$dir"
 (cd "$dir" && mise trust -q)
 run_hook "$check" -C "$dir"
 expect_equal "a .config/mise/config.toml repository with .config/mise/mise.lock passes" \
@@ -366,6 +431,7 @@ printf 'lockfile_version = 3\n\n[[tools.jq]]\nversion = "1.8.1"\nbackend = "aqua
 printf '[tools]\njq = "1.8"\n\n[tasks.ci]\ndescription = "Run REPLACE_WITH_API ci"\nrun = "true"\ndepends = ["no-such-task"]\n' >"$root/apps/api/mise.toml"
 printf '[env]\nPWNED = "{{ exec(command=\x27touch %s/pwned\x27) }}"\n\n[tools]\njq = "1.7.1"\n\n[tasks.x]\ndescription = "{{ exec(command=\x27touch %s/pwned\x27) }}"\nrun = "true"\n' "$root" "$root" >"$root/apps/new/mise.toml"
 printf '[tasks."test:unit"]\ndescription = "Run lib tests"\nrun = "true"\n\n[tasks.bare]\nrun = "true"\n' >"$root/apps/lib/mise.toml"
+git_init "$root"
 for project in . apps/web apps/api apps/lib; do (cd "$root/$project" && mise trust -q); done
 run_hook "$check" -C "$root"
 expect_equal "a monorepo root with no tools passes" "0 check-mise-setup.sh: $root: 0 failed" "$STATUS ${STDOUT%$'\n'}"
@@ -394,9 +460,13 @@ expect_equal "a monorepo project behind a symlink is checked for its own ci task
   "0 check-mise-setup.sh: $root/apps/web: 0 failed" "$STATUS ${STDOUT%$'\n'}"
 cp -R "$root" "$WORK/untrusted-root"
 (cd "$WORK/untrusted-root/apps/web" && mise trust -q)
-run_hook "$check" -C "$WORK/untrusted-root/apps/web"
-expect_contains "an untrusted monorepo root fails a project under it" \
-  "FAIL  $WORK/untrusted-root: config is not trusted" "$STDOUT"
+mkdir "$WORK/tmp-run"
+capture env TMPDIR="$WORK/tmp-run" bash "$check" -C "$WORK/untrusted-root/apps/web"
+expect_equal "an untrusted monorepo root fails a project under it, with the paths of the repository" \
+  "1 FAIL  $WORK/untrusted-root: config is not trusted
+      fix: read the config, then run: mise trust $WORK/untrusted-root
+check-mise-setup.sh: $WORK/untrusted-root/apps/web: 1 failed" "$STATUS ${STDOUT%$'\n'}"
+expect_equal "the check removes its copy of the repository" "" "$(ls -A "$WORK/tmp-run")"
 run_hook "$check" -C "$root/apps/new"
 expect_contains "an untrusted monorepo project is named" "FAIL  .: config is not trusted" "$STDOUT"
 in_repo "$root/apps/new" mise trust --show
