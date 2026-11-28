@@ -114,6 +114,22 @@ expect_contains "the untrusted config is named" "FAIL  .: config is not trusted"
 in_repo "$dir" mise trust --show
 expect_contains "the check does not trust the config" "$dir: untrusted" "$STDOUT"
 
+dir="$WORK/trusted-by-setting"
+cp -R "$WORK/good" "$dir"
+mkdir "$WORK/trust-setting"
+printf '[settings]\ntrusted_config_paths = ["%s"]\n' "$dir" >"$WORK/trust-setting/config.toml"
+capture env MISE_CONFIG_DIR="$WORK/trust-setting" bash "$check" -C "$dir"
+expect_equal "a config trusted by the global trusted_config_paths setting passes" \
+  "0 check-mise-setup.sh: $dir: 0 failed" "$STATUS ${STDOUT%$'\n'}"
+
+mkdir "$WORK/home"
+echo 'jq 1.8.1' >"$WORK/home/.tool-versions"
+cp -R "$WORK/good" "$WORK/home/proj"
+(cd "$WORK/home/proj" && mise trust -q)
+capture env HOME="$WORK/home" bash "$check" -C "$WORK/home/proj"
+expect_equal "an untrusted ~/.tool-versions above the repository does not fail it" \
+  "0 check-mise-setup.sh: $WORK/home/proj: 0 failed" "$STATUS ${STDOUT%$'\n'}"
+
 dir=$(repo unparsed)
 printf '[tasks.broken\n' >>"$dir/mise.toml"
 run_hook "$check" -C "$dir"
@@ -206,13 +222,14 @@ expect_equal "a repository with no ci task fails" 1 "$STATUS"
 expect_contains "the missing ci task is named" "FAIL  mise.toml: no ci task" "$STDOUT"
 
 root="$WORK/monorepo"
-mkdir -p "$root/apps/api" "$root/apps/web" "$root/apps/new"
-printf 'monorepo_root = true\n\n[monorepo]\nconfig_roots = ["apps/api", "apps/web", "apps/new"]\n\n[tasks.ci]\ndescription = "Run every ci task"\nrun = "true"\n' >"$root/mise.toml"
+mkdir -p "$root/apps/api" "$root/apps/web" "$root/apps/new" "$root/apps/lib"
+printf 'monorepo_root = true\n\n[monorepo]\nconfig_roots = ["apps/api", "apps/web", "apps/new", "apps/lib"]\n\n[tasks.ci]\ndescription = "Run every ci task"\nrun = "true"\n' >"$root/mise.toml"
 printf '[settings]\nlockfile = true\n\n[tools]\njq = "1.8.1"\n\n[tasks.ci]\ndescription = "Run web ci"\nrun = "true"\n' >"$root/apps/web/mise.toml"
 printf 'lockfile_version = 3\n\n[[tools.jq]]\nversion = "1.8.1"\nbackend = "aqua:jqlang/jq"\n' >"$root/apps/web/mise.lock"
 printf '[tools]\njq = "1.8"\n\n[tasks.ci]\ndescription = "Run REPLACE_WITH_API ci"\nrun = "true"\ndepends = ["no-such-task"]\n' >"$root/apps/api/mise.toml"
-printf '[env]\nPWNED = "{{ exec(command=\x27touch %s/pwned\x27) }}"\n\n[tools]\njq = "1.7.1"\n' "$root" >"$root/apps/new/mise.toml"
-for project in . apps/web apps/api; do (cd "$root/$project" && mise trust -q); done
+printf '[env]\nPWNED = "{{ exec(command=\x27touch %s/pwned\x27) }}"\n\n[tools]\njq = "1.7.1"\n\n[tasks.x]\ndescription = "{{ exec(command=\x27touch %s/pwned\x27) }}"\nrun = "true"\n' "$root" "$root" >"$root/apps/new/mise.toml"
+printf '[tasks."test:unit"]\ndescription = "Run lib tests"\nrun = "true"\n\n[tasks.bare]\nrun = "true"\n' >"$root/apps/lib/mise.toml"
+for project in . apps/web apps/api apps/lib; do (cd "$root/$project" && mise trust -q); done
 run_hook "$check" -C "$root"
 expect_equal "a monorepo root with no tools passes" "0 check-mise-setup.sh: $root: 0 failed" "$STATUS ${STDOUT%$'\n'}"
 run_hook "$check" -C "$root/apps/web"
@@ -222,17 +239,44 @@ run_hook "$check" -C "$root/apps/api"
 expect_equal "a monorepo project reports its own defects" "1 FAIL  mise.toml: a REPLACE_WITH_ placeholder is left
       fix: replace each REPLACE_WITH_ value
 FAIL  mise.toml: mise tasks validate fails
-      fix: run mise tasks validate to see each error
+      fix: run mise tasks validate to see each error. A task field that calls exec() fails too, because the check runs in safe mode
 FAIL  mise.toml: jq is requested as 1.8, not an exact version
       fix: request one exact release, such as: mise use --pin jq@<version>
 FAIL  mise.lock: the lockfile does not list every requested tool
       fix: run mise lock, and commit the lockfile it writes
 check-mise-setup.sh: $root/apps/api: 4 failed" "$STATUS ${STDOUT%$'\n'}"
+run_hook "$check" -C "$root/apps/lib"
+expect_equal "a monorepo project is checked for its own ci task and descriptions only" "1 FAIL  //apps/lib:bare: task has no description
+      fix: add description = \"...\" to a TOML task, or #MISE description=\"...\" to a file task
+FAIL  mise.toml: no ci task
+      fix: add a ci task that depends on lint:* and test:*
+check-mise-setup.sh: $root/apps/lib: 2 failed" "$STATUS ${STDOUT%$'\n'}"
+cp -R "$root" "$WORK/untrusted-root"
+(cd "$WORK/untrusted-root/apps/web" && mise trust -q)
+run_hook "$check" -C "$WORK/untrusted-root/apps/web"
+expect_contains "an untrusted monorepo root fails a project under it" \
+  "FAIL  $WORK/untrusted-root: config is not trusted" "$STDOUT"
 run_hook "$check" -C "$root/apps/new"
 expect_contains "an untrusted monorepo project is named" "FAIL  .: config is not trusted" "$STDOUT"
 in_repo "$root/apps/new" mise trust --show
 expect_contains "no check trusts the untrusted project" "$root/apps/new: untrusted" "$STDOUT"
 expect_equal "no check runs a template exec() or installs a tool" "no 1.8.1" \
   "$([ -e "$root/pwned" ] && echo yes || echo no) $(ls "$MISE_DATA_DIR/installs/jq")"
+
+mkdir "$WORK/slow"
+printf '#!/bin/sh\nsleep 1\nexec %s "$@"\n' "$(command -v mise)" >"$WORK/slow/mise"
+chmod +x "$WORK/slow/mise"
+for signal in HUP TERM; do
+  mkdir "$WORK/tmp-$signal"
+  env PATH="$WORK/slow:$PATH" TMPDIR="$WORK/tmp-$signal" bash "$check" -C "$WORK/good" >/dev/null 2>&1 &
+  pid=$!
+  until [ -d "$WORK/tmp-$signal"/*/state ] || ! kill -0 "$pid" 2>/dev/null; do sleep 0.1; done
+  kill -"$signal" "$pid"
+  wait "$pid"
+  alive=$(pgrep -f "$WORK/slow" >/dev/null && echo alive)
+  sleep 2
+  expect_equal "SIG$signal leaves no copy of the mise state and no mise process" "" \
+    "$alive$(ls -A "$WORK/tmp-$signal")"
+done
 
 finish
