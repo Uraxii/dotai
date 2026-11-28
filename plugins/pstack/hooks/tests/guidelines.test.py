@@ -122,12 +122,13 @@ if sys.argv[1:2] == ["--print-config"]:
     # As the Node resolve hook does: the config files, then $ESLINT_LOADED.
     import glob
     out = os.environ.get("PSTACK_ESLINT_LOADED")
-    loaded = glob.glob(os.path.join(os.getcwd(), "eslint.config.*"))
-    loaded += glob.glob(os.path.join(os.getcwd(), ".eslintrc*"))
-    loaded += [os.path.join(os.getcwd(), name) for name in
+    # ESLint looks for every flat config name (a `?` line).
+    loaded = ["?" + os.path.realpath(p) for p in glob.glob(os.path.join(os.getcwd(), "eslint.config.*"))]
+    loaded += [os.path.realpath(p) for p in glob.glob(os.path.join(os.getcwd(), ".eslintrc*"))]
+    loaded += [name[0] * (name[0] == "?") + os.path.realpath(os.path.join(os.getcwd(), name.lstrip("?"))) for name in
                os.environ.get("ESLINT_LOADED", "").split(os.pathsep) if name]
     if out and os.environ.get("ESLINT_LOADED") != "none":
-        open(out, "w").write("\\n".join(os.path.realpath(p) for p in loaded))
+        open(out, "w").write("\\n".join(loaded))
     sys.exit(0)
 with open(os.path.join(os.environ["WORK"], "eslint.args"), "a") as args:
     args.write(" ".join(sys.argv[1:]) + "\\n")
@@ -135,8 +136,9 @@ with open(os.path.join(os.environ["WORK"], "eslint.cwd"), "w") as cwd:
     cwd.write(os.getcwd())
 with open(os.path.join(os.environ["WORK"], "eslint.env"), "w") as env:
     env.write(os.environ.get("ESLINT_USE_FLAT_CONFIG", ""))
-sys.stdin.read()
-print(os.environ.get("ESLINT_JSON") or '[{{"messages":[]}}]')
+# Empty source has no findings, as in ESLint.
+source = sys.stdin.read()
+print(source.strip() and os.environ.get("ESLINT_JSON") or '[{{"messages":[]}}]')
 """
 
 
@@ -654,6 +656,15 @@ c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Add File: made/two.py\n+from 
        harness="codex", RUFF_JSON=F403_ROW)
 expect_equal("a child config's respect-gitignore beats the one it extends", "", c.decision())
 (c.project / "ruff.toml").unlink()
+c.file("sub/.ignore", "sub/foo.py\n")
+c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Add File: sub/foo.py\n+from math import *\n*** End Patch"),
+       harness="codex", RUFF_JSON=F403_ROW)
+expect_contains("a nested .ignore path pattern is unknown, not a skip", "could not tell whether sub/.ignore", str(c.output()))
+c = Case("ruff-ignore-no-git")
+c.file(".ignore", "skipme.py\n")
+c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Add File: skipme.py\n+from math import *\n*** End Patch"),
+       harness="codex", RUFF_JSON=F403_ROW)
+expect_equal("outside a git repository a .ignore is unknown, so no deny", "", c.decision())
 c = Case("eslint-imported-flat-name")
 c.file("eslint.config.js", "module.exports = require('./eslint.config.cjs');\n")
 c.file("eslint.config.cjs", "module.exports = [];\n")
@@ -661,6 +672,18 @@ c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: eslint.config.cj
                              "*** Add File: new14.js\n+var x = 1;\n*** End Patch"),
        harness="codex", ESLINT_JSON=NO_VAR_ROW, ESLINT_LOADED="eslint.config.cjs")
 expect_contains("an outranked config name the config loads counts", "also changes eslint.config.cjs", str(c.output()))
+c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: eslint.config.cjs\n@@\n-module.exports = [];\n+module.exports = [{}];\n"
+                             "*** Add File: new15.js\n+var x = 1;\n*** End Patch"),
+       harness="codex", ESLINT_JSON=NO_VAR_ROW)
+expect_equal("an outranked config name ESLint only looked for does not stop a deny", "deny", c.decision())
+c.file("real16.js", "const a = 1;\n")
+(c.project / "link16.js").symlink_to(c.project / "real16.js")
+c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Delete File: link16.js\n*** Add File: link16.js\n+var a = 1;\n*** End Patch"),
+       harness="codex", ESLINT_JSON=NO_VAR_ROW, ESLINT_LOADED="*")
+expect_equal("a file that replaces a symlink is not its own setting", "deny", c.decision())
+c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Delete File: link16.js\n*** Add File: link16.js\n+var a = 1;\n*** End Patch"),
+       harness="codex", ESLINT_JSON=NO_VAR_ROW, ESLINT_LOADED="none")
+expect_equal("also when the trace is unknown", "deny", c.decision())
 NODE = shutil.which("node")
 if NODE:
     trace = Case("eslint-recorder")

@@ -244,7 +244,7 @@ def eslint_setting(
         return True
     # ESLint reads the file it lints and tries every flat config name, but
     # neither is a setting unless the name rules above say so.
-    if setting == code:
+    if setting in (code, code.resolve()):
         return False
     shadowed = flat_name and outranked(setting, setting.parent)
     # A config can read any data file in ways no trace sees, so a changed
@@ -262,7 +262,7 @@ def eslint_setting(
     if loaded is None:
         global trace_failed
         trace_failed = True
-        return setting != code and not shadowed and (
+        return not shadowed and (
             name == ".eslintignore" or setting.suffix in SETTING_SUFFIXES
         )
     # An outranked config name still counts when the config loads it.
@@ -345,8 +345,16 @@ def eslint_loaded(
             ).splitlines()
         except (OSError, subprocess.SubprocessError):
             return None
-    files = {Path(name) for name in names if name}
-    files = {path for path in files if root in path.parents}
+    read = {Path(name) for name in names if name and name[0] != "?"}
+    files = read | {Path(name[1:]) for name in names if name[:1] == "?"}
+    # ESLint looks for every flat config name; one it only looked for that
+    # exists is not loaded.
+    files = {
+        path for path in files if root in path.parents and (
+            path in read or not path.exists()
+            or FLAT_ESLINT_CONFIG.match(path.name) is None
+        )
+    }
     for path in list(files):
         manifest = next((
             folder / "package.json" for folder in parents_within(path, root)
@@ -411,7 +419,9 @@ RUFF_IGNORED_PROBLEM = "skips this file, as a .ignore file excludes it"
 RUFF_GIT_IGNORE_NAMES = (".gitignore", ".ignore")
 
 
-def git_matches(target: Target, *options: str) -> bool:
+def git_matches(target: Target, *options: str) -> bool | None:
+    """Whether git ignores the file, or None when git cannot tell (no
+    git, or no repository)."""
     try:
         process = subprocess.run(
             ["git", *options, "check-ignore", "-q", "--no-index",
@@ -421,8 +431,8 @@ def git_matches(target: Target, *options: str) -> bool:
             timeout=1, check=False,
         )
     except (OSError, subprocess.SubprocessError):
-        return False
-    return process.returncode == 0
+        return None
+    return {0: True, 1: False}.get(process.returncode)
 
 
 def ruff_ignore_skip(target: Target) -> RunResult | None:
@@ -442,9 +452,8 @@ def ruff_ignore_skip(target: Target) -> RunResult | None:
         ignore = folder / ".ignore"
         if not ignore.is_file():
             continue
-        # git reads the file's patterns from the project root.
-        if git_matches(target, "-c", f"core.excludesFile={ignore}"):
-            return RunResult((), RUFF_IGNORED_PROBLEM)
+        # git reads the file's patterns from the project root, so a nested
+        # file's path patterns are not known.
         try:
             anchored = folder != target.root and any(
                 "/" in line.strip().rstrip("/")
@@ -453,7 +462,12 @@ def ruff_ignore_skip(target: Target) -> RunResult | None:
             )
         except (OSError, UnicodeDecodeError):
             anchored = True
-        if anchored:
+        matched = None if anchored else git_matches(
+            target, "-c", f"core.excludesFile={ignore}"
+        )
+        if matched:
+            return RunResult((), RUFF_IGNORED_PROBLEM)
+        if matched is None:
             name = ignore.relative_to(target.root).as_posix()
             return RunResult(
                 None, f"could not tell whether {name} excludes this file"

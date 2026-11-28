@@ -12,8 +12,11 @@ const { fileURLToPath } = require("node:url");
 const out = process.env.PSTACK_ESLINT_LOADED;
 if (out && typeof nodeModule.registerHooks === "function") {
   const realpathSync = fs.realpathSync;
-  const loaded = new Set();
-  const record = (file) => {
+  // Each file maps to whether it was read, not only looked for: ESLint
+  // looks for every flat config name, also ones it never loads.
+  const loaded = new Map();
+  const add = (file, probe) => loaded.set(file, loaded.get(file) || !probe);
+  const record = (file, probe = false) => {
     let name;
     try {
       name = file instanceof URL ? fileURLToPath(file) : file;
@@ -28,12 +31,12 @@ if (out && typeof nodeModule.registerHooks === "function") {
     let rest = "";
     for (;;) {
       try {
-        loaded.add(path.join(realpathSync(folder), rest));
+        add(path.join(realpathSync(folder), rest), probe);
         return;
       } catch {
         const up = path.dirname(folder);
         if (up === folder) {
-          loaded.add(full);
+          add(full, probe);
           return;
         }
         rest = path.join(path.basename(folder), rest);
@@ -59,9 +62,9 @@ if (out && typeof nodeModule.registerHooks === "function") {
       }
       if (base) {
         const suffixes = ["", ".js", ".cjs", ".mjs", ".ts", ".cts", ".mts", ".json", ".node"];
-        for (const suffix of suffixes) record(base + suffix);
-        record(path.join(base, "package.json"));
-        for (const suffix of suffixes.slice(1)) record(path.join(base, "index" + suffix));
+        for (const suffix of suffixes) record(base + suffix, true);
+        record(path.join(base, "package.json"), true);
+        for (const suffix of suffixes.slice(1)) record(path.join(base, "index" + suffix), true);
       }
       const result = nextResolve(specifier, context);
       if (result.url.startsWith("file:")) record(new URL(result.url));
@@ -85,14 +88,18 @@ if (out && typeof nodeModule.registerHooks === "function") {
   };
   for (const [owner, name] of [
     [fs, "readFileSync"], [fs, "readFile"], [fs, "openSync"], [fs, "open"],
+    [fs.promises, "readFile"], [fs.promises, "open"],
+  ]) {
+    wrap(owner, name, (file) => record(file));
+  }
+  for (const [owner, name] of [
     [fs, "existsSync"], [fs, "statSync"], [fs, "accessSync"], [fs, "lstatSync"],
     [fs, "exists"], [fs, "stat"], [fs, "access"], [fs, "lstat"],
     [fs, "realpathSync"], [fs, "realpath"],
-    [fs.promises, "readFile"], [fs.promises, "open"],
     [fs.promises, "stat"], [fs.promises, "access"], [fs.promises, "lstat"],
     [fs.promises, "realpath"],
   ]) {
-    wrap(owner, name, (file) => record(file));
+    wrap(owner, name, (file) => record(file, true));
   }
   // A listed folder is kept as `folder/*`: a file the edit adds in it
   // can change the config, also when a glob library lists it.
@@ -104,5 +111,7 @@ if (out && typeof nodeModule.registerHooks === "function") {
       record(path.join(folder instanceof URL ? fileURLToPath(folder) : String(folder), "*")));
   }
   // Appended, as Node processes the config starts record to the same list.
-  process.on("exit", () => fs.appendFileSync(out, [...loaded].map((file) => file + "\n").join("")));
+  // A file only looked for is written with a leading `?`.
+  process.on("exit", () => fs.appendFileSync(out, [...loaded].map(
+    ([file, read]) => (read ? "" : "?") + file + "\n").join("")));
 }

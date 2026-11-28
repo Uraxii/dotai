@@ -307,3 +307,9 @@ Scratch paths named in those notes (under `/tmp/...`) are gone; ignore them.
 - Code files are classified by their own path (`resolve_in_root(..., follow=False)`): a file that replaces a deleted symlink is linted at its path, and a symlinked file now gets its own folder's Ruff settings (the former known limit).
 - Codex: moving a symlink onto its own target still empties the link path.
 - Real Ruff / ESLint 9 repros for all 4.
+
+## Update: review 72ebe041 (a08e883) findings fixed (3 blocking, 1 non-blocking)
+- ESLint recorder marks look-ups (`exists`/`stat`/`access`/`lstat`/`realpath`, resolve candidates) with a leading `?`; reads and resolved modules have none. An existing flat config name that ESLint only looked for is dropped from the trace, so an unused outranked config no longer stops a deny.
+- `eslint_setting`: the code file's real path (symlink target) is not its own setting, also with an unknown trace.
+- Ruff `.ignore`: a nested `.ignore` with path patterns is unknown before git is asked; when git cannot tell (no repository, no git) a `.ignore` is unknown (warning), not "not ignored".
+- Test ESLint stub returns no findings for empty source.
