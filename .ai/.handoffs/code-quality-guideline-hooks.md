@@ -212,3 +212,8 @@ Scratch paths named in those notes (under `/tmp/...`) are gone; ignore them.
 - Codex apply: new lines take the file's first line ending, as in Codex.
 - A path Ruff excludes counts as checked with zero findings (notice kept), so a move out of an excluded folder can deny. Checked with real ruff.
 - mise run ci green: guidelines.test.py 243/243.
+
+## Update: review a19d0778 findings fixed (0 blocking, 3 non-blocking)
+- The same-edit lint-setting check (`setting_applies`) now counts only settings that can change the code file's result: a Ruff config in its folder or above, a file in its Ruff `extend` chain, `.editorconfig` when no Ruff config; an ESLint config, `.eslintignore` or `package.json` with `eslintConfig` in its folder or above, or any script module below its flat ESLint config (it may be imported).
+- Deleted files and move sources count. A `package.json` dependency edit no longer lowers a deny.
+- Checked with real ruff and ESLint 9. mise run ci green: guidelines.test.py 246/246.

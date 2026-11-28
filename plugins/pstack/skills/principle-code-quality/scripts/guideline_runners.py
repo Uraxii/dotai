@@ -24,7 +24,7 @@ from code_quality import check_source
 
 RUNNER_TIMEOUT_S = 1.5
 DEFAULT_LINE_LENGTH = 80
-LINT_SETTING_FILES = frozenset({".editorconfig", "package.json", ".eslintignore"})
+SCRIPT_SUFFIXES = frozenset({".js", ".mjs", ".cjs", ".ts", ".mts", ".cts"})
 # In ruff's order of precedence within one directory.
 RUFF_CONFIG_NAMES = (".ruff.toml", "ruff.toml", "pyproject.toml")
 ESLINT_CONFIG_PATTERN = re.compile(
@@ -150,11 +150,40 @@ def ruff_live_tables(config: Path) -> list[Mapping[str, object]]:
     return live
 
 
-def is_lint_setting(name: str) -> bool:
-    """Whether a file with this name can change what a detector reports."""
+def setting_applies(
+    setting: Path, code: Path, language: str, root: Path, text: str | None
+) -> bool:
+    """Whether a file the same edit changes can change what a detector
+    reports for the code file: a config in its folder or above, a config
+    its Ruff config extends, or a module below its flat ESLint config,
+    which that config may import."""
+    folders = list(parents_within(code, root))
+    name = setting.name
+    if language == "python":
+        config = ruff_config(code, root)
+        chain = {linked.resolve() for linked in ruff_chain(config)} if (
+            config is not None
+        ) else set()
+        return (
+            (name in RUFF_CONFIG_NAMES and setting.parent in folders)
+            or setting in chain
+            or (name == ".editorconfig" and config is None)
+        )
+    if language not in SCRIPT_LANGUAGES:
+        return False
+    eslint_setting = (
+        ESLINT_CONFIG_PATTERN.match(name) is not None
+        or name == ".eslintignore"
+        or (name == "package.json" and (
+            "eslintConfig" in (text or "") or package_eslint_config(setting)
+        ))
+    )
+    if eslint_setting and setting.parent in folders:
+        return True
+    mode = eslint_config(code, root)
     return (
-        name in RUFF_CONFIG_NAMES or name in LINT_SETTING_FILES
-        or ESLINT_CONFIG_PATTERN.match(name) is not None
+        mode is not None and mode.flat and setting.suffix in SCRIPT_SUFFIXES
+        and mode.folder in setting.parents
     )
 
 

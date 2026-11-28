@@ -434,7 +434,8 @@ def patch_change(
 def codex_tool_event(payload: Payload, base: Neutral) -> Neutral | None:
     name = payload.get("hook_event_name")
     command = text_of(table_of(payload.get("tool_input")).get("command"))
-    files = [f for f in parse_patch(command) if f.action != "Delete File"]
+    sections = parse_patch(command)
+    files = [f for f in sections if f.action != "Delete File"]
     cwd, root = str(base["cwd"]), str(base["root"])
     if name == "PostToolUse":
         return {"kind": "post_write", "files": [
@@ -447,6 +448,12 @@ def codex_tool_event(payload: Payload, base: Neutral) -> Neutral | None:
     for file in files:
         prior = changes.pop(file.source, None)
         changes[file.target] = patch_change(file, base, prior)
+    # A deleted file can be a lint setting the other files depend on.
+    for file in sections:
+        if file.action == "Delete File":
+            changes.setdefault(
+                file.target, {"path": file.target, "before": None, "after": None}
+            )
     return {"kind": "pre_write", "files": list(changes.values())}
 
 

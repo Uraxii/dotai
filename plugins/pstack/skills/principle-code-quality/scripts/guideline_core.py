@@ -27,7 +27,7 @@ from guideline_files import (
 )
 from guideline_runners import (
     SKIPPED_FOR_BUDGET, Detection, Finding, Target, detect, glob_matches,
-    is_lint_setting, matches_code, runs_on,
+    matches_code, runs_on, setting_applies,
 )
 
 EXCLUDED_DIRECTORIES = frozenset({
@@ -524,9 +524,17 @@ class Engine:
                 f"Notice: {', '.join(unproven)} could not check the current "
                 f"{file.rel}, so its findings in this edit are warnings."
             )
+        root = Path(self.event.root).resolve()
         settings = sorted({
-            Path(other.path).name for other in self.event.files
-            if is_lint_setting(Path(other.path).name)
+            setting.relative_to(root).as_posix()
+            for other in self.event.files
+            for raw in {other.path, other.source} - {"", change.path}
+            if (setting := resolve_in_root(
+                raw, self.event.cwd, self.event.root
+            )) is not None
+            and setting_applies(
+                setting, file.path, file.language, root, other.after
+            )
         })
         if added and settings:
             self.notices.append(

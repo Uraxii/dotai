@@ -940,6 +940,21 @@ c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: ruff.toml\n@@\n 
        harness="codex", RUFF_JSON=F403_ROW)
 expect_lacks("an edit that also changes a lint config does not deny", "deny", str(c.output()))
 expect_contains("and says why", "also changes ruff.toml", str(c.output()))
+c.file("package.json", "{}\n")
+c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: package.json\n@@\n-{}\n+{\"name\": \"x\"}\n"
+                             "*** Add File: newmod2.py\n+from math import *\n*** End Patch"),
+       harness="codex", RUFF_JSON=F403_ROW)
+expect_equal("a setting file for another tool does not lower the deny", "deny", c.decision())
+c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Delete File: ruff.toml\n"
+                             "*** Add File: newmod3.py\n+from math import *\n*** End Patch"),
+       harness="codex", RUFF_JSON=F403_ROW)
+expect_contains("deleting a config in the same edit warns", "also changes ruff.toml", str(c.output()))
+c.file("cfg/base.toml", "[lint]\n")
+c.file("ruff.toml", 'extend = "cfg/base.toml"\n')
+c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: cfg/base.toml\n@@\n [lint]\n+ignore = [\"F403\"]\n"
+                             "*** Add File: newmod4.py\n+from math import *\n*** End Patch"),
+       harness="codex", RUFF_JSON=F403_ROW)
+expect_contains("changing a config the project config extends warns", "also changes cfg/base.toml", str(c.output()))
 (c.project / "ruff.toml").unlink()
 c.file("demo.py", "pass\n")
 c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: demo.py\n*** Move to: moved_out.py\n@@\n-pass\n"
