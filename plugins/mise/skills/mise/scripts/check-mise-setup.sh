@@ -3,10 +3,12 @@
 # Prints a FAIL line and a fix for each problem, then one summary line, and
 # exits 1 if there was a problem. It leaves the repository and the mise state
 # as they were: it never trusts a config, never installs a tool, and never
-# runs a task. It runs `mise tasks` in safe mode (MISE_SAFE=1), so that no
-# monorepo project it loads, trusted or not, runs a template exec(). It ignores
-# the global and system config, except for the trust they give. It hides mise
-# output, which can hold [env] values.
+# runs a task. It runs `mise tasks` in safe mode (MISE_SAFE=1), so that a
+# monorepo project config that is not trusted runs no template exec(). The
+# other calls load the config of the checked directory as mise does, so a
+# template exec() in a trusted config there does run. It ignores the global and
+# system config, except for the trust they give. It hides mise output, which
+# can hold [env] values.
 #
 # Usage: check-mise-setup.sh [-C DIR]
 
