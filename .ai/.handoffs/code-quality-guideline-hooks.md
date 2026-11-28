@@ -264,3 +264,9 @@ Scratch paths named in those notes (under `/tmp/...`) are gone; ignore them.
 - eslint_loaded.cjs records every candidate of a relative lookup (base, base+ext, base/package.json, base/index.*), on success and failure, so a new `rules.js` that shadows `rules/index.js` lowers the deny.
 - Codex: deleting a symlink keys by the link, not its target; a path a move left empty starts empty for a later Add; `find_lines` normalizes the file once per pass and checks the first line first (12000-line unanchored hunk: 0.11 s, was > 10 s).
 - Real ESLint 9 / ruff repros for all 4. Test added for the large hunk.
+
+## Update: review 6642d619 (6c07e8e) findings fixed (2 blocking, 1 non-blocking)
+- The code file is never its own ESLint setting unless its name is a config name: in legacy mode the trace probe is the code file, so every legacy deny became a warning.
+- A flat config name outranked in its folder is not a setting, even though ESLint looks for all six names.
+- ESLint traces stop at detector deadline + 4 s (`TRACE_GRACE_S`); past it the list is unknown (warn), so the hook stays inside 10 s.
+- Real ESLint 9 legacy and flat repros. Tests for the first two.

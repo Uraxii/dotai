@@ -239,6 +239,10 @@ def eslint_setting(
         setting == mode.folder / ".eslintignore"
     ):
         return True
+    # ESLint reads the file it lints and tries every flat config name, but
+    # neither is a setting unless the name rules above say so.
+    if setting == code or flat_name and outranked(setting, setting.parent):
+        return False
     # A config can read any data file in ways no trace sees, so a changed
     # data or ignore file always counts.
     if setting != code and name != "package.json" and (
@@ -287,6 +291,10 @@ def outranked(setting: Path, folder: Path) -> bool:
     )
 
 
+# Past this time a trace gives no file list, so the hook ends in time.
+trace_deadline = float("inf")
+
+
 @functools.cache
 def eslint_loaded(
     executable: str, target: Path, mode: EslintMode, root: Path
@@ -294,6 +302,9 @@ def eslint_loaded(
     """The project files ESLint reads to build a config, with the nearest
     package.json of each, or None when they cannot be found. ESLint loads
     the config itself under a Node resolve hook that lists them."""
+    timeout = min(LOADED_TIMEOUT_S, trace_deadline - time.monotonic())
+    if timeout <= 0:
+        return None
     probe = target / "_.js" if mode.flat else target
     # NODE_OPTIONS reads backslashes in quotes as escapes, so the path is
     # written with forward slashes and its quotes escaped.
@@ -309,7 +320,7 @@ def eslint_loaded(
             subprocess.run(
                 [executable, "--print-config", str(probe)], cwd=mode.folder,
                 env=env, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL, timeout=LOADED_TIMEOUT_S,
+                stderr=subprocess.DEVNULL, timeout=timeout,
                 check=False,
             )
             names = Path(env["PSTACK_ESLINT_LOADED"]).read_text(

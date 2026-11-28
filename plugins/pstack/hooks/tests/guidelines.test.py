@@ -521,6 +521,10 @@ c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: tools/rules.mjs\
                              "*** Add File: packages/web/new0.ts\n+var x = 1\n*** End Patch"),
        harness="codex", ESLINT_LOADED=os.pathsep.join(str(c.project / p) for p in ['tools/rules.mjs']), ESLINT_JSON=NO_VAR_ROW)
 expect_contains("a module the flat config imports counts as a setting", "also changes tools/rules.mjs", str(c.output()))
+c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Add File: packages/web/eslint.config.ts\n+export default [];\n"
+                             "*** Add File: packages/web/new9.ts\n+var x = 1\n*** End Patch"),
+       harness="codex", ESLINT_LOADED=str(c.project / "packages/web/eslint.config.ts"), ESLINT_JSON=NO_VAR_ROW)
+expect_equal("an outranked flat config ESLint only looked for is not a setting", "deny", c.decision())
 c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: .eslintignore\n@@\n-dist/\n+packages/web/main.ts\n"
                              "*** Add File: packages/web/new1.ts\n+var x = 1\n*** End Patch"),
        harness="codex", ESLINT_JSON=NO_VAR_ROW)
@@ -560,6 +564,9 @@ c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Add File: eslint.config.mjs\n
                              "*** Add File: new1.js\n+var x = 1;\n*** End Patch"),
        harness="codex", ESLINT_JSON=NO_VAR_ROW, ESLINT_USE_FLAT_CONFIG="false")
 expect_equal("with flat mode off, a flat config is not a setting", "deny", c.decision())
+c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Add File: new3.js\n+var x = 1;\n*** End Patch"),
+       harness="codex", ESLINT_JSON=NO_VAR_ROW, ESLINT_USE_FLAT_CONFIG="false", ESLINT_LOADED=str(c.project / "new3.js"))
+expect_equal("in legacy mode the code file ESLint reads is not its own setting", "deny", c.decision())
 c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Add File: src/.eslintignore\n+new2.js\n"
                              "*** Add File: src/new2.js\n+var x = 1;\n*** End Patch"),
        harness="codex", ESLINT_JSON=NO_VAR_ROW)

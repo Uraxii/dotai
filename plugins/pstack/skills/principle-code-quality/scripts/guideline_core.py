@@ -25,6 +25,7 @@ from guideline_files import (
     Guideline, keyword_matches, language_of, load_extensions,
     load_guidelines,
 )
+import guideline_runners
 from guideline_runners import (
     SKIPPED_FOR_BUDGET, Detection, Finding, Target, detect, glob_matches,
     matches_code, runs_on, setting_tools,
@@ -53,6 +54,9 @@ MAX_FILES_PER_EVENT = 50
 MAX_NOTICES_KEPT = 200
 MAX_NAME_CHARS = 80
 STATE_MAX_AGE_SEC = 7 * 24 * 60 * 60
+# The ESLint traces end this long after the detector budget, inside the
+# 10 s hook timeout.
+TRACE_GRACE_S = 4.0
 BUDGET_SEC = {"pre_write": 2.5, "post_write": 5.0, "check": 30.0}
 EVENT_KINDS = frozenset({
     "session_start", "cleared", "compacted", "prompt", "pre_write",
@@ -528,6 +532,7 @@ class Engine:
                 f"{file.rel}, so its findings in this edit are warnings."
             )
         root = Path(self.event.root).resolve()
+        guideline_runners.trace_deadline = self.deadline + TRACE_GRACE_S
         settings: dict[str, frozenset[str]] = {}
         # A file can be its own lint config, so it is not left out.
         for other in (*self.event.files, *self.event.unchecked) if added else ():
