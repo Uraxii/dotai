@@ -1,10 +1,10 @@
 # dotai
 
 Skills and agents for Claude Code, Codex, GitHub Copilot CLI, Devin, opencode,
-and Hermes, written in the open Agent Skills format. Eighteen plugins live under
+and Hermes, written in the open Agent Skills format. Nineteen plugins live under
 `plugins/`, and each one installs on its own. `pstack` carries the shared
 machinery: the poteto-mode workflow, the principles, the playbooks, and the
-agent files. The other seventeen each cover one tool or one job. Only
+agent files. The other eighteen each cover one tool or one job. Only
 `codex-worker` refers to `pstack` skills and agents, so install it next to
 `pstack`.
 
@@ -32,6 +32,7 @@ agent files. The other seventeen each cover one tool or one job. Only
 | `steer` | Harness hooks that steer agent behaviour, independent of any skill. |
 | `shunt` | Delegate large reads to subagents to save main-agent context. |
 | `personal-instructions` | Inject a hand-edited instructions.md at session start and, where the harness has a subagent-start hook, subagent start. |
+| `mise` | Set up and change mise in a repository: tools, environment values, tasks, the lockfile, test runs, and CI. |
 
 <!-- dotai:plugins:end -->
 
