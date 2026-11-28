@@ -67,6 +67,7 @@ Query: `mise config ls` shows the files that mise loads, in order.
 - Two or more projects with their own tools or tasks: set `monorepo_root = true` and `[monorepo] config_roots = [...]` in the root `mise.toml`. Give each project its own `mise.toml`.
 - A monorepo task has the name `//<path>:<task>`. `//...:<task>` selects that task in each project.
 - In a project directory, a root task needs the name `//:<task>`.
+- A project can have its own lockfile. Run `mise lock --dry-run` in the project to see the file that mise writes.
 
 Query: `mise tasks ls --all`.
 
