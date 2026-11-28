@@ -1,0 +1,17 @@
+[tasks."test:unit"]
+description = "Run the unit tests"
+alias = "test"
+# Replace with the unit test command and the globs of the files it reads.
+run = "REPLACE_WITH_UNIT_TEST_COMMAND"
+# mise skips a run whose sources and arguments are unchanged. mise run --force reruns it.
+sources = ["REPLACE_WITH_SOURCE_GLOB"]
+
+[tasks."test:integration"]
+description = "Run the integration tests"
+# Replace with the integration test command. No sources: it reads external state, so it runs every time.
+run = "REPLACE_WITH_INTEGRATION_TEST_COMMAND"
+
+[tasks.ci]
+description = "Run every lint:* and test:* task"
+# Each pattern must match a task, or mise run ci fails. Drop "lint:*" if the repo has no lint:* task.
+depends = ["lint:*", "test:*"]

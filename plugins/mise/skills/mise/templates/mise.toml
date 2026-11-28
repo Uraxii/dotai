@@ -1,0 +1,30 @@
+min_version = "2026.10.25"
+
+[settings]
+lockfile = true
+
+[tools]
+# Replace with each tool the repo needs, pinned exact: mise use --pin <tool>@<version>.
+REPLACE_WITH_TOOL = "REPLACE_WITH_EXACT_VERSION"
+
+[env]
+# Add non-secret values only. Secrets go in mise.local.toml, which git ignores.
+
+[tasks.lint]
+description = "Run every lint:* task"
+depends = ["lint:*"]
+
+[tasks."lint:code"]
+description = "Lint the code"
+# Replace with the repo's lint command. Add one lint:<tool> task per linter.
+run = "REPLACE_WITH_LINT_COMMAND"
+
+[tasks."test:unit"]
+description = "Run the unit tests"
+alias = "test"
+# Replace with the repo's unit test command. Arguments after -- are appended.
+run = "REPLACE_WITH_UNIT_TEST_COMMAND"
+
+[tasks.ci]
+description = "Run every lint:* and test:* task"
+depends = ["lint:*", "test:*"]
