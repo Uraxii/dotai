@@ -36,7 +36,8 @@ LOADED_RECORDER = Path(__file__).with_name("eslint_loaded.cjs")
 LOADED_TIMEOUT_S = 4
 DATA_SUFFIXES = frozenset({".json", ".jsonc", ".json5", ".yaml", ".yml"})
 SETTING_SUFFIXES = frozenset({
-    ".js", ".mjs", ".cjs", ".ts", ".mts", ".cts", ".json", ".yaml", ".yml",
+    ".js", ".mjs", ".cjs", ".jsx", ".ts", ".mts", ".cts", ".tsx",
+    ".json", ".jsonc", ".json5", ".yaml", ".yml",
 })
 LEGACY_ESLINT_CONFIG = re.compile(r"^\.eslintrc(\.(js|cjs|json|ya?ml))?$")
 IGNORE_KEYS = ("ignore", "extend-ignore")

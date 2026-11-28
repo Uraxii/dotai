@@ -292,31 +292,42 @@ LINE_MATCHES: tuple[Callable[[str], str], ...] = (
 )
 
 
-def find_lines(lines: list[str], wanted: list[str], start: int) -> int | None:
+def find_lines(
+    lines: list[str], wanted: list[str], start: int,
+    forms: dict[int, list[str]] | None = None,
+) -> int | None:
     """Find the context the way Codex does: exact, then without trailing
     whitespace, then without any surrounding whitespace, then with Unicode
     dashes, quotes and spaces read as ASCII."""
     last = len(lines) - len(wanted)
     if not wanted:
         return start if start <= last else None
-    for normalize in LINE_MATCHES:
+    # The normalized file, made once per form for all hunks.
+    forms = {} if forms is None else forms
+    for rank, normalize in enumerate(LINE_MATCHES):
         target = [normalize(line) for line in wanted]
-        normal = [normalize(line) for line in lines]
-        for index in range(start, last + 1):
-            if (
-                normal[index] == target[0]
-                and normal[index:index + len(wanted)] == target
-            ):
+        if rank not in forms:
+            forms[rank] = lines if rank == 0 else [normalize(x) for x in lines]
+        normal = forms[rank]
+        index = start
+        while index <= last:
+            try:
+                index = normal.index(target[0], index, last + 1)
+            except ValueError:
+                break
+            if normal[index:index + len(wanted)] == target:
                 return index
+            index += 1
     return None
 
 
 def find_hunk(
-    lines: list[str], hunk: Hunk, old: list[str], cursor: int
+    lines: list[str], hunk: Hunk, old: list[str], cursor: int,
+    forms: dict[int, list[str]],
 ) -> int | None:
     """Codex looks for an End of File hunk at the end of the file only."""
     start = len(lines) - len(old) if hunk.at_end else cursor
-    return find_lines(lines, old, max(start, 0))
+    return find_lines(lines, old, max(start, 0), forms)
 
 
 def changed_runs(rows: list[str]) -> list[tuple[int, int, list[str]]]:
@@ -365,10 +376,11 @@ def apply_update(current: str, body: Sequence[str]) -> str | None:
     if lines and not lines[-1].endswith(("\n", "\r")):
         lines[-1] += ending
     replacements: list[tuple[int, int, list[str]]] = []
+    forms: dict[int, list[str]] = {}
     cursor = 0
     for hunk in hunks(body):
         if hunk.anchor:
-            anchor = find_lines(keys, [hunk.anchor], cursor)
+            anchor = find_lines(keys, [hunk.anchor], cursor, forms)
             if anchor is None:
                 return None
             cursor = anchor + 1
@@ -380,11 +392,11 @@ def apply_update(current: str, body: Sequence[str]) -> str | None:
                 for _, _, new in changed_runs(rows)
             ]
             continue
-        index = find_hunk(keys, hunk, old, cursor)
+        index = find_hunk(keys, hunk, old, cursor, forms)
         if index is None and old[-1] == "":
             rows = without_final_empty(rows)
             old = old[:-1]
-            index = find_hunk(keys, hunk, old, cursor)
+            index = find_hunk(keys, hunk, old, cursor, forms)
         if index is None:
             return None
         replacements += [
@@ -454,15 +466,21 @@ def codex_tool_event(payload: Payload, base: Neutral) -> Neutral | None:
     changes: dict[str, Neutral] = {}
     deleted: set[str] = set()
     moved_away: set[str] = set()
+    # Symlinks the patch deletes; their paths no longer lead to the target.
+    unlinked: set[str] = set()
     for file in sections:
         source, target = (
-            os.path.realpath(os.path.join(cwd, path))
-            for path in (file.source, file.target)
+            path if path in unlinked else os.path.realpath(path)
+            for path in (
+                os.path.normpath(os.path.join(cwd, name))
+                for name in (file.source, file.target)
+            )
         )
         link = os.path.normpath(os.path.join(cwd, file.source))
         if file.action == "Delete File" and os.path.islink(link):
             # Deleting a symlink leaves its target as it is.
             source = target = link
+            unlinked.add(link)
         prior = changes.pop(source, None)
         if file.action == "Delete File":
             # Kept, as a deleted file can be a lint setting of the others;
@@ -476,9 +494,9 @@ def codex_tool_event(payload: Payload, base: Neutral) -> Neutral | None:
         if source in deleted:
             prior = None
             deleted.discard(source)
-        # A path a move left empty starts empty, not as the moved file.
+        # A path a move or a symlink delete left empty starts empty.
         start = base | {"disk": ""} if (
-            prior is None and source in moved_away
+            prior is None and source in moved_away | unlinked
         ) else base
         changes[target] = patch_change(file, start, prior)
         deleted.discard(target)

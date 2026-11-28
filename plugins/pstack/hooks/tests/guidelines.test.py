@@ -613,6 +613,10 @@ c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Add File: src/.gitignore\n+di
                              "*** Add File: new10.js\n+var x = 1;\n*** End Patch"),
        harness="codex", ESLINT_JSON=NO_VAR_ROW)
 expect_contains("a changed ignore file counts without a trace", "also changes src/.gitignore", str(c.output()))
+c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Add File: src/policy.tsx\n+export const level = 'off';\n"
+                             "*** Add File: new11.js\n+var x = 1;\n*** End Patch"),
+       harness="codex", ESLINT_JSON=NO_VAR_ROW, ESLINT_LOADED="none")
+expect_contains("with no trace, a changed TSX file counts", "also changes src/policy.tsx", str(c.output()))
 
 
 c = Case("ruff-symlink-extend")
@@ -1146,6 +1150,13 @@ c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: lookup.json\n@@\
        harness="codex", RUFF_JSON=F403_ROW, **shared_env)
 expect_equal("a 12000-line unanchored hunk still gets checked", "deny", c.decision())
 expect_equal("a 12000-line unanchored hunk takes under 3 s", True, time.monotonic() - began < 3)
+c.file("schema.json", "[\n" + ("0,\n" + "2,\n" * 71) * 3500 + "3\n]\n")
+began = time.monotonic()
+c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: schema.json\n" + "@@\n-0,\n+1,\n" * 3500 +
+                             "*** Add File: many-hunks.py\n+from math import *\n*** End Patch"),
+       harness="codex", RUFF_JSON=F403_ROW, **shared_env)
+expect_equal("3500 small hunks still get checked", "deny", c.decision())
+expect_equal("3500 small hunks take under 3 s", True, time.monotonic() - began < 3)
 c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: ruff.toml\n*** Move to: scratch/old.toml\n@@\n-extend = \"${DOTAI_SHARED}/base.toml\"\n+x = 1\n"
                              "*** Delete File: scratch/old.toml\n*** Add File: newmod10.py\n+from math import *\n*** End Patch"),
        harness="codex", RUFF_JSON=F403_ROW, **shared_env)

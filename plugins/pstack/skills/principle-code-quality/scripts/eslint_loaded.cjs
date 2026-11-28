@@ -21,14 +21,22 @@ if (out && typeof nodeModule.registerHooks === "function") {
     }
     if (typeof name !== "string") return;
     const full = path.resolve(name);
-    try {
-      loaded.add(fs.realpathSync(full));
-    } catch {
-      // An absent file the config looks for can be added by the edit.
+    // An absent file the config looks for can be added by the edit, so it
+    // is kept below the real path of its nearest existing folder.
+    let folder = full;
+    let rest = "";
+    for (;;) {
       try {
-        loaded.add(path.join(fs.realpathSync(path.dirname(full)), path.basename(full)));
+        loaded.add(path.join(fs.realpathSync(folder), rest));
+        return;
       } catch {
-        loaded.add(full);
+        const up = path.dirname(folder);
+        if (up === folder) {
+          loaded.add(full);
+          return;
+        }
+        rest = path.join(path.basename(folder), rest);
+        folder = up;
       }
     }
   };
@@ -61,5 +69,6 @@ if (out && typeof nodeModule.registerHooks === "function") {
       return original.call(this, file, ...rest);
     };
   }
-  process.on("exit", () => fs.writeFileSync(out, [...loaded].join("\n")));
+  // Appended, as Node processes the config starts record to the same list.
+  process.on("exit", () => fs.appendFileSync(out, [...loaded].map((file) => file + "\n").join("")));
 }

@@ -270,3 +270,10 @@ Scratch paths named in those notes (under `/tmp/...`) are gone; ignore them.
 - A flat config name outranked in its folder is not a setting, even though ESLint looks for all six names.
 - ESLint traces stop at detector deadline + 4 s (`TRACE_GRACE_S`); past it the list is unknown (warn), so the hook stays inside 10 s.
 - Real ESLint 9 legacy and flat repros. Tests for the first two.
+
+## Update: review 84581975 (7a94e91) findings fixed (4 blocking, 1 non-blocking)
+- Codex: a path whose symlink the patch deleted is keyed by its own path, and a later Add there starts empty.
+- eslint_loaded.cjs appends to the list (Node subprocesses of the config record too) and keeps an absent path below the real path of its nearest existing folder.
+- The unknown-trace fallback counts `.jsx/.tsx/.jsonc/.json5` too.
+- `find_lines` normalizes the file once per form for all hunks and finds the first line with `list.index` (3500 hunks: under 3 s, was 18.7 s).
+- Real ESLint 9 / ruff repros for 1, 2, 4; tests for 3 and 5.
