@@ -84,6 +84,7 @@ class FileChange(NamedTuple):
     after: str | None
     problem: str = ""
     before_problem: str = ""
+    source: str = ""
 
 
 class Event(NamedTuple):
@@ -116,10 +117,12 @@ def file_change(item: dict[str, object]) -> FileChange:
     if isinstance(after, str) and len(after) > MAX_CONTENT_CHARS:
         problem = "it is larger than 1 MB"
     before_problem = item.get("before_problem")
+    source = item.get("source")
     return FileChange(
         str(item["path"]), optional_text(item.get("before")),
         optional_text(after), problem if isinstance(problem, str) else "",
         before_problem if isinstance(before_problem, str) else "",
+        source if isinstance(source, str) else "",
     )
 
 
@@ -501,7 +504,13 @@ class Engine:
         old: list[Hit] = []
         failed: set[str] = set()
         if change.before is not None and hits:
-            old, failed = self.scan(file, change.before, quiet=True)
+            # A moved file's old findings come from its old path's rules.
+            moved = change.source and change.source != change.path
+            source = self.code_file(
+                change._replace(path=change.source, after=change.before)
+            ) if moved else file
+            if source is not None:
+                old, failed = self.scan(source, change.before, quiet=True)
         blocking = [
             hit for hit in new_hits(hits, old)
             if hit.guideline.severity == "block" and hit.finding.blocks

@@ -504,6 +504,21 @@ c.hook(c.write("packages/api/f.js", "var x = 1;\n"))
 expect_equal("eslint runs in the folder of the nearest config, so ESLint 9 loads it",
              str(c.project / "packages" / "api"), (WORK / "eslint.cwd").read_text())
 
+c = Case("eslint-legacy-nested")
+c.file(".eslintrc.json", '{"root": true}\n')
+c.file("packages/api/.eslintrc.json", "{}\n")
+c.hook(c.write("packages/api/f.js", "var x = 1;\n"))
+expect_equal("a legacy config runs eslint at the root, where it reads .eslintignore",
+             str(c.project), (WORK / "eslint.cwd").read_text())
+
+c = Case("eslint-package-install")
+c.file("packages/api/eslint.config.js", "export default [];\n")
+local = c.file("packages/api/node_modules/.bin/eslint", ESLINT_STUB.replace('"eslint.cwd"', '"eslint.local"'))
+local.chmod(0o755)
+(WORK / "eslint.local").unlink(missing_ok=True)
+c.hook(c.write("packages/api/f.js", "var x = 1;\n"))
+expect_equal("eslint installed in the package is used for its files", True, (WORK / "eslint.local").exists())
+
 c = Case("codex-subfolder")
 c.file(".git/HEAD", "ref: refs/heads/main\n")
 c.file("ruff.toml", '[lint]\nignore = ["F403"]\n')
@@ -864,6 +879,20 @@ c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: demo.py\n@@\n im
                              " def f():\n*** End Patch"), harness="codex")
 expect_equal("a patch splits on newlines only, so a form feed line is context, as in Codex",
              "import os\n\x0c\nfrom math import *\ndef f():\n    return 1\n", (WORK / "ruff.stdin").read_text())
+c.file("demo.py", b'def f():\r\n    pass\r\ns = """\n    pass\n"""\n')
+c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: demo.py\n@@\n-    pass\n+    x = 1\n*** End Patch"),
+       harness="codex")
+expect_equal("a CRLF line matches before a later LF line, as in Codex",
+             'def f():\r\n    x = 1\ns = """\n    pass\n"""\n', (WORK / "ruff.stdin").read_bytes().decode())
+c.hook(c.patch("PreToolUse", "*** Begin Patch\n  *** Add File: added.py\n+x = [a for b in c for a in b]\n*** End Patch"),
+       harness="codex")
+expect_equal("a file header with leading spaces is read, as Codex trims it", "deny", c.decision())
+c.file("moved.py", "from os import *\nnum = 0\n")
+(WORK / "ruff.args").unlink(missing_ok=True)
+c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: moved.py\n*** Move to: target.py\n@@\n-num = 0\n"
+                             "+num = 1\n*** End Patch"), harness="codex", RUFF_JSON=F403_ROW)
+expect_contains("a moved file's old findings are scanned at its old path",
+                f"--stdin-filename {c.project}/moved.py", c.args())
 c.file("demo.py", "if True:\n    a = 1\n    b = 2\n")
 c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: demo.py\n@@\n a = 1\n-    b = 2\n+    from math import *\n"
                              "*** End Patch"), harness="codex")
@@ -960,6 +989,10 @@ c.file("ruff.toml", '[lint]\nselect = ["PTH123"]\nignore = ["PTH123"]\n')
 c.hook(c.write("app.py", "x = 1\n"), PSTACK_GUIDELINES_DIR=str(PLUGIN / "skills" / "principle-code-quality" / "guidelines"))
 expect_contains("an ignore wins a tie with a select in one config, as in ruff", "--extend-ignore PTH123",
                 c.args().splitlines()[-1])
+c.file("ruff.toml", '[lint]\nignore = ["PTH1"]\nextend-select = ["PTH123"]\n')
+c.hook(c.write("app.py", "x = 3\n"), PSTACK_GUIDELINES_DIR=str(PLUGIN / "skills" / "principle-code-quality" / "guidelines"))
+expect_contains("a rule selected again inside an ignored prefix is selected on the command line too",
+                ",PTH123 --extend-ignore PTH1 ", c.args().splitlines()[-1])
 c.file("base.toml", '[lint]\nignore = ["PTH123"]\n')
 c.file("ruff.toml", 'extend = "base.toml"\n[lint]\nextend-select = ["PTH123"]\n')
 c.hook(c.write("app.py", "x = 2\n"), PSTACK_GUIDELINES_DIR=str(PLUGIN / "skills" / "principle-code-quality" / "guidelines"))

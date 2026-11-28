@@ -29,6 +29,7 @@ RUFF_CONFIG_NAMES = (".ruff.toml", "ruff.toml", "pyproject.toml")
 ESLINT_CONFIG_PATTERN = re.compile(
     r"^(eslint\.config\.[cm]?[jt]s|\.eslintrc(\.(js|cjs|json|ya?ml))?)$"
 )
+FLAT_ESLINT_CONFIG = re.compile(r"^eslint\.config\.[cm]?[jt]s$")
 IGNORE_KEYS = ("ignore", "extend-ignore")
 SELECT_KEYS = ("select", "extend-select")
 RUFF_EXTENDS_MAX = 10
@@ -234,6 +235,15 @@ def ruff_arguments(target: Target) -> list[str]:
             if any(selector.startswith(code) for code in added)
             and ruff_ignores(selector, tables)
         })
+        # A rule the config selects again inside such an ignore is selected
+        # on the command line too, where the more specific selector wins.
+        added += sorted({
+            selector for table in tables for key in SELECT_KEYS
+            for selector in as_strings(table.get(key))
+            if any(selector.startswith(code) for code in narrower)
+            and selector not in narrower
+            and not ruff_ignores(selector, tables)
+        })
         preview = any("preview" in table for table in tables)
         return [
             "--verbose", "--force-exclude",
@@ -280,17 +290,25 @@ def package_eslint_config(package: Path) -> bool:
 
 
 def eslint_config(path: Path, root: Path) -> Path | None:
-    """The nearest folder with an ESLint config. ESLint 9 loads the flat
-    config it finds from its working folder, so it runs there."""
-    return next((
-        directory for directory in parents_within(path, root)
-        if directory.is_dir() and any(
-            ESLINT_CONFIG_PATTERN.match(entry.name) or (
-                entry.name == "package.json" and package_eslint_config(entry)
+    """The folder ESLint runs in, or None without a config. ESLint 9 loads
+    the flat config it finds from its working folder, so it runs in the
+    nearest one; a legacy config cascades, and its .eslintignore is read
+    from the working folder, so it runs at the root."""
+    legacy = False
+    for directory in parents_within(path, root):
+        names = [e.name for e in directory.iterdir()] if (
+            directory.is_dir()
+        ) else []
+        if any(FLAT_ESLINT_CONFIG.match(name) for name in names):
+            return directory
+        legacy = legacy or any(
+            ESLINT_CONFIG_PATTERN.match(name) or (
+                name == "package.json"
+                and package_eslint_config(directory / name)
             )
-            for entry in directory.iterdir()
+            for name in names
         )
-    ), None)
+    return root if legacy else None
 
 
 def run_eslint(executable: str, target: Target) -> RunResult:
@@ -354,23 +372,24 @@ def runs_on(tool: str, language: str) -> bool:
     )
 
 
-def locate(tool: str, root: Path) -> str | None:
-    """Find an installed tool: the project's own copy first, then PATH.
-    `which` adds Windows extensions, so npm's eslint.cmd is found there."""
+def locate(tool: str, path: Path, root: Path) -> str | None:
+    """Find an installed tool: the nearest project copy at or above the
+    file, as in a monorepo package, then PATH. `which` adds Windows
+    extensions, so npm's eslint.cmd is found there."""
     local = os.pathsep.join(
-        str(root / folder)
+        str(directory / folder)
+        for directory in parents_within(path, root)
         for folder in ("node_modules/.bin", ".venv/bin", ".venv/Scripts")
     )
     return shutil.which(tool, path=local) or shutil.which(tool)
 
 
-def probe(runner: Runner, root: Path) -> tuple[str, str]:
+def probe(runner: Runner, executable: str | None, root: Path) -> tuple[str, str]:
     """Return (executable, problem); problem is empty when usable."""
     if runner.run is None:
         return "", "has no runner yet"
     if not runner.probe:
         return runner.tool, ""
-    executable = locate(runner.tool, root)
     if executable is None:
         return "", "is not installed"
     try:
@@ -401,11 +420,13 @@ def run_one(tool: str, detection: Detection) -> RunResult:
         return RunResult(None, "has no runner yet")
     if time.monotonic() >= detection.deadline:
         return RunResult(None, SKIPPED_FOR_BUDGET)
-    executable, problem = detection.probes.get(tool) or probe(
-        runner, detection.target.root
+    found = locate(tool, detection.target.path, detection.target.root)
+    key = f"{tool} {found}"
+    executable, problem = detection.probes.get(key) or probe(
+        runner, found, detection.target.root
     )
     if not problem:
-        detection.probes[tool] = [executable, problem]
+        detection.probes[key] = [executable, problem]
     if problem or runner.run is None:
         return RunResult(None, problem)
     target = detection.target._replace(codes=detection.codes_by_tool[tool])

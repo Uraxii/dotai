@@ -232,14 +232,14 @@ def parse_patch(patch: str) -> list[PatchFile]:
     if lines[-1] == "":
         lines.pop()
     for line in lines:
-        header = PATCH_HEADER.match(line)
+        header = PATCH_HEADER.match(line.strip())
         if header and header.group(1) == "Move to" and files:
             files[-1] = files[-1]._replace(target=header.group(2))
         elif header:
             path = header.group(2)
             files.append(PatchFile(header.group(1), path, path, ()))
             bodies.append([])
-        elif files and line not in PATCH_MARKERS:
+        elif files and line.strip() not in PATCH_MARKERS:
             bodies[-1].append(line)
     return [
         file._replace(body=tuple(body)) for file, body in zip(files, bodies)
@@ -346,11 +346,13 @@ def apply_update(current: str, body: Sequence[str]) -> str | None:
     lines = current.split("\n")
     if lines[-1] == "":
         lines.pop()
+    # Codex matches lines without their terminators, so CR is dropped too.
+    keys = [line.removesuffix("\r") for line in lines]
     replacements: list[tuple[int, int, list[str]]] = []
     cursor = 0
     for hunk in hunks(body):
         if hunk.anchor:
-            anchor = find_lines(lines, [hunk.anchor], cursor)
+            anchor = find_lines(keys, [hunk.anchor], cursor)
             if anchor is None:
                 return None
             cursor = anchor + 1
@@ -361,11 +363,11 @@ def apply_update(current: str, body: Sequence[str]) -> str | None:
                 (len(lines), 0, new) for _, _, new in changed_runs(rows)
             ]
             continue
-        index = find_hunk(lines, hunk, old, cursor)
+        index = find_hunk(keys, hunk, old, cursor)
         if index is None and old[-1] == "":
             rows = without_final_empty(rows)
             old = old[:-1]
-            index = find_hunk(lines, hunk, old, cursor)
+            index = find_hunk(keys, hunk, old, cursor)
         if index is None:
             return None
         replacements += [
@@ -390,7 +392,8 @@ def patch_change(file: PatchFile, base: Neutral) -> Neutral:
     after = None if disk.text is None else apply_update(disk.text, file.body)
     if after is None:
         return unbuilt(file.target, disk)
-    return {"path": file.target, "before": disk.text, "after": after}
+    return {"path": file.target, "before": disk.text, "after": after,
+            "source": file.source}
 
 
 def codex_tool_event(payload: Payload, base: Neutral) -> Neutral | None:

@@ -185,3 +185,12 @@ Scratch paths named in those notes (under `/tmp/...`) are gone; ignore them.
 - Codex apply: `changed_runs()` makes one replacement per `-`/`+` run between context lines, as Codex does, so insertions at one offset keep Codex's order.
 - parse_patch splits on `\n` only and drops a trailing `\r`, like Rust `str::lines()`; a form-feed line is context.
 - mise run ci green: guidelines.test.py 220/220.
+
+## Update: review 081215ee findings fixed (4 blocking, 2 non-blocking)
+- Codex apply matches lines without their CR, as Codex does, so a CRLF line matches before a later LF line; the file's own line endings are kept.
+- Patch file headers and markers are read after `strip()`, as Codex trims them.
+- A Codex move scans the old text at the source path and the new text at the target path, so per-file ignores count correctly.
+- ESLint runs in the nearest flat-config folder; with only legacy configs it runs at the root, where it reads `.eslintignore`.
+- Ruff: a rule the config selects again inside an ignored prefix (ignore PTH1, select PTH123) is added to `--extend-select`. Checked with real ruff.
+- Tools are found in `node_modules/.bin` and `.venv` of every folder from the file up to the root (nearest first), then PATH; the probe cache is keyed by tool and path.
+- mise run ci green: guidelines.test.py 226/226.
