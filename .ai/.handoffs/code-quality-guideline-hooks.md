@@ -300,3 +300,10 @@ Scratch paths named in those notes (under `/tmp/...`) are gone; ignore them.
 
 ## Update: review deb49024 (be05557) finding fixed (0 blocking, 1 non-blocking)
 - Codex: the moved-symlink rule applies only while the path is still the symlink (not after the patch deleted or moved it). Real Ruff repro: delete link, add file there, move it to an excluded folder: no deny.
+
+## Update: review fbb5d33e (42c9963) findings fixed (2 blocking, 2 non-blocking)
+- Ruff ignore scope: the effective `respect-gitignore` is the first config in the extend chain that sets it; a root `.ignore` is matched with git (`-c core.excludesFile`); a nested `.ignore` with path patterns is unknown (warning).
+- ESLint: an outranked flat config name counts when the trace shows the config loads it (`eslint.config.js` requiring `eslint.config.cjs`).
+- Code files are classified by their own path (`resolve_in_root(..., follow=False)`): a file that replaces a deleted symlink is linted at its path, and a symlinked file now gets its own folder's Ruff settings (the former known limit).
+- Codex: moving a symlink onto its own target still empties the link path.
+- Real Ruff / ESLint 9 repros for all 4.

@@ -68,10 +68,17 @@ SHEBANG_LANGUAGES = {"python": "python", "node": "javascript"}
 UNSAFE_NAME_CHARS = re.compile(r"[^A-Za-z0-9_-]")
 
 
-def resolve_in_root(raw: str, cwd: str, root: str) -> Path | None:
-    """Resolve a payload path; None when it leaves the project root."""
+def resolve_in_root(
+    raw: str, cwd: str, root: str, follow: bool = True,
+) -> Path | None:
+    """Resolve a payload path; None when it leaves the project root.
+    Without follow, a symlink file keeps its own name, as linters see it."""
     try:
-        resolved = (Path(cwd) / raw).resolve()
+        if follow:
+            resolved = (Path(cwd) / raw).resolve()
+        else:
+            full = Path(os.path.normpath(Path(cwd) / raw))
+            resolved = full.parent.resolve() / full.name
         inside = resolved.is_relative_to(Path(root).resolve())
     except (OSError, ValueError):
         return None
@@ -377,7 +384,9 @@ class Engine:
 
     def classify(self, raw: str, content: str | None) -> CodeFile | str:
         """Describe a payload path, or say why no guideline covers it."""
-        path = resolve_in_root(raw, self.event.cwd, self.event.root)
+        path = resolve_in_root(
+            raw, self.event.cwd, self.event.root, follow=False
+        )
         if path is None:
             return "it is outside the project"
         language = language_of(Path(raw).name, self.extensions)

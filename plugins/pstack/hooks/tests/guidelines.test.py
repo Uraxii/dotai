@@ -643,6 +643,24 @@ c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: .gitignore\n@@\n
                              "*** Add File: kept/out.py\n+from math import *\n*** End Patch"),
        harness="codex", RUFF_JSON=F403_ROW)
 expect_contains("a .gitignore change in the same edit counts as a Ruff setting", "also changes .gitignore", str(c.output()))
+c.file(".ignore", "skipme.py\n")
+c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Add File: skipme.py\n+from math import *\n*** End Patch"),
+       harness="codex", RUFF_JSON=F403_ROW)
+expect_equal("a file a .ignore excludes is not denied, as Ruff skips it", "", c.decision())
+expect_contains("and the notice names the .ignore", ".ignore file excludes it", str(c.output()))
+c.file("base.toml", "respect-gitignore = false\n")
+c.file("ruff.toml", 'extend = "base.toml"\nrespect-gitignore = true\n')
+c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Add File: made/two.py\n+from math import *\n*** End Patch"),
+       harness="codex", RUFF_JSON=F403_ROW)
+expect_equal("a child config's respect-gitignore beats the one it extends", "", c.decision())
+(c.project / "ruff.toml").unlink()
+c = Case("eslint-imported-flat-name")
+c.file("eslint.config.js", "module.exports = require('./eslint.config.cjs');\n")
+c.file("eslint.config.cjs", "module.exports = [];\n")
+c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: eslint.config.cjs\n@@\n-module.exports = [];\n+module.exports = [{}];\n"
+                             "*** Add File: new14.js\n+var x = 1;\n*** End Patch"),
+       harness="codex", ESLINT_JSON=NO_VAR_ROW, ESLINT_LOADED="eslint.config.cjs")
+expect_contains("an outranked config name the config loads counts", "also changes eslint.config.cjs", str(c.output()))
 NODE = shutil.which("node")
 if NODE:
     trace = Case("eslint-recorder")
@@ -1223,6 +1241,19 @@ c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Delete File: link4.py\n*** Ad
                              "*** Update File: link4.py\n*** Move to: moved4.py\n@@\n-x = [a for b in c for a in b]\n+x = 1\n*** End Patch"),
        harness="codex", **shared_env)
 expect_lacks("a file added where a symlink was, then moved, is not checked at the old target", "real4.py", str(c.output()))
+c.file("deep/real7.py", "pass\n")
+(c.project / "link7.py").symlink_to(c.project / "deep" / "real7.py")
+c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Delete File: link7.py\n*** Add File: link7.py\n+x = [a for b in c for a in b]\n*** End Patch"),
+       harness="codex", **shared_env)
+expect_equal("a file that replaces a deleted symlink is checked", "deny", c.decision())
+expect_lacks("at its own path, not the old target", "real7.py", str(c.output()))
+c.file("real8.py", "pass\n")
+(c.project / "link8.py").symlink_to(c.project / "real8.py")
+c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: link8.py\n*** Move to: real8.py\n@@\n-pass\n+x = [a for b in c for a in b]\n"
+                             "*** Add File: link8.py\n+pass\n*** End Patch"),
+       harness="codex", **shared_env)
+expect_equal("moving a symlink onto its own target keeps the target's change", "deny", c.decision())
+expect_contains("and the deny names the target", "real8.py", str(c.output()))
 c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: ruff.toml\n*** Move to: scratch/old.toml\n@@\n-extend = \"${DOTAI_SHARED}/base.toml\"\n+x = 1\n"
                              "*** Delete File: scratch/old.toml\n*** Add File: newmod10.py\n+from math import *\n*** End Patch"),
        harness="codex", RUFF_JSON=F403_ROW, **shared_env)

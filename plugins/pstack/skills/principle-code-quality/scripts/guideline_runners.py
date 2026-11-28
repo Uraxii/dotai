@@ -244,8 +244,9 @@ def eslint_setting(
         return True
     # ESLint reads the file it lints and tries every flat config name, but
     # neither is a setting unless the name rules above say so.
-    if setting == code or flat_name and outranked(setting, setting.parent):
+    if setting == code:
         return False
+    shadowed = flat_name and outranked(setting, setting.parent)
     # A config can read any data file in ways no trace sees, so a changed
     # data or ignore file always counts.
     if setting != code and name != "package.json" and (
@@ -261,9 +262,12 @@ def eslint_setting(
     if loaded is None:
         global trace_failed
         trace_failed = True
-        return setting != code and (
+        return setting != code and not shadowed and (
             name == ".eslintignore" or setting.suffix in SETTING_SUFFIXES
         )
+    # An outranked config name still counts when the config loads it.
+    if shadowed and setting not in loaded:
+        return False
     # A package.json above a loaded file counts when the edit adds it (it
     # becomes that file's manifest) or it maps the package's modules.
     if name == "package.json" and setting not in loaded:
@@ -403,22 +407,15 @@ RUFF_EXCLUDED_PROBLEM = (
     "(the project's or ruff's defaults)"
 )
 RUFF_GITIGNORED_PROBLEM = "skips this file, as git ignores it"
+RUFF_IGNORED_PROBLEM = "skips this file, as a .ignore file excludes it"
 RUFF_GIT_IGNORE_NAMES = (".gitignore", ".ignore")
 
 
-def git_ignores(target: Target) -> bool:
-    """Ruff skips a git-ignored file in its own runs, but not one given on
-    stdin, so the hook asks git. Tracked files count, as Ruff matches only
-    the ignore rules."""
-    config = ruff_config(target.path, target.root)
-    if config is not None and any(
-        table.get("respect-gitignore") is False
-        for table in ruff_tables(config)
-    ):
-        return False
+def git_matches(target: Target, *options: str) -> bool:
     try:
         process = subprocess.run(
-            ["git", "check-ignore", "-q", "--no-index", str(target.path)],
+            ["git", *options, "check-ignore", "-q", "--no-index",
+             str(target.path)],
             cwd=target.root, stdin=subprocess.DEVNULL,
             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
             timeout=1, check=False,
@@ -426,6 +423,42 @@ def git_ignores(target: Target) -> bool:
     except (OSError, subprocess.SubprocessError):
         return False
     return process.returncode == 0
+
+
+def ruff_ignore_skip(target: Target) -> RunResult | None:
+    """Ruff skips a file that git or a `.ignore` file ignores in its own
+    runs, but not one given on stdin, so the hook asks git. Tracked files
+    count, as Ruff matches only the ignore rules."""
+    config = ruff_config(target.path, target.root)
+    respect = next((
+        table["respect-gitignore"] for table in ruff_tables(config)
+        if "respect-gitignore" in table
+    ), True) if config is not None else True
+    if respect is False:
+        return None
+    if git_matches(target):
+        return RunResult((), RUFF_GITIGNORED_PROBLEM)
+    for folder in parents_within(target.path, target.root):
+        ignore = folder / ".ignore"
+        if not ignore.is_file():
+            continue
+        # git reads the file's patterns from the project root.
+        if git_matches(target, "-c", f"core.excludesFile={ignore}"):
+            return RunResult((), RUFF_IGNORED_PROBLEM)
+        try:
+            anchored = folder != target.root and any(
+                "/" in line.strip().rstrip("/")
+                for line in ignore.read_text(encoding="utf-8").splitlines()
+                if line.strip() and not line.startswith("#")
+            )
+        except (OSError, UnicodeDecodeError):
+            anchored = True
+        if anchored:
+            name = ignore.relative_to(target.root).as_posix()
+            return RunResult(
+                None, f"could not tell whether {name} excludes this file"
+            )
+    return None
 
 
 def wanted(tool: str, code: object, codes: frozenset[str]) -> bool:
@@ -508,8 +541,9 @@ def ruff_arguments(target: Target) -> list[str]:
 
 
 def run_ruff(executable: str, target: Target) -> RunResult:
-    if git_ignores(target):
-        return RunResult((), RUFF_GITIGNORED_PROBLEM)
+    skip = ruff_ignore_skip(target)
+    if skip is not None:
+        return skip
     process = run_tool([
         executable, "check", *ruff_arguments(target), "--output-format",
         "json", "--stdin-filename", str(target.path), "-",

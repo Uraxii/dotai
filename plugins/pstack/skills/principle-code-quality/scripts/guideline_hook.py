@@ -512,7 +512,8 @@ def codex_tool_event(payload: Payload, base: Neutral) -> Neutral | None:
             unlinked.add(link)
         # A moved symlink leaves its target, and the target's change, in place.
         moves_link = (
-            file.action != "Delete File" and source != target
+            file.action != "Delete File"
+            and link != os.path.normpath(os.path.join(cwd, file.target))
             and link not in unlinked and os.path.islink(link)
         )
         prior = changes.get(source) if moves_link else changes.pop(source, None)
@@ -534,13 +535,12 @@ def codex_tool_event(payload: Payload, base: Neutral) -> Neutral | None:
         ) else base
         changes[target] = patch_change(file, start, prior)
         deleted.discard(target)
-        if source != target:
-            # Moving a symlink removes the symlink, not its target.
-            if moves_link:
-                moved_away.add(link)
-                unlinked.add(link)
-            else:
-                moved_away.add(source)
+        # Moving a symlink removes the symlink, not its target.
+        if moves_link:
+            moved_away.add(link)
+            unlinked.add(link)
+        elif source != target:
+            moved_away.add(source)
     # A path a move left empty is deleted, also when another section
     # moved a file there first.
     for source in moved_away - changes.keys():
