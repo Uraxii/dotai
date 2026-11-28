@@ -310,7 +310,7 @@ def find_lines(
             forms[rank] = lines if rank == 0 else [normalize(x) for x in lines]
         normal = forms[rank]
         index = start
-        while index <= last:
+        for _ in range(64):
             try:
                 index = normal.index(target[0], index, last + 1)
             except ValueError:
@@ -318,6 +318,35 @@ def find_lines(
             if normal[index:index + len(wanted)] == target:
                 return index
             index += 1
+        else:
+            # A first line found at many places: a linear search.
+            found = search_lines(normal, target, index, last)
+            if found is not None:
+                return found
+    return None
+
+
+def search_lines(
+    lines: list[str], wanted: list[str], start: int, last: int,
+) -> int | None:
+    """The first index from start to last where wanted begins
+    (Knuth-Morris-Pratt), in time linear in both lengths."""
+    fallback = [0] * len(wanted)
+    size = 0
+    for at in range(1, len(wanted)):
+        while size and wanted[at] != wanted[size]:
+            size = fallback[size - 1]
+        if wanted[at] == wanted[size]:
+            size += 1
+        fallback[at] = size
+    size = 0
+    for at in range(start, last + len(wanted)):
+        while size and lines[at] != wanted[size]:
+            size = fallback[size - 1]
+        if lines[at] == wanted[size]:
+            size += 1
+        if size == len(wanted):
+            return at - size + 1
     return None
 
 
@@ -501,7 +530,12 @@ def codex_tool_event(payload: Payload, base: Neutral) -> Neutral | None:
         changes[target] = patch_change(file, start, prior)
         deleted.discard(target)
         if source != target:
-            moved_away.add(source)
+            # Moving a symlink removes the symlink, not its target.
+            if os.path.islink(link):
+                moved_away.add(link)
+                unlinked.add(link)
+            else:
+                moved_away.add(source)
     # A path a move left empty is deleted, also when another section
     # moved a file there first.
     for source in moved_away - changes.keys():

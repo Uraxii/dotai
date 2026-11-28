@@ -287,3 +287,10 @@ Scratch paths named in those notes (under `/tmp/...`) are gone; ignore them.
 ## Update: review 3af236a8 (334cad8) findings fixed (0 blocking, 2 non-blocking)
 - Every `readdir`/`opendir` is recorded (glob libraries in node_modules list for the config); a file anywhere below a listed folder counts (recursive listings, new subfolders).
 - Real ESLint 9 + tinyglobby repro (new subfolder warns, control denies). mise run ci green: 286/286.
+
+## Update: review e3adc3ef (f22633b) findings fixed (3 blocking, 2 non-blocking)
+- Codex: moving a symlink marks the symlink path empty (keyed lexically), not its target.
+- eslint_loaded.cjs: wrappers keep the original's own properties (`promisify(fs.exists)`, `realpathSync.native`); `realpath` (sync, callback, promise) is recorded; a non-zero `--print-config` exit is an unknown trace.
+- Ruff: a file `git check-ignore --no-index` ignores is skipped with a notice (unless `respect-gitignore = false`), as Ruff skips it in its own runs; a `.gitignore`/`.ignore` in the code file's folder or a parent counts as a Ruff setting. Known gap: an edit that un-ignores a file is checked with the old ignore scope (visible notice).
+- `find_lines` switches to Knuth-Morris-Pratt after 64 failed candidates (130k repeated lines, 15k-line hunk: under 3 s).
+- Real ESLint 9 / Ruff repros for all 5. Test env PATH has only the stub bin, so the gitignore test links git into it.

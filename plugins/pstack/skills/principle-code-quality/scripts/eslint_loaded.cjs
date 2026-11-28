@@ -11,6 +11,7 @@ const { fileURLToPath } = require("node:url");
 
 const out = process.env.PSTACK_ESLINT_LOADED;
 if (out && typeof nodeModule.registerHooks === "function") {
+  const realpathSync = fs.realpathSync;
   const loaded = new Set();
   const record = (file) => {
     let name;
@@ -27,7 +28,7 @@ if (out && typeof nodeModule.registerHooks === "function") {
     let rest = "";
     for (;;) {
       try {
-        loaded.add(path.join(fs.realpathSync(folder), rest));
+        loaded.add(path.join(realpathSync(folder), rest));
         return;
       } catch {
         const up = path.dirname(folder);
@@ -67,18 +68,31 @@ if (out && typeof nodeModule.registerHooks === "function") {
       return result;
     },
   });
+  // The wrapper keeps the original's own properties, such as the custom
+  // promisify of fs.exists and realpathSync.native.
+  const wrap = (owner, name, before) => {
+    const original = owner[name];
+    const wrapper = function (file, ...rest) {
+      before(file);
+      return original.call(this, file, ...rest);
+    };
+    for (const key of Reflect.ownKeys(original)) {
+      if (!Object.hasOwn(wrapper, key)) {
+        Object.defineProperty(wrapper, key, Object.getOwnPropertyDescriptor(original, key));
+      }
+    }
+    owner[name] = wrapper;
+  };
   for (const [owner, name] of [
     [fs, "readFileSync"], [fs, "readFile"], [fs, "openSync"], [fs, "open"],
     [fs, "existsSync"], [fs, "statSync"], [fs, "accessSync"], [fs, "lstatSync"],
     [fs, "exists"], [fs, "stat"], [fs, "access"], [fs, "lstat"],
+    [fs, "realpathSync"], [fs, "realpath"],
     [fs.promises, "readFile"], [fs.promises, "open"],
     [fs.promises, "stat"], [fs.promises, "access"], [fs.promises, "lstat"],
+    [fs.promises, "realpath"],
   ]) {
-    const original = owner[name];
-    owner[name] = function (file, ...rest) {
-      record(file);
-      return original.call(this, file, ...rest);
-    };
+    wrap(owner, name, (file) => record(file));
   }
   // A listed folder is kept as `folder/*`: a file the edit adds in it
   // can change the config, also when a glob library lists it.
@@ -86,11 +100,8 @@ if (out && typeof nodeModule.registerHooks === "function") {
     [fs, "readdirSync"], [fs, "readdir"], [fs, "opendirSync"], [fs, "opendir"],
     [fs.promises, "readdir"], [fs.promises, "opendir"],
   ]) {
-    const original = owner[name];
-    owner[name] = function (folder, ...rest) {
-      record(path.join(folder instanceof URL ? fileURLToPath(folder) : String(folder), "*"));
-      return original.call(this, folder, ...rest);
-    };
+    wrap(owner, name, (folder) =>
+      record(path.join(folder instanceof URL ? fileURLToPath(folder) : String(folder), "*")));
   }
   // Appended, as Node processes the config starts record to the same list.
   process.on("exit", () => fs.appendFileSync(out, [...loaded].map((file) => file + "\n").join("")));

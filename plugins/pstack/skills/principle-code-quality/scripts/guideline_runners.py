@@ -184,6 +184,8 @@ def ruff_setting(
         linked.resolve() for linked in ruff_chain(config)
     }:
         return True
+    if setting.name in RUFF_GIT_IGNORE_NAMES:
+        return setting.parent in parents_within(code, root)
     if setting.name == ".editorconfig":
         return config is None and setting == root / ".editorconfig"
     if setting.name not in RUFF_CONFIG_NAMES:
@@ -325,12 +327,15 @@ def eslint_loaded(
     with tempfile.TemporaryDirectory() as work:
         env["PSTACK_ESLINT_LOADED"] = str(Path(work) / "loaded")
         try:
-            subprocess.run(
+            process = subprocess.run(
                 [executable, "--print-config", str(probe)], cwd=mode.folder,
                 env=env, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL, timeout=timeout,
                 check=False,
             )
+            # A failed load can stop before the config reads its files.
+            if process.returncode:
+                return None
             names = Path(env["PSTACK_ESLINT_LOADED"]).read_text(
                 encoding="utf-8"
             ).splitlines()
@@ -397,6 +402,30 @@ RUFF_EXCLUDED_PROBLEM = (
     "skips this file under its exclude settings "
     "(the project's or ruff's defaults)"
 )
+RUFF_GITIGNORED_PROBLEM = "skips this file, as git ignores it"
+RUFF_GIT_IGNORE_NAMES = (".gitignore", ".ignore")
+
+
+def git_ignores(target: Target) -> bool:
+    """Ruff skips a git-ignored file in its own runs, but not one given on
+    stdin, so the hook asks git. Tracked files count, as Ruff matches only
+    the ignore rules."""
+    config = ruff_config(target.path, target.root)
+    if config is not None and any(
+        table.get("respect-gitignore") is False
+        for table in ruff_tables(config)
+    ):
+        return False
+    try:
+        process = subprocess.run(
+            ["git", "check-ignore", "-q", "--no-index", str(target.path)],
+            cwd=target.root, stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+            timeout=1, check=False,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return False
+    return process.returncode == 0
 
 
 def wanted(tool: str, code: object, codes: frozenset[str]) -> bool:
@@ -479,6 +508,8 @@ def ruff_arguments(target: Target) -> list[str]:
 
 
 def run_ruff(executable: str, target: Target) -> RunResult:
+    if git_ignores(target):
+        return RunResult((), RUFF_GITIGNORED_PROBLEM)
     process = run_tool([
         executable, "check", *ruff_arguments(target), "--output-format",
         "json", "--stdin-filename", str(target.path), "-",

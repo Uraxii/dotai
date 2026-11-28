@@ -630,6 +630,35 @@ expect_contains("a file added below a listed folder counts", "also changes eslin
 expect_lacks("with a trace, the notice does not say it failed", "could not be listed", str(c.output()))
 
 
+c = Case("ruff-gitignore")
+subprocess.run(["git", "init", "-q", str(c.project)], check=True)
+if not (BIN / "git").exists():
+    (BIN / "git").symlink_to(shutil.which("git"))
+c.file(".gitignore", "made/\n")
+c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Add File: made/out.py\n+from math import *\n*** End Patch"),
+       harness="codex", RUFF_JSON=F403_ROW)
+expect_equal("a file git ignores is not denied, as Ruff skips it", "", c.decision())
+expect_contains("and the notice says so", "git ignores it", str(c.output()))
+c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: .gitignore\n@@\n-made/\n+kept/\n"
+                             "*** Add File: kept/out.py\n+from math import *\n*** End Patch"),
+       harness="codex", RUFF_JSON=F403_ROW)
+expect_contains("a .gitignore change in the same edit counts as a Ruff setting", "also changes .gitignore", str(c.output()))
+NODE = shutil.which("node")
+if NODE:
+    trace = Case("eslint-recorder")
+    trace.file("enabled", "")
+    trace.file("rules.cjs", "module.exports = 1;\n")
+    trace.file("probe.cjs", "const fs = require('node:fs'); const path = require('node:path');\n"
+               "const { promisify } = require('node:util');\n"
+               "try { fs.realpathSync(path.join(__dirname, 'overrides.cjs')); } catch {}\n"
+               "promisify(fs.exists)(path.join(__dirname, 'enabled')).then((on) => { if (on) require('./rules.cjs'); });\n")
+    listed = trace.project / "listed.txt"
+    process = subprocess.run([NODE, "probe.cjs"], cwd=trace.project, capture_output=True, text=True, env=os.environ | {
+        "NODE_OPTIONS": f"--require {ENGINE.parent / 'eslint_loaded.cjs'}", "PSTACK_ESLINT_LOADED": str(listed)})
+    names = listed.read_text() if listed.exists() else ""
+    expect_equal("the recorder keeps fs.exists working with promisify", 0, process.returncode)
+    expect_contains("so the file loaded after it is listed", str((trace.project / "rules.cjs").resolve()), names)
+    expect_contains("a realpath lookup of an absent file is listed", str(trace.project.resolve() / "overrides.cjs"), names)
 c = Case("ruff-symlink-extend")
 c.file("ruff.toml", 'extend = "b/config.toml"\n')
 c.file("a/source/config.toml", 'extend = "../shared.toml"\n')
@@ -1168,6 +1197,19 @@ c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: schema.json\n" +
        harness="codex", RUFF_JSON=F403_ROW, **shared_env)
 expect_equal("3500 small hunks still get checked", "deny", c.decision())
 expect_equal("3500 small hunks take under 3 s", True, time.monotonic() - began < 3)
+c.file("data.py", "values = [\n" + "    0,\n" * 130000 + "    2,\n]\n")
+began = time.monotonic()
+c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: data.py\n@@\n" + "-    0,\n" * 15000 +
+                             "     2,\n ]\n+from os import *\n*** Add File: repeated.py\n+from math import *\n*** End Patch"),
+       harness="codex", RUFF_JSON=F403_ROW, **shared_env)
+expect_equal("a hunk of one repeated line still gets checked", "deny", c.decision())
+expect_equal("a hunk of one repeated line takes under 3 s", True, time.monotonic() - began < 3)
+c.file("target2.py", "pass\n")
+(c.project / "link2.py").symlink_to(c.project / "target2.py")
+c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: link2.py\n*** Move to: moved2.py\n@@\n-pass\n+import sys\n"
+                             "*** Update File: target2.py\n@@\n-pass\n+from os import *\n*** End Patch"),
+       harness="codex", RUFF_JSON=F403_ROW, **shared_env)
+expect_lacks("moving a symlink leaves its target to check", "could not build", str(c.output()))
 c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: ruff.toml\n*** Move to: scratch/old.toml\n@@\n-extend = \"${DOTAI_SHARED}/base.toml\"\n+x = 1\n"
                              "*** Delete File: scratch/old.toml\n*** Add File: newmod10.py\n+from math import *\n*** End Patch"),
        harness="codex", RUFF_JSON=F403_ROW, **shared_env)
