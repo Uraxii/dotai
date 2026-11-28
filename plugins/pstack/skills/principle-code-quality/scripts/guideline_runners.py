@@ -136,6 +136,18 @@ def ruff_tables(config: Path) -> Iterator[Mapping[str, object]]:
         yield from ruff_lint_tables(linked)
 
 
+def ruff_live_tables(config: Path) -> list[Mapping[str, object]]:
+    """The tables whose rule selectors still count: a config that sets
+    `select` resets what the configs it extends selected and ignored."""
+    live: list[Mapping[str, object]] = []
+    for linked in ruff_chain(config):
+        tables = ruff_lint_tables(linked)
+        live += tables
+        if any("select" in table for table in tables):
+            break
+    return live
+
+
 def selected_by(code: str, selectors: frozenset[str]) -> bool:
     return any(
         selector == "ALL" or code.startswith(selector)
@@ -159,11 +171,13 @@ def line_length(root: Path) -> int:
 
 
 def run_tool(
-    argv: list[str], target: Target, cwd: Path | None = None
+    argv: list[str], target: Target, cwd: Path | None = None,
+    env: Mapping[str, str] | None = None,
 ) -> subprocess.CompletedProcess[str] | None:
     try:
         return subprocess.run(
             argv, input=target.content, cwd=cwd or target.root, text=True,
+            encoding="utf-8", errors="replace", env=env,
             capture_output=True, check=False, timeout=RUNNER_TIMEOUT_S,
         )
     except (OSError, ValueError, subprocess.TimeoutExpired):
@@ -218,7 +232,7 @@ def ruff_arguments(target: Target) -> list[str]:
     codes = ",".join(sorted(target.codes))
     config = ruff_config(target.path, target.root)
     if config is not None:
-        tables = list(ruff_tables(config))
+        tables = ruff_live_tables(config)
         named = frozenset(
             selector for table in tables
             for key in (*SELECT_KEYS, *IGNORE_KEYS)
@@ -244,7 +258,7 @@ def ruff_arguments(target: Target) -> list[str]:
             and selector not in narrower
             and not ruff_ignores(selector, tables)
         })
-        preview = any("preview" in table for table in tables)
+        preview = any("preview" in table for table in ruff_tables(config))
         return [
             "--verbose", "--force-exclude",
             *([] if preview else ["--preview"]),
@@ -289,18 +303,27 @@ def package_eslint_config(package: Path) -> bool:
     return isinstance(data, dict) and "eslintConfig" in data
 
 
-def eslint_config(path: Path, root: Path) -> Path | None:
-    """The folder ESLint runs in, or None without a config. ESLint 9 loads
-    the flat config it finds from its working folder, so it runs in the
-    nearest one; a legacy config cascades, and its .eslintignore is read
-    from the working folder, so it runs at the root."""
+class EslintMode(NamedTuple):
+    folder: Path
+    flat: bool
+
+
+def eslint_config(path: Path, root: Path) -> EslintMode | None:
+    """Where and in which config mode ESLint runs, or None without a
+    config. A flat config loads from the working folder, so ESLint runs
+    in the nearest one. A legacy config cascades and its .eslintignore is
+    read from the working folder, so it runs at the root in legacy mode,
+    also when the project turns flat mode off."""
+    flat_allowed = os.environ.get("ESLINT_USE_FLAT_CONFIG") != "false"
     legacy = False
     for directory in parents_within(path, root):
         names = [e.name for e in directory.iterdir()] if (
             directory.is_dir()
         ) else []
-        if any(FLAT_ESLINT_CONFIG.match(name) for name in names):
-            return directory
+        if flat_allowed and any(
+            FLAT_ESLINT_CONFIG.match(name) for name in names
+        ):
+            return EslintMode(directory, flat=True)
         legacy = legacy or any(
             ESLINT_CONFIG_PATTERN.match(name) or (
                 name == "package.json"
@@ -308,17 +331,18 @@ def eslint_config(path: Path, root: Path) -> Path | None:
             )
             for name in names
         )
-    return root if legacy else None
+    return EslintMode(root, flat=False) if legacy else None
 
 
 def run_eslint(executable: str, target: Target) -> RunResult:
-    config = eslint_config(target.path, target.root)
-    if config is None:
+    mode = eslint_config(target.path, target.root)
+    if mode is None:
         return RunResult(None, "has no project config")
+    env = None if mode.flat else os.environ | {"ESLINT_USE_FLAT_CONFIG": "false"}
     process = run_tool([
         executable, "--stdin", "--stdin-filename", str(target.path),
         "-f", "json",
-    ], target, config)
+    ], target, mode.folder, env)
     if process is None:
         return RunResult(None, f"timed out after {RUNNER_TIMEOUT_S} s")
     try:
@@ -395,6 +419,7 @@ def probe(runner: Runner, executable: str | None, root: Path) -> tuple[str, str]
     try:
         process = subprocess.run(
             [executable, *runner.probe], capture_output=True, text=True,
+            encoding="utf-8", errors="replace",
             check=False, timeout=RUNNER_TIMEOUT_S, cwd=root,
         )
     except subprocess.TimeoutExpired:

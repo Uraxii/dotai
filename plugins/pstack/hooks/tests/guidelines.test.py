@@ -122,6 +122,8 @@ with open(os.path.join(os.environ["WORK"], "eslint.args"), "a") as args:
     args.write(" ".join(sys.argv[1:]) + "\\n")
 with open(os.path.join(os.environ["WORK"], "eslint.cwd"), "w") as cwd:
     cwd.write(os.getcwd())
+with open(os.path.join(os.environ["WORK"], "eslint.env"), "w") as env:
+    env.write(os.environ.get("ESLINT_USE_FLAT_CONFIG", ""))
 sys.stdin.read()
 print(os.environ.get("ESLINT_JSON") or '[{{"messages":[]}}]')
 """
@@ -510,6 +512,15 @@ c.file("packages/api/.eslintrc.json", "{}\n")
 c.hook(c.write("packages/api/f.js", "var x = 1;\n"))
 expect_equal("a legacy config runs eslint at the root, where it reads .eslintignore",
              str(c.project), (WORK / "eslint.cwd").read_text())
+expect_equal("and in legacy mode", "false", (WORK / "eslint.env").read_text())
+c.file("packages/api/eslint.config.js", "export default [];\n")
+c.hook(c.write("packages/api/f.js", "var x = 2;\n"), ESLINT_USE_FLAT_CONFIG="false")
+expect_equal("with flat mode turned off, a nested flat config is not used",
+             str(c.project), (WORK / "eslint.cwd").read_text())
+c.hook(c.write("packages/api/f.js", "var x = 3;\n"))
+expect_equal("otherwise the nearest flat config folder is used",
+             str(c.project / "packages/api"), (WORK / "eslint.cwd").read_text())
+expect_equal("in flat mode", "", (WORK / "eslint.env").read_text())
 
 c = Case("eslint-package-install")
 c.file("packages/api/eslint.config.js", "export default [];\n")
@@ -893,6 +904,24 @@ c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: moved.py\n*** Mo
                              "+num = 1\n*** End Patch"), harness="codex", RUFF_JSON=F403_ROW)
 expect_contains("a moved file's old findings are scanned at its old path",
                 f"--stdin-filename {c.project}/moved.py", c.args())
+def codex_result(name: str, before: str | bytes, patch: str, expected: str) -> None:
+    c.file("demo.py", before)
+    c.hook(c.patch("PreToolUse", f"*** Begin Patch\n{patch}\n*** End Patch"), harness="codex")
+    expect_equal(name, expected, (WORK / "ruff.stdin").read_bytes().decode())
+
+
+codex_result("a second section for one file starts from the first one's text", "from math import *\npass\n",
+             "*** Update File: demo.py\n@@\n-from math import *\n+x = 0\n*** Update File: demo.py\n@@\n-pass\n"
+             "+from os import *", "x = 0\nfrom os import *\n")
+codex_result("an indented move line in an update is context", 'doc = """\n*** Move to: fixture.txt\n"""\npass\n',
+             '*** Update File: demo.py\n@@\n doc = """\n *** Move to: fixture.txt\n """\n-pass\n+x = 1',
+             'doc = """\n*** Move to: fixture.txt\n"""\nx = 1\n')
+codex_result("an anchor's trailing spaces are dropped, as in Codex", '# marker\npass\ndoc = """\n# marker   \npass\n"""\n',
+             "*** Update File: demo.py\n@@ # marker   \n-pass\n+x = 1", '# marker\nx = 1\ndoc = """\n# marker   \npass\n"""\n')
+codex_result("an End of File line with trailing spaces still ends the hunk", 'doc = """\npass\n"""\npass\n',
+             "*** Update File: demo.py\n@@\n-pass\n+x = 1\n*** End of File   ", 'doc = """\npass\n"""\nx = 1\n')
+codex_result("a bare CR ends a source line, as in Codex", b'doc = """\r\npass\r"""\rpass\r',
+             "*** Update File: demo.py\n@@\n-pass\n+x = 1\n*** End of File", 'doc = """\r\npass\r"""\rx = 1\n')
 c.file("demo.py", "if True:\n    a = 1\n    b = 2\n")
 c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: demo.py\n@@\n a = 1\n-    b = 2\n+    from math import *\n"
                              "*** End Patch"), harness="codex")
@@ -993,6 +1022,14 @@ c.file("ruff.toml", '[lint]\nignore = ["PTH1"]\nextend-select = ["PTH123"]\n')
 c.hook(c.write("app.py", "x = 3\n"), PSTACK_GUIDELINES_DIR=str(PLUGIN / "skills" / "principle-code-quality" / "guidelines"))
 expect_contains("a rule selected again inside an ignored prefix is selected on the command line too",
                 ",PTH123 --extend-ignore PTH1 ", c.args().splitlines()[-1])
+c.file("base.toml", '[lint]\nselect = ["ALL"]\n')
+c.file("ruff.toml", 'extend = "base.toml"\n[lint]\nselect = ["E"]\n')
+c.hook(c.write("app.py", "x = 4\n"), PSTACK_GUIDELINES_DIR=str(PLUGIN / "skills" / "principle-code-quality" / "guidelines"))
+expect_contains("a child select resets the base's ALL, so guideline codes are added", "F403", c.args().splitlines()[-1])
+c.file("base.toml", '[lint]\nignore = ["PTH123"]\n')
+c.file("ruff.toml", 'extend = "base.toml"\n[lint]\nselect = ["F"]\n')
+c.hook(c.write("app.py", "x = 5\n"), PSTACK_GUIDELINES_DIR=str(PLUGIN / "skills" / "principle-code-quality" / "guidelines"))
+expect_lacks("and drops the base's ignores", "--extend-ignore", c.args().splitlines()[-1])
 c.file("base.toml", '[lint]\nignore = ["PTH123"]\n')
 c.file("ruff.toml", 'extend = "base.toml"\n[lint]\nextend-select = ["PTH123"]\n')
 c.hook(c.write("app.py", "x = 2\n"), PSTACK_GUIDELINES_DIR=str(PLUGIN / "skills" / "principle-code-quality" / "guidelines"))

@@ -232,14 +232,19 @@ def parse_patch(patch: str) -> list[PatchFile]:
     if lines[-1] == "":
         lines.pop()
     for line in lines:
-        header = PATCH_HEADER.match(line.strip())
-        if header and header.group(1) == "Move to" and files:
+        # Codex trims a header line, but in an update body an indented
+        # line is context, and a move comes right after its header.
+        update = bool(files) and files[-1].action == "Update File"
+        directive = line.rstrip() if update else line.strip()
+        header = PATCH_HEADER.match(directive)
+        move = header is not None and header.group(1) == "Move to"
+        if move and update and not bodies[-1]:
             files[-1] = files[-1]._replace(target=header.group(2))
-        elif header:
+        elif header and not move:
             path = header.group(2)
             files.append(PatchFile(header.group(1), path, path, ()))
             bodies.append([])
-        elif files and line.strip() not in PATCH_MARKERS:
+        elif files and directive not in PATCH_MARKERS:
             bodies[-1].append(line)
     return [
         file._replace(body=tuple(body)) for file, body in zip(files, bodies)
@@ -257,11 +262,13 @@ def hunks(body: Sequence[str]) -> Iterator[Hunk]:
     is an anchor line that Codex finds before it looks for the hunk."""
     hunk: Hunk | None = None
     for line in body:
-        if line.startswith("@@"):
+        directive = line.rstrip()
+        if directive.startswith("@@"):
             if hunk is not None:
                 yield hunk
-            hunk = Hunk(line[3:] if line.startswith("@@ ") else "", [], False)
-        elif line == END_OF_FILE:
+            anchor = directive[3:] if directive.startswith("@@ ") else ""
+            hunk = Hunk(anchor, [], False)
+        elif directive == END_OF_FILE:
             hunk = (hunk or Hunk("", [], False))._replace(at_end=True)
         else:
             hunk = hunk or Hunk("", [], False)
@@ -343,11 +350,12 @@ def apply_update(current: str, body: Sequence[str]) -> str | None:
     its anchor does not match the file. Codex finds every hunk in the
     original lines, without a final empty one, then replaces from the
     end, and always ends the file with a newline."""
-    lines = current.split("\n")
-    if lines[-1] == "":
-        lines.pop()
-    # Codex matches lines without their terminators, so CR is dropped too.
-    keys = [line.removesuffix("\r") for line in lines]
+    # Codex splits at LF, CRLF and a bare CR, and matches the lines
+    # without their terminators; the file's own terminators are kept.
+    lines = SOURCE_LINE.findall(current)
+    keys = [line.rstrip("\r\n") for line in lines]
+    if lines and not lines[-1].endswith(("\n", "\r")):
+        lines[-1] += "\n"
     replacements: list[tuple[int, int, list[str]]] = []
     cursor = 0
     for hunk in hunks(body):
@@ -360,7 +368,8 @@ def apply_update(current: str, body: Sequence[str]) -> str | None:
         old = [row[1:] for row in rows if row[0] in " -"]
         if not old:
             replacements += [
-                (len(lines), 0, new) for _, _, new in changed_runs(rows)
+                (len(lines), 0, terminated(new))
+                for _, _, new in changed_runs(rows)
             ]
             continue
         index = find_hunk(keys, hunk, old, cursor)
@@ -371,7 +380,7 @@ def apply_update(current: str, body: Sequence[str]) -> str | None:
         if index is None:
             return None
         replacements += [
-            (index + offset, length, new)
+            (index + offset, length, terminated(new))
             for offset, length, new in changed_runs(rows)
         ]
         cursor = index + len(old)
@@ -380,11 +389,33 @@ def apply_update(current: str, body: Sequence[str]) -> str | None:
         replacements, key=lambda item: item[0]
     )[::-1]:
         lines[start:start + length] = new
-    return "\n".join(lines) + "\n"
+    return "".join(lines)
 
 
-def patch_change(file: PatchFile, base: Neutral) -> Neutral:
+SOURCE_LINE = re.compile(r"[^\r\n]*(?:\r\n|\r|\n)|[^\r\n]+$")
+
+
+def terminated(lines: list[str]) -> list[str]:
+    return [line + "\n" for line in lines]
+
+
+def patch_change(
+    file: PatchFile, base: Neutral, prior: Neutral | None = None
+) -> Neutral:
+    """The change one file section makes. A later section for the same
+    file starts from the text the earlier ones leave, as Codex applies
+    them in order, and keeps the original text as the baseline."""
+    if prior is not None:
+        if not isinstance(prior.get("after"), str):
+            return prior
+        change = patch_change(file, base | {"disk": prior["after"]})
+        return change | {
+            key: prior[key] for key in ("before", "before_problem", "source")
+            if key in prior
+        }
     disk = read_disk(file.source, str(base["cwd"]), str(base["root"]))
+    if isinstance(base.get("disk"), str):
+        disk = Disk(str(base["disk"]))
     if file.action == "Add File":
         added = "".join(line[1:] + "\n" for line in file.body)
         return {"path": file.target, "before": disk.text, "after": added,
@@ -403,13 +434,16 @@ def codex_tool_event(payload: Payload, base: Neutral) -> Neutral | None:
     cwd, root = str(base["cwd"]), str(base["root"])
     if name == "PostToolUse":
         return {"kind": "post_write", "files": [
-            written(file.target, read_disk(file.target, cwd, root))
-            for file in files
+            written(target, read_disk(target, cwd, root))
+            for target in dict.fromkeys(file.target for file in files)
         ]}
     if name != "PreToolUse":
         return None
-    changes = [patch_change(file, base) for file in files]
-    return {"kind": "pre_write", "files": changes}
+    changes: dict[str, Neutral] = {}
+    for file in files:
+        prior = changes.pop(file.source, None)
+        changes[file.target] = patch_change(file, base, prior)
+    return {"kind": "pre_write", "files": list(changes.values())}
 
 
 def codex_event(payload: Payload) -> Neutral | None:

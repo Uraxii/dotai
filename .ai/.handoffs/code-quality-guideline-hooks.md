@@ -194,3 +194,12 @@ Scratch paths named in those notes (under `/tmp/...`) are gone; ignore them.
 - Ruff: a rule the config selects again inside an ignored prefix (ignore PTH1, select PTH123) is added to `--extend-select`. Checked with real ruff.
 - Tools are found in `node_modules/.bin` and `.venv` of every folder from the file up to the root (nearest first), then PATH; the probe cache is keyed by tool and path.
 - mise run ci green: guidelines.test.py 226/226.
+
+## Update: review a807a7fc findings fixed (5 blocking, 2 non-blocking)
+- Codex: several sections for one file apply in order; the original text stays the baseline and PostToolUse reads the file once.
+- Codex parser: in an update body an indented line is context (a `*** Move to` there is not a move); a move counts only right after its Update header; `@@` anchors and `*** End of File` lose trailing whitespace.
+- Codex apply splits source at LF, CRLF and bare CR, matches without terminators, and keeps the file's terminators.
+- Ruff: a config that sets `select` resets the selectors and ignores of the configs it extends (`ruff_live_tables`). Checked with real ruff.
+- ESLint: mode and folder are chosen together. Nearest flat config folder in flat mode; with only legacy configs, or `ESLINT_USE_FLAT_CONFIG=false`, the root in legacy mode (`ESLINT_USE_FLAT_CONFIG=false` set for the run).
+- Tool input and output use UTF-8 whatever the locale.
+- mise run ci green: guidelines.test.py 237/237.
