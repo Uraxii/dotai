@@ -12,6 +12,7 @@ const { fileURLToPath } = require("node:url");
 const out = process.env.PSTACK_ESLINT_LOADED;
 if (out && typeof nodeModule.registerHooks === "function") {
   const realpathSync = fs.realpathSync;
+  const readFileSync = fs.readFileSync;
   // Each file maps to whether it was read, not only looked for: ESLint
   // looks for every flat config name, also ones it never loads.
   const loaded = new Map();
@@ -64,14 +65,27 @@ if (out && typeof nodeModule.registerHooks === "function") {
       // `import` tries only the exact name; `require` also tries the
       // extensions it knows. These look-ups come from project code, so
       // they count as reads.
+      // A folder's package.json `main` comes before its index files, and
+      // a name ending in `/` (or `.`, `..`) is only a folder.
       const suffixes = context.conditions?.includes("require") === false
         ? [] : Object.keys(nodeModule._extensions || { ".js": 0, ".json": 0, ".node": 0 });
-      const candidates = base ? [
-        base,
-        ...suffixes.map((suffix) => base + suffix),
+      const folderOnly = /(^|\/)\.{0,2}$/.test(specifier);
+      const indexes = (folder) => suffixes.map((suffix) => path.join(folder, "index" + suffix));
+      const mainOf = (folder) => {
+        try {
+          const main = JSON.parse(readFileSync(path.join(folder, "package.json"), "utf8")).main;
+          return typeof main === "string" && main ? path.resolve(folder, main) : null;
+        } catch {
+          return null;
+        }
+      };
+      const main = base && suffixes.length ? mainOf(base) : null;
+      const candidates = !base ? [] : !suffixes.length ? [base] : [
+        ...(folderOnly ? [] : [base, ...suffixes.map((suffix) => base + suffix)]),
         path.join(base, "package.json"),
-        ...suffixes.map((suffix) => path.join(base, "index" + suffix)),
-      ] : [];
+        ...(main ? [main, ...suffixes.map((suffix) => main + suffix), ...indexes(main)] : []),
+        ...indexes(base),
+      ];
       let result;
       try {
         result = nextResolve(specifier, context);

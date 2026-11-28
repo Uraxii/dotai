@@ -423,6 +423,23 @@ RUFF_IGNORE_UNKNOWN = (
 RUFF_GIT_IGNORE_NAMES = (".gitignore", ".ignore")
 
 
+def global_git_excludes() -> str:
+    """The excludes file Ruff reads: its matcher reads core.excludesFile
+    only from the global git config, not from the repository's own."""
+    try:
+        value = subprocess.run(
+            ["git", "config", "--global", "--get", "core.excludesFile"],
+            stdin=subprocess.DEVNULL, capture_output=True, text=True,
+            timeout=1, check=False,
+        ).stdout.strip()
+    except (OSError, subprocess.SubprocessError):
+        value = ""
+    if value:
+        return os.path.expanduser(value)
+    config = os.environ.get("XDG_CONFIG_HOME") or os.path.expanduser("~/.config")
+    return os.path.join(config, "git", "ignore")
+
+
 def git_matches(target: Target, *options: str) -> bool | None:
     """Whether git ignores the file, or None when git cannot tell (no
     git, or no repository)."""
@@ -459,7 +476,9 @@ def ruff_ignore_skip(target: Target) -> RunResult | None:
     }
     if respects == {False}:
         return None
-    ignored = git_matches(target)
+    ignored = git_matches(
+        target, "-c", f"core.excludesFile={global_git_excludes()}",
+    )
     # A `.ignore` can also un-ignore what git ignores, with `!name`.
     dot_ignore = any(
         (folder / ".ignore").is_file()

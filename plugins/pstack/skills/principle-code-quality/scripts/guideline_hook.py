@@ -521,6 +521,8 @@ def codex_tool_event(payload: Payload, base: Neutral) -> Neutral | None:
     moved_away: set[str] = set()
     # Symlinks the patch deletes; their paths no longer lead to the target.
     unlinked: set[str] = set()
+    # The symlink paths each file was edited through, by real path.
+    link_names: dict[str, list[str]] = {}
     for file in sections:
         source, target = (
             path if path in unlinked else os.path.realpath(path)
@@ -550,8 +552,9 @@ def codex_tool_event(payload: Payload, base: Neutral) -> Neutral | None:
             changes[source] = {"path": file.source, "before": None,
                                "after": None, "source": file.source}
             deleted.add(source)
-            unlinked.add(dest)
             continue
+        if file.action != "Delete File" and dest not in unlinked and os.path.islink(dest):
+            link_names.setdefault(target, []).append(dest)
         prior = changes.get(source) if moves_link else changes.pop(source, None)
         if file.action == "Delete File":
             # Kept, as a deleted file can be a lint setting of the others;
@@ -585,8 +588,21 @@ def codex_tool_event(payload: Payload, base: Neutral) -> Neutral | None:
     # moved a file there first.
     for source in moved_away - changes.keys():
         changes[source] = {"path": source, "before": None, "after": None}
-    return {"kind": "pre_write", "files": with_link_targets(
-        list(changes.values()), cwd, root, unlinked)}
+    files = list(changes.values())
+    # Each symlink the file was edited through has its own lint settings.
+    for key, names in link_names.items():
+        change = changes.get(key)
+        if change is None or change.get("after") is None:
+            continue
+        own = os.path.normpath(os.path.join(cwd, str(change["path"])))
+        files += [
+            change | {"path": name, "source": name}
+            for name in dict.fromkeys(names)
+            if name != own and name not in unlinked
+            and os.path.realpath(name) == key
+        ]
+    return {"kind": "pre_write",
+            "files": with_link_targets(files, cwd, root, unlinked)}
 
 
 def codex_event(payload: Payload) -> Neutral | None:

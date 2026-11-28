@@ -675,6 +675,12 @@ c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Add File: made/neg.py\n+from 
        harness="codex", RUFF_JSON=F403_ROW)
 expect_contains("a .ignore that can un-ignore a git-ignored file is unknown, not a skip", "could not tell whether a .ignore", str(c.output()))
 (c.project / ".ignore").unlink()
+c.file("local-excludes", "localx.py\n")
+with (c.project / ".git" / "config").open("a") as config:
+    config.write(f"[core]\n\texcludesFile = {c.project / 'local-excludes'}\n")
+c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Add File: localx.py\n+from math import *\n*** End Patch"),
+       harness="codex", RUFF_JSON=F403_ROW)
+expect_equal("a repository's own core.excludesFile is not used, as in Ruff", "deny", c.decision())
 c = Case("ruff-ignore-no-git")
 c.file(".ignore", "skipme.py\n")
 c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Add File: skipme.py\n+from math import *\n*** End Patch"),
@@ -740,6 +746,16 @@ if NODE:
     expect_equal("a require.resolve the config makes counts as a read", True, str(trace.project.resolve() / "absent.cjs") in recorded)
     expect_equal("an extension require does not try is not a candidate", False, any(line.endswith("rules.cjs") for line in recorded))
     expect_equal("one it does try is", True, str(trace.project.resolve() / "rules.js") in recorded)
+    trace.file("pkgdir/index.js", "module.exports = 1;\n")
+    trace.file("preset/package.json", '{"main": "src/preset"}\n')
+    trace.file("preset/src/preset.json", "{}\n")
+    trace.file("dirs.cjs", "require('./pkgdir/'); require('./preset');\n")
+    listed.unlink(missing_ok=True)
+    subprocess.run([NODE, "dirs.cjs"], cwd=trace.project, capture_output=True, env=os.environ | {
+        "NODE_OPTIONS": f"--require {ENGINE.parent / 'eslint_loaded.cjs'}", "PSTACK_ESLINT_LOADED": str(listed)})
+    recorded = listed.read_text().splitlines() if listed.exists() else []
+    expect_equal("a name ending in / tries no sibling file", False, str(trace.project.resolve() / "pkgdir.js") in recorded)
+    expect_equal("a package main tries its extensions in order", True, str(trace.project.resolve() / "preset/src/preset.js") in recorded)
     trace.file("eslint.config.mjs", "")
     trace.file("node_modules/disc/index.js", "module.exports = () => new Promise((done) => done(require('node:fs').existsSync(require('node:path').join(process.cwd(), 'eslint.config.mjs'))));\n")
     trace.file("node_modules/disc/run.js", "require('./index.js')();\n")
@@ -1348,6 +1364,21 @@ c.file("real12.py", "pass\n")
 (c.project / "build" / "alias12.py").symlink_to(c.project / "real12.py")
 c.hook(c.write("build/alias12.py", "x = [a for b in c for a in b]\n"), **shared_env)
 expect_equal("a Write through a symlink is checked at the target's own path", "deny", c.decision())
+c.file("build/real13.py", "pass\n")
+(c.project / "link13.py").symlink_to(c.project / "build" / "real13.py")
+(c.project / "build" / "link13b.py").symlink_to(c.project / "build" / "real13.py")
+c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: link13.py\n@@\n-pass\n+x = [a for b in c for a in b]\n"
+                             "*** Update File: build/link13b.py\n@@\n x = [a for b in c for a in b]\n+# note\n*** End Patch"),
+       harness="codex", **shared_env)
+expect_equal("each symlink a file was edited through is checked", "deny", c.decision())
+expect_contains("and the deny names the first link", "link13.py", str(c.output()))
+c.file("a14.py", "pass\n")
+(c.project / "build" / "alias14.py").symlink_to(c.project / "a14.py")
+c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: a14.py\n*** Move to: build/alias14.py\n@@\n-pass\n+# moved\n"
+                             "*** Add File: build/alias14.py\n+x = [a for b in c for a in b]\n*** End Patch"),
+       harness="codex", **shared_env)
+expect_equal("an add through the symlink a move left is checked at the real path", "deny", c.decision())
+expect_contains("and the deny names it", "a14.py", str(c.output()))
 c.file("real9.py", "pass\n")
 c.file("aliases/keep", "")
 (c.project / "aliases" / "alias9.py").symlink_to("../real9.py")

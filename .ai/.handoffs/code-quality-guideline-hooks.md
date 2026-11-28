@@ -327,3 +327,8 @@ Scratch paths named in those notes (under `/tmp/...`) are gone; ignore them.
 - ESLint recorder: resolve candidates from project code are reads; `require` candidates use `Module._extensions`, `import` only the exact name. A look-up counts as a read when any project (non-node_modules) frame is on the stack (path-exists, `require.resolve`).
 - `with_link_targets` (guideline_hook.py): a change written through a symlink is also checked at the real path inside the root, with its own settings (Claude Write/Edit, Codex pre and post).
 - Codex: a move onto a symlink to the file itself is a delete (Codex writes through the symlink, then removes the file).
+
+## Update: review 3e0513de (7381773) findings fixed (4 blocking, 1 non-blocking)
+- Ruff git-ignore check passes `-c core.excludesFile=<global value or $XDG_CONFIG_HOME/git/ignore>`: Ruff's matcher ignores a repository's own `core.excludesFile`.
+- ESLint recorder candidates follow Node's `require` order: exact name and extensions (none for a name ending in `/`, `.`, `..`), then `package.json`, its `main` with extensions and index files, then the folder's index files.
+- Codex: every symlink a file is edited through is also checked (`link_names`), plus the real path; a move onto a symlink to the file itself leaves the symlink, so a later Add through it is checked at the real path.
