@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+#MISE description="REPLACE_WITH_DESCRIPTION"
+#USAGE arg "<environment>" help="Where to run" {
+#USAGE   choices "dev" "prod"
+#USAGE }
+#USAGE flag "-n --dry-run" help="Print what would change, change nothing"
+set -euo pipefail
+
+# Replace with the task's commands. mise sets usage_environment and usage_dry_run.
+REPLACE_WITH_COMMAND "$usage_environment" "${usage_dry_run:-false}"

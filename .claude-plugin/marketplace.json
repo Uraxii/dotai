@@ -96,6 +96,11 @@
       "name": "personal-instructions",
       "source": "./plugins/personal-instructions",
       "description": "Inject a hand-edited instructions.md at session start and, where the harness has a subagent-start hook, subagent start."
+    },
+    {
+      "name": "mise",
+      "source": "./plugins/mise",
+      "description": "Set up and change mise in a repository: tools, environment values, tasks, the lockfile, test runs, and CI."
     }
   ]
 }

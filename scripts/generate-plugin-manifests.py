@@ -446,6 +446,27 @@ PLUGINS: list[dict[str, object]] = [
             "Install my personal instructions into every session.",
         ],
     },
+    {
+        "name": "mise",
+        "version": "1.0.0",
+        "description": (
+            "Set up and change mise in a repository: tools, environment "
+            "values, tasks, the lockfile, test runs, and CI."
+        ),
+        "short": "Playbooks and templates for mise setups and test runs.",
+        "long": (
+            "Gives an agent playbooks for a new mise setup, for changes to "
+            "tools, environment values and tasks, and for test runs that "
+            "scale by one task per suite. It also has a chooser for "
+            "backends, task forms and config files, templates, and a script "
+            "that checks a repository's setup."
+        ),
+        "keywords": ["mise", "dev-environment", "tasks", "testing"],
+        "prompts": [
+            "Set up mise for this repository.",
+            "Add an integration test suite to the mise tasks.",
+        ],
+    },
 ]
 
 

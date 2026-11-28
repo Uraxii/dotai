@@ -1,7 +1,7 @@
 #!/bin/bash
-# Lints every hook manifest, runs every plugin hook test and the shunt evals,
-# and checks that the files each plugin carries its own copy of have not
-# drifted apart.
+# Lints every hook manifest, runs every plugin hook test, every skill script
+# test and the shunt evals, and checks that the files each plugin carries its
+# own copy of have not drifted apart.
 #
 # Usage: scripts/run-hook-tests.sh
 # Needs bash and jq for the tests; the hooks themselves need only bash and awk.
@@ -22,7 +22,7 @@ for shared in hook-json.awk run-hook.cmd; do
   done
 done
 
-for test in "$root"/plugins/*/hooks/tests/*.test.sh; do
+for test in "$root"/plugins/*/hooks/tests/*.test.sh "$root"/plugins/*/skills/*/scripts/*.test.sh; do
   bash "$test" || failed=1
 done
 bash "$root/plugins/shunt/evals/run.sh" 2>&1 | grep -E 'FAIL|^Total'
