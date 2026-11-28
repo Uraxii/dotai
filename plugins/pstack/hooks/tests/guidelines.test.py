@@ -118,6 +118,17 @@ import os, sys
 if sys.argv[1:] == ["--version"]:
     print("v10.1.0")
     sys.exit(0)
+if sys.argv[1:2] == ["--print-config"]:
+    # As the Node resolve hook does: the config files, then $ESLINT_LOADED.
+    import glob
+    out = os.environ.get("PSTACK_ESLINT_LOADED")
+    loaded = glob.glob(os.path.join(os.getcwd(), "eslint.config.*"))
+    loaded += glob.glob(os.path.join(os.getcwd(), ".eslintrc*"))
+    loaded += [os.path.join(os.getcwd(), name) for name in
+               os.environ.get("ESLINT_LOADED", "").split(os.pathsep) if name]
+    if out and os.environ.get("ESLINT_LOADED") != "none":
+        open(out, "w").write("\\n".join(os.path.realpath(p) for p in loaded))
+    sys.exit(0)
 with open(os.path.join(os.environ["WORK"], "eslint.args"), "a") as args:
     args.write(" ".join(sys.argv[1:]) + "\\n")
 with open(os.path.join(os.environ["WORK"], "eslint.cwd"), "w") as cwd:
@@ -508,7 +519,7 @@ c.file("packages/cfg/index.mjs", "export default {};\n")
 c.file("packages/web/other.mjs", "export default {};\n")
 c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: tools/rules.mjs\n@@\n-export default {};\n+export default { 'no-var': 'off' };\n"
                              "*** Add File: packages/web/new0.ts\n+var x = 1\n*** End Patch"),
-       harness="codex", ESLINT_JSON=NO_VAR_ROW)
+       harness="codex", ESLINT_LOADED=os.pathsep.join(str(c.project / p) for p in ['tools/rules.mjs']), ESLINT_JSON=NO_VAR_ROW)
 expect_contains("a module the flat config imports counts as a setting", "also changes tools/rules.mjs", str(c.output()))
 c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: .eslintignore\n@@\n-dist/\n+packages/web/main.ts\n"
                              "*** Add File: packages/web/new1.ts\n+var x = 1\n*** End Patch"),
@@ -523,7 +534,7 @@ expect_equal("a module the config does not load is not a setting", "deny", c.dec
 c.file("packages/web/eslint.config.mjs", "import shared from '@org/cfg';\nexport default [shared];\n")
 c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: packages/cfg/index.mjs\n@@\n-export default {};\n+export default { rules: {} };\n"
                              "*** Add File: packages/web/new3.ts\n+var x = 1\n*** End Patch"),
-       harness="codex", ESLINT_JSON=NO_VAR_ROW)
+       harness="codex", ESLINT_LOADED=os.pathsep.join(str(c.project / p) for p in ['packages/cfg/index.mjs']), ESLINT_JSON=NO_VAR_ROW)
 expect_contains("a workspace package the config imports counts as a setting", "also changes packages/cfg/index.mjs", str(c.output()))
 c.file("packages/cfg/index.mjs", "import base from '@org/base';\nexport default base;\n")
 c.file("packages/base/package.json", '{"exports": {".": "./main.mjs"}}\n')
@@ -531,7 +542,7 @@ c.file("packages/base/main.mjs", "export default {};\n")
 (c.project / "node_modules" / "@org" / "base").symlink_to(c.project / "packages" / "base")
 c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: packages/base/main.mjs\n@@\n-export default {};\n+export default { rules: {} };\n"
                              "*** Add File: packages/web/new4.ts\n+var x = 1\n*** End Patch"),
-       harness="codex", ESLINT_JSON=NO_VAR_ROW)
+       harness="codex", ESLINT_LOADED=os.pathsep.join(str(c.project / p) for p in ['packages/cfg/index.mjs', 'packages/base/main.mjs']), ESLINT_JSON=NO_VAR_ROW)
 expect_contains("a workspace package another one imports counts", "also changes packages/base/main.mjs", str(c.output()))
 
 c = Case("eslint-legacy-settings")
@@ -542,7 +553,7 @@ c.file("packages/acme/index.cjs", "module.exports = {};\n")
 (c.project / "node_modules" / "@acme" / "eslint-config").symlink_to(c.project / "packages" / "acme")
 c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: packages/acme/index.cjs\n@@\n-module.exports = {};\n+module.exports = { rules: {} };\n"
                              "*** Add File: new0.js\n+var x = 1;\n*** End Patch"),
-       harness="codex", ESLINT_JSON=NO_VAR_ROW)
+       harness="codex", ESLINT_LOADED=os.pathsep.join(str(c.project / p) for p in ['packages/acme/index.cjs']), ESLINT_JSON=NO_VAR_ROW)
 expect_contains("a scoped legacy extends name resolves to its eslint-config package",
                 "also changes packages/acme/index.cjs", str(c.output()))
 c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Add File: eslint.config.mjs\n+export default [];\n"
@@ -558,10 +569,42 @@ c = Case("eslint-folder-main")
 c.file("eslint.config.cjs", "module.exports = require('./lint');\n")
 c.file("lint/package.json", '{"main": "rules.cjs"}\n')
 c.file("lint/rules.cjs", "module.exports = [];\n")
+c.file("lint/other.cjs", "module.exports = [];\n")
 c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: lint/rules.cjs\n@@\n-module.exports = [];\n+module.exports = [{}];\n"
                              "*** Add File: new.js\n+var x = 1;\n*** End Patch"),
-       harness="codex", ESLINT_JSON=NO_VAR_ROW)
+       harness="codex", ESLINT_LOADED=os.pathsep.join(str(c.project / p) for p in ['lint/rules.cjs']), ESLINT_JSON=NO_VAR_ROW)
 expect_contains("a folder's package.json main counts as a loaded file", "also changes lint/rules.cjs", str(c.output()))
+c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: lint/other.cjs\n@@\n-module.exports = [];\n+module.exports = [{}];\n"
+                             "*** Add File: new2.js\n+var x = 1;\n*** End Patch"),
+       harness="codex", ESLINT_JSON=NO_VAR_ROW, ESLINT_LOADED="none")
+expect_contains("when ESLint's loaded files are unknown, a changed module counts", "also changes lint/other.cjs", str(c.output()))
+c.file("eslint.config.js", "export default [];\n")
+c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Add File: eslint.config.mjs\n+export default [];\n"
+                             "*** Add File: new3.js\n+var x = 1;\n*** End Patch"),
+       harness="codex", ESLINT_JSON=NO_VAR_ROW)
+expect_equal("a flat config that an eslint.config.js outranks is not a setting", "deny", c.decision())
+
+
+c = Case("ruff-symlink-extend")
+c.file("ruff.toml", 'extend = "b/config.toml"\n')
+c.file("a/source/config.toml", 'extend = "../shared.toml"\n')
+(c.project / "b").symlink_to(c.project / "a" / "source")
+c.file("shared.toml", '[lint]\nselect = ["F403"]\n')
+c.file("a/shared.toml", '[lint]\nignore = ["F403"]\n')
+c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: shared.toml\n@@\n [lint]\n+ignore = [\"F403\"]\n"
+                             "*** Add File: app.py\n+from math import *\n*** End Patch"),
+       harness="codex", RUFF_JSON=F403_ROW)
+expect_contains("extend follows the path through a symlink, as Ruff does", "also changes shared.toml", str(c.output()))
+
+c = Case("codex-move-chain")
+c.file(".ruff.toml", '# original\nlint.select = ["F403"]\n')
+c.file("candidate.toml", '# original\nlint.select = ["F403"]\n')
+c.file("ruff.toml", 'lint.ignore = ["F403"]\n')
+c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: candidate.toml\n*** Move to: .ruff.toml\n@@\n-# original\n+# moved\n"
+                             "*** Update File: .ruff.toml\n*** Move to: archive.toml\n@@\n-lint.select = [\"F403\"]\n+lint.select = []\n"
+                             "*** Add File: app.py\n+from math import *\n*** End Patch"),
+       harness="codex", RUFF_JSON=F403_ROW)
+expect_contains("a config a move chain leaves empty counts", "also changes .ruff.toml", str(c.output()))
 
 c = Case("eslint-nested-config")
 c.file("eslint.config.js", "export default [];\n")

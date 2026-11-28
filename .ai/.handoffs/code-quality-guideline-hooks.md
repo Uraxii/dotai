@@ -231,3 +231,10 @@ Scratch paths named in those notes (under `/tmp/...`) are gone; ignore them.
 - Codex: sections are keyed by normalized path (`./a.py` = `a.py`); a delete keeps the path a moved file came from.
 - Files past the 50-file limit still count as settings (`Event.unchecked`).
 - Checked with real ruff and ESLint 9. mise run ci green: guidelines.test.py 263/263.
+
+## Update: review db1e2bbe findings fixed (7 blocking, 1 non-blocking)
+- ESLint settings no longer copy Node/ESLint resolution. `eslint_loaded` runs `eslint --print-config` once per config with NODE_OPTIONS `--require scripts/eslint_loaded.cjs`; a `node:module` registerHooks resolve hook lists every file Node resolves. A changed file counts if ESLint read it, or it is the nearest package.json of such a file. Covers shorthand, `exports` subpaths and conditions, YAML configs, folder `main`. If the list is unknown (Node without registerHooks, timeout, no eslint), any changed script/JSON/YAML/.eslintignore counts (warn).
+- A flat config outranked in ESLint's folder (order js, mjs, cjs, ts, mts, cts) is not a setting. A file can be its own config.
+- Settings are scanned only when a deny is possible: 50 files + 20 imported modules now take 2.7 s (was 28 s).
+- Ruff `extend` follows the path through symlinks, as Ruff does. Codex: a path a move chain leaves empty gets a delete entry.
+- Real ESLint 9 / Node 24 / ruff repros for all 8. The self-config case is checked only with real ESLint (the stub returns the same findings before and after). mise run ci green.

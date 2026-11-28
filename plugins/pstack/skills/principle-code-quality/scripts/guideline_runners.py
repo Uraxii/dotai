@@ -14,6 +14,7 @@ import os
 import re
 import shutil
 import subprocess
+import tempfile
 import time
 import tomllib
 from collections.abc import Callable, Iterator, Mapping
@@ -24,16 +25,18 @@ from code_quality import check_source
 
 RUNNER_TIMEOUT_S = 1.5
 DEFAULT_LINE_LENGTH = 80
-MODULE_SUFFIXES = ("", ".js", ".mjs", ".cjs", ".ts", ".mts", ".cts", ".json")
-CONFIG_MODULES_MAX = 50
-QUOTED = re.compile(r"""['"]([^'"\n]{1,200})['"]""")
-PACKAGE_NAME = re.compile(r"^(@[\w.-]+/)?[\w.-]+$")
 # In ruff's order of precedence within one directory.
 RUFF_CONFIG_NAMES = (".ruff.toml", "ruff.toml", "pyproject.toml")
 ESLINT_CONFIG_PATTERN = re.compile(
     r"^(eslint\.config\.[cm]?[jt]s|\.eslintrc(\.(js|cjs|json|ya?ml))?)$"
 )
 FLAT_ESLINT_CONFIG = re.compile(r"^eslint\.config\.[cm]?[jt]s$")
+FLAT_ORDER = ("js", "mjs", "cjs", "ts", "mts", "cts")
+LOADED_RECORDER = Path(__file__).with_name("eslint_loaded.cjs")
+LOADED_TIMEOUT_S = 4
+SETTING_SUFFIXES = frozenset({
+    ".js", ".mjs", ".cjs", ".ts", ".mts", ".cts", ".json", ".yaml", ".yml",
+})
 LEGACY_ESLINT_CONFIG = re.compile(r"^\.eslintrc(\.(js|cjs|json|ya?ml))?$")
 IGNORE_KEYS = ("ignore", "extend-ignore")
 SELECT_KEYS = ("select", "extend-select")
@@ -132,12 +135,10 @@ def ruff_chain(config: Path) -> Iterator[Path]:
         tables = ruff_lint_tables(current)
         extend = tables[0].get("extend") if tables else None
         # Ruff expands `~` and environment variables in `extend`.
-        current = (
-            (current.parent / os.path.expandvars(
-                os.path.expanduser(extend)
-            )).resolve()
-            if isinstance(extend, str) else None
-        )
+        # Ruff joins `extend` to the path it read, through symlinks.
+        current = Path(os.path.normpath(
+            current.parent / os.path.expandvars(os.path.expanduser(extend))
+        )) if isinstance(extend, str) else None
 
 
 def ruff_tables(config: Path) -> Iterator[Mapping[str, object]]:
@@ -213,7 +214,7 @@ def eslint_setting(
     setting: Path, code: Path, root: Path, text: str | None
 ) -> bool:
     """An ESLint config the code file uses or would use instead, the
-    .eslintignore in legacy mode, or a file the config loads."""
+    .eslintignore in legacy mode, or a file ESLint reads for the config."""
     mode = eslint_config(code, root)
     folders = list(parents_within(code, root))
     name = setting.name
@@ -230,135 +231,71 @@ def eslint_setting(
     if mode.flat:
         if flat_name and setting.parent in list(
             parents_within(code, mode.folder)
-        ):
+        ) and not outranked(setting, mode.folder):
             return True
-        configs = [
-            entry for entry in mode.folder.iterdir()
-            if FLAT_ESLINT_CONFIG.match(entry.name)
-        ]
-    else:
-        # Legacy ESLint runs at the root and reads the .eslintignore there.
-        if (legacy_name or flat_name) and setting.parent in folders or (
-            setting == mode.folder / ".eslintignore"
-        ):
-            return True
-        configs = [
-            directory / entry for directory in folders if directory.is_dir()
-            for entry in os.listdir(directory)
-            if LEGACY_ESLINT_CONFIG.match(entry) or entry == "package.json"
-        ]
-    files, packages = config_modules(configs, root)
-    return setting in files or any(
-        package in setting.parents for package in packages
+    # Legacy ESLint runs at the root and reads the .eslintignore there.
+    elif (legacy_name or flat_name) and setting.parent in folders or (
+        setting == mode.folder / ".eslintignore"
+    ):
+        return True
+    loaded = eslint_loaded(mode.folder if mode.flat else code, mode, root)
+    if loaded is None:
+        return name == ".eslintignore" or setting.suffix in SETTING_SUFFIXES
+    return setting in loaded
+
+
+def outranked(setting: Path, folder: Path) -> bool:
+    """Whether a flat config in ESLint's folder is unused because a name
+    ESLint tries first is there."""
+    if setting.parent != folder:
+        return False
+    rank = FLAT_ORDER.index(setting.name.rsplit(".", 1)[1])
+    return any(
+        (folder / f"eslint.config.{suffix}").is_file()
+        for suffix in FLAT_ORDER[:rank]
     )
 
 
-def config_text(config: Path) -> str:
-    """A config's text; of a package.json only its eslintConfig."""
-    try:
-        text = config.read_text(encoding="utf-8")
-        if config.name == "package.json":
-            data = json.loads(text)
-            return json.dumps(
-                data.get("eslintConfig") if isinstance(data, dict) else None
+@functools.cache
+def eslint_loaded(
+    target: Path, mode: EslintMode, root: Path
+) -> frozenset[Path] | None:
+    """The project files ESLint reads to build a config, with the nearest
+    package.json of each, or None when they cannot be found. ESLint loads
+    the config itself under a Node resolve hook that lists them."""
+    executable = locate("eslint", target if mode.flat else target.parent, root)
+    if executable is None:
+        return None
+    env = os.environ | {"NODE_OPTIONS": " ".join(filter(None, (
+        os.environ.get("NODE_OPTIONS"), f'--require "{LOADED_RECORDER}"',
+    )))}
+    if not mode.flat:
+        env["ESLINT_USE_FLAT_CONFIG"] = "false"
+    with tempfile.TemporaryDirectory() as work:
+        env["PSTACK_ESLINT_LOADED"] = str(Path(work) / "loaded")
+        probe = target / "_.js" if mode.flat else target
+        try:
+            subprocess.run(
+                [executable, "--print-config", str(probe)], cwd=mode.folder,
+                env=env, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL, timeout=LOADED_TIMEOUT_S,
+                check=False,
             )
-    except (OSError, ValueError):
-        return ""
-    return text
-
-
-def file_candidates(base: Path) -> list[Path]:
-    return [
-        base.with_name(base.name + suffix) for suffix in MODULE_SUFFIXES
-    ] + [base / f"index{suffix}" for suffix in MODULE_SUFFIXES[1:]]
-
-
-def package_entries(folder: Path) -> list[str]:
-    """The entry points a folder's package.json names in main or in the
-    exports of its root."""
-    try:
-        data = json.loads((folder / "package.json").read_text(encoding="utf-8"))
-    except (OSError, ValueError):
-        return []
-    if not isinstance(data, dict):
-        return []
-    exports = data.get("exports")
-    if isinstance(exports, dict):
-        exports = exports.get(".", exports)
-    if isinstance(exports, dict):
-        exports = list(exports.values())
-    entries = [data.get("main"), *(
-        exports if isinstance(exports, list) else [exports]
-    )]
-    return [entry for entry in entries if isinstance(entry, str)]
-
-
-def module_candidates(base: Path) -> list[Path]:
-    """The files a module path can load, as Node resolves it: the file,
-    an index file, or the entry point of a folder's package.json."""
-    return file_candidates(base) + [
-        candidate for entry in package_entries(base)
-        for candidate in file_candidates(base / entry)
-    ]
-
-
-def workspace_package(name: str, start: Path, root: Path) -> Path | None:
-    """The project folder of a package a config names, when the package
-    is part of the project (a workspace package linked in node_modules)."""
-    # ESLint expands `foo` to `eslint-config-foo`, `@acme` to
-    # `@acme/eslint-config` and `@acme/foo` to `@acme/eslint-config-foo`.
-    parts = name.split("/")
-    if name.startswith("@"):
-        scope = parts[0]
-        names = [f"{scope}/{parts[1]}", f"{scope}/eslint-config-{parts[1]}"] if (
-            len(parts) > 1 and parts[1]
-        ) else [f"{scope}/eslint-config"]
-    else:
-        names = [parts[0], f"eslint-config-{parts[0]}"]
-    names = [package for package in names if PACKAGE_NAME.match(package)]
-    for directory in parents_within(start / "_", root):
-        for candidate in names:
-            linked = directory / "node_modules" / candidate
-            if linked.is_dir():
-                real = linked.resolve()
-                return real if root in real.parents else None
-    return None
-
-
-def config_modules(
-    configs: list[Path], root: Path
-) -> tuple[set[Path], set[Path]]:
-    """The files ESLint configs load by relative path, followed through
-    those files, and the folders of workspace packages they name. Every
-    quoted string counts, so a name in a rule option can add a file:
-    a false match only makes a finding a warning."""
-    files: set[Path] = set()
-    packages: set[Path] = set()
-    pending = [config.resolve() for config in configs]
-    read: set[Path] = set()
-    while pending and len(read) < CONFIG_MODULES_MAX:
-        current = pending.pop()
-        if current in read:
-            continue
-        read.add(current)
-        files.add(current)
-        for name in QUOTED.findall(config_text(current)):
-            if name.startswith(("./", "../")):
-                candidates = [
-                    candidate.resolve()
-                    for candidate in module_candidates(current.parent / name)
-                ]
-                files.update(candidates)
-                pending += [c for c in candidates if c.is_file()]
-            elif (package := workspace_package(
-                name, current.parent, root
-            )) is not None and package not in packages:
-                packages.add(package)
-                pending += [
-                    candidate.resolve() for candidate in
-                    module_candidates(package) if candidate.is_file()
-                ]
-    return files, packages
+            names = Path(env["PSTACK_ESLINT_LOADED"]).read_text(
+                encoding="utf-8"
+            ).splitlines()
+        except (OSError, subprocess.SubprocessError):
+            return None
+    files = {Path(name) for name in names if name}
+    files = {path for path in files if root in path.parents}
+    for path in list(files):
+        manifest = next((
+            folder / "package.json" for folder in parents_within(path, root)
+            if (folder / "package.json").is_file()
+        ), None)
+        if manifest is not None:
+            files.add(manifest)
+    return frozenset(files)
 
 
 def selected_by(code: str, selectors: frozenset[str]) -> bool:

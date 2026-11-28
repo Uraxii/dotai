@@ -447,6 +447,7 @@ def codex_tool_event(payload: Payload, base: Neutral) -> Neutral | None:
     # Keyed by normalized path, as `./a.py` and `a.py` are one file.
     changes: dict[str, Neutral] = {}
     deleted: set[str] = set()
+    moved_away: set[str] = set()
     for file in sections:
         source, target = map(os.path.normpath, (file.source, file.target))
         prior = changes.pop(source, None)
@@ -463,6 +464,12 @@ def codex_tool_event(payload: Payload, base: Neutral) -> Neutral | None:
             prior = None
             deleted.discard(source)
         changes[target] = patch_change(file, base, prior)
+        if source != target:
+            moved_away.add(source)
+    # A path a move left empty is deleted, also when another section
+    # moved a file there first.
+    for source in moved_away - changes.keys():
+        changes[source] = {"path": source, "before": None, "after": None}
     return {"kind": "pre_write", "files": list(changes.values())}
 
 

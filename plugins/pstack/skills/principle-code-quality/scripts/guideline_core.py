@@ -529,8 +529,9 @@ class Engine:
             )
         root = Path(self.event.root).resolve()
         settings: dict[str, frozenset[str]] = {}
-        for other in (*self.event.files, *self.event.unchecked):
-            for raw in {other.path, other.source} - {"", change.path}:
+        # A file can be its own lint config, so it is not left out.
+        for other in (*self.event.files, *self.event.unchecked) if added else ():
+            for raw in {other.path, other.source} - {""}:
                 setting = resolve_in_root(raw, self.event.cwd, self.event.root)
                 tools = setting_tools(
                     setting, file.path, file.language, root, other.after
