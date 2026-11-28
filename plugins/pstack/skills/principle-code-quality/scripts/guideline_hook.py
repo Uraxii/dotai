@@ -510,7 +510,12 @@ def codex_tool_event(payload: Payload, base: Neutral) -> Neutral | None:
             # Deleting a symlink leaves its target as it is.
             source = target = link
             unlinked.add(link)
-        prior = changes.pop(source, None)
+        # A moved symlink leaves its target, and the target's change, in place.
+        moves_link = (
+            file.action != "Delete File" and source != target
+            and os.path.islink(link)
+        )
+        prior = changes.get(source) if moves_link else changes.pop(source, None)
         if file.action == "Delete File":
             # Kept, as a deleted file can be a lint setting of the others;
             # a moved file keeps the path it was moved from.
@@ -531,7 +536,7 @@ def codex_tool_event(payload: Payload, base: Neutral) -> Neutral | None:
         deleted.discard(target)
         if source != target:
             # Moving a symlink removes the symlink, not its target.
-            if os.path.islink(link):
+            if moves_link:
                 moved_away.add(link)
                 unlinked.add(link)
             else:

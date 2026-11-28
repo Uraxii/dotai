@@ -294,3 +294,6 @@ Scratch paths named in those notes (under `/tmp/...`) are gone; ignore them.
 - Ruff: a file `git check-ignore --no-index` ignores is skipped with a notice (unless `respect-gitignore = false`), as Ruff skips it in its own runs; a `.gitignore`/`.ignore` in the code file's folder or a parent counts as a Ruff setting. Known gap: an edit that un-ignores a file is checked with the old ignore scope (visible notice).
 - `find_lines` switches to Knuth-Morris-Pratt after 64 failed candidates (130k repeated lines, 15k-line hunk: under 3 s).
 - Real ESLint 9 / Ruff repros for all 5. Test env PATH has only the stub bin, so the gitignore test links git into it.
+
+## Update: review d5b6e402 (7599419) finding fixed (0 blocking, 1 non-blocking)
+- Codex: a symlink moved after its target was updated in the same patch keeps the target's change (the move reads it, does not take it). Real Ruff repro: E722 in the target denies.

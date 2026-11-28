@@ -1210,6 +1210,13 @@ c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: link2.py\n*** Mo
                              "*** Update File: target2.py\n@@\n-pass\n+from os import *\n*** End Patch"),
        harness="codex", RUFF_JSON=F403_ROW, **shared_env)
 expect_lacks("moving a symlink leaves its target to check", "could not build", str(c.output()))
+c.file("real3.py", "pass\n")
+(c.project / "link3.py").symlink_to(c.project / "real3.py")
+c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: real3.py\n@@\n-pass\n+x = [a for b in c for a in b]\n"
+                             "*** Update File: link3.py\n*** Move to: moved3.py\n@@\n-x = [a for b in c for a in b]\n+x = 1\n*** End Patch"),
+       harness="codex", **shared_env)
+expect_equal("a symlink moved after its target changed keeps the target's change", "deny", c.decision())
+expect_contains("and the deny names the target", "real3.py", str(c.output()))
 c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: ruff.toml\n*** Move to: scratch/old.toml\n@@\n-extend = \"${DOTAI_SHARED}/base.toml\"\n+x = 1\n"
                              "*** Delete File: scratch/old.toml\n*** Add File: newmod10.py\n+from math import *\n*** End Patch"),
        harness="codex", RUFF_JSON=F403_ROW, **shared_env)
