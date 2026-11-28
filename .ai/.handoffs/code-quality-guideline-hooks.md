@@ -283,3 +283,7 @@ Scratch paths named in those notes (under `/tmp/...`) are gone; ignore them.
 - Folders project code lists (`readdir`/`opendir`) are kept as `folder/*`; a file the edit adds there counts.
 - When the trace gives no list, a notice says the files ESLint reads could not be listed.
 - Real ESLint 9 repros for all 4. Do not run `mise -C <repo> exec -- npm`: `-C` changes the cwd to the repo.
+
+## Update: review 3af236a8 (334cad8) findings fixed (0 blocking, 2 non-blocking)
+- Every `readdir`/`opendir` is recorded (glob libraries in node_modules list for the config); a file anywhere below a listed folder counts (recursive listings, new subfolders).
+- Real ESLint 9 + tinyglobby repro (new subfolder warns, control denies). mise run ci green: 286/286.

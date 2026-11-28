@@ -80,20 +80,15 @@ if (out && typeof nodeModule.registerHooks === "function") {
       return original.call(this, file, ...rest);
     };
   }
-  // A folder project code lists is kept as `folder/*`: a file the edit
-  // adds there can change the config.
-  const fromProject = () => {
-    const frames = (new Error().stack || "").split("\n").slice(2);
-    const caller = frames.find((frame) => !frame.includes(__filename) && !frame.includes("node:"));
-    return caller !== undefined && !caller.split(/[\\/]/).includes("node_modules");
-  };
+  // A listed folder is kept as `folder/*`: a file the edit adds in it
+  // can change the config, also when a glob library lists it.
   for (const [owner, name] of [
     [fs, "readdirSync"], [fs, "readdir"], [fs, "opendirSync"], [fs, "opendir"],
     [fs.promises, "readdir"], [fs.promises, "opendir"],
   ]) {
     const original = owner[name];
     owner[name] = function (folder, ...rest) {
-      if (fromProject()) record(path.join(folder instanceof URL ? fileURLToPath(folder) : String(folder), "*"));
+      record(path.join(folder instanceof URL ? fileURLToPath(folder) : String(folder), "*"));
       return original.call(this, folder, ...rest);
     };
   }

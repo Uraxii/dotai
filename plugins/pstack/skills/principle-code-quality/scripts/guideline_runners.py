@@ -268,7 +268,10 @@ def eslint_setting(
         return any(setting.parent in path.parents for path in loaded) and (
             not setting.exists() or maps_modules(setting, text)
         )
-    return setting in loaded or setting.parent / "*" in loaded
+    # A listing can be recursive, so a file below a listed folder counts.
+    return setting in loaded or any(
+        folder / "*" in loaded for folder in setting.parents
+    )
 
 
 def maps_modules(manifest: Path, text: str | None) -> bool:

@@ -623,6 +623,10 @@ c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Add File: eslint-rules/off.mj
                              "*** Add File: new12.js\n+var x = 1;\n*** End Patch"),
        harness="codex", ESLINT_JSON=NO_VAR_ROW, ESLINT_LOADED=str(c.project / "eslint-rules" / "*"))
 expect_contains("a file added to a folder the config lists counts", "also changes eslint-rules/off.mjs", str(c.output()))
+c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Add File: eslint-rules/web/off.mjs\n+export default {};\n"
+                             "*** Add File: new13.js\n+var x = 1;\n*** End Patch"),
+       harness="codex", ESLINT_JSON=NO_VAR_ROW, ESLINT_LOADED=str(c.project / "eslint-rules" / "*"))
+expect_contains("a file added below a listed folder counts", "also changes eslint-rules/web/off.mjs", str(c.output()))
 expect_lacks("with a trace, the notice does not say it failed", "could not be listed", str(c.output()))
 
 
