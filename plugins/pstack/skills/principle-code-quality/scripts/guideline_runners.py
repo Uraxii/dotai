@@ -440,13 +440,13 @@ def global_git_excludes() -> str:
     return os.path.join(config, "git", "ignore")
 
 
-def git_matches(target: Target, *options: str) -> bool | None:
+def git_matches(target: Target, path: Path, *options: str) -> bool | None:
     """Whether git ignores the file, or None when git cannot tell (no
-    git, or no repository)."""
+    git, no repository, or a path beyond a symlinked folder)."""
     try:
         process = subprocess.run(
             ["git", *options, "check-ignore", "-q", "--no-index",
-             str(target.path)],
+             str(path)],
             cwd=target.root, stdin=subprocess.DEVNULL,
             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
             timeout=1, check=False,
@@ -477,10 +477,18 @@ def ruff_ignore_skip(target: Target) -> RunResult | None:
     if respects == {False}:
         return None
     # Ruff matches case-sensitively, whatever git's core.ignoreCase says.
-    ignored = git_matches(
-        target, "-c", f"core.excludesFile={global_git_excludes()}",
+    options = (
+        "-c", f"core.excludesFile={global_git_excludes()}",
         "-c", "core.ignoreCase=false",
     )
+    ignored = git_matches(target, target.path, *options)
+    real = target.path.resolve()
+    # Git does not match a path through a symlinked folder; the real path
+    # can be ignored by other rules, so that is unknown.
+    if ignored is None and real != target.path and git_matches(
+        target, real, *options,
+    ):
+        return RunResult(None, RUFF_IGNORE_UNKNOWN)
     # A `.ignore` can also un-ignore what git ignores, with `!name`.
     dot_ignore = any(
         (folder / ".ignore").is_file()

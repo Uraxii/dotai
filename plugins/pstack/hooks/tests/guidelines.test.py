@@ -687,6 +687,18 @@ c.file(".gitignore", "made/\nCASEY.PY\n")
 c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Add File: casey.py\n+from math import *\n*** End Patch"),
        harness="codex", RUFF_JSON=F403_ROW)
 expect_equal("git's core.ignoreCase is not used, as Ruff matches case-sensitively", "deny", c.decision())
+c.file("real18/a.py", "pass\n")
+(c.project / "link18").symlink_to(c.project / "real18")
+c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Add File: link18/ruff.toml\n+[lint]\n+ignore = [\"F403\"]\n*** Update File: link18/a.py\n@@\n-pass\n+from math import *\n*** End Patch"),
+       harness="codex", RUFF_JSON=F403_ROW)
+expect_equal("a config added in a symlinked folder lowers the deny there", "", c.decision())
+c.file(".gitignore", "made/\nCASEY.PY\ngen_*.py\n")
+c.file("real19/gen_a.py", "pass\n")
+(c.project / "link19").symlink_to(c.project / "real19")
+c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: link19/gen_a.py\n@@\n-pass\n+from math import *\n*** End Patch"),
+       harness="codex", RUFF_JSON=F403_ROW)
+expect_equal("a git-ignored file through a symlinked folder is not denied", "", c.decision())
+expect_contains("and says the ignore scope is unknown", "could not tell", str(c.output()))
 c = Case("ruff-ignore-no-git")
 c.file(".ignore", "skipme.py\n")
 c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Add File: skipme.py\n+from math import *\n*** End Patch"),

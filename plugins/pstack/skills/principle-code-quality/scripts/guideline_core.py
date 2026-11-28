@@ -551,12 +551,20 @@ class Engine:
         # A file can be its own lint config, so it is not left out.
         for other in (*self.event.files, *self.event.unchecked) if added else ():
             for raw in {other.path, other.source} - {""}:
-                setting = resolve_in_root(raw, self.event.cwd, self.event.root)
-                tools = setting_tools(
-                    setting, file.path, file.language, root, other.after
-                ) if setting is not None else frozenset()
+                # The code file keeps its names through symlinked folders,
+                # so a setting counts by its own names or its real path.
+                real = resolve_in_root(raw, self.event.cwd, self.event.root)
+                names = {real, resolve_in_root(
+                    raw, self.event.cwd, self.event.root, follow=False,
+                )} - {None}
+                tools = frozenset().union(*(
+                    setting_tools(
+                        setting, file.path, file.language, root, other.after
+                    ) for setting in names
+                ))
                 if tools:
-                    settings[setting.relative_to(root).as_posix()] = tools
+                    shown = real or next(iter(names))
+                    settings[shown.relative_to(root).as_posix()] = tools
         changed = frozenset().union(*settings.values())
         held = sorted({hit.finding.tool for hit in added} & changed)
         if held:

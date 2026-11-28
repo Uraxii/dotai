@@ -338,3 +338,7 @@ Scratch paths named in those notes (under `/tmp/...`) are gone; ignore them.
 - A code file below the root keeps its lexical name, also through a symlinked folder (`resolve_in_root(follow=False)`); `with_link_targets` adds the real path whenever it differs, and a moved file keeps its move source as the baseline there.
 - `patched_realpath` follows symlinks one link at a time and stops at a link the patch deleted, so a chain broken by the same patch resolves to the new regular file.
 - Recorder wraps `realpathSync.native` and `realpath.native`, and stops candidates at the first one whose real path is the file Node found.
+
+## Update: review ff7a6da3 (a1d1694) findings fixed (1 blocking, 1 non-blocking)
+- A changed setting counts by its lexical name or its real path, because the code file keeps its lexical name through symlinked folders.
+- Git does not match a path through a symlinked folder (exit 128); the hook then asks about the real path, and an ignored real path gives the "could not tell" warning.
