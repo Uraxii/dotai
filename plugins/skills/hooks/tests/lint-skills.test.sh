@@ -84,6 +84,14 @@ run_hook "$lint" "$dir"
 expect_contains "a body over 5,000 words fails" "body is 5001 words" "$STDOUT"
 expect_contains "a description that starts with Use warns" "not third person" "$STDOUT"
 
+dir=$(skill tall "$good" "$(printf 'Line.\n%.0s' $(seq 501))")
+run_hook "$lint" "$dir"
+expect_contains "a body over 500 lines warns" "WARN  SKILL.md: body is 502 lines, over 500" "$STDOUT"
+expect_equal "a body over 500 lines still passes" 0 "$STATUS"
+dir=$(skill short "$good" "$(printf 'Line.\n%.0s' $(seq 499))")
+run_hook "${lint%/*}/checks/body-length.sh" "$dir"
+expect_equal "a body of 500 lines adds nothing" "0 " "$STATUS $STDOUT"
+
 dir=$(skill nowhen "Checks widgets." "Body.")
 run_hook "$lint" "$dir"
 expect_contains "a description with no trigger warns" "does not say when" "$STDOUT"
