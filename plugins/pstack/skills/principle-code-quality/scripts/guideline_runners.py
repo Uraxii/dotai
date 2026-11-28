@@ -460,12 +460,14 @@ def ruff_ignore_skip(target: Target) -> RunResult | None:
     if respects == {False}:
         return None
     ignored = git_matches(target)
-    if respects == {True} and ignored:
-        return RunResult((), RUFF_GITIGNORED_PROBLEM)
-    if ignored or any(
+    # A `.ignore` can also un-ignore what git ignores, with `!name`.
+    dot_ignore = any(
         (folder / ".ignore").is_file()
         for folder in parents_within(target.path, target.root)
-    ):
+    )
+    if respects == {True} and ignored and not dot_ignore:
+        return RunResult((), RUFF_GITIGNORED_PROBLEM)
+    if ignored or dot_ignore:
         return RunResult(None, RUFF_IGNORE_UNKNOWN)
     return None
 

@@ -61,36 +61,44 @@ if (out && typeof nodeModule.registerHooks === "function") {
         }
       }
       // In Node's order: only the files tried before the one found matter.
-      const suffixes = ["", ".js", ".json", ".node", ".cjs", ".mjs", ".ts", ".cts", ".mts"];
+      // `import` tries only the exact name; `require` also tries the
+      // extensions it knows. These look-ups come from project code, so
+      // they count as reads.
+      const suffixes = context.conditions?.includes("require") === false
+        ? [] : Object.keys(nodeModule._extensions || { ".js": 0, ".json": 0, ".node": 0 });
       const candidates = base ? [
+        base,
         ...suffixes.map((suffix) => base + suffix),
         path.join(base, "package.json"),
-        ...suffixes.slice(1).map((suffix) => path.join(base, "index" + suffix)),
+        ...suffixes.map((suffix) => path.join(base, "index" + suffix)),
       ] : [];
       let result;
       try {
         result = nextResolve(specifier, context);
       } catch (error) {
-        for (const candidate of candidates) record(candidate, true);
+        for (const candidate of candidates) record(candidate);
         throw error;
       }
       const found = result.url.startsWith("file:") ? fileURLToPath(result.url) : null;
       const index = found ? candidates.indexOf(found) : -1;
-      for (const candidate of index < 0 ? candidates : candidates.slice(0, index)) record(candidate, true);
+      for (const candidate of index < 0 ? candidates : candidates.slice(0, index)) record(candidate);
       if (found) record(found);
       return result;
     },
   });
-  // A look-up the project's own config makes can change the config, also
-  // for a flat config name, so it counts as a read; ESLint's own look-ups
-  // come from node_modules.
+  // A look-up the project's own config makes, also through a library such
+  // as path-exists, can change the config, also for a flat config name, so
+  // it counts as a read. ESLint's own look-ups have only node_modules code
+  // on the stack.
   const fromProject = () => {
-    for (const line of (new Error().stack || "").split("\n").slice(1)) {
+    const limit = Error.stackTraceLimit;
+    Error.stackTraceLimit = 200;
+    const stack = new Error().stack || "";
+    Error.stackTraceLimit = limit;
+    return stack.split("\n").slice(1).some((line) =>
       // Frames with no file, such as `new Promise (<anonymous>)`, are skipped.
-      if (line.includes(__filename) || line.includes("(node:") || line.includes(" node:") || !/[\\/]/.test(line)) continue;
-      return !/[\\/]node_modules[\\/]/.test(line);
-    }
-    return false;
+      !line.includes(__filename) && !line.includes("(node:") && !line.includes(" node:")
+      && /[\\/]/.test(line) && !/[\\/]node_modules[\\/]/.test(line));
   };
   // The wrapper keeps the original's own properties, such as the custom
   // promisify of fs.exists and realpathSync.native.

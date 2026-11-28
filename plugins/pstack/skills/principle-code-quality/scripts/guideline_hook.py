@@ -111,6 +111,27 @@ def read_disk(raw: str, cwd: str, root: str) -> Disk:
         return Disk(None, f"it could not be read ({type(error).__name__})")
 
 
+def with_link_targets(
+    files: list[Neutral], cwd: str, root: str,
+    unlinked: frozenset[str] | set[str] = frozenset(),
+) -> list[Neutral]:
+    """A file edited through a symlink is also checked at the file the
+    symlink points to, with that path's own lint settings."""
+    named = {os.path.normpath(os.path.join(cwd, str(file["path"]))) for file in files}
+    top = Path(root).resolve()
+    extra: list[Neutral] = []
+    for change in files:
+        full = os.path.normpath(os.path.join(cwd, str(change["path"])))
+        if change.get("after") is None or full in unlinked or not os.path.islink(full):
+            continue
+        real = os.path.realpath(full)
+        if real in named or top not in Path(real).parents:
+            continue
+        named.add(real)
+        extra.append(change | {"path": real, "source": real})
+    return files + extra
+
+
 def written(raw: str, disk: Disk) -> Neutral:
     return {"path": raw, "after": disk.text, "problem": disk.problem}
 
@@ -197,9 +218,11 @@ def claude_tool_event(payload: Payload, base: Neutral) -> Neutral | None:
         return {"kind": "post_read", "files": [{"path": raw}]}
     if tool not in WRITE_TOOLS:
         return None
-    disk = read_disk(raw, str(base["cwd"]), str(base["root"]))
+    cwd, root = str(base["cwd"]), str(base["root"])
+    disk = read_disk(raw, cwd, root)
     if name == "PostToolUse":
-        return {"kind": "post_write", "files": [written(raw, disk)]}
+        return {"kind": "post_write",
+                "files": with_link_targets([written(raw, disk)], cwd, root)}
     if name != "PreToolUse":
         return None
     known = tool == "Write" or not disk.problem
@@ -208,7 +231,8 @@ def claude_tool_event(payload: Payload, base: Neutral) -> Neutral | None:
         return {"kind": "pre_write", "files": [unbuilt(raw, disk)]}
     change = {"path": raw, "before": disk.text, "after": after,
               "before_problem": disk.problem}
-    return {"kind": "pre_write", "files": [change]}
+    return {"kind": "pre_write",
+            "files": with_link_targets([change], cwd, root)}
 
 
 def claude_event(payload: Payload) -> Neutral | None:
@@ -484,10 +508,10 @@ def codex_tool_event(payload: Payload, base: Neutral) -> Neutral | None:
     files = [f for f in sections if f.action != "Delete File"]
     cwd, root = str(base["cwd"]), str(base["root"])
     if name == "PostToolUse":
-        return {"kind": "post_write", "files": [
+        return {"kind": "post_write", "files": with_link_targets([
             written(target, read_disk(target, cwd, root))
             for target in dict.fromkeys(file.target for file in files)
-        ]}
+        ], cwd, root)}
     if name != "PreToolUse":
         return None
     # Keyed by real path, as `./a.py`, `$PWD/a.py` and a symlink to it
@@ -516,6 +540,18 @@ def codex_tool_event(payload: Payload, base: Neutral) -> Neutral | None:
             and link != os.path.normpath(os.path.join(cwd, file.target))
             and link not in unlinked and os.path.islink(link)
         )
+        dest = os.path.normpath(os.path.join(cwd, file.target))
+        if (
+            file.action != "Delete File" and not moves_link and dest != link
+            and dest not in unlinked and os.path.islink(dest) and target == source
+        ):
+            # Moved onto a symlink to itself: Codex writes through the
+            # symlink, then removes the file, so the text is lost.
+            changes[source] = {"path": file.source, "before": None,
+                               "after": None, "source": file.source}
+            deleted.add(source)
+            unlinked.add(dest)
+            continue
         prior = changes.get(source) if moves_link else changes.pop(source, None)
         if file.action == "Delete File":
             # Kept, as a deleted file can be a lint setting of the others;
@@ -549,7 +585,8 @@ def codex_tool_event(payload: Payload, base: Neutral) -> Neutral | None:
     # moved a file there first.
     for source in moved_away - changes.keys():
         changes[source] = {"path": source, "before": None, "after": None}
-    return {"kind": "pre_write", "files": list(changes.values())}
+    return {"kind": "pre_write", "files": with_link_targets(
+        list(changes.values()), cwd, root, unlinked)}
 
 
 def codex_event(payload: Payload) -> Neutral | None:

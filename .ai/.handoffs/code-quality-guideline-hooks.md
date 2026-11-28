@@ -321,3 +321,9 @@ Scratch paths named in those notes (under `/tmp/...`) are gone; ignore them.
 - Codex: a moved symlink's text is compared with the target's own rules, and the target's change is checked at the target's path.
 - Known limit: after a symlink is moved, the PostToolUse check sees only the patch's destination names, not the old target.
 - Recorder call-stack check skips frames with no file (`new Promise (<anonymous>)`), as ESLint's discovery runs inside one. Real ESLint 9 repros for all 8.
+
+## Update: review 369a8709 (1da4a2d) findings fixed (4 blocking, 1 non-blocking)
+- Ruff: any `.ignore` in the file's folder or a parent makes a git-ignored file unknown too (`!name` can un-ignore it).
+- ESLint recorder: resolve candidates from project code are reads; `require` candidates use `Module._extensions`, `import` only the exact name. A look-up counts as a read when any project (non-node_modules) frame is on the stack (path-exists, `require.resolve`).
+- `with_link_targets` (guideline_hook.py): a change written through a symlink is also checked at the real path inside the root, with its own settings (Claude Write/Edit, Codex pre and post).
+- Codex: a move onto a symlink to the file itself is a delete (Codex writes through the symlink, then removes the file).

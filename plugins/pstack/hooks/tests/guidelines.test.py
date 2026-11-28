@@ -670,6 +670,11 @@ c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Add File: src/made/x.py\n+fro
 expect_contains("a root run with another respect-gitignore is unknown", "could not tell whether a .ignore file or git", str(c.output()))
 (c.project / "ruff.toml").unlink()
 (c.project / "src" / "ruff.toml").unlink()
+c.file(".ignore", "!made/neg.py\n")
+c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Add File: made/neg.py\n+from math import *\n*** End Patch"),
+       harness="codex", RUFF_JSON=F403_ROW)
+expect_contains("a .ignore that can un-ignore a git-ignored file is unknown, not a skip", "could not tell whether a .ignore", str(c.output()))
+(c.project / ".ignore").unlink()
 c = Case("ruff-ignore-no-git")
 c.file(".ignore", "skipme.py\n")
 c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Add File: skipme.py\n+from math import *\n*** End Patch"),
@@ -725,15 +730,30 @@ if NODE:
     recorded = listed.read_text().splitlines() if listed.exists() else []
     expect_equal("a look-up the config makes itself counts as a read", True, str((trace.project / "eslint.config.cjs").resolve()) in recorded)
     expect_equal("a lookup candidate Node tries after the found file is left out", False, any(line.endswith("lib.cjs") for line in recorded))
-    expect_equal("one it tries before is kept", True, "?" + str(trace.project.resolve() / "lib") in recorded)
+    expect_equal("one it tries before is kept", True, str(trace.project.resolve() / "lib") in recorded)
+    trace.file("rules/index.js", "module.exports = 1;\n")
+    trace.file("res.cjs", "try { require.resolve('./absent.cjs'); } catch {} require('./rules');\n")
+    listed.unlink(missing_ok=True)
+    subprocess.run([NODE, "res.cjs"], cwd=trace.project, capture_output=True, env=os.environ | {
+        "NODE_OPTIONS": f"--require {ENGINE.parent / 'eslint_loaded.cjs'}", "PSTACK_ESLINT_LOADED": str(listed)})
+    recorded = listed.read_text().splitlines() if listed.exists() else []
+    expect_equal("a require.resolve the config makes counts as a read", True, str(trace.project.resolve() / "absent.cjs") in recorded)
+    expect_equal("an extension require does not try is not a candidate", False, any(line.endswith("rules.cjs") for line in recorded))
+    expect_equal("one it does try is", True, str(trace.project.resolve() / "rules.js") in recorded)
     trace.file("eslint.config.mjs", "")
     trace.file("node_modules/disc/index.js", "module.exports = () => new Promise((done) => done(require('node:fs').existsSync(require('node:path').join(process.cwd(), 'eslint.config.mjs'))));\n")
+    trace.file("node_modules/disc/run.js", "require('./index.js')();\n")
     trace.file("disc.cjs", "require('disc')();\n")
+    listed.unlink(missing_ok=True)
+    subprocess.run([NODE, "node_modules/disc/run.js"], cwd=trace.project, capture_output=True, env=os.environ | {
+        "NODE_OPTIONS": f"--require {ENGINE.parent / 'eslint_loaded.cjs'}", "PSTACK_ESLINT_LOADED": str(listed)})
+    recorded = listed.read_text().splitlines() if listed.exists() else []
+    expect_equal("a look-up with only node_modules code on the stack is only a look-up", True, "?" + str(trace.project.resolve() / "eslint.config.mjs") in recorded)
     listed.unlink(missing_ok=True)
     subprocess.run([NODE, "disc.cjs"], cwd=trace.project, capture_output=True, env=os.environ | {
         "NODE_OPTIONS": f"--require {ENGINE.parent / 'eslint_loaded.cjs'}", "PSTACK_ESLINT_LOADED": str(listed)})
     recorded = listed.read_text().splitlines() if listed.exists() else []
-    expect_equal("a look-up from node_modules inside a Promise is only a look-up", True, "?" + str(trace.project.resolve() / "eslint.config.mjs") in recorded)
+    expect_equal("a look-up project code makes through a library counts as a read", True, str(trace.project.resolve() / "eslint.config.mjs") in recorded)
 c = Case("ruff-symlink-extend")
 c.file("ruff.toml", 'extend = "b/config.toml"\n')
 c.file("a/source/config.toml", 'extend = "../shared.toml"\n')
@@ -1311,6 +1331,23 @@ c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: link8.py\n*** Mo
        harness="codex", **shared_env)
 expect_equal("moving a symlink onto its own target keeps the target's change", "deny", c.decision())
 expect_contains("and the deny names the target", "real8.py", str(c.output()))
+c.file("src10.py", "pass\n")
+c.file("build/keep", "")
+(c.project / "build" / "alias10.py").symlink_to(c.project / "src10.py")
+c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: src10.py\n@@\n-pass\n+x = [a for b in c for a in b]\n"
+                             "*** Update File: build/alias10.py\n@@\n x = [a for b in c for a in b]\n+# note\n*** End Patch"),
+       harness="codex", **shared_env)
+expect_equal("a later section through a symlink still checks the target at its own path", "deny", c.decision())
+expect_contains("and the deny names the target", "src10.py", str(c.output()))
+c.file("src11.py", "pass\n")
+(c.project / "alias11.py").symlink_to(c.project / "src11.py")
+c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: src11.py\n*** Move to: alias11.py\n@@\n-pass\n+x = [a for b in c for a in b]\n*** End Patch"),
+       harness="codex", **shared_env)
+expect_equal("a move onto a symlink to the file itself loses the text, so no deny", "", c.decision())
+c.file("real12.py", "pass\n")
+(c.project / "build" / "alias12.py").symlink_to(c.project / "real12.py")
+c.hook(c.write("build/alias12.py", "x = [a for b in c for a in b]\n"), **shared_env)
+expect_equal("a Write through a symlink is checked at the target's own path", "deny", c.decision())
 c.file("real9.py", "pass\n")
 c.file("aliases/keep", "")
 (c.project / "aliases" / "alias9.py").symlink_to("../real9.py")
