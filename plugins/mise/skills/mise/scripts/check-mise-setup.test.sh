@@ -7,8 +7,14 @@ SKILL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 . "$SKILL_DIR/../../../../scripts/hook-test-assertions.sh"
 
 check="$SKILL_DIR/scripts/check-mise-setup.sh"
-WORK=$(mktemp -d)
+# The real path: mise and the check print real paths, and a temp root can be a symlink.
+WORK=$(cd -P "$(mktemp -d)" && pwd) || exit 1
+: "${WORK:?}"
 trap 'rm -rf "$WORK"' EXIT
+# Before each command: stop if a test directory is empty or not under WORK, so
+# that no test writes outside its temp directory.
+trap 'case ${dir-$WORK/unset}:${root-$WORK/unset} in "$WORK"/*:"$WORK"/*) ;; *)
+  echo "check-mise-setup.test.sh: a test directory is not under $WORK" >&2; exit 1 ;; esac' DEBUG
 export MISE_DATA_DIR="$WORK/mise/data" MISE_STATE_DIR="$WORK/mise/state" \
   MISE_CACHE_DIR="$WORK/mise/cache" MISE_CONFIG_DIR="$WORK/mise/config" MISE_OFFLINE=1 \
   HTTPS_PROXY=http://127.0.0.1:9 HTTP_PROXY=http://127.0.0.1:9 https_proxy=http://127.0.0.1:9 http_proxy=http://127.0.0.1:9
@@ -37,10 +43,10 @@ repo() { # NAME: writes a passing repository from the templates and prints its d
   printf '%s\n' "$dir"
 }
 
-in_repo() { # DIR COMMAND...: runs a mise command in the repository
+in_repo() { # DIR COMMAND...: runs a mise command in the repository, with no config from above WORK
   cd "$1" || exit 1
   shift
-  capture "$@"
+  capture env MISE_CEILING_PATHS="$WORK" "$@"
   cd "$WORK" || exit 1
 }
 
@@ -48,6 +54,9 @@ dir=$(repo good)
 run_hook "$check" -C "$dir"
 expect_equal "a repository built from mise.toml and file-task passes and says so" \
   "0 check-mise-setup.sh: $dir: 0 failed" "$STATUS ${STDOUT%$'\n'}"
+
+cp -R "$dir" "$WORK/no-ci-source"
+sed -i.bak '/^\[tasks.ci\]/,/^depends/d' "$WORK/no-ci-source/mise.toml"
 
 mkdir -p "$WORK/global/tasks"
 printf '[tools]\nyq = "4.44.3"\n\n[tasks.global-bare]\nrun = "true"\n' >"$WORK/global/config.toml"
@@ -114,6 +123,36 @@ expect_contains "the untrusted config is named" "FAIL  .: config is not trusted"
 in_repo "$dir" mise trust --show
 expect_contains "the check does not trust the config" "$dir: untrusted" "$STDOUT"
 
+ln -s "$dir" "$WORK/link-to-untrusted"
+run_hook "$check" -C "$WORK/link-to-untrusted"
+expect_equal "an untrusted config behind a symlink fails as not trusted" "1 FAIL  .: config is not trusted
+      fix: read the config, then run: mise trust .
+check-mise-setup.sh: $dir: 1 failed" "$STATUS ${STDOUT%$'\n'}"
+
+dir="$WORK/trusted-parent/project"
+mkdir -p "$WORK/trusted-parent"
+cp -R "$WORK/no-ci-source" "$dir"
+printf '[tools]\njq = "1.8"\n\n[tasks.ci]\ndescription = "Run the parent ci"\nrun = "true"\n' >"$WORK/trusted-parent/mise.toml"
+for trusted in "$WORK/trusted-parent" "$dir"; do (cd "$trusted" && mise trust -q); done
+run_hook "$check" -C "$dir"
+expect_equal "a trusted config above the repository adds no tool and no ci task to the result" "1 FAIL  mise.toml: no ci task
+      fix: add a ci task that depends on lint:* and test:*
+check-mise-setup.sh: $dir: 1 failed" "$STATUS ${STDOUT%$'\n'}"
+
+mkdir "$WORK/trusted-parent/empty"
+run_hook "$check" -C "$WORK/trusted-parent/empty"
+expect_equal "a directory with no config below a trusted config fails as no config" \
+  "1 FAIL  .: no mise config found" "$STATUS ${STDOUT%%$'\n'*}"
+
+dir="$WORK/untrusted-parent/project"
+mkdir -p "$WORK/untrusted-parent"
+cp -R "$WORK/good" "$dir"
+printf '[env]\nABOVE = "1"\n' >"$WORK/untrusted-parent/mise.toml"
+(cd "$dir" && mise trust -q)
+run_hook "$check" -C "$dir"
+expect_equal "an untrusted config with [env] above the repository does not fail it" \
+  "0 check-mise-setup.sh: $dir: 0 failed" "$STATUS ${STDOUT%$'\n'}"
+
 dir="$WORK/trusted-by-setting"
 cp -R "$WORK/good" "$dir"
 mkdir "$WORK/trust-setting"
@@ -161,12 +200,31 @@ expect_contains "a placeholder in mise.toml is named" "FAIL  mise.toml: a REPLAC
 expect_contains "a placeholder in a file task is named" "FAIL  mise-tasks/deploy: a REPLACE_WITH_ placeholder is left" "$STDOUT"
 in_repo "$dir" mise run ci
 expect_equal "ci fails while a run placeholder is left" 127 "$STATUS"
+dir=$(repo env-placeholders)
+mkdir "$dir/.config"
+for file in mise.local.toml mise.ci.toml .mise.ci.toml .config/mise.ci.toml; do
+  printf '[env]\nDEPLOY_URL = "REPLACE_WITH_URL"\n' >"$dir/$file"
+done
+run_hook "$check" -C "$dir"
+expect_equal "a placeholder in a local config and in each environment config is named" "1 FAIL  mise.ci.toml: a REPLACE_WITH_ placeholder is left
+FAIL  mise.local.toml: a REPLACE_WITH_ placeholder is left
+FAIL  .mise.ci.toml: a REPLACE_WITH_ placeholder is left
+FAIL  .config/mise.ci.toml: a REPLACE_WITH_ placeholder is left
+check-mise-setup.sh: $dir: 4 failed" "$STATUS $(grep -v '^      fix: ' <<<"$STDOUT")"
 
 dir=$(repo invalid)
 printf '\n[tasks.broken]\ndescription = "Broken"\ndepends = ["no-such-task"]\n' >>"$dir/mise.toml"
 run_hook "$check" -C "$dir"
 expect_equal "a task that fails validation fails" 1 "$STATUS"
 expect_contains "the validation failure is named" "FAIL  mise.toml: mise tasks validate fails" "$STDOUT"
+
+dir=$(repo env-in-task)
+mkdir "$dir/app"
+printf '\n[tasks.build]\ndescription = "Build the app"\ndir = "{{env.APP_DIR}}"\nrun = "true"\n' >>"$dir/mise.toml"
+sed -i.bak 's/^\[env\]$/[env]\nAPP_DIR = "app"/' "$dir/mise.toml"
+run_hook "$check" -C "$dir"
+expect_equal "a task field that reads an [env] value passes validation" \
+  "0 check-mise-setup.sh: $dir: 0 failed" "$STATUS ${STDOUT%$'\n'}"
 
 dir=$(repo missing)
 sed -i.bak 's/^jq = "1.8.1"/jq = "1.7.1"/' "$dir/mise.toml"
@@ -186,6 +244,10 @@ for requested in 1.8 latest path:/tmp ref:jq-1.8.1 prefix:1.8.1 sub-0.1:1.8.2 '1
       fix: request one exact release, such as: mise use --pin jq@<version>" "$STDOUT"
 done
 
+capture env MISE_JQ_VERSION=1.8.1 bash "$check" -C "$WORK/fuzzy-1.8"
+expect_contains "a MISE_<TOOL>_VERSION variable does not hide a request that is not exact" \
+  "FAIL  mise.toml: jq is requested as 1.8, not an exact version" "$STDOUT"
+
 dir="$WORK/dot-config"
 mkdir -p "$dir/.config/mise"
 printf '[settings]\nlockfile = true\n\n[tools]\njq = "1.8.1"\n\n[tasks.ci]\ndescription = "Run ci"\nrun = "true"\n' >"$dir/.config/mise/config.toml"
@@ -201,6 +263,20 @@ run_hook "$check" -C "$dir"
 expect_equal "a repository with tools and no lockfile fails" "1 FAIL  mise.lock: the lockfile does not list every requested tool
       fix: run mise lock, and commit the lockfile it writes
 check-mise-setup.sh: $dir: 1 failed" "$STATUS ${STDOUT%$'\n'}"
+
+dir=$(repo lockfile-off)
+rm "$dir/mise.lock"
+sed -i.bak 's/^lockfile = true/lockfile = false/' "$dir/mise.toml"
+run_hook "$check" -C "$dir"
+expect_equal "a repository with tools, no lockfile and lockfile = false fails" "1 FAIL  mise.lock: the lockfile does not list every requested tool
+      fix: run mise lock, and commit the lockfile it writes
+check-mise-setup.sh: $dir: 1 failed" "$STATUS ${STDOUT%$'\n'}"
+dir=$(repo lockfile-unset)
+rm "$dir/mise.lock"
+sed -i.bak '/^lockfile = true/d' "$dir/mise.toml"
+run_hook "$check" -C "$dir"
+expect_contains "a repository with tools, no lockfile and no lockfile setting fails" \
+  "FAIL  mise.lock: the lockfile does not list every requested tool" "$STDOUT"
 
 dir=$(repo stale-lock)
 sed -i.bak 's/1.8.1/1.7.1/' "$dir/mise.lock"
@@ -239,7 +315,7 @@ run_hook "$check" -C "$root/apps/api"
 expect_equal "a monorepo project reports its own defects" "1 FAIL  mise.toml: a REPLACE_WITH_ placeholder is left
       fix: replace each REPLACE_WITH_ value
 FAIL  mise.toml: mise tasks validate fails
-      fix: run mise tasks validate to see each error. A task field that calls exec() fails too, because the check runs in safe mode
+      fix: run mise tasks validate to see each error. In a monorepo, a task field that calls exec() or reads [env] fails too, because the check runs in safe mode there
 FAIL  mise.toml: jq is requested as 1.8, not an exact version
       fix: request one exact release, such as: mise use --pin jq@<version>
 FAIL  mise.lock: the lockfile does not list every requested tool
@@ -251,6 +327,10 @@ expect_equal "a monorepo project is checked for its own ci task and descriptions
 FAIL  mise.toml: no ci task
       fix: add a ci task that depends on lint:* and test:*
 check-mise-setup.sh: $root/apps/lib: 2 failed" "$STATUS ${STDOUT%$'\n'}"
+ln -s "$root/apps/web" "$WORK/link-to-web"
+run_hook "$check" -C "$WORK/link-to-web"
+expect_equal "a monorepo project behind a symlink is checked for its own ci task" \
+  "0 check-mise-setup.sh: $root/apps/web: 0 failed" "$STATUS ${STDOUT%$'\n'}"
 cp -R "$root" "$WORK/untrusted-root"
 (cd "$WORK/untrusted-root/apps/web" && mise trust -q)
 run_hook "$check" -C "$WORK/untrusted-root/apps/web"
