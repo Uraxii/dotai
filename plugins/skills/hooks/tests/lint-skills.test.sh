@@ -130,12 +130,17 @@ for stop in Stop Stops Done Exit Exits Finish Finished Complete Completed End En
   run_hook "$shape" "$dir"
   expect_equal "'$stop when' is a stop predicate" "0 " "$STATUS $STDOUT"
 done
+for connector in if once after; do
+  dir=$(shaped playbook "${playbook/Done when/Done $connector}")
+  run_hook "$shape" "$dir"
+  expect_equal "'Done $connector' is a stop predicate" "0 " "$STATUS $STDOUT"
+done
 
 dir=$(shaped playbook "${playbook/\*\*Reply:\*\*/Report}")
 run_hook "$shape" "$dir"
 expect_equal "a playbook with no Reply label fails" 1 "$STATUS"
 expect_contains "the Reply label is named" "FAIL  references/p.md: playbook has no Reply label" "$STDOUT"
-for reply in '**Reply**:' '- **Reply:**' '__Reply:__' 'Reply:' $'## Reply\n\n'; do
+for reply in '**Reply**:' '- **Reply:**' '__Reply:__' 'Reply:' $'## Reply\n\n' '> **Reply:**'; do
   dir=$(shaped playbook "${playbook/\*\*Reply:\*\*/$reply}")
   run_hook "$shape" "$dir"
   expect_equal "'$reply' is a Reply label" "0 " "$STATUS $STDOUT"
@@ -143,6 +148,15 @@ done
 dir=$(shaped playbook "${playbook/\*\*Reply:\*\* cause, fix./The reply names the cause.}")
 run_hook "$shape" "$dir"
 expect_equal "the word reply inside a sentence is not a label" 1 "$STATUS"
+dir=$(shaped playbook "${playbook/\*\*Reply:\*\* cause, fix./Reply with the cause.}")
+run_hook "$shape" "$dir"
+expect_equal "Reply followed by more words is not a label" 1 "$STATUS"
+dir=$(shaped Playbook "${playbook/\*\*Reply:\*\*/Report}")
+run_hook "$shape" "$dir"
+expect_contains "the shape value is read in any case" "FAIL  references/p.md: playbook has no Reply label" "$STDOUT"
+awk '{ printf "%s\r\n", $0 }' "$dir/references/p.md" >"$WORK/tmp" && mv "$WORK/tmp" "$dir/references/p.md"
+run_hook "$shape" "$dir"
+expect_contains "a shaped file with CRLF line endings is checked" "FAIL  references/p.md: playbook has no Reply label" "$STDOUT"
 
 dir=$(skill unclosed "$good" "Read [p](references/p.md) when a widget breaks.")
 printf -- '---\n\n# Title under a rule\n\nshape: playbook\n\n1. Fix it.\n' >"$dir/references/p.md"
@@ -169,13 +183,16 @@ dir=$(shaped playbook "$playbook"$'\nUse for "run until done". Not for one fix; 
 run_hook "$shape" "$dir"
 expect_equal "loop words in quotes or in a hyphenated name add nothing" "0 " "$STATUS $STDOUT"
 for loop in '3. Run the test again.' $'## Retry policy\n' $'3. Retry the build until it passes,\n   at most 3 times.' \
-  '3. Repeat steps 1 and 2 at most <N> times, until the test passes.'; do
+  '3. Repeat steps 1 and 2 at most <N> times, until the test passes.' '3. Retry the build at most ten times.' \
+  '3. Retry the build, 3 rounds in all.' '3. Retry the build for 3 tries.' '3. Retry the build for 3 attempts.' \
+  '3. Do not merge until the review passes.' '3. Keep the copy until step 6.' '3. Retry once.' '3. Retry twice.'; do
   dir=$(shaped playbook "$loop"$'\n'"$playbook")
   run_hook "$shape" "$dir"
   expect_equal "'$loop' adds nothing" "0 " "$STATUS $STDOUT"
 done
 for loop in '3. Repeat steps 1 and 2 until the test passes.' '3. Retry until the cache is up to date.' \
-  '3. Loop to maximize coverage.' '3. Go back to step one.'; do
+  '3. Loop to maximize coverage.' '3. Go back to step one.' '3. Run the tests until they pass.' \
+  '3. Retry the build, and stop once it passes.'; do
   dir=$(shaped playbook "$loop"$'\n'"$playbook")
   run_hook "$shape" "$dir"
   expect_contains "'$loop' warns" "WARN  references/p.md: line 5 has a loop with no limit" "$STDOUT"
@@ -201,6 +218,10 @@ rm "$dir/references/fix.md"
 printf '# Ship\n' >"$dir/references/ship.md"
 run_hook "$shape" "$dir"
 expect_contains "a Markdown-link route to a missing file fails" "FAIL  references/p.md: line 5 routes to fix.md, which does not exist" "$STDOUT"
+printf '# Fix\n' >"$dir/references/fix.md"
+printf '\nSee [the notes](gone.md) for background.\n\n- Run `scripts/gone.sh` first.\n' >>"$dir/references/p.md"
+run_hook "$shape" "$dir"
+expect_equal "a paragraph link and a non-.md list target are not routes" "0 " "$STATUS $STDOUT"
 
 dir=$(shaped router "$router"$'\n\n- Update `CHANGELOG.md`. Write a route as `[name](name.md)`.\n- "two": read [two](my%20file.md).')
 printf '# Ref\n' >"$dir/references/fix.md"

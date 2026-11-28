@@ -13,15 +13,16 @@ shape_of() {
   awk '{ sub(/\r$/, "") } NR == 1 { if (!/^---$/) exit; next } /^---$/ { closed = 1; exit }
     /^[^ \t]/ { meta = /^metadata:/ }
     found == "" && (/^shape:/ || meta && /^[ \t]+shape:/) {
-      sub(/^[ \t]*shape:[ \t]*/, ""); sub(/[ \t]+#.*/, ""); gsub(/["'\'' \t]/, ""); found = $0 }
+      sub(/^[ \t]*shape:[ \t]*/, ""); sub(/[ \t]+#.*/, ""); gsub(/["'\'' \t]/, ""); found = tolower($0) }
     END { if (closed) print found }' "$1"
 }
 
 # True when a line of the text on standard input starts with the label: after
-# an optional list or heading marker, in optional bold, with a colon inside or
-# outside the bold. A label with no colon must end its line.
+# optional blockquote markers and an optional list or heading marker, in
+# optional bold, with a colon inside or outside the bold. A label with no
+# colon must end its line.
 has_label() {
-  grep -qiE "^[[:space:]]*(([-*+]|[0-9]+\.)[[:space:]]+|#{1,6}[[:space:]]+)?(\*\*|__)?($1)(\*\*|__)?(:|[[:space:]]*$)"
+  grep -qiE "^[[:space:]]*(>[[:space:]]*)*(([-*+]|[0-9]+\.)[[:space:]]+|#{1,6}[[:space:]]+)?(\*\*|__)?($1)(\*\*|__)?(:|[[:space:]]*$)"
 }
 
 # LINE<TAB>TEXT for each list item or paragraph of FILE, with its wrapped
@@ -37,9 +38,13 @@ items() {
 }
 
 stop_words='stop|stops|done|exit|exits|finish|finished|complete|completed|end|ends'
-loop_words='repeat|retry|retries|loop|iterate|until|go back|keep trying'
+loop_words='repeat|retry|retries|loop|iterate|go back|keep trying'
 count='([0-9]+|<[^>]+>|one|two|three|four|five|six|seven|eight|nine|ten)'
 limit="(at most|no more than|up to|max|maximum|maximum of) $count([^a-z]|$)|(^|[^a-z])$count (times|rounds|tries|attempts)"
+limit="$limit|(^|[^a-z])(once|twice)([[:space:]]+(more|again))?[[:space:]]*([.,;:)]|$)"
+# "until" alone is a loop, except after a negation (a gate: "do not merge
+# until the review passes") or before a step (a hold: "keep it until step 6").
+not_loop_until="(^|[^a-z])(do not|don't|never|must not)[^.]*[[:space:]]until([^a-z]|$)|until (step|steps) $count"
 
 for file in "$skill" "${refs[@]}"; do
   [ -f "$file" ] || continue
@@ -58,7 +63,8 @@ for file in "$skill" "${refs[@]}"; do
       while IFS=$'\t' read -r line body; do
         body=$(sed -E 's/"[^"]*"//g' <<<"$body") # quoted user words are not steps
         # A hyphen joins a name such as diagnose-loop, which is not a loop.
-        grep -qiE "(^|[^a-z-])($loop_words)([^a-z-]|$)" <<<"$body" &&
+        { grep -qiE "(^|[^a-z-])($loop_words)([^a-z-]|$)" <<<"$body" ||
+          { grep -qiE "(^|[^a-z-])until([^a-z-]|$)" <<<"$body" && ! grep -qiE "$not_loop_until" <<<"$body"; }; } &&
           ! grep -qiE "$limit" <<<"$body" &&
           warn "$file" "line $line has a loop with no limit" "add 'at most <N> times', and the route after the limit"
       done < <(items "$file")

@@ -193,34 +193,47 @@ function jtruthy(path,    t) {
   return 0
 }
 
-function jdecode(s,    out, i, c, code, low) {
+# Splitting on backslashes makes each part after the first start with one
+# escape. An empty part is the first half of an escaped backslash, so the part
+# after it is plain text. The pieces are joined in pairs, so a long string
+# with many escapes still decodes in about linear time.
+function jdecode(s,    parts, pieces, n, k, i, part, c, code, low) {
   if (!index(s, "\\")) return s
-  out = ""
-  while ((i = index(s, "\\")) > 0) {
-    out = out substr(s, 1, i - 1)
-    c = substr(s, i + 1, 1)
-    if (c == "u") {
-      code = jhex(substr(s, i + 2, 4))
-      s = substr(s, i + 6)
-      if (code >= 55296 && code <= 56319 && substr(s, 1, 2) == "\\u") {
-        low = jhex(substr(s, 3, 4))
+  n = split(s, parts, "\\")
+  k = 1
+  pieces[1] = parts[1]
+  for (i = 2; i <= n; i++) {
+    part = parts[i]
+    c = substr(part, 1, 1)
+    if (part == "") {
+      i++
+      pieces[++k] = "\\" parts[i]
+    } else if (c == "u") {
+      code = jhex(substr(part, 2, 4))
+      part = substr(part, 6)
+      if (code >= 55296 && code <= 56319 && part == "" && substr(parts[i + 1], 1, 1) == "u") {
+        low = jhex(substr(parts[i + 1], 2, 4))
         if (low >= 56320 && low <= 57343) {
           code = 65536 + (code - 55296) * 1024 + (low - 56320)
-          s = substr(s, 7)
+          part = substr(parts[++i], 6)
         }
       }
-      out = out jutf8(code)
-      continue
+      pieces[++k] = jutf8(code) part
+    } else {
+      if (c == "n") c = "\n"
+      else if (c == "t") c = "\t"
+      else if (c == "r") c = "\r"
+      else if (c == "b") c = sprintf("%c", 8)
+      else if (c == "f") c = sprintf("%c", 12)
+      pieces[++k] = c substr(part, 2)
     }
-    if (c == "n") out = out "\n"
-    else if (c == "t") out = out "\t"
-    else if (c == "r") out = out "\r"
-    else if (c == "b") out = out sprintf("%c", 8)
-    else if (c == "f") out = out sprintf("%c", 12)
-    else out = out c
-    s = substr(s, i + 2)
   }
-  return out s
+  while (k > 1) {
+    for (i = 1; 2 * i <= k; i++) pieces[i] = pieces[2 * i - 1] pieces[2 * i]
+    if (k % 2) pieces[i] = pieces[k]
+    k = int((k + 1) / 2)
+  }
+  return pieces[1]
 }
 
 function jhex(h,    v, i) {

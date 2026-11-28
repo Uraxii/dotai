@@ -6,6 +6,14 @@ PLUGIN_ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 # shellcheck source=../../../../scripts/hook-test-assertions.sh
 . "$PLUGIN_ROOT_DIR/../../scripts/hook-test-assertions.sh"
 
+# A hook only advises, so every run in this file must exit 0.
+eval "shared_$(declare -f capture)"
+capture() {
+  local run="$*"
+  shared_capture "$@"
+  expect_equal "exits 0: ${run:0:160}" 0 "$STATUS"
+}
+
 WORK=$(mktemp -d)
 trap 'rm -rf "$WORK"' EXIT
 export PLUGIN_ROOT="$PLUGIN_ROOT_DIR" CLAUDE_PLUGIN_ROOT="$PLUGIN_ROOT_DIR" TMPDIR="$WORK"
@@ -171,6 +179,20 @@ run_wiring claude "$claude_pre" <<<"$(input claude s-clean "$skill_a/SKILL.md")"
 run_wiring claude "$claude_post" <<<"$(input claude s-clean "$skill_a/SKILL.md")"
 expect_equal "a clean skill after the guidance adds nothing" "0 " "$STATUS $STDOUT"
 
+# The lint reports each skill directory of a patch, and the 40 lines are shared.
+patch=$(printf '*** Begin Patch\n*** Update File: %s\n@@\n-a\n+b\n*** Update File: %s\n@@\n-a\n+b\n*** End Patch' "$skill_d/SKILL.md" "$skill_f/SKILL.md")
+run_hook "$hook" --harness codex --lint <<<"$(jq -cn --arg c "$patch" '{session_id: "s-two-lint", tool_input: {command: $c}}')"
+expect_contains "the first skill of a patch is linted" "references/nope.md does not resolve" "$(context)"
+expect_contains "the second skill gets the room the first left" "[24 more lint lines are not shown." "$(context)"
+
+# A lint line cut at 200 bytes ends on a whole character.
+printf -- '---\nshape: x%s\n---\n' "$(printf 'é%.0s' $(seq 200))" >"$skill_f/references/p.md"
+run_hook "$hook" --harness claude --lint <<<"$(input claude s-utf8 "$skill_f/SKILL.md")"
+expect_equal "a cut multibyte line stays valid UTF-8" 199 \
+  "$(context | grep -F "shape 'xé" | LC_ALL=C awk '{ print length($0) }')"
+quoted=$(printf 'éééé' | LC_ALL=C JSON_MODE= JSON_MAX=5 awk -f "$PLUGIN_ROOT_DIR/hooks/hook-json.awk" -f "$PLUGIN_ROOT_DIR/hooks/quote-stdin.awk")
+expect_equal "a context cut inside a character drops the partial bytes" '"éé\n[The rest of this context was cut at 5 bytes.]"' "$quoted"
+
 # A file with numbered steps or routes gets one pointer to the playbook reference.
 skill_e="$WORK/repo/skills/epsilon"
 clean_skill "$skill_e"
@@ -191,5 +213,20 @@ run_hook "$hook" --harness claude <<<"$(jq -cn --arg f "$skill_e/references/new.
 expect_contains "a Write whose content has a shape line adds the pointer" "holds numbered steps or routes" "$(context)"
 run_hook "$hook" --harness codex <<<"$(jq -cn --arg c "$(printf '*** Begin Patch\n*** Add File: %s\n+1. Read.\n+2. Fix.\n+3. Verify.\n*** End Patch' "$skill_e/references/add.md")" '{session_id: "s-patch", tool_input: {command: $c}}')"
 expect_contains "a codex patch that adds steps adds the pointer" "holds numbered steps or routes" "$(context)"
+run_hook "$hook" --harness codex <<<"$(jq -cn --arg c "$(printf '*** Begin Patch\n*** Update File: %s\n@@\n-a\n+b\n*** Add File: %s\n+1. Read.\n+2. Fix.\n+3. Verify.\n*** End Patch' "$skill_e/SKILL.md" "$WORK/repo/notes.md")" '{session_id: "s-patch-other", tool_input: {command: $c}}')"
+expect_equal "steps in another file of the patch add no pointer" "" "$(context | grep -F 'holds numbered steps or routes')"
+run_hook "$hook" --harness codex <<<"$(jq -cn --arg c "$(printf '*** Begin Patch\n*** Update File: %s\n*** Move to: %s\n@@\n+1. Read.\n+2. Fix.\n+3. Verify.\n*** Update File: %s\n@@\n-a\n+b\n*** End Patch' "$WORK/repo/old.md" "$WORK/repo/new.md" "$skill_e/SKILL.md")" '{session_id: "s-move-other", tool_input: {command: $c}}')"
+expect_equal "steps in a file moved outside the skill add no pointer" "" "$(context | grep -F 'holds numbered steps or routes')"
+run_hook "$hook" --harness codex <<<"$(jq -cn --arg c "$(printf '*** Begin Patch\n*** Update File: %s\n*** Move to: %s\n@@\n+1. Read.\n+2. Fix.\n+3. Verify.\n*** End Patch' "$WORK/repo/old.md" "$skill_e/references/moved.md")" '{session_id: "s-move-in", tool_input: {command: $c}}')"
+expect_contains "steps in a file moved into the skill add the pointer" "holds numbered steps or routes" "$(context)"
+
+printf -- '- [a](a.md)\n- [b](b.md)\n- [c](c.md)\n' >"$skill_e/references/routes.md"
+run_hook "$hook" --harness claude <<<"$(input claude s-routes "$skill_e/references/routes.md")"
+expect_contains "three list items that name a .md file add the pointer" "holds numbered steps or routes" "$(context)"
+printf '1. Read.\n2. Fix.\n' >"$skill_e/references/two.md"
+run_hook "$hook" --harness claude <<<"$(input claude s-two "$skill_e/references/two.md")"
+expect_equal "two numbered steps add no pointer" "" "$(context | grep -F 'holds numbered steps or routes')"
+run_hook "$hook" --harness claude <<<"$(jq -cn --arg f "$skill_e/references/two.md" '{session_id: "s-multi-edit", tool_input: {file_path: $f, edits: [{old_string: "a", new_string: "1. Read."}, {old_string: "b", new_string: "2. Fix.\n3. Verify."}]}}')"
+expect_contains "a MultiEdit whose edits add steps adds the pointer" "holds numbered steps or routes" "$(context)"
 
 finish

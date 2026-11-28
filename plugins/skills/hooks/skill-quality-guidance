@@ -41,7 +41,8 @@ run_lint=
 [ -f "$skill_md" ] || exit 0
 input=$(cat)
 cwd=$(field /cwd)
-# A Write's content is decoded only for a path in a skill, by has_procedure.
+# The text a Claude edit writes is decoded only for a path in a skill that
+# has no pointer yet, by has_procedure.
 edit_text=
 edit_read=
 case "$harness" in
@@ -62,30 +63,51 @@ esac
 # One path field that holds a newline is not one file.
 [ "$harness" != codex ] && [[ "$paths" == *$'\n'* ]] && exit 0
 
-# new_marker NAME DIR: creates the once-per-session marker for NAME and DIR,
-# and fails if it exists. noclobber makes the check and the create one step,
-# so parallel edits cannot both add the same text. With no usable session id,
-# every edit counts as new, except in a Claude or Codex --lint run, because
-# the PreToolUse run of the same edit has added the text.
+# new_marker NAME DIR [test]: creates the once-per-session marker for NAME and
+# DIR, and fails if it exists. noclobber makes the check and the create one
+# step, so parallel edits cannot both add the same text. With a third
+# argument, it only fails if the marker exists, and creates nothing. With no
+# usable session id, every edit counts as new, except in a Claude or Codex
+# --lint run, because the PreToolUse run of the same edit has added the text.
 new_marker() {
+  local marker
   if ! [[ "$session" =~ ^[A-Za-z0-9_.-]+$ ]]; then
     [ -z "$run_lint" ] || [ "$harness" = copilot ]
     return
   fi
-  (set -C && : >"${TMPDIR:-/tmp}/skill-quality-$1$session-$(printf '%s' "$2" | cksum | cut -d' ' -f1)") 2>/dev/null
+  marker="${TMPDIR:-/tmp}/skill-quality-$1$session-$(printf '%s' "$2" | cksum | cut -d' ' -f1)"
+  if [ -n "${3-}" ]; then
+    [ ! -e "$marker" ]
+    return
+  fi
+  (set -C && : >"$marker") 2>/dev/null
 }
 
-# A numbered list of three or more steps, a shape line, or three list items
-# that name a .md file. A codex patch prefixes each added line with +.
+# has_procedure PATH RAW: true when PATH, or the text this edit writes to it,
+# holds a numbered list of three or more steps, a shape line, or three list
+# items that name a .md file. RAW is the path as a codex patch names it; only
+# that file's part of the patch counts, and it prefixes each added line with +.
 has_procedure() {
-  local text
-  if [ "$harness" = claude ] && [ -z "$edit_read" ]; then
-    edit_text="$(field /tool_input/content)
-$(field /tool_input/new_string)"
-    edit_read=1
-  fi
-  text=$({ [ -f "$1" ] && cat "$1"; printf '%s\n' "$edit_text"; } 2>/dev/null)
-  grep -qE '^\+?[[:space:]]*shape:[[:space:]]*["'\'']?(playbook|router)' <<<"$text" ||
+  local text=
+  case "$harness" in
+    claude)
+      if [ -z "$edit_read" ]; then
+        edit_text=$(printf '%s' "$input" | LC_ALL=C JSON_MODE= awk -f "$hooks_dir/hook-json.awk" -f "$hooks_dir/edit-text.awk")
+        edit_read=1
+      fi
+      text=$edit_text
+      ;;
+    codex)
+      text=$(RAW=$2 awk '{ sub(/\r$/, "") }
+        /^\*\*\* (Add|Update|Delete) File: / {
+          name = $0; sub(/^\*\*\* [A-Za-z]+ File: /, "", name); on = name == ENVIRON["RAW"] && !/^\*\*\* Delete/; next }
+        /^\*\*\* Move to: / { name = $0; sub(/^\*\*\* Move to: /, "", name); on = on || name == ENVIRON["RAW"]; next }
+        /^\*\*\* End Patch/ { on = 0 }
+        on' <<<"$edit_text")
+      ;;
+  esac
+  text=$({ [ -f "$1" ] && cat "$1"; printf '%s\n' "$text"; } 2>/dev/null)
+  grep -qiE '^\+?[[:space:]]*shape:[[:space:]]*["'\'']?(playbook|router)' <<<"$text" ||
     [ "$(grep -cE '^\+?[[:space:]]*[0-9]+\.[[:space:]]' <<<"$text")" -ge 3 ] ||
     [ "$(grep -cE '^\+?[[:space:]]*[-*+][[:space:]].*\.md' <<<"$text")" -ge 3 ]
 }
@@ -98,6 +120,7 @@ pointer_dirs=()
 while IFS= read -r path; do
   path=${path%$'\r'}
   [ -n "$path" ] || continue
+  raw=$path
   case "$path" in /* | [A-Za-z]:[/\\]*) ;; *) path="${cwd:-.}/$path" ;; esac
   path=${path//\\//}
   case "$path" in *.md) ;; *) continue ;; esac
@@ -114,7 +137,8 @@ while IFS= read -r path; do
   [ -n "$dir" ] || continue
   [[ " ${all_dirs[*]} " == *" $dir "* ]] || all_dirs+=("$dir")
   if [[ " ${dirs[*]} " != *" $dir "* ]] && new_marker "" "$dir"; then dirs+=("$dir"); fi
-  if [[ " ${pointer_dirs[*]} " != *" $dir "* ]] && has_procedure "$path" && new_marker pointer- "$dir"; then
+  if [[ " ${pointer_dirs[*]} " != *" $dir "* ]] && new_marker pointer- "$dir" test &&
+    has_procedure "$path" "$raw" && new_marker pointer- "$dir"; then
     pointer_dirs+=("$dir")
   fi
 done <<<"$paths"
