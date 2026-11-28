@@ -125,7 +125,7 @@ if sys.argv[1:2] == ["--print-config"]:
     # ESLint looks for every flat config name (a `?` line).
     loaded = ["?" + os.path.realpath(p) for p in glob.glob(os.path.join(os.getcwd(), "eslint.config.*"))]
     loaded += [os.path.realpath(p) for p in glob.glob(os.path.join(os.getcwd(), ".eslintrc*"))]
-    loaded += [name[0] * (name[0] == "?") + os.path.realpath(os.path.join(os.getcwd(), name.lstrip("?"))) for name in
+    loaded += [name[0] * (name[0] in "?!") + os.path.realpath(os.path.join(os.getcwd(), name.lstrip("?!"))) for name in
                os.environ.get("ESLINT_LOADED", "").split(os.pathsep) if name]
     if out and os.environ.get("ESLINT_LOADED") != "none":
         open(out, "w").write("\\n".join(loaded))
@@ -570,6 +570,9 @@ expect_equal("with flat mode off, a flat config is not a setting", "deny", c.dec
 c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Add File: new3.js\n+var x = 1;\n*** End Patch"),
        harness="codex", ESLINT_JSON=NO_VAR_ROW, ESLINT_USE_FLAT_CONFIG="false", ESLINT_LOADED=str(c.project / "new3.js"))
 expect_equal("in legacy mode the code file ESLint reads is not its own setting", "deny", c.decision())
+c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Add File: rules7.js\n+var x = 1;\n*** End Patch"),
+       harness="codex", ESLINT_JSON=NO_VAR_ROW, ESLINT_USE_FLAT_CONFIG="false", ESLINT_LOADED="!" + str(c.project / "rules7.js"))
+expect_contains("in legacy mode a code file the config loads as a module is a setting", "also changes rules7.js", str(c.output()))
 c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Add File: src/.eslintignore\n+new2.js\n"
                              "*** Add File: src/new2.js\n+var x = 1;\n*** End Patch"),
        harness="codex", ESLINT_JSON=NO_VAR_ROW)
@@ -707,6 +710,14 @@ c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Add File: demo22.py\n+from ma
 expect_equal("a symlinked .gitignore, which git does not read, is not denied", "", c.decision())
 expect_contains("and says the ignore scope is unknown", "could not tell", str(c.output()))
 (c.project / ".gitignore").unlink()
+c.file("real24/.ignore", "bad24.py\n")
+(c.project / "alias24").symlink_to(c.project / "real24")
+c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Add File: alias24/bad24.py\n+from math import *\n*** End Patch"),
+       harness="codex", RUFF_JSON=F403_ROW)
+expect_equal("a .ignore in the real folder of a symlinked folder is not denied", "", c.decision())
+c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: .git/info/exclude\n@@\n+bad25.py\n*** Add File: bad25.py\n+from math import *\n*** End Patch"),
+       harness="codex", RUFF_JSON=F403_ROW)
+expect_contains("a change to .git/info/exclude counts as a Ruff setting", "also changes .git/info/exclude", str(c.output()))
 c.file(".gitignore", "made/\nCASEY.PY\ngen_*.py\n")
 xdg = c.project.parent / "xdg23"
 (xdg / "git").mkdir(parents=True)
@@ -814,6 +825,15 @@ if NODE:
     expect_equal("a package main is read from a package.json with a BOM", True, str(trace.project.resolve() / "bom/lib/entry.js") in recorded)
     expect_equal("a symlink only looked for keeps its own name", True, "?" + str(trace.project.resolve() / "probe/eslint.config.cjs") in recorded)
     expect_equal("and not the name of the file it points to", False, any("unrelated.cjs" in line for line in recorded))
+    trace.file("mode-target", "legacy\n")
+    (trace.project / "lint-mode").symlink_to(trace.project / "mode-target")
+    trace.file("modes.cjs", "require('node:fs').readlinkSync(require('node:path').join(__dirname, 'lint-mode')); require('./modx');\n")
+    trace.file("modx.js", "module.exports = 1;\n")
+    listed.unlink(missing_ok=True)
+    subprocess.run([NODE, "modes.cjs"], cwd=trace.project, capture_output=True, env=os.environ | loader)
+    recorded = listed.read_text().splitlines() if listed.exists() else []
+    expect_equal("a symlink the config reads with readlink counts by its own name", True, str(trace.project.resolve() / "lint-mode") in recorded)
+    expect_equal("a file Node loads as a module is marked", True, "!" + str(trace.project.resolve() / "modx.js") in recorded)
     trace.file("eslint.config.mjs", "")
     trace.file("node_modules/disc/index.js", "module.exports = () => new Promise((done) => done(require('node:fs').existsSync(require('node:path').join(process.cwd(), 'eslint.config.mjs'))));\n")
     trace.file("node_modules/disc/run.js", "require('./index.js')();\n")
@@ -1469,6 +1489,35 @@ c.file("build/end21.py", "x = [a for b in c for a in b]\n")
 c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Delete File: alias21/middle.py\n*** Add File: real21/middle.py\n+x = [a for b in c for a in b]\n*** End Patch"),
        harness="codex", **shared_env)
 expect_equal("a symlink deleted by a folder alias leaves its real name empty", "deny", c.decision())
+c.file("src26.py", "pass\n")
+(c.project / "build" / "alias26.py").symlink_to(c.project / "src26.py")
+c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Add File: build/alias26.py\n+x = [a for b in c for a in b]\n*** Delete File: build/alias26.py\n*** End Patch"),
+       harness="codex", **shared_env)
+expect_equal("an add through a symlink the patch then deletes is checked at the target", "deny", c.decision())
+c.file("src27.py", "pass\n")
+(c.project / "build" / "real27").mkdir()
+(c.project / "build" / "real27" / "link.py").symlink_to(c.project / "src27.py")
+(c.project / "build" / "alias27").symlink_to(c.project / "build" / "real27")
+c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: build/alias27/link.py\n@@\n-pass\n+x = [a for b in c for a in b]\n*** Delete File: build/real27/link.py\n*** End Patch"),
+       harness="codex", **shared_env)
+expect_equal("a symlink edited by a folder alias and deleted by its real name keeps the target's check", "deny", c.decision())
+expect_contains("and the deny names the target", "src27.py", str(c.output()))
+c.file("build/end28.py", "x = [a for b in c for a in b]\n")
+(c.project / "real28").mkdir()
+(c.project / "real28" / "link.py").symlink_to(c.project / "build" / "end28.py")
+(c.project / "alias28").symlink_to(c.project / "real28")
+c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: alias28/link.py\n*** Move to: build/moved28.py\n@@\n x = [a for b in c for a in b]\n+# moved\n*** Add File: real28/link.py\n+x = [a for b in c for a in b]\n*** End Patch"),
+       harness="codex", **shared_env)
+expect_equal("a symlink moved by a folder alias leaves its real name empty", "deny", c.decision())
+(c.project / "links29").mkdir()
+for index in range(6000):
+    (c.project / "links29" / f"l{index}.py").symlink_to(c.project / "src20.py")
+deletes = "".join(f"*** Delete File: links29/l{index}.py\n" for index in range(6000))
+started = time.monotonic()
+c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Add File: new29.py\n+x = [a for b in c for a in b]\n" + deletes + "*** End Patch"),
+       harness="codex", **shared_env)
+expect_equal("a patch that deletes 6,000 symlinks still denies", "deny", c.decision())
+expect_equal("well inside the hook timeout", True, time.monotonic() - started < 5)
 c.file("real9.py", "pass\n")
 c.file("aliases/keep", "")
 (c.project / "aliases" / "alias9.py").symlink_to("../real9.py")

@@ -186,6 +186,8 @@ def ruff_setting(
         return True
     if setting.name in RUFF_GIT_IGNORE_NAMES:
         return setting.parent in parents_within(code, root)
+    if setting.parts[-3:] == (".git", "info", "exclude"):
+        return True
     if setting.name == ".editorconfig":
         return config is None and setting == root / ".editorconfig"
     if setting.name not in RUFF_CONFIG_NAMES:
@@ -247,8 +249,6 @@ def eslint_setting(
     # In flat mode the trace lists the code file only when the config loads
     # it, as with a config symlink to the file.
     own = setting in (code, code.resolve())
-    if own and not mode.flat:
-        return False
     shadowed = flat_name and outranked(setting, setting.parent)
     # A config can read any data file in ways no trace sees, so a changed
     # data or ignore file always counts.
@@ -348,7 +348,13 @@ def eslint_loaded(
             ).splitlines()
         except (OSError, subprocess.SubprocessError):
             return None
-    read = {Path(name) for name in names if name and name[0] != "?"}
+    read = {Path(name.removeprefix("!")) for name in names if name and name[0] != "?"}
+    # Legacy ESLint reads the file it lints; it is a setting only when the
+    # config loads it as a module (`!`).
+    if not mode.flat:
+        read -= {target, target.resolve()} - {
+            Path(name[1:]) for name in names if name[:1] == "!"
+        }
     files = read | {Path(name[1:]) for name in names if name[:1] == "?"}
     # ESLint looks for every flat config name; one it only looked for is
     # not loaded (a closer or higher-ranked one is a setting by name).
@@ -497,14 +503,17 @@ def ruff_ignore_skip(target: Target) -> RunResult | None:
     found = answers(target.path)
     real = target.path.resolve()
     # Git does not match a path through a symlinked folder; the real path
-    # can be ignored by other rules, so that is unknown.
+    # can be ignored by other rules, so an ignored real path is unknown.
     if found == {None} and real != target.path:
-        return RunResult(None, RUFF_IGNORE_UNKNOWN) if True in answers(real) else None
+        found |= {True} & answers(real)
     # A `.ignore` can also un-ignore what git ignores, with `!name`, and
     # git does not read a symlinked .gitignore, which Ruff follows.
     unmatched = any(
         (folder / ".ignore").is_file() or (folder / ".gitignore").is_symlink()
-        for folder in parents_within(target.path, target.root)
+        for folder in {
+            *parents_within(target.path, target.root),
+            *parents_within(real, target.root),
+        }
     )
     if respects == {True} and found == {True} and not unmatched:
         return RunResult((), RUFF_GITIGNORED_PROBLEM)

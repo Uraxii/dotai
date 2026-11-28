@@ -16,8 +16,9 @@ if (out && typeof nodeModule.registerHooks === "function") {
   // Each file maps to whether it was read, not only looked for: ESLint
   // looks for every flat config name, also ones it never loads.
   const loaded = new Map();
+  const modules = new Set();
   const add = (file, probe) => loaded.set(file, loaded.get(file) || !probe);
-  const record = (file, probe = false) => {
+  const record = (file, probe = false, own = probe) => {
     let name;
     try {
       name = file instanceof URL ? fileURLToPath(file) : file;
@@ -29,9 +30,10 @@ if (out && typeof nodeModule.registerHooks === "function") {
     // An absent file the config looks for can be added by the edit, so it
     // is kept below the real path of its nearest existing folder. A file
     // only looked for keeps its own name: ESLint looks for every flat
-    // config name, also a symlink to a file it never reads.
-    let folder = probe ? path.dirname(full) : full;
-    let rest = probe ? path.basename(full) : "";
+    // config name, also a symlink to a file it never reads. A symlink the
+    // config reads with readlink also keeps its own name.
+    let folder = own ? path.dirname(full) : full;
+    let rest = own ? path.basename(full) : "";
     for (;;) {
       try {
         add(path.join(realpathSync(folder), rest), probe);
@@ -106,7 +108,12 @@ if (out && typeof nodeModule.registerHooks === "function") {
         }
       }) : -1;
       for (const candidate of index < 0 ? candidates : candidates.slice(0, index)) record(candidate);
-      if (found) record(found);
+      if (found) {
+        record(found);
+        try {
+          modules.add(realpathSync(found));
+        } catch {}
+      }
       return result;
     },
   });
@@ -154,6 +161,11 @@ if (out && typeof nodeModule.registerHooks === "function") {
   ]) {
     wrap(owner, name, (file) => record(file, !fromProject()));
   }
+  for (const [owner, name] of [
+    [fs, "readlinkSync"], [fs, "readlink"], [fs.promises, "readlink"],
+  ]) {
+    wrap(owner, name, (file) => record(file, !fromProject(), true));
+  }
   // The wrappers above copied the original `native`, so it is wrapped on them.
   for (const owner of [fs.realpathSync, fs.realpath]) {
     wrap(owner, "native", (file) => record(file, !fromProject()));
@@ -168,7 +180,8 @@ if (out && typeof nodeModule.registerHooks === "function") {
       record(path.join(folder instanceof URL ? fileURLToPath(folder) : String(folder), "*")));
   }
   // Appended, as Node processes the config starts record to the same list.
-  // A file only looked for is written with a leading `?`.
+  // A file only looked for is written with a leading `?`, a file Node
+  // loaded as a module with a leading `!`.
   process.on("exit", () => fs.appendFileSync(out, [...loaded].map(
-    ([file, read]) => (read ? "" : "?") + file + "\n").join("")));
+    ([file, read]) => (modules.has(file) ? "!" : read ? "" : "?") + file + "\n").join("")));
 }

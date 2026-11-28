@@ -541,6 +541,14 @@ def codex_tool_event(payload: Payload, base: Neutral) -> Neutral | None:
     unlinked: set[str] = set()
     # The symlink paths each file was edited through, by real path.
     link_names: dict[str, list[str]] = {}
+    # Those paths with their folders resolved.
+    through: set[str] = set()
+
+    def named(path: str) -> str:
+        return os.path.join(
+            os.path.realpath(os.path.dirname(path)), os.path.basename(path),
+        )
+
     for file in sections:
         source, target = (
             patched_realpath(path, unlinked)
@@ -554,16 +562,15 @@ def codex_tool_event(payload: Payload, base: Neutral) -> Neutral | None:
             # Deleting a symlink leaves its target as it is; an earlier
             # change made through the symlink stays at the target's path.
             source = target = link
-            unlinked |= {link, os.path.join(
-                os.path.realpath(os.path.dirname(link)), os.path.basename(link),
-            )}
-            for key, change in list(changes.items()):
-                if key != link and os.path.normpath(
-                    os.path.join(cwd, str(change["path"]))
-                ) == link:
-                    source_of = os.path.normpath(os.path.join(cwd, str(change["source"])))
+            unlinked |= {link, named(link)}
+            for key, change in list(changes.items()) if named(link) in through else ():
+                path = os.path.normpath(os.path.join(cwd, str(change["path"])))
+                if key != link and named(path) == named(link):
+                    source_of = os.path.normpath(
+                        os.path.join(cwd, str(change.get("source") or path))
+                    )
                     changes[key] = change | {"path": key} | (
-                        {"source": key} if source_of == link else {}
+                        {"source": key} if named(source_of) == named(link) else {}
                     )
         # A moved symlink leaves its target, and the target's change, in place.
         moves_link = (
@@ -584,6 +591,7 @@ def codex_tool_event(payload: Payload, base: Neutral) -> Neutral | None:
             continue
         if file.action != "Delete File" and dest not in unlinked and target != dest:
             link_names.setdefault(target, []).append(dest)
+            through.add(named(dest))
         prior = changes.get(source) if moves_link else changes.pop(source, None)
         if file.action == "Delete File":
             # Kept, as a deleted file can be a lint setting of the others;
@@ -607,7 +615,7 @@ def codex_tool_event(payload: Payload, base: Neutral) -> Neutral | None:
         # text was the target's, and the target is checked at its own path.
         if moves_link:
             moved_away.add(link)
-            unlinked.add(link)
+            unlinked |= {link, named(link)}
             changes[target] = changes[target] | {"source": source}
             if prior is not None and source != target:
                 changes[source] = prior | {"path": source, "source": source}

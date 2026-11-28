@@ -347,3 +347,8 @@ Scratch paths named in those notes (under `/tmp/...`) are gone; ignore them.
 - Codex: deleting a symlink moves an earlier change made through it to the target's own path; a symlink deleted by a folder-alias name also unlinks its parent-resolved name.
 - Ruff ignore: a symlinked `.gitignore` (git does not read it, Ruff does) gives "could not tell"; an empty or repeated global `core.excludesFile` is asked with every candidate file, and differing answers give "could not tell".
 - Recorder: a file only looked for keeps its own name (parent resolved), so a symlinked unused flat config name is dropped; package `main` parses a `package.json` with a BOM.
+
+## Update: review 645ea3d6 (dfee79d) findings fixed (7 blocking, 1 non-blocking)
+- Codex: a symlink deleted or moved also unlinks its folder-resolved name; a delete rescans earlier changes only when the patch edited through that name (6,000 symlink deletes stay fast); a change with no `source` field no longer fails.
+- Ruff ignore: `.ignore`/symlinked `.gitignore` are looked for in the lexical and the real parents; an edit to `.git/info/exclude` counts as a Ruff setting.
+- Recorder: `readlink` look-ups keep the link's own name; files Node loads as modules are marked `!`, and in legacy mode the code file counts as its own setting only when marked.
