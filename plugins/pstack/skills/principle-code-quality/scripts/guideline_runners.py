@@ -24,7 +24,10 @@ from code_quality import check_source
 
 RUNNER_TIMEOUT_S = 1.5
 DEFAULT_LINE_LENGTH = 80
-SCRIPT_SUFFIXES = frozenset({".js", ".mjs", ".cjs", ".ts", ".mts", ".cts"})
+MODULE_SUFFIXES = ("", ".js", ".mjs", ".cjs", ".ts", ".mts", ".cts", ".json")
+CONFIG_MODULES_MAX = 50
+QUOTED = re.compile(r"""['"]([^'"\n]{1,200})['"]""")
+PACKAGE_NAME = re.compile(r"^(@[\w.-]+/)?[\w.-]+$")
 # In ruff's order of precedence within one directory.
 RUFF_CONFIG_NAMES = (".ruff.toml", "ruff.toml", "pyproject.toml")
 ESLINT_CONFIG_PATTERN = re.compile(
@@ -127,8 +130,11 @@ def ruff_chain(config: Path) -> Iterator[Path]:
         yield current
         tables = ruff_lint_tables(current)
         extend = tables[0].get("extend") if tables else None
+        # Ruff expands `~` and environment variables in `extend`.
         current = (
-            (current.parent / extend).resolve()
+            (current.parent / os.path.expandvars(
+                os.path.expanduser(extend)
+            )).resolve()
             if isinstance(extend, str) else None
         )
 
@@ -150,41 +156,153 @@ def ruff_live_tables(config: Path) -> list[Mapping[str, object]]:
     return live
 
 
-def setting_applies(
+def setting_tools(
     setting: Path, code: Path, language: str, root: Path, text: str | None
+) -> frozenset[str]:
+    """The detectors whose result for the code file can change when the
+    same edit changes this other file."""
+    if language == "python" and ruff_setting(setting, code, root, text):
+        return frozenset({"ruff"})
+    if language in SCRIPT_LANGUAGES and eslint_setting(
+        setting, code, root, text
+    ):
+        return frozenset({"eslint"})
+    return frozenset()
+
+
+def ruff_setting(
+    setting: Path, code: Path, root: Path, text: str | None
 ) -> bool:
-    """Whether a file the same edit changes can change what a detector
-    reports for the code file: a config in its folder or above, a config
-    its Ruff config extends, or a module below its flat ESLint config,
-    which that config may import."""
+    """A config in the Ruff chain of the code file, or a Ruff config at
+    the current one or closer to the code, which Ruff would use instead."""
+    config = ruff_config(code, root)
+    if config is not None and setting in {
+        linked.resolve() for linked in ruff_chain(config)
+    }:
+        return True
+    if setting.name == ".editorconfig":
+        return config is None and setting == root / ".editorconfig"
+    if setting.name not in RUFF_CONFIG_NAMES:
+        return False
+    nearer = parents_within(code, config.parent if config else root)
+    if config is not None and setting.parent == config.parent and (
+        RUFF_CONFIG_NAMES.index(setting.name)
+        > RUFF_CONFIG_NAMES.index(config.name)
+    ):
+        return False
+    return setting.parent in list(nearer) and (
+        setting.name != "pyproject.toml" or bool(ruff_lint_tables(setting))
+        or "tool.ruff" in (text or "")
+    )
+
+
+def eslint_setting(
+    setting: Path, code: Path, root: Path, text: str | None
+) -> bool:
+    """An ESLint config the code file uses or would use instead, the
+    .eslintignore in legacy mode, or a file the config loads."""
+    mode = eslint_config(code, root)
     folders = list(parents_within(code, root))
     name = setting.name
-    if language == "python":
-        config = ruff_config(code, root)
-        chain = {linked.resolve() for linked in ruff_chain(config)} if (
-            config is not None
-        ) else set()
-        return (
-            (name in RUFF_CONFIG_NAMES and setting.parent in folders)
-            or setting in chain
-            or (name == ".editorconfig" and config is None)
-        )
-    if language not in SCRIPT_LANGUAGES:
-        return False
-    eslint_setting = (
-        ESLINT_CONFIG_PATTERN.match(name) is not None
-        or name == ".eslintignore"
-        or (name == "package.json" and (
-            "eslintConfig" in (text or "") or package_eslint_config(setting)
-        ))
+    flat_name = FLAT_ESLINT_CONFIG.match(name) is not None
+    legacy_name = ESLINT_CONFIG_PATTERN.match(name) is not None or (
+        name == ".eslintignore"
+    ) or (name == "package.json" and (
+        "eslintConfig" in (text or "") or package_eslint_config(setting)
+    ))
+    if mode is None:
+        return (flat_name or legacy_name) and setting.parent in folders
+    if mode.flat:
+        if flat_name and setting.parent in list(
+            parents_within(code, mode.folder)
+        ):
+            return True
+        configs = [
+            entry for entry in mode.folder.iterdir()
+            if FLAT_ESLINT_CONFIG.match(entry.name)
+        ]
+    else:
+        if legacy_name and setting.parent in folders:
+            return True
+        configs = [
+            directory / entry for directory in folders if directory.is_dir()
+            for entry in os.listdir(directory)
+            if ESLINT_CONFIG_PATTERN.match(entry) or entry == "package.json"
+        ]
+    files, packages = config_modules(configs, root)
+    return setting in files or any(
+        package in setting.parents for package in packages
     )
-    if eslint_setting and setting.parent in folders:
-        return True
-    mode = eslint_config(code, root)
-    return (
-        mode is not None and mode.flat and setting.suffix in SCRIPT_SUFFIXES
-        and mode.folder in setting.parents
-    )
+
+
+def config_text(config: Path) -> str:
+    """A config's text; of a package.json only its eslintConfig."""
+    try:
+        text = config.read_text(encoding="utf-8")
+        if config.name == "package.json":
+            data = json.loads(text)
+            return json.dumps(
+                data.get("eslintConfig") if isinstance(data, dict) else None
+            )
+    except (OSError, ValueError):
+        return ""
+    return text
+
+
+def module_candidates(base: Path) -> list[Path]:
+    """The files a relative module name can load, as Node resolves it."""
+    return [
+        base.with_name(base.name + suffix) for suffix in MODULE_SUFFIXES
+    ] + [base / f"index{suffix}" for suffix in MODULE_SUFFIXES[1:]]
+
+
+def workspace_package(name: str, start: Path, root: Path) -> Path | None:
+    """The project folder of a package a config names, when the package
+    is part of the project (a workspace package linked in node_modules)."""
+    parts = name.split("/")
+    package = "/".join(parts[:2] if name.startswith("@") else parts[:1])
+    if not PACKAGE_NAME.match(package):
+        return None
+    shorthand = () if package.startswith("@") else (f"eslint-config-{package}",)
+    for directory in parents_within(start / "_", root):
+        for candidate in (package, *shorthand):
+            linked = directory / "node_modules" / candidate
+            if linked.is_dir():
+                real = linked.resolve()
+                return real if root in real.parents else None
+    return None
+
+
+def config_modules(
+    configs: list[Path], root: Path
+) -> tuple[set[Path], set[Path]]:
+    """The files ESLint configs load by relative path, followed through
+    those files, and the folders of workspace packages they name. Every
+    quoted string counts, so a name in a rule option can add a file:
+    a false match only makes a finding a warning."""
+    files: set[Path] = set()
+    packages: set[Path] = set()
+    pending = [config.resolve() for config in configs]
+    read: set[Path] = set()
+    while pending and len(read) < CONFIG_MODULES_MAX:
+        current = pending.pop()
+        if current in read:
+            continue
+        read.add(current)
+        files.add(current)
+        for name in QUOTED.findall(config_text(current)):
+            if name.startswith(("./", "../")):
+                candidates = [
+                    candidate.resolve()
+                    for candidate in module_candidates(current.parent / name)
+                ]
+                files.update(candidates)
+                pending += [c for c in candidates if c.is_file()]
+            elif (package := workspace_package(
+                name, current.parent, root
+            )) is not None:
+                packages.add(package)
+    return files, packages
 
 
 def selected_by(code: str, selectors: frozenset[str]) -> bool:

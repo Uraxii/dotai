@@ -499,6 +499,33 @@ c.hook(c.write("b.ts", "var x = 1\n"), ESLINT_JSON=NO_VAR_ROW)
 expect_contains("a package.json without eslintConfig is not",
                 "eslint has no project config", c.context())
 
+c = Case("eslint-shared-config")
+c.file("packages/web/eslint.config.mjs", "import rules from '../../tools/rules.mjs';\nexport default [{ rules }];\n")
+c.file("tools/rules.mjs", "export default {};\n")
+c.file("packages/web/main.ts", "let x = 1\n")
+c.file(".eslintignore", "dist/\n")
+c.file("packages/cfg/index.mjs", "export default {};\n")
+c.file("packages/web/other.mjs", "export default {};\n")
+c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: tools/rules.mjs\n@@\n-export default {};\n+export default { 'no-var': 'off' };\n"
+                             "*** Add File: packages/web/new0.ts\n+var x = 1\n*** End Patch"),
+       harness="codex", ESLINT_JSON=NO_VAR_ROW)
+expect_contains("a module the flat config imports counts as a setting", "also changes tools/rules.mjs", str(c.output()))
+c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: .eslintignore\n@@\n-dist/\n+packages/web/main.ts\n"
+                             "*** Add File: packages/web/new1.ts\n+var x = 1\n*** End Patch"),
+       harness="codex", ESLINT_JSON=NO_VAR_ROW)
+expect_equal("flat mode does not read .eslintignore", "deny", c.decision())
+c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: packages/web/other.mjs\n@@\n-export default {};\n+export default 1;\n"
+                             "*** Add File: packages/web/new2.ts\n+var x = 1\n*** End Patch"),
+       harness="codex", ESLINT_JSON=NO_VAR_ROW)
+expect_equal("a module the config does not load is not a setting", "deny", c.decision())
+(c.project / "node_modules" / "@org").mkdir(parents=True)
+(c.project / "node_modules" / "@org" / "cfg").symlink_to(c.project / "packages" / "cfg")
+c.file("packages/web/eslint.config.mjs", "import shared from '@org/cfg';\nexport default [shared];\n")
+c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: packages/cfg/index.mjs\n@@\n-export default {};\n+export default { rules: {} };\n"
+                             "*** Add File: packages/web/new3.ts\n+var x = 1\n*** End Patch"),
+       harness="codex", ESLINT_JSON=NO_VAR_ROW)
+expect_contains("a workspace package the config imports counts as a setting", "also changes packages/cfg/index.mjs", str(c.output()))
+
 c = Case("eslint-nested-config")
 c.file("eslint.config.js", "export default [];\n")
 c.file("packages/api/eslint.config.js", "export default [];\n")
@@ -955,6 +982,26 @@ c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: cfg/base.toml\n@
                              "*** Add File: newmod4.py\n+from math import *\n*** End Patch"),
        harness="codex", RUFF_JSON=F403_ROW)
 expect_contains("changing a config the project config extends warns", "also changes cfg/base.toml", str(c.output()))
+c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: ruff.toml\n@@\n-extend = \"cfg/base.toml\"\n+extend = \"cfg/other.toml\"\n"
+                             "*** Add File: newmod5.py\n+items = [[1]]\n+x = [a for b in items for a in b]\n*** End Patch"),
+       harness="codex")
+expect_equal("a Ruff config edit does not lower another detector's deny", "deny", c.decision())
+c.file("pyproject.toml", "[project]\nname = 'old'\n")
+c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: pyproject.toml\n@@\n-name = 'old'\n+name = 'new'\n"
+                             "*** Add File: newmod6.py\n+from math import *\n*** End Patch"),
+       harness="codex", RUFF_JSON=F403_ROW)
+expect_equal("a pyproject.toml that Ruff does not read does not lower the deny", "deny", c.decision())
+c.file("gone.py", "pass\n")
+c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: gone.py\n@@\n-pass\n+from math import *\n"
+                             "*** Delete File: gone.py\n*** End Patch"),
+       harness="codex", RUFF_JSON=F403_ROW)
+expect_equal("a file the patch deletes at the end is not denied", "", c.decision())
+c.file("shared/base.toml", "[lint]\n")
+c.file("ruff.toml", 'extend = "${DOTAI_SHARED}/base.toml"\n')
+c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: shared/base.toml\n@@\n [lint]\n+ignore = [\"F403\"]\n"
+                             "*** Add File: newmod7.py\n+from math import *\n*** End Patch"),
+       harness="codex", RUFF_JSON=F403_ROW, DOTAI_SHARED=str(c.project / "shared"))
+expect_contains("an extend path with an environment variable is followed", "also changes shared/base.toml", str(c.output()))
 (c.project / "ruff.toml").unlink()
 c.file("demo.py", "pass\n")
 c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: demo.py\n*** Move to: moved_out.py\n@@\n-pass\n"

@@ -27,7 +27,7 @@ from guideline_files import (
 )
 from guideline_runners import (
     SKIPPED_FOR_BUDGET, Detection, Finding, Target, detect, glob_matches,
-    matches_code, runs_on, setting_applies,
+    matches_code, runs_on, setting_tools,
 )
 
 EXCLUDED_DIRECTORIES = frozenset({
@@ -525,23 +525,24 @@ class Engine:
                 f"{file.rel}, so its findings in this edit are warnings."
             )
         root = Path(self.event.root).resolve()
-        settings = sorted({
-            setting.relative_to(root).as_posix()
-            for other in self.event.files
-            for raw in {other.path, other.source} - {"", change.path}
-            if (setting := resolve_in_root(
-                raw, self.event.cwd, self.event.root
-            )) is not None
-            and setting_applies(
-                setting, file.path, file.language, root, other.after
-            )
-        })
-        if added and settings:
+        settings: dict[str, frozenset[str]] = {}
+        for other in self.event.files:
+            for raw in {other.path, other.source} - {"", change.path}:
+                setting = resolve_in_root(raw, self.event.cwd, self.event.root)
+                tools = setting_tools(
+                    setting, file.path, file.language, root, other.after
+                ) if setting is not None else frozenset()
+                if tools:
+                    settings[setting.relative_to(root).as_posix()] = tools
+        changed = frozenset().union(*settings.values())
+        held = sorted({hit.finding.tool for hit in added} & changed)
+        if held:
             self.notices.append(
-                f"Notice: this edit also changes {', '.join(settings)}, so "
-                f"its findings in {file.rel} are warnings until it is written."
+                f"Notice: this edit also changes {', '.join(sorted(settings))},"
+                f" so {', '.join(held)} findings in {file.rel} are warnings "
+                "until it is written."
             )
-            added = []
+            added = [hit for hit in added if hit.finding.tool not in changed]
         if added and change.before_problem:
             self.notices.append(
                 f"Notice: could not read the current {file.rel}: "

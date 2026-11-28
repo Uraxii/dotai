@@ -445,15 +445,20 @@ def codex_tool_event(payload: Payload, base: Neutral) -> Neutral | None:
     if name != "PreToolUse":
         return None
     changes: dict[str, Neutral] = {}
-    for file in files:
-        prior = changes.pop(file.source, None)
-        changes[file.target] = patch_change(file, base, prior)
-    # A deleted file can be a lint setting the other files depend on.
+    deleted: set[str] = set()
     for file in sections:
+        prior = changes.pop(file.source, None)
         if file.action == "Delete File":
-            changes.setdefault(
-                file.target, {"path": file.target, "before": None, "after": None}
-            )
+            # Kept, as a deleted file can be a lint setting of the others.
+            changes[file.target] = {
+                "path": file.target, "before": None, "after": None,
+            }
+            deleted.add(file.target)
+            continue
+        if file.source in deleted:
+            prior = None
+            deleted.discard(file.source)
+        changes[file.target] = patch_change(file, base, prior)
     return {"kind": "pre_write", "files": list(changes.values())}
 
 

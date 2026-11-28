@@ -217,3 +217,10 @@ Scratch paths named in those notes (under `/tmp/...`) are gone; ignore them.
 - The same-edit lint-setting check (`setting_applies`) now counts only settings that can change the code file's result: a Ruff config in its folder or above, a file in its Ruff `extend` chain, `.editorconfig` when no Ruff config; an ESLint config, `.eslintignore` or `package.json` with `eslintConfig` in its folder or above, or any script module below its flat ESLint config (it may be imported).
 - Deleted files and move sources count. A `package.json` dependency edit no longer lowers a deny.
 - Checked with real ruff and ESLint 9. mise run ci green: guidelines.test.py 246/246.
+
+## Update: review e18da9a8 findings fixed (3 blocking, 3 non-blocking)
+- `setting_tools` returns the detectors a same-edit setting change can affect; only those tools' findings become warnings (a Ruff config edit keeps a code_quality deny).
+- Ruff: a config counts when it is in the chain, or a Ruff config at the current one or closer that Ruff would use (a lower-precedence name in the same folder and a pyproject.toml without `[tool.ruff]` do not). `extend` expands `~` and environment variables, as Ruff does.
+- ESLint: `.eslintignore` and legacy names count only outside flat mode. Files a config loads count: quoted relative paths followed through those files, and workspace packages it names that resolve through node_modules into the project.
+- Codex: sections apply in order, so a Delete after an Update leaves the file deleted (no deny on the intermediate text).
+- Checked with real ruff and ESLint 9. mise run ci green: guidelines.test.py 254/254.
