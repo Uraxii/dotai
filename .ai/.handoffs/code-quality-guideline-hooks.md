@@ -366,3 +366,9 @@ Scratch paths named in those notes (under `/tmp/...`) are gone; ignore them.
 - Ruff ignore: git runs in the file's own (also nested) repository; the excludes file comes from `~/.gitconfig`, else the XDG git config, as in Ruff (not `$GIT_CONFIG_GLOBAL`); a same-edit change to that excludes file counts as a Ruff setting.
 - Recorder: a symlink read by its target also counts by its own name; only Node's `load` hook marks `!` (not `require.resolve`). The Engine also matches a setting by its own name below its folder's real path.
 - Codex: a move onto the same file through a symlinked folder leaves no file.
+
+## Update: PR opened; Devin Review round 1 (7914428)
+- User chose "open it": PR to `develop` lists the remaining edge cases as known limits.
+- CI: the broken-`python3` fall-through test now uses `PATH` with only its own folder, like the other launcher tests (it failed on the GitHub runner, not locally).
+- `read_disk` checks the root without following the last symlink: a Write through a project symlink to an outside file now has a baseline, so a comment-only edit is not denied.
+- Rejected: `code_quality` findings in git-ignored files still apply (the skip copies Ruff's scan scope only). Escalated: project-local linters run with the harness trust as the only gate.

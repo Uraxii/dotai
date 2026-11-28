@@ -96,8 +96,9 @@ def read_disk(raw: str, cwd: str, root: str) -> Disk:
     """Read a project file as UTF-8 with its own line endings.
 
     A missing file or one outside the root gives no text and no problem.
+    A project symlink to a file outside the root is read through the link.
     """
-    path = resolve_in_root(raw, cwd, root)
+    path = resolve_in_root(raw, cwd, root, follow=False)
     if path is None or not path.is_file():
         return Disk(None)
     try:
