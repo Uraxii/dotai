@@ -203,3 +203,12 @@ Scratch paths named in those notes (under `/tmp/...`) are gone; ignore them.
 - ESLint: mode and folder are chosen together. Nearest flat config folder in flat mode; with only legacy configs, or `ESLINT_USE_FLAT_CONFIG=false`, the root in legacy mode (`ESLINT_USE_FLAT_CONFIG=false` set for the run).
 - Tool input and output use UTF-8 whatever the locale.
 - mise run ci green: guidelines.test.py 237/237.
+
+## Update: review fbb36125 findings fixed (4 blocking, 2 non-blocking)
+- An edit that also changes a lint setting file (ruff/pyproject/eslint configs, package.json, .eslintignore, .editorconfig) does not deny; its findings are warnings with a notice, and PostToolUse checks the written result.
+- Tools get the source as UTF-8 bytes (no Windows text-mode newline changes); output is decoded as UTF-8.
+- Ruff: a `[lint]` setting replaces the same deprecated top-level setting in one config.
+- code_quality accepts a leading UTF-8 BOM.
+- Codex apply: new lines take the file's first line ending, as in Codex.
+- A path Ruff excludes counts as checked with zero findings (notice kept), so a move out of an excluded folder can deny. Checked with real ruff.
+- mise run ci green: guidelines.test.py 243/243.

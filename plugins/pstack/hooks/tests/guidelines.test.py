@@ -506,6 +506,15 @@ c.hook(c.write("packages/api/f.js", "var x = 1;\n"))
 expect_equal("eslint runs in the folder of the nearest config, so ESLint 9 loads it",
              str(c.project / "packages" / "api"), (WORK / "eslint.cwd").read_text())
 
+c = Case("bom")
+c.hook(c.write("app.py", "\ufeffitems = [[1]]\nx = [a for b in items for a in b]\n"))
+expect_equal("a UTF-8 BOM does not stop the comprehension check", "deny", c.decision())
+
+c = Case("ruff-lint-over-top")
+c.file("ruff.toml", 'select = ["F"]\n[lint]\nselect = ["E"]\n')
+c.hook(c.write("app.py", "x = 1\n"), PSTACK_GUIDELINES_DIR=str(PLUGIN / "skills" / "principle-code-quality" / "guidelines"))
+expect_contains("a [lint] select replaces the top-level one", "F403", c.args().splitlines()[-1])
+
 c = Case("eslint-legacy-nested")
 c.file(".eslintrc.json", '{"root": true}\n')
 c.file("packages/api/.eslintrc.json", "{}\n")
@@ -894,7 +903,7 @@ c.file("demo.py", b'def f():\r\n    pass\r\ns = """\n    pass\n"""\n')
 c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: demo.py\n@@\n-    pass\n+    x = 1\n*** End Patch"),
        harness="codex")
 expect_equal("a CRLF line matches before a later LF line, as in Codex",
-             'def f():\r\n    x = 1\ns = """\n    pass\n"""\n', (WORK / "ruff.stdin").read_bytes().decode())
+             'def f():\r\n    x = 1\r\ns = """\n    pass\n"""\n', (WORK / "ruff.stdin").read_bytes().decode())
 c.hook(c.patch("PreToolUse", "*** Begin Patch\n  *** Add File: added.py\n+x = [a for b in c for a in b]\n*** End Patch"),
        harness="codex")
 expect_equal("a file header with leading spaces is read, as Codex trims it", "deny", c.decision())
@@ -921,7 +930,22 @@ codex_result("an anchor's trailing spaces are dropped, as in Codex", '# marker\n
 codex_result("an End of File line with trailing spaces still ends the hunk", 'doc = """\npass\n"""\npass\n',
              "*** Update File: demo.py\n@@\n-pass\n+x = 1\n*** End of File   ", 'doc = """\npass\n"""\nx = 1\n')
 codex_result("a bare CR ends a source line, as in Codex", b'doc = """\r\npass\r"""\rpass\r',
-             "*** Update File: demo.py\n@@\n-pass\n+x = 1\n*** End of File", 'doc = """\r\npass\r"""\rx = 1\n')
+             "*** Update File: demo.py\n@@\n-pass\n+x = 1\n*** End of File", 'doc = """\r\npass\r"""\rx = 1\r\n')
+codex_result("new lines take the file's first line ending, as in Codex", b"a\rb\r",
+             "*** Update File: demo.py\n@@\n a\n+\n+x", "a\r\rx\rb\r")
+c.file("ruff.toml", "[lint]\n")
+c.file("demo.py", "x\n")
+c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: ruff.toml\n@@\n [lint]\n+ignore = [\"F403\"]\n"
+                             "*** Add File: newmod.py\n+from math import *\n*** End Patch"),
+       harness="codex", RUFF_JSON=F403_ROW)
+expect_lacks("an edit that also changes a lint config does not deny", "deny", str(c.output()))
+expect_contains("and says why", "also changes ruff.toml", str(c.output()))
+(c.project / "ruff.toml").unlink()
+c.file("demo.py", "pass\n")
+c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: demo.py\n*** Move to: moved_out.py\n@@\n-pass\n"
+                             "+from math import *\n*** End Patch"),
+       harness="codex", RUFF_JSON=F403_ROW, RUFF_STDERR="warning: Ignored path via `extend-exclude`")
+expect_lacks("a path ruff excludes counts as checked, with no findings", "could not check the current", str(c.output()))
 c.file("demo.py", "if True:\n    a = 1\n    b = 2\n")
 c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: demo.py\n@@\n a = 1\n-    b = 2\n+    from math import *\n"
                              "*** End Patch"), harness="codex")
@@ -931,7 +955,7 @@ c.file("demo.py", "x = 1\r\ny = 2\nz = 3\r\n")
 c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: demo.py\n@@\n-y = 2\n+from math import *\n"
                              "*** End Patch"), harness="codex")
 expect_equal("a file with mixed line endings is patched, as Codex does",
-             "x = 1\r\nfrom math import *\nz = 3\r\n", (WORK / "ruff.stdin").read_bytes().decode())
+             "x = 1\r\nfrom math import *\r\nz = 3\r\n", (WORK / "ruff.stdin").read_bytes().decode())
 c.file("demo.py", "x = 1\n")
 c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: demo.py\n@@\n+from os import *\n@@\n-x = 1\n+x = 2\n"
                              "*** End of File\n*** End Patch"), harness="codex")

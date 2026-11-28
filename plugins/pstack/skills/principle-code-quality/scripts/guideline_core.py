@@ -27,7 +27,7 @@ from guideline_files import (
 )
 from guideline_runners import (
     SKIPPED_FOR_BUDGET, Detection, Finding, Target, detect, glob_matches,
-    matches_code, runs_on,
+    is_lint_setting, matches_code, runs_on,
 )
 
 EXCLUDED_DIRECTORIES = frozenset({
@@ -482,10 +482,10 @@ class Engine:
         hits, failed = [], set()
         lines = content.split("\n")
         for tool, result in results.items():
+            if result.problem and not quiet:
+                self.report_problem(file, tool, result.problem)
             if result.findings is None:
                 failed.add(tool)
-                if not quiet:
-                    self.report_problem(file, tool, result.problem)
                 continue
             for finding in result.findings:
                 owner = guideline_for(finding, file.guidelines)
@@ -524,6 +524,16 @@ class Engine:
                 f"Notice: {', '.join(unproven)} could not check the current "
                 f"{file.rel}, so its findings in this edit are warnings."
             )
+        settings = sorted({
+            Path(other.path).name for other in self.event.files
+            if is_lint_setting(Path(other.path).name)
+        })
+        if added and settings:
+            self.notices.append(
+                f"Notice: this edit also changes {', '.join(settings)}, so "
+                f"its findings in {file.rel} are warnings until it is written."
+            )
+            added = []
         if added and change.before_problem:
             self.notices.append(
                 f"Notice: could not read the current {file.rel}: "

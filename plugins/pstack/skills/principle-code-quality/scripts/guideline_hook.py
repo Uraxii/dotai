@@ -354,8 +354,11 @@ def apply_update(current: str, body: Sequence[str]) -> str | None:
     # without their terminators; the file's own terminators are kept.
     lines = SOURCE_LINE.findall(current)
     keys = [line.rstrip("\r\n") for line in lines]
+    # New lines take the file's first line ending, as in Codex.
+    first = LINE_ENDING.search(current)
+    ending = first.group() if first else "\n"
     if lines and not lines[-1].endswith(("\n", "\r")):
-        lines[-1] += "\n"
+        lines[-1] += ending
     replacements: list[tuple[int, int, list[str]]] = []
     cursor = 0
     for hunk in hunks(body):
@@ -368,7 +371,7 @@ def apply_update(current: str, body: Sequence[str]) -> str | None:
         old = [row[1:] for row in rows if row[0] in " -"]
         if not old:
             replacements += [
-                (len(lines), 0, terminated(new))
+                (len(lines), 0, terminated(new, ending))
                 for _, _, new in changed_runs(rows)
             ]
             continue
@@ -380,7 +383,7 @@ def apply_update(current: str, body: Sequence[str]) -> str | None:
         if index is None:
             return None
         replacements += [
-            (index + offset, length, terminated(new))
+            (index + offset, length, terminated(new, ending))
             for offset, length, new in changed_runs(rows)
         ]
         cursor = index + len(old)
@@ -393,10 +396,11 @@ def apply_update(current: str, body: Sequence[str]) -> str | None:
 
 
 SOURCE_LINE = re.compile(r"[^\r\n]*(?:\r\n|\r|\n)|[^\r\n]+$")
+LINE_ENDING = re.compile(r"\r\n|\r|\n")
 
 
-def terminated(lines: list[str]) -> list[str]:
-    return [line + "\n" for line in lines]
+def terminated(lines: list[str], ending: str) -> list[str]:
+    return [line + ending for line in lines]
 
 
 def patch_change(

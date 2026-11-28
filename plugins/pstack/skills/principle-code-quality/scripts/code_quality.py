@@ -48,7 +48,8 @@ def check_source(source: str, path: Path) -> list[Finding]:
     """Return findings for one module; raise SyntaxError if unparseable."""
     findings = []
     nested_calls: set[ast.Call] = set()
-    for node in ast.walk(ast.parse(source, str(path))):
+    tree = ast.parse(source.removeprefix("\ufeff"), str(path))
+    for node in ast.walk(tree):
         if not isinstance(node, COMPREHENSIONS):
             continue
         clauses = len(node.generators)

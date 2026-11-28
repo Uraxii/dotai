@@ -24,6 +24,7 @@ from code_quality import check_source
 
 RUNNER_TIMEOUT_S = 1.5
 DEFAULT_LINE_LENGTH = 80
+LINT_SETTING_FILES = frozenset({".editorconfig", "package.json", ".eslintignore"})
 # In ruff's order of precedence within one directory.
 RUFF_CONFIG_NAMES = (".ruff.toml", "ruff.toml", "pyproject.toml")
 ESLINT_CONFIG_PATTERN = re.compile(
@@ -95,8 +96,9 @@ def ruff_lint_tables(config: Path) -> tuple[Mapping[str, object], ...]:
         if not isinstance(section, dict):
             return ()
         data = section
+    # A [lint] setting replaces the same deprecated top-level setting.
     lint = data.get("lint")
-    return (data, lint) if isinstance(lint, dict) else (data,)
+    return ({**data, **lint},) if isinstance(lint, dict) else (data,)
 
 
 def ruff_config(path: Path, root: Path) -> Path | None:
@@ -148,6 +150,14 @@ def ruff_live_tables(config: Path) -> list[Mapping[str, object]]:
     return live
 
 
+def is_lint_setting(name: str) -> bool:
+    """Whether a file with this name can change what a detector reports."""
+    return (
+        name in RUFF_CONFIG_NAMES or name in LINT_SETTING_FILES
+        or ESLINT_CONFIG_PATTERN.match(name) is not None
+    )
+
+
 def selected_by(code: str, selectors: frozenset[str]) -> bool:
     return any(
         selector == "ALL" or code.startswith(selector)
@@ -174,14 +184,21 @@ def run_tool(
     argv: list[str], target: Target, cwd: Path | None = None,
     env: Mapping[str, str] | None = None,
 ) -> subprocess.CompletedProcess[str] | None:
+    # Bytes, so the source reaches the tool as UTF-8 without the newline
+    # changes of text mode on Windows.
     try:
-        return subprocess.run(
-            argv, input=target.content, cwd=cwd or target.root, text=True,
-            encoding="utf-8", errors="replace", env=env,
-            capture_output=True, check=False, timeout=RUNNER_TIMEOUT_S,
+        process = subprocess.run(
+            argv, input=target.content.encode("utf-8", "surrogateescape"),
+            cwd=cwd or target.root, env=env, capture_output=True,
+            check=False, timeout=RUNNER_TIMEOUT_S,
         )
     except (OSError, ValueError, subprocess.TimeoutExpired):
         return None
+    return subprocess.CompletedProcess(
+        process.args, process.returncode,
+        process.stdout.decode("utf-8", "replace"),
+        process.stderr.decode("utf-8", "replace"),
+    )
 
 
 NOT_UNDERSTOOD = RunResult(None, "output was not understood")
@@ -279,7 +296,7 @@ def run_ruff(executable: str, target: Target) -> RunResult:
     if process is None:
         return RunResult(None, f"timed out after {RUNNER_TIMEOUT_S} s")
     if RUFF_EXCLUDED in process.stderr:
-        return RunResult(None, RUFF_EXCLUDED_PROBLEM)
+        return RunResult((), RUFF_EXCLUDED_PROBLEM)
     try:
         rows = json.loads(process.stdout)
         findings = tuple(
