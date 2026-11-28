@@ -444,14 +444,14 @@ def codex_tool_event(payload: Payload, base: Neutral) -> Neutral | None:
         ]}
     if name != "PreToolUse":
         return None
-    # Keyed by absolute path, as `./a.py`, `a.py` and `$PWD/a.py` are
-    # one file.
+    # Keyed by real path, as `./a.py`, `$PWD/a.py` and a symlink to it
+    # are one file.
     changes: dict[str, Neutral] = {}
     deleted: set[str] = set()
     moved_away: set[str] = set()
     for file in sections:
         source, target = (
-            os.path.normpath(os.path.join(cwd, path))
+            os.path.realpath(os.path.join(cwd, path))
             for path in (file.source, file.target)
         )
         prior = changes.pop(source, None)
@@ -468,6 +468,7 @@ def codex_tool_event(payload: Payload, base: Neutral) -> Neutral | None:
             prior = None
             deleted.discard(source)
         changes[target] = patch_change(file, base, prior)
+        deleted.discard(target)
         if source != target:
             moved_away.add(source)
     # A path a move left empty is deleted, also when another section

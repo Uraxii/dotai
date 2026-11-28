@@ -253,3 +253,9 @@ Scratch paths named in those notes (under `/tmp/...`) are gone; ignore them.
 - Codex sections are keyed by absolute path (`a.py` = `$PWD/a.py`).
 - NODE_OPTIONS keeps non-ASCII recorder paths (`ensure_ascii=False`).
 - Real ESLint 9 / jiti / ruff repros for all 5. mise run ci green: guidelines.test.py 272/272.
+
+## Update: review c7991908 (cc12e67) - 9 blocking
+- Design change: an ESLint deny becomes a warning when the edit changes any data or ignore file (`.json/.jsonc/.json5/.yaml/.yml`, `.*ignore`; not package.json). A package.json counts when it is a loaded file's nearest manifest, or is above a loaded file and is added or names `exports`/`imports`/`main`. Recorder also records failed relative resolves and callback `fs.access/stat/exists/lstat`.
+- Codex: sections keyed by realpath (symlink alias = target); a move into a deleted path makes it live again.
+- Known limits (for the PR): a symlinked Python file is linted by Ruff with its target folder's settings; a ~1M-line Codex patch can pass the 10 s hook timeout with no notice.
+- Real ESLint 9 repros: move into deleted path denies, failed require.resolve / outer exports manifest warn, symlink alias update allows. mise run ci green: guidelines.test.py 275/275.

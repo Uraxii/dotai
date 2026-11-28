@@ -34,6 +34,7 @@ FLAT_ESLINT_CONFIG = re.compile(r"^eslint\.config\.[cm]?[jt]s$")
 FLAT_ORDER = ("js", "mjs", "cjs", "ts", "mts", "cts")
 LOADED_RECORDER = Path(__file__).with_name("eslint_loaded.cjs")
 LOADED_TIMEOUT_S = 4
+DATA_SUFFIXES = frozenset({".json", ".jsonc", ".json5", ".yaml", ".yml"})
 SETTING_SUFFIXES = frozenset({
     ".js", ".mjs", ".cjs", ".ts", ".mts", ".cts", ".json", ".yaml", ".yml",
 })
@@ -238,6 +239,13 @@ def eslint_setting(
         setting == mode.folder / ".eslintignore"
     ):
         return True
+    # A config can read any data file in ways no trace sees, so a changed
+    # data or ignore file always counts.
+    if setting != code and name != "package.json" and (
+        setting.suffix in DATA_SUFFIXES
+        or name.startswith(".") and name.endswith("ignore")
+    ):
+        return True
     # Traced with the ESLint that lints the code file.
     executable = locate("eslint", code, root)
     loaded = None if executable is None else eslint_loaded(
@@ -247,10 +255,24 @@ def eslint_setting(
         return setting != code and (
             name == ".eslintignore" or setting.suffix in SETTING_SUFFIXES
         )
-    # A package.json the edit adds above a loaded file becomes its manifest.
-    if name == "package.json" and not setting.exists():
-        return any(setting.parent in path.parents for path in loaded)
+    # A package.json above a loaded file counts when the edit adds it (it
+    # becomes that file's manifest) or it maps the package's modules.
+    if name == "package.json" and setting not in loaded:
+        return any(setting.parent in path.parents for path in loaded) and (
+            not setting.exists() or maps_modules(setting, text)
+        )
     return setting in loaded
+
+
+def maps_modules(manifest: Path, text: str | None) -> bool:
+    """Whether a package.json, before or after the edit, names the
+    modules its package resolves to."""
+    try:
+        before = manifest.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        before = ""
+    keys = ('"exports"', '"imports"', '"main"')
+    return any(key in (text or "") or key in before for key in keys)
 
 
 def outranked(setting: Path, folder: Path) -> bool:

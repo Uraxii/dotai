@@ -34,16 +34,29 @@ if (out && typeof nodeModule.registerHooks === "function") {
   };
   nodeModule.registerHooks({
     resolve(specifier, context, nextResolve) {
-      const result = nextResolve(specifier, context);
+      let result;
+      try {
+        result = nextResolve(specifier, context);
+      } catch (error) {
+        // A relative module the config looks for can be added by the edit.
+        if (/^\.{1,2}\//.test(specifier) && context.parentURL?.startsWith("file:")) {
+          const base = path.resolve(path.dirname(fileURLToPath(context.parentURL)), specifier);
+          for (const suffix of ["", ".js", ".cjs", ".mjs", ".ts", ".cts", ".mts", ".json"]) {
+            record(base + suffix);
+          }
+        }
+        throw error;
+      }
       if (result.url.startsWith("file:")) record(new URL(result.url));
       return result;
     },
   });
   for (const [owner, name] of [
     [fs, "readFileSync"], [fs, "readFile"], [fs, "openSync"], [fs, "open"],
-    [fs, "existsSync"], [fs, "statSync"], [fs, "accessSync"],
+    [fs, "existsSync"], [fs, "statSync"], [fs, "accessSync"], [fs, "lstatSync"],
+    [fs, "exists"], [fs, "stat"], [fs, "access"], [fs, "lstat"],
     [fs.promises, "readFile"], [fs.promises, "open"],
-    [fs.promises, "stat"], [fs.promises, "access"],
+    [fs.promises, "stat"], [fs.promises, "access"], [fs.promises, "lstat"],
   ]) {
     const original = owner[name];
     owner[name] = function (file, ...rest) {

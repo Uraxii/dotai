@@ -524,7 +524,7 @@ expect_contains("a module the flat config imports counts as a setting", "also ch
 c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: .eslintignore\n@@\n-dist/\n+packages/web/main.ts\n"
                              "*** Add File: packages/web/new1.ts\n+var x = 1\n*** End Patch"),
        harness="codex", ESLINT_JSON=NO_VAR_ROW)
-expect_equal("flat mode does not read .eslintignore", "deny", c.decision())
+expect_contains("an .eslintignore counts as an ignore file, also in flat mode", "also changes .eslintignore", str(c.output()))
 c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: packages/web/other.mjs\n@@\n-export default {};\n+export default 1;\n"
                              "*** Add File: packages/web/new2.ts\n+var x = 1\n*** End Patch"),
        harness="codex", ESLINT_JSON=NO_VAR_ROW)
@@ -563,7 +563,7 @@ expect_equal("with flat mode off, a flat config is not a setting", "deny", c.dec
 c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Add File: src/.eslintignore\n+new2.js\n"
                              "*** Add File: src/new2.js\n+var x = 1;\n*** End Patch"),
        harness="codex", ESLINT_JSON=NO_VAR_ROW)
-expect_equal("legacy ESLint reads only the root .eslintignore", "deny", c.decision())
+expect_contains("a nested .eslintignore counts as an ignore file", "also changes src/.eslintignore", str(c.output()))
 
 c = Case("eslint-folder-main")
 c.file("eslint.config.cjs", "module.exports = require('./lint');\n")
@@ -598,6 +598,14 @@ c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Add File: notes/package.json\
                              "*** Add File: new8.js\n+var x = 1;\n*** End Patch"),
        harness="codex", ESLINT_JSON=NO_VAR_ROW)
 expect_equal("an added package.json above no loaded file is not a setting", "deny", c.decision())
+c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Add File: src/allow-var.json\n+{}\n"
+                             "*** Add File: new9.js\n+var x = 1;\n*** End Patch"),
+       harness="codex", ESLINT_JSON=NO_VAR_ROW)
+expect_contains("a changed data file counts without a trace", "also changes src/allow-var.json", str(c.output()))
+c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Add File: src/.gitignore\n+dist\n"
+                             "*** Add File: new10.js\n+var x = 1;\n*** End Patch"),
+       harness="codex", ESLINT_JSON=NO_VAR_ROW)
+expect_contains("a changed ignore file counts without a trace", "also changes src/.gitignore", str(c.output()))
 
 
 c = Case("ruff-symlink-extend")
@@ -1117,6 +1125,11 @@ c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: alias.py\n@@\n-p
                              f"*** Update File: {c.project}/alias.py\n@@\n-from math import *\n+import math\n*** End Patch"),
        harness="codex", RUFF_JSON=F403_ROW, **shared_env)
 expect_lacks("an absolute and a relative header are one file", "could not build", str(c.output()))
+(c.project / "alias-link.py").symlink_to(c.project / "alias.py")
+c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: alias.py\n@@\n-pass\n+from math import *\n"
+                             "*** Update File: alias-link.py\n@@\n-from math import *\n+import math\n*** End Patch"),
+       harness="codex", RUFF_JSON=F403_ROW, **shared_env)
+expect_lacks("a symlink and its target are one file", "could not build", str(c.output()))
 c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: ruff.toml\n*** Move to: scratch/old.toml\n@@\n-extend = \"${DOTAI_SHARED}/base.toml\"\n+x = 1\n"
                              "*** Delete File: scratch/old.toml\n*** Add File: newmod10.py\n+from math import *\n*** End Patch"),
        harness="codex", RUFF_JSON=F403_ROW, **shared_env)
