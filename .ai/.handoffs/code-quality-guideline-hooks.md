@@ -224,3 +224,10 @@ Scratch paths named in those notes (under `/tmp/...`) are gone; ignore them.
 - ESLint: `.eslintignore` and legacy names count only outside flat mode. Files a config loads count: quoted relative paths followed through those files, and workspace packages it names that resolve through node_modules into the project.
 - Codex: sections apply in order, so a Delete after an Update leaves the file deleted (no deny on the intermediate text).
 - Checked with real ruff and ESLint 9. mise run ci green: guidelines.test.py 254/254.
+
+## Update: review 17278fcb findings fixed (4 blocking, 4 non-blocking)
+- ESLint: scoped shorthand (`@acme` -> `@acme/eslint-config`, `@acme/x` -> `@acme/eslint-config-x`); a folder import follows its package.json `main`/`exports`; workspace packages are followed through their entry points; legacy configs list only `.eslintrc*`/package.json; with `ESLINT_USE_FLAT_CONFIG=false` a flat config is not a setting; legacy mode counts only the root `.eslintignore`.
+- Ruff: a pyproject.toml the edit writes counts only when its new text has `[tool.ruff]`.
+- Codex: sections are keyed by normalized path (`./a.py` = `a.py`); a delete keeps the path a moved file came from.
+- Files past the 50-file limit still count as settings (`Event.unchecked`).
+- Checked with real ruff and ESLint 9. mise run ci green: guidelines.test.py 263/263.

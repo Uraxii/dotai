@@ -34,6 +34,7 @@ ESLINT_CONFIG_PATTERN = re.compile(
     r"^(eslint\.config\.[cm]?[jt]s|\.eslintrc(\.(js|cjs|json|ya?ml))?)$"
 )
 FLAT_ESLINT_CONFIG = re.compile(r"^eslint\.config\.[cm]?[jt]s$")
+LEGACY_ESLINT_CONFIG = re.compile(r"^\.eslintrc(\.(js|cjs|json|ya?ml))?$")
 IGNORE_KEYS = ("ignore", "extend-ignore")
 SELECT_KEYS = ("select", "extend-select")
 RUFF_EXTENDS_MAX = 10
@@ -190,10 +191,22 @@ def ruff_setting(
         > RUFF_CONFIG_NAMES.index(config.name)
     ):
         return False
-    return setting.parent in list(nearer) and (
-        setting.name != "pyproject.toml" or bool(ruff_lint_tables(setting))
-        or "tool.ruff" in (text or "")
-    )
+    return setting.parent in list(nearer) and declares_ruff(setting, text)
+
+
+def declares_ruff(setting: Path, text: str | None) -> bool:
+    """Whether a Ruff config name holds a Ruff config: a pyproject.toml
+    only with a [tool.ruff] table, in its new text when the edit writes
+    one. A pending text that does not parse counts."""
+    if setting.name != "pyproject.toml":
+        return True
+    if text is None:
+        return setting.is_file() and bool(ruff_lint_tables(setting))
+    try:
+        tool = tomllib.loads(text).get("tool")
+    except ValueError:
+        return True
+    return isinstance(tool, dict) and isinstance(tool.get("ruff"), dict)
 
 
 def eslint_setting(
@@ -204,12 +217,14 @@ def eslint_setting(
     mode = eslint_config(code, root)
     folders = list(parents_within(code, root))
     name = setting.name
-    flat_name = FLAT_ESLINT_CONFIG.match(name) is not None
-    legacy_name = ESLINT_CONFIG_PATTERN.match(name) is not None or (
-        name == ".eslintignore"
-    ) or (name == "package.json" and (
-        "eslintConfig" in (text or "") or package_eslint_config(setting)
-    ))
+    flat_name = FLAT_ESLINT_CONFIG.match(name) is not None and (
+        os.environ.get("ESLINT_USE_FLAT_CONFIG") != "false"
+    )
+    legacy_name = LEGACY_ESLINT_CONFIG.match(name) is not None or (
+        name == "package.json" and (
+            "eslintConfig" in (text or "") or package_eslint_config(setting)
+        )
+    )
     if mode is None:
         return (flat_name or legacy_name) and setting.parent in folders
     if mode.flat:
@@ -222,12 +237,15 @@ def eslint_setting(
             if FLAT_ESLINT_CONFIG.match(entry.name)
         ]
     else:
-        if legacy_name and setting.parent in folders:
+        # Legacy ESLint runs at the root and reads the .eslintignore there.
+        if (legacy_name or flat_name) and setting.parent in folders or (
+            setting == mode.folder / ".eslintignore"
+        ):
             return True
         configs = [
             directory / entry for directory in folders if directory.is_dir()
             for entry in os.listdir(directory)
-            if ESLINT_CONFIG_PATTERN.match(entry) or entry == "package.json"
+            if LEGACY_ESLINT_CONFIG.match(entry) or entry == "package.json"
         ]
     files, packages = config_modules(configs, root)
     return setting in files or any(
@@ -249,23 +267,57 @@ def config_text(config: Path) -> str:
     return text
 
 
-def module_candidates(base: Path) -> list[Path]:
-    """The files a relative module name can load, as Node resolves it."""
+def file_candidates(base: Path) -> list[Path]:
     return [
         base.with_name(base.name + suffix) for suffix in MODULE_SUFFIXES
     ] + [base / f"index{suffix}" for suffix in MODULE_SUFFIXES[1:]]
 
 
+def package_entries(folder: Path) -> list[str]:
+    """The entry points a folder's package.json names in main or in the
+    exports of its root."""
+    try:
+        data = json.loads((folder / "package.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return []
+    if not isinstance(data, dict):
+        return []
+    exports = data.get("exports")
+    if isinstance(exports, dict):
+        exports = exports.get(".", exports)
+    if isinstance(exports, dict):
+        exports = list(exports.values())
+    entries = [data.get("main"), *(
+        exports if isinstance(exports, list) else [exports]
+    )]
+    return [entry for entry in entries if isinstance(entry, str)]
+
+
+def module_candidates(base: Path) -> list[Path]:
+    """The files a module path can load, as Node resolves it: the file,
+    an index file, or the entry point of a folder's package.json."""
+    return file_candidates(base) + [
+        candidate for entry in package_entries(base)
+        for candidate in file_candidates(base / entry)
+    ]
+
+
 def workspace_package(name: str, start: Path, root: Path) -> Path | None:
     """The project folder of a package a config names, when the package
     is part of the project (a workspace package linked in node_modules)."""
+    # ESLint expands `foo` to `eslint-config-foo`, `@acme` to
+    # `@acme/eslint-config` and `@acme/foo` to `@acme/eslint-config-foo`.
     parts = name.split("/")
-    package = "/".join(parts[:2] if name.startswith("@") else parts[:1])
-    if not PACKAGE_NAME.match(package):
-        return None
-    shorthand = () if package.startswith("@") else (f"eslint-config-{package}",)
+    if name.startswith("@"):
+        scope = parts[0]
+        names = [f"{scope}/{parts[1]}", f"{scope}/eslint-config-{parts[1]}"] if (
+            len(parts) > 1 and parts[1]
+        ) else [f"{scope}/eslint-config"]
+    else:
+        names = [parts[0], f"eslint-config-{parts[0]}"]
+    names = [package for package in names if PACKAGE_NAME.match(package)]
     for directory in parents_within(start / "_", root):
-        for candidate in (package, *shorthand):
+        for candidate in names:
             linked = directory / "node_modules" / candidate
             if linked.is_dir():
                 real = linked.resolve()
@@ -300,8 +352,12 @@ def config_modules(
                 pending += [c for c in candidates if c.is_file()]
             elif (package := workspace_package(
                 name, current.parent, root
-            )) is not None:
+            )) is not None and package not in packages:
                 packages.add(package)
+                pending += [
+                    candidate.resolve() for candidate in
+                    module_candidates(package) if candidate.is_file()
+                ]
     return files, packages
 
 

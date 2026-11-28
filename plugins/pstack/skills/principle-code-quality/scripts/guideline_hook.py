@@ -444,21 +444,25 @@ def codex_tool_event(payload: Payload, base: Neutral) -> Neutral | None:
         ]}
     if name != "PreToolUse":
         return None
+    # Keyed by normalized path, as `./a.py` and `a.py` are one file.
     changes: dict[str, Neutral] = {}
     deleted: set[str] = set()
     for file in sections:
-        prior = changes.pop(file.source, None)
+        source, target = map(os.path.normpath, (file.source, file.target))
+        prior = changes.pop(source, None)
         if file.action == "Delete File":
-            # Kept, as a deleted file can be a lint setting of the others.
-            changes[file.target] = {
+            # Kept, as a deleted file can be a lint setting of the others;
+            # a moved file keeps the path it was moved from.
+            changes[target] = {
                 "path": file.target, "before": None, "after": None,
+                "source": str((prior or {}).get("source") or file.source),
             }
-            deleted.add(file.target)
+            deleted.add(target)
             continue
-        if file.source in deleted:
+        if source in deleted:
             prior = None
-            deleted.discard(file.source)
-        changes[file.target] = patch_change(file, base, prior)
+            deleted.discard(source)
+        changes[target] = patch_change(file, base, prior)
     return {"kind": "pre_write", "files": list(changes.values())}
 
 

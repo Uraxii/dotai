@@ -97,6 +97,8 @@ class Event(NamedTuple):
     files: tuple[FileChange, ...] = ()
     channel: bool = True
     skipped: tuple[str, ...] = ()
+    # The changes past the file limit, still read for lint settings.
+    unchecked: tuple[FileChange, ...] = ()
 
 
 class Result(NamedTuple):
@@ -172,6 +174,7 @@ def event_from_json(data: object) -> Event | None:
         files=files[:limit],
         channel=data.get("channel") is not False,
         skipped=tuple(change.path for change in files[limit:]),
+        unchecked=tuple(files[limit:]),
     )
 
 
@@ -526,7 +529,7 @@ class Engine:
             )
         root = Path(self.event.root).resolve()
         settings: dict[str, frozenset[str]] = {}
-        for other in self.event.files:
+        for other in (*self.event.files, *self.event.unchecked):
             for raw in {other.path, other.source} - {"", change.path}:
                 setting = resolve_in_root(raw, self.event.cwd, self.event.root)
                 tools = setting_tools(
