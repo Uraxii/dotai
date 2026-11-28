@@ -10,6 +10,7 @@ from __future__ import annotations
 import fnmatch
 import functools
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -244,14 +245,22 @@ def ruff_arguments(target: Target) -> list[str]:
             for key in (*SELECT_KEYS, *IGNORE_KEYS)
             for selector in as_strings(table.get(key))
         )
-        added = ",".join(sorted(
+        added = sorted(
             code for code in target.codes if not selected_by(code, named)
-        ))
+        )
+        # A selector on the command line beats the config, so the config's
+        # narrower ignores under an added code go on the command line too.
+        narrower = sorted(
+            selector for table in tables for key in IGNORE_KEYS
+            for selector in as_strings(table.get(key))
+            if any(selector.startswith(code) for code in added)
+        )
         preview = any("preview" in table for table in tables)
         return [
             "--verbose", "--force-exclude",
             *([] if preview else ["--preview"]),
-            *(["--extend-select", added] if added else []),
+            *(["--extend-select", ",".join(added)] if added else []),
+            *(["--extend-ignore", ",".join(narrower)] if narrower else []),
         ]
     length = str(line_length(target.root))
     return [
@@ -352,12 +361,13 @@ def runs_on(tool: str, language: str) -> bool:
 
 
 def locate(tool: str, root: Path) -> str | None:
-    """Find an installed tool: the project's own copy first, then PATH."""
-    for local in ("node_modules/.bin", ".venv/bin"):
-        candidate = root / local / tool
-        if candidate.is_file():
-            return str(candidate)
-    return shutil.which(tool)
+    """Find an installed tool: the project's own copy first, then PATH.
+    `which` adds Windows extensions, so npm's eslint.cmd is found there."""
+    local = os.pathsep.join(
+        str(root / folder)
+        for folder in ("node_modules/.bin", ".venv/bin", ".venv/Scripts")
+    )
+    return shutil.which(tool, path=local) or shutil.which(tool)
 
 
 def probe(runner: Runner, root: Path) -> tuple[str, str]:

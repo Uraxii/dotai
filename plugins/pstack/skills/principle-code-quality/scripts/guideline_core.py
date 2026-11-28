@@ -269,7 +269,10 @@ class Hit(NamedTuple):
         markers = COMMENT_MARKERS.get(language, ())
         code = self.text
         if "/*" in markers:
-            code = BLOCK_COMMENT.sub(" ", code).rsplit("*/", 1)[-1]
+            # A closing */ left after the spans and // go is the end of a
+            # comment that opened on an earlier line.
+            code = BLOCK_COMMENT.sub(" ", code).split("//", 1)[0]
+            code = code.rsplit("*/", 1)[-1]
         for marker in markers:
             code = code.split(marker, 1)[0]
         return (self.finding.tool, self.finding.code, code.strip())

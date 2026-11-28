@@ -838,6 +838,9 @@ c.file("app.js", "/* intro\n * original */ var item = 1;\n")
 c.hook(c.write("app.js", "/* intro\n * revised */ var item = 1;\n"),
        ESLINT_JSON='[{"messages":[{"ruleId":"no-var","line":2,"severity":2}]}]')
 expect_equal("and when the comment opened on an earlier line", "", c.decision())
+c.file("app.js", "var x = 1; // matches */foo\n")
+c.hook(c.write("app.js", "var x = 1; // matches foo\n"), ESLINT_JSON=NO_VAR_ROW)
+expect_equal("and when a // comment holds */", "", c.decision())
 
 c = Case("eslint-project-warns")
 c.file("eslint.config.js", "export default [];\n")
@@ -870,6 +873,12 @@ expect_lacks("a project that sets preview keeps its setting", "--preview", c.arg
 c.hook(c.write("app.py", "x = [a for b in c for a in b]\n"))
 expect_lacks("a Python edit names no C# tool", "roslyn", c.stdout)
 expect_lacks("or GDScript tool", "gdlint", c.stdout)
+
+c = Case("ruff-narrower-ignore")
+c.file("ruff.toml", '[lint]\nignore = ["PTH123"]\n')
+c.hook(c.write("app.py", "x = 1\n"), PSTACK_GUIDELINES_DIR=str(PLUGIN / "skills" / "principle-code-quality" / "guidelines"))
+expect_contains("a narrower project ignore under a selected code stays ignored", "--extend-ignore PTH123",
+                c.args().splitlines()[-1])
 
 c = Case("ruff-python-only")
 c.file("eslint.config.js", "export default [];\n")

@@ -157,3 +157,9 @@ Scratch paths named in those notes (under `/tmp/...`) are gone; ignore them.
 - `guidelines.cmd` uses `call` so .bat/.cmd Python shims return control (untested on Windows).
 - No-runner tools carry languages, so a Python edit names no roslyn/gdlint. `ts.enum.no-enum` uses `keywords: enum` instead of tsc:TS1294.
 - mise run ci green: guidelines.test.py 199/199, hook total 171/171.
+
+## Update: review 9326c90a findings fixed (0 blocking, 3 non-blocking)
+- Ruff: project ignores narrower than an added guideline code (PTH123 under PTH) are passed as `--extend-ignore`, since CLI selection beats config.
+- `locate()` uses `shutil.which` over node_modules/.bin, .venv/bin, .venv/Scripts, so Windows finds eslint.cmd / ruff.exe.
+- Comment identity cuts `//` before looking for a closing `*/`.
+- mise run ci green: guidelines.test.py 201/201.
