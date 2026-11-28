@@ -24,9 +24,6 @@ skill_md="$hooks_dir/../skills/skill-quality/SKILL.md"
 lint="$hooks_dir/../skills/skill-quality/scripts/lint-skills.sh"
 blocks="$hooks_dir/../skills/skill-quality/references/playbook-building-blocks.md"
 
-field() {
-  printf '%s' "$input" | LC_ALL=C JSON_MODE=get JSON_PATH="$1" JSON_VIA="${2-}" awk -f "$hooks_dir/hook-json.awk"
-}
 # Standard input as a quoted JSON string, cut to 32,000 bytes.
 quote() {
   LC_ALL=C JSON_MODE= JSON_MAX=32000 awk -f "$hooks_dir/hook-json.awk" -f "$hooks_dir/quote-stdin.awk"
@@ -39,36 +36,22 @@ run_lint=
 [ "${3:-}" = --lint ] && run_lint=1
 
 [ -f "$skill_md" ] || exit 0
-input=$(cat)
-cwd=$(field /cwd)
-# The text a Claude edit writes is decoded only for a path in a skill that
-# has no pointer yet, by has_procedure.
-edit_text=
-edit_read=
-case "$harness" in
-  claude)
-    paths=$(field /tool_input/file_path)
-    session=$(field /session_id)
-    ;;
-  codex)
-    edit_text=$(field /tool_input/command)
-    paths=$(sed -nE 's/^\*\*\* (Add File|Update File|Move to): (.*)$/\2/p' <<<"$edit_text")
-    session=$(field /session_id)
-    ;;
-  copilot)
-    paths=$(field /path /toolArgs)
-    session=$(field /sessionId)
-    ;;
-esac
-# One path field that holds a newline is not one file.
-[ "$harness" != codex ] && [[ "$paths" == *$'\n'* ]] && exit 0
+# The input is parsed once: the cwd, session id and path lines, then the text
+# the edit writes.
+fields=$(LC_ALL=C JSON_MODE= HARNESS=$harness awk -f "$hooks_dir/hook-json.awk" -f "$hooks_dir/hook-input.awk")
+{
+  IFS= read -r cwd
+  IFS= read -r session
+  IFS= read -r paths
+  edit_text=$(cat)
+} <<<"$fields"
+[ "$harness" = codex ] && paths=$(sed -nE 's/^\*\*\* (Add File|Update File|Move to): (.*)$/\2/p' <<<"$edit_text")
 
-# new_marker NAME DIR [test]: creates the once-per-session marker for NAME and
-# DIR, and fails if it exists. noclobber makes the check and the create one
-# step, so parallel edits cannot both add the same text. With a third
-# argument, it only fails if the marker exists, and creates nothing. With no
-# usable session id, every edit counts as new, except in a Claude or Codex
-# --lint run, because the PreToolUse run of the same edit has added the text.
+# new_marker NAME DIR: creates the once-per-session marker for NAME and DIR,
+# and fails if it exists. noclobber makes the check and the create one step,
+# so parallel edits cannot both add the same text. With no usable session id,
+# every edit counts as new, except in a Claude or Codex --lint run, because the
+# PreToolUse run of the same edit has added the text.
 new_marker() {
   local marker
   if ! [[ "$session" =~ ^[A-Za-z0-9_.-]+$ ]]; then
@@ -76,10 +59,6 @@ new_marker() {
     return
   fi
   marker="${TMPDIR:-/tmp}/skill-quality-$1$session-$(printf '%s' "$2" | cksum | cut -d' ' -f1)"
-  if [ -n "${3-}" ]; then
-    [ ! -e "$marker" ]
-    return
-  fi
   (set -C && : >"$marker") 2>/dev/null
 }
 
@@ -87,25 +66,12 @@ new_marker() {
 # holds a numbered list of three or more steps, a shape line, or three list
 # items that name a .md file. RAW is the path as a codex patch names it; only
 # that file's part of the patch counts, and it prefixes each added line with +.
+# A hunk after "Move to:" counts for the new path only, not the one it leaves.
 has_procedure() {
-  local text=
-  case "$harness" in
-    claude)
-      if [ -z "$edit_read" ]; then
-        edit_text=$(printf '%s' "$input" | LC_ALL=C JSON_MODE= awk -f "$hooks_dir/hook-json.awk" -f "$hooks_dir/edit-text.awk")
-        edit_read=1
-      fi
-      text=$edit_text
-      ;;
-    codex)
-      text=$(RAW=$2 awk '{ sub(/\r$/, "") }
-        /^\*\*\* (Add|Update|Delete) File: / {
-          name = $0; sub(/^\*\*\* [A-Za-z]+ File: /, "", name); on = name == ENVIRON["RAW"] && !/^\*\*\* Delete/; next }
-        /^\*\*\* Move to: / { name = $0; sub(/^\*\*\* Move to: /, "", name); on = on || name == ENVIRON["RAW"]; next }
-        /^\*\*\* End Patch/ { on = 0 }
-        on' <<<"$edit_text")
-      ;;
-  esac
+  local text=$edit_text
+  [ "$harness" = codex ] && text=$(RAW=$2 awk '{ sub(/\r$/, "") }
+    /^\*\*\* ([A-Za-z]+ File|Move to): / { name = $0; sub(/^\*\*\* ([A-Za-z]+ File|Move to): /, "", name); on = name == ENVIRON["RAW"]; next }
+    on' <<<"$edit_text")
   text=$({ [ -f "$1" ] && cat "$1"; printf '%s\n' "$text"; } 2>/dev/null)
   grep -qiE '^\+?[[:space:]]*shape:[[:space:]]*["'\'']?(playbook|router)' <<<"$text" ||
     [ "$(grep -cE '^\+?[[:space:]]*[0-9]+\.[[:space:]]' <<<"$text")" -ge 3 ] ||
@@ -137,8 +103,8 @@ while IFS= read -r path; do
   [ -n "$dir" ] || continue
   [[ " ${all_dirs[*]} " == *" $dir "* ]] || all_dirs+=("$dir")
   if [[ " ${dirs[*]} " != *" $dir "* ]] && new_marker "" "$dir"; then dirs+=("$dir"); fi
-  if [[ " ${pointer_dirs[*]} " != *" $dir "* ]] && new_marker pointer- "$dir" test &&
-    has_procedure "$path" "$raw" && new_marker pointer- "$dir"; then
+  if [[ " ${pointer_dirs[*]} " != *" $dir "* ]] && has_procedure "$path" "$raw" &&
+    new_marker pointer- "$dir"; then
     pointer_dirs+=("$dir")
   fi
 done <<<"$paths"

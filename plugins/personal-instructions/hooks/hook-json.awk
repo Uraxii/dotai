@@ -36,7 +36,7 @@ BEGIN {
   }
 }
 
-function jparse(text,    n, i, inside, raw, run, part, rest) {
+function jparse(text,    n, i, inside, raw, run, part, rest, pos, start) {
   split("", JT)
   split("", JR)
   split("", JN)
@@ -45,32 +45,32 @@ function jparse(text,    n, i, inside, raw, run, part, rest) {
   jnt = 0
   # Splitting on quotes makes the odd parts string content, so the scan is
   # linear even for a long line. A part that ends in an odd run of
-  # backslashes ends at an escaped quote, so the string goes on.
+  # backslashes ends at an escaped quote, so the string goes on. pos tracks
+  # the byte offset, so each string is cut from text once, not built up.
   # BWK awk (macOS) also splits on newline. A raw newline is whitespace
   # outside a string and invalid inside one, and so is a carriage return.
   if (index(text, "\n")) gsub(/\n/, "\r", text)
   n = split(text, JP, "\"")
   inside = 0
+  pos = 1
   for (i = 1; i <= n; i++) {
     part = JP[i]
+    pos += length(part) + 1
     if (!inside) {
       if (!jlex(part)) return 0
       inside = 1
-      raw = ""
+      start = pos
       continue
     }
     # No quote follows the last part, so a string still open there is unclosed.
     if (i == n) return 0
-    raw = raw part
     run = 0
     if (substr(part, length(part), 1) == "\\") {
       match(part, /\\+$/)
       run = RLENGTH
     }
-    if (run % 2 == 1) {
-      raw = raw "\""
-      continue
-    }
+    if (run % 2 == 1) continue
+    raw = substr(text, start, pos - 1 - start)
     if (raw ~ /[\001-\037]/) return 0
     if (index(raw, "\\")) {
       rest = raw

@@ -228,5 +228,29 @@ run_hook "$hook" --harness claude <<<"$(input claude s-two "$skill_e/references/
 expect_equal "two numbered steps add no pointer" "" "$(context | grep -F 'holds numbered steps or routes')"
 run_hook "$hook" --harness claude <<<"$(jq -cn --arg f "$skill_e/references/two.md" '{session_id: "s-multi-edit", tool_input: {file_path: $f, edits: [{old_string: "a", new_string: "1. Read."}, {old_string: "b", new_string: "2. Fix.\n3. Verify."}]}}')"
 expect_contains "a MultiEdit whose edits add steps adds the pointer" "holds numbered steps or routes" "$(context)"
+printf 'Intro.\n' >"$skill_e/references/edit.md"
+run_hook "$hook" --harness claude <<<"$(jq -cn --arg f "$skill_e/references/edit.md" '{session_id: "s-edit", tool_input: {file_path: $f, old_string: "Intro.", new_string: "1. Read.\n2. Fix.\n3. Verify."}}')"
+expect_contains "an Edit whose new_string adds steps adds the pointer" "holds numbered steps or routes" "$(context)"
+printf 'x\n' >"$skill_e/references/first.md"
+run_hook "$hook" --harness claude <<<"$(jq -cn --arg f "$skill_e/references/first.md" '{session_id: "s-first-edit", tool_input: {file_path: $f, edits: [{old_string: "x", new_string: "1. Read.\n2. Fix.\n3. Verify."}, {old_string: "y", new_string: "z"}]}}')"
+expect_contains "a MultiEdit whose first edit adds steps adds the pointer" "holds numbered steps or routes" "$(context)"
+run_hook "$hook" --harness claude <<<"$(jq -cn --arg f "$skill_e/references/cap.md" '{session_id: "s-cap-shape", tool_input: {file_path: $f, content: "---\nshape: Playbook\n---\n"}}')"
+expect_contains "a shape line in capitals adds the pointer" "holds numbered steps or routes" "$(context)"
+run_hook "$hook" --harness codex <<<"$(jq -cn --arg c "$(printf '*** Begin Patch\r\n*** Add File: %s\r\n+1. Read.\r\n+2. Fix.\r\n+3. Verify.\r\n*** End Patch\r\n' "$skill_e/references/crlf.md")" '{session_id: "s-crlf", tool_input: {command: $c}}')"
+expect_contains "a codex patch with CRLF lines that adds steps adds the pointer" "holds numbered steps or routes" "$(context)"
+run_hook "$hook" --harness codex <<<"$(jq -cn --arg c "$(printf '*** Begin Patch\n*** Update File: %s\n*** Move to: %s\n@@\n+1. Read.\n+2. Fix.\n+3. Verify.\n*** End Patch' "$skill_e/references/leaving.md" "$WORK/repo/left.md")" '{session_id: "s-move-out", tool_input: {command: $c}}')"
+expect_contains "a file moved out of the skill still adds the guidance" "- $skill_e" "$(context)"
+expect_equal "steps in a file moved out of the skill add no pointer" "" "$(context | grep -F 'holds numbered steps or routes')"
+
+# The input is parsed in linear time: 1 MB of prose full of quotes stays fast.
+yes 'say "hi" ok' | head -c 800000 >"$WORK/quotes.txt"
+for flag in "" --lint; do
+  for path in "$skill_e/references/quotes.md" "$WORK/repo/quotes.md"; do
+    jq -cn --arg f "$path" --rawfile c "$WORK/quotes.txt" '{session_id: "s-quotes", tool_input: {file_path: $f, content: $c}}' >"$WORK/quotes.json"
+    start=$(date +%s)
+    run_hook "$hook" --harness claude $flag <"$WORK/quotes.json"
+    expect_equal "1 MB of quoted prose to $path ${flag:-without --lint} takes under 4 s" 1 "$(($(date +%s) - start < 4))"
+  done
+done
 
 finish

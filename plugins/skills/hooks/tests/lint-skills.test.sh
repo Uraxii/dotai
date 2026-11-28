@@ -185,14 +185,20 @@ expect_equal "loop words in quotes or in a hyphenated name add nothing" "0 " "$S
 for loop in '3. Run the test again.' $'## Retry policy\n' $'3. Retry the build until it passes,\n   at most 3 times.' \
   '3. Repeat steps 1 and 2 at most <N> times, until the test passes.' '3. Retry the build at most ten times.' \
   '3. Retry the build, 3 rounds in all.' '3. Retry the build for 3 tries.' '3. Retry the build for 3 attempts.' \
-  '3. Do not merge until the review passes.' '3. Keep the copy until step 6.' '3. Retry once.' '3. Retry twice.'; do
+  '3. Do not merge until the review passes.' '3. Keep the copy until step 6.' '3. Retry once.' '3. Retry twice.' \
+  '3. Do not edit README.md until the review passes.' "3. Don't merge until the review passes." \
+  '3. Don’t merge until the review passes.' '3. Never merge until the review passes.' \
+  '3. You must not merge until the review passes.' '3. Retry once more.'; do
   dir=$(shaped playbook "$loop"$'\n'"$playbook")
   run_hook "$shape" "$dir"
   expect_equal "'$loop' adds nothing" "0 " "$STATUS $STDOUT"
 done
 for loop in '3. Repeat steps 1 and 2 until the test passes.' '3. Retry until the cache is up to date.' \
   '3. Loop to maximize coverage.' '3. Go back to step one.' '3. Run the tests until they pass.' \
-  '3. Retry the build, and stop once it passes.'; do
+  '3. Retry the build, and stop once it passes.' '3. Never skip a test, and run the suite until it passes.' \
+  '3. Do not stop; run the suite until it passes.' '3. Run the suite until it passes, at least once.' \
+  '3. Run the suite until it passes all at once.' '3. Poll until step 4 succeeds.' '3. Wait until CI is green.' \
+  '3. Retry once it is green.' '3. Retry until green, once per file.'; do
   dir=$(shaped playbook "$loop"$'\n'"$playbook")
   run_hook "$shape" "$dir"
   expect_contains "'$loop' warns" "WARN  references/p.md: line 5 has a loop with no limit" "$STDOUT"
