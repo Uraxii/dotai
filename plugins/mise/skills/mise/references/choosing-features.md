@@ -22,7 +22,7 @@ Query: `mise backends ls`, `mise search <name>`, `mise install --dry-run <backen
 |---|---|
 | No version file | Put exact versions in `mise.toml`. |
 | `.tool-versions` | Move the versions to `mise.toml`. mise reads the file, but `mise lock` cannot lock its tools. If another tool reads the file, keep it and keep its versions equal to `mise.toml`. |
-| `.nvmrc`, `.python-version`, or a similar file | mise does not read it by default. If CI or another tool reads the file, keep it and add the tool to the `idiomatic_version_file_enable_tools` setting. If not, move the version to `mise.toml`. |
+| `.nvmrc`, `.python-version`, or a similar file | mise does not read it by default. If CI or another tool reads the file, keep it and run `mise settings add --local idiomatic_version_file_enable_tools <tool>`. Without `--local`, mise writes the setting to the global config of one machine. If no other tool reads the file, move the version to `mise.toml`. |
 
 `mise.toml` wins over `.tool-versions` in the same directory.
 `mise use --pin <tool>@<version>` writes the exact version. Without `--pin`, mise writes the request as typed, such as `24` or `latest`.
