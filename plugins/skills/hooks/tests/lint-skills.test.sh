@@ -280,6 +280,34 @@ done
 run_hook "$shape" "$PLUGIN_ROOT_DIR/skills/skill-quality"
 expect_equal "the six templates pass the shape check" "0 6" "$STATUS $(ls "$PLUGIN_ROOT_DIR"/skills/skill-quality/examples/*.md | wc -l | tr -d ' ')"
 
+# A playbook beside SKILL.md, as the router template places it, is checked:
+# the waitcap reproduction from the phase 4 eval.
+waitcap=$'---\nshape: playbook\n---\n\n# X\n\n1. Push the branch. Expect it on origin.\n2. Wait until the PR is merged.\n3. Retry the push until it works.\n\nDone when the PR is merged.\n\n**Reply:** result.'
+dir=$(skill waitcap "$good" "Read [x](x.md) when needed.")
+printf '%s\n' "$waitcap" >"$dir/x.md"
+run_hook "$lint" "$dir"
+expect_equal "a playbook beside SKILL.md warns on each loop" "WARN  x.md: line 8 has a loop with no limit
+WARN  x.md: line 9 has a loop with no limit" "$(grep -E '^(FAIL|WARN)' <<<"$STDOUT")"
+expect_contains "a playbook beside SKILL.md is counted" "0 failed, 2 warnings" "$STDOUT"
+
+dir=$(skill waitcap "$good" "Read [x](references/x.md) when needed.")
+printf '%s\n' "$waitcap" >"$dir/references/x.md"
+run_hook "$lint" "$dir"
+expect_contains "a playbook under references/ is checked once" "0 failed, 2 warnings" "$STDOUT"
+
+dir=$(skill waitcap "$good" "Read [x](deep/er/x.md) and [y](deep/my play.md) when needed.")
+mkdir -p "$dir/deep/er"
+printf '%s\n' "$waitcap" >"$dir/deep/er/x.md"
+printf '%s\n' "$waitcap" >"$dir/deep/my play.md"
+printf '%s\n' "${waitcap/shape: playbook/title: x}" >"$dir/plain.md"
+printf '%s\n' "$waitcap" >"$WORK/outside.md"
+ln -s "$WORK/outside.md" "$dir/linked.md"
+run_hook "$shape" "$dir"
+expect_equal "an opted-in file at any depth or with a space is checked; others are not" "WARN  deep/er/x.md: line 8 has a loop with no limit
+WARN  deep/er/x.md: line 9 has a loop with no limit
+WARN  deep/my play.md: line 8 has a loop with no limit
+WARN  deep/my play.md: line 9 has a loop with no limit" "$(grep -E '^(FAIL|WARN)' <<<"$STDOUT")"
+
 run_hook "$lint" "$PLUGIN_ROOT_DIR/skills/skill-quality"
 expect_equal "skill-quality passes its own verification" 0 "$STATUS"
 

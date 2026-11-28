@@ -145,6 +145,14 @@ run_hook "$hook" --harness codex <<<"$(jq -cn --arg c "$patch" '{session_id: "s-
 expect_contains "a context over 32,000 bytes is cut with a notice" "[The rest of this context was cut at 32000 bytes.]" "$(context)"
 expect_equal "the cut context stays small" 1 "$(context | LC_ALL=C wc -c | awk '{ print ($1 <= 32100) }')"
 
+# An edit of a playbook beside SKILL.md reports its shape warnings.
+skill_w="$WORK/repo/skills/waitcap"
+clean_skill "$skill_w"
+printf 'Read [x](x.md) when needed.\n' >>"$skill_w/SKILL.md"
+printf -- '---\nshape: playbook\n---\n\n# X\n\n1. Push the branch. Expect it on origin.\n2. Wait until the PR is merged.\n3. Retry the push until it works.\n\nDone when the PR is merged.\n\n**Reply:** result.\n' >"$skill_w/x.md"
+run_hook "$hook" --harness claude --lint <<<"$(input claude s-waitcap "$skill_w/x.md")"
+expect_contains "a playbook beside SKILL.md gets its lint line" "WARN  x.md: line 9 has a loop with no limit" "$(context)"
+
 # The lint runs only on a skill directory whose SKILL.md exists.
 mkdir -p "$WORK/repo/skills/zeta"
 run_hook "$hook" --harness claude --lint <<<"$(input claude s-guard "$WORK/repo/skills/zeta/SKILL.md")"

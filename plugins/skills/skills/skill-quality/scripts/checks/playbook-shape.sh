@@ -58,7 +58,15 @@ until_loop() {
     grep -iE "(^|[^a-z-])until([^a-z-]|$)" | grep -viE "$not_loop_until" | grep -q .
 }
 
-for file in "$skill" "${refs[@]}"; do
+# SKILL.md and every other .md file at any depth in the skill directory, so a
+# playbook beside SKILL.md is checked too. It covers refs, each file once.
+# find -type f lists no symlink, so no link leads out of the directory.
+files=("$skill")
+while IFS= read -r file; do
+  [ "$file" = "$skill" ] || files+=("$file")
+done < <(find "$dir" -type f -name '*.md' | sort)
+
+for file in "${files[@]}"; do
   [ -f "$file" ] || continue
   shape=$(shape_of "$file")
   [ -n "$shape" ] || continue
