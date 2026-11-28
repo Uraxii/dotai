@@ -297,11 +297,16 @@ def find_lines(lines: list[str], wanted: list[str], start: int) -> int | None:
     whitespace, then without any surrounding whitespace, then with Unicode
     dashes, quotes and spaces read as ASCII."""
     last = len(lines) - len(wanted)
+    if not wanted:
+        return start if start <= last else None
     for normalize in LINE_MATCHES:
         target = [normalize(line) for line in wanted]
+        normal = [normalize(line) for line in lines]
         for index in range(start, last + 1):
-            window = lines[index:index + len(wanted)]
-            if [normalize(line) for line in window] == target:
+            if (
+                normal[index] == target[0]
+                and normal[index:index + len(wanted)] == target
+            ):
                 return index
     return None
 
@@ -454,6 +459,10 @@ def codex_tool_event(payload: Payload, base: Neutral) -> Neutral | None:
             os.path.realpath(os.path.join(cwd, path))
             for path in (file.source, file.target)
         )
+        link = os.path.normpath(os.path.join(cwd, file.source))
+        if file.action == "Delete File" and os.path.islink(link):
+            # Deleting a symlink leaves its target as it is.
+            source = target = link
         prior = changes.pop(source, None)
         if file.action == "Delete File":
             # Kept, as a deleted file can be a lint setting of the others;
@@ -467,7 +476,11 @@ def codex_tool_event(payload: Payload, base: Neutral) -> Neutral | None:
         if source in deleted:
             prior = None
             deleted.discard(source)
-        changes[target] = patch_change(file, base, prior)
+        # A path a move left empty starts empty, not as the moved file.
+        start = base | {"disk": ""} if (
+            prior is None and source in moved_away
+        ) else base
+        changes[target] = patch_change(file, start, prior)
         deleted.discard(target)
         if source != target:
             moved_away.add(source)

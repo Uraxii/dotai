@@ -34,19 +34,16 @@ if (out && typeof nodeModule.registerHooks === "function") {
   };
   nodeModule.registerHooks({
     resolve(specifier, context, nextResolve) {
-      let result;
-      try {
-        result = nextResolve(specifier, context);
-      } catch (error) {
-        // A relative module the config looks for can be added by the edit.
-        if (/^\.{1,2}\//.test(specifier) && context.parentURL?.startsWith("file:")) {
-          const base = path.resolve(path.dirname(fileURLToPath(context.parentURL)), specifier);
-          for (const suffix of ["", ".js", ".cjs", ".mjs", ".ts", ".cts", ".mts", ".json"]) {
-            record(base + suffix);
-          }
-        }
-        throw error;
+      // Every file a relative lookup tries can be added by the edit, also
+      // the ones tried before the file it found.
+      if (/^\.{1,2}(\/|$)/.test(specifier) && context.parentURL?.startsWith("file:")) {
+        const base = path.resolve(path.dirname(fileURLToPath(context.parentURL)), specifier);
+        const suffixes = ["", ".js", ".cjs", ".mjs", ".ts", ".cts", ".mts", ".json", ".node"];
+        for (const suffix of suffixes) record(base + suffix);
+        record(path.join(base, "package.json"));
+        for (const suffix of suffixes.slice(1)) record(path.join(base, "index" + suffix));
       }
+      const result = nextResolve(specifier, context);
       if (result.url.startsWith("file:")) record(new URL(result.url));
       return result;
     },

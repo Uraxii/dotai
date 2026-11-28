@@ -1130,6 +1130,15 @@ c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: alias.py\n@@\n-p
                              "*** Update File: alias-link.py\n@@\n-from math import *\n+import math\n*** End Patch"),
        harness="codex", RUFF_JSON=F403_ROW, **shared_env)
 expect_lacks("a symlink and its target are one file", "could not build", str(c.output()))
+rows = ["["] + [f"{i}," for i in range(50000)] + ["null", "]"]
+c.file("lookup.json", "\n".join(rows) + "\n")
+removed = "\n".join("-" + row for row in rows[38001:50001])
+began = time.monotonic()
+c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: lookup.json\n@@\n" + removed +
+                             "\n+0,\n*** Add File: big-hunk.py\n+from math import *\n*** End Patch"),
+       harness="codex", RUFF_JSON=F403_ROW, **shared_env)
+expect_equal("a 12000-line unanchored hunk still gets checked", "deny", c.decision())
+expect_equal("a 12000-line unanchored hunk takes under 3 s", True, time.monotonic() - began < 3)
 c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: ruff.toml\n*** Move to: scratch/old.toml\n@@\n-extend = \"${DOTAI_SHARED}/base.toml\"\n+x = 1\n"
                              "*** Delete File: scratch/old.toml\n*** Add File: newmod10.py\n+from math import *\n*** End Patch"),
        harness="codex", RUFF_JSON=F403_ROW, **shared_env)

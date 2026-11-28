@@ -259,3 +259,8 @@ Scratch paths named in those notes (under `/tmp/...`) are gone; ignore them.
 - Codex: sections keyed by realpath (symlink alias = target); a move into a deleted path makes it live again.
 - Known limits (for the PR): a symlinked Python file is linted by Ruff with its target folder's settings; a ~1M-line Codex patch can pass the 10 s hook timeout with no notice.
 - Real ESLint 9 repros: move into deleted path denies, failed require.resolve / outer exports manifest warn, symlink alias update allows. mise run ci green: guidelines.test.py 275/275.
+
+## Update: review 1a459d58 (bac3150) findings fixed (4 blocking)
+- eslint_loaded.cjs records every candidate of a relative lookup (base, base+ext, base/package.json, base/index.*), on success and failure, so a new `rules.js` that shadows `rules/index.js` lowers the deny.
+- Codex: deleting a symlink keys by the link, not its target; a path a move left empty starts empty for a later Add; `find_lines` normalizes the file once per pass and checks the first line first (12000-line unanchored hunk: 0.11 s, was > 10 s).
+- Real ESLint 9 / ruff repros for all 4. Test added for the large hunk.
