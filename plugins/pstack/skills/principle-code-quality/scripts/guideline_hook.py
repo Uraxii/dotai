@@ -162,8 +162,18 @@ def common_fields(payload: Payload) -> Neutral:
         "session": text_of(payload.get("session_id")),
         "agent": text_of(payload.get("agent_id")),
         "cwd": cwd,
-        "root": os.environ.get("CLAUDE_PROJECT_DIR") or cwd,
+        "root": os.environ.get("CLAUDE_PROJECT_DIR") or project_root(cwd),
     }
+
+
+def project_root(cwd: str) -> str:
+    """The nearest folder above cwd with a .git, else cwd: Codex sends the
+    folder it runs in, which can be below the project root."""
+    start = Path(cwd)
+    for directory in (start, *start.parents):
+        if (directory / ".git").exists():
+            return str(directory)
+    return cwd
 
 
 def session_or_prompt(payload: Payload) -> Neutral | None:
@@ -217,6 +227,7 @@ class PatchFile(NamedTuple):
 def parse_patch(patch: str) -> list[PatchFile]:
     """Split an apply_patch text into one entry per file."""
     files: list[PatchFile] = []
+    bodies: list[list[str]] = []
     for line in patch.splitlines():
         header = PATCH_HEADER.match(line)
         if header and header.group(1) == "Move to" and files:
@@ -224,9 +235,12 @@ def parse_patch(patch: str) -> list[PatchFile]:
         elif header:
             path = header.group(2)
             files.append(PatchFile(header.group(1), path, path, ()))
+            bodies.append([])
         elif files and line not in PATCH_MARKERS:
-            files[-1] = files[-1]._replace(body=(*files[-1].body, line))
-    return files
+            bodies[-1].append(line)
+    return [
+        file._replace(body=tuple(body)) for file, body in zip(files, bodies)
+    ]
 
 
 class Hunk(NamedTuple):
@@ -290,13 +304,26 @@ def find_hunk(
     return find_lines(lines, old, max(start, 0))
 
 
+def merged(rows: list[str], window: list[str]) -> list[str]:
+    """The hunk's new lines. A context line keeps the file's text, as
+    Codex keeps it, even when it matched past whitespace."""
+    new: list[str] = []
+    old = 0
+    for row in rows:
+        if row[0] == " ":
+            new.append(window[old] if old < len(window) else row[1:])
+        elif row[0] == "+":
+            new.append(row[1:])
+        old += row[0] in " -"
+    return new
+
+
 def apply_update(current: str, body: Sequence[str]) -> str | None:
     """Apply the hunks in memory the way Codex does; None when a hunk or
     its anchor does not match the file. Codex finds every hunk in the
     original lines, without a final empty one, then replaces from the
     end, and always ends the file with a newline."""
-    ending = "\r\n" if "\r\n" in current else "\n"
-    lines = current.split(ending)
+    lines = current.split("\n")
     if lines[-1] == "":
         lines.pop()
     replacements: list[tuple[int, int, list[str]]] = []
@@ -308,24 +335,27 @@ def apply_update(current: str, body: Sequence[str]) -> str | None:
                 return None
             cursor = anchor + 1
         old = [line[1:] for line in hunk.rows if line[0] in " -"]
-        new = [line[1:] for line in hunk.rows if line[0] in " +"]
         if not old:
-            replacements.append((len(lines), 0, new))
+            replacements.append((len(lines), 0, merged(hunk.rows, [])))
             continue
         index = find_hunk(lines, hunk, old, cursor)
-        if index is None and old[-1] == "":
+        trimmed = index is None and old[-1] == ""
+        if trimmed:
             old = old[:-1]
-            new = new[:-1] if new and new[-1] == "" else new
             index = find_hunk(lines, hunk, old, cursor)
         if index is None:
             return None
+        new = merged(hunk.rows, lines[index:index + len(old)])
+        if trimmed and new and new[-1] == "":
+            new = new[:-1]
         replacements.append((index, len(old), new))
         cursor = index + len(old)
+    # Codex applies from the end, so hunks at one offset keep patch order.
     for start, length, new in sorted(
-        replacements, key=lambda item: item[0], reverse=True
-    ):
+        replacements, key=lambda item: item[0]
+    )[::-1]:
         lines[start:start + length] = new
-    return ending.join(lines) + ending
+    return "\n".join(lines) + "\n"
 
 
 def patch_change(file: PatchFile, base: Neutral) -> Neutral:

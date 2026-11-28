@@ -170,3 +170,12 @@ Scratch paths named in those notes (under `/tmp/...`) are gone; ignore them.
 - Ruff per-file ignores: the hook no longer reads them; ruff applies them itself even to --extend-select codes (verified with ruff 0.17.6). `project_disables`/`ruff_ignored` removed. Narrower ignores are not put on the CLI when the config re-selects the rule as narrowly.
 - ESLint: a package.json with `eslintConfig` counts as a project config.
 - mise run ci green: guidelines.test.py 207/207.
+
+## Update: review ef54d4a1 findings fixed (4 blocking, 2 non-blocking)
+- New-finding rule changed: a rule (tool, code) denies only when the edit raises its count. Comment edits and changed lines next to an old finding keep the count, so they never deny; PostToolUse still shows them as warnings. Line text only picks which hits to name. The comment lexer is deleted.
+- Codex apply: hunks at one offset keep patch order; context lines keep the file's text; split on LF only (mixed endings match via the rstrip pass).
+- Root: without CLAUDE_PROJECT_DIR, the nearest ancestor of cwd with `.git`, so a Codex session in `src/` finds the project's ruff.toml.
+- ESLint runs in the folder of the nearest config, so ESLint 9 loads a nested package config.
+- Ruff: a guideline code is left to ruff when the config names it or any rule under it (no --extend-ignore).
+- parse_patch is linear; a 100k-line Add File runs in about 0.1 s.
+- mise run ci green: guidelines.test.py 215/215.

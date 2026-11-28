@@ -106,8 +106,8 @@ if sys.argv[1:] == ["--version"]:
     sys.exit(0)
 with open(os.path.join(os.environ["WORK"], "ruff.args"), "a") as args:
     args.write(" ".join(sys.argv[1:]) + "\\n")
-with open(os.path.join(os.environ["WORK"], "ruff.stdin"), "w") as text:
-    text.write(sys.stdin.read())
+with open(os.path.join(os.environ["WORK"], "ruff.stdin"), "wb") as text:
+    text.write(sys.stdin.buffer.read())
 time.sleep(float(os.environ.get("RUFF_SLEEP") or 0))
 if os.environ.get("RUFF_STDERR"):
     print(os.environ["RUFF_STDERR"], file=sys.stderr)
@@ -120,6 +120,8 @@ if sys.argv[1:] == ["--version"]:
     sys.exit(0)
 with open(os.path.join(os.environ["WORK"], "eslint.args"), "a") as args:
     args.write(" ".join(sys.argv[1:]) + "\\n")
+with open(os.path.join(os.environ["WORK"], "eslint.cwd"), "w") as cwd:
+    cwd.write(os.getcwd())
 sys.stdin.read()
 print(os.environ.get("ESLINT_JSON") or '[{{"messages":[]}}]')
 """
@@ -495,6 +497,22 @@ c.hook(c.write("b.ts", "var x = 1\n"), ESLINT_JSON=NO_VAR_ROW)
 expect_contains("a package.json without eslintConfig is not",
                 "eslint has no project config", c.context())
 
+c = Case("eslint-nested-config")
+c.file("eslint.config.js", "export default [];\n")
+c.file("packages/api/eslint.config.js", "export default [];\n")
+c.hook(c.write("packages/api/f.js", "var x = 1;\n"))
+expect_equal("eslint runs in the folder of the nearest config, so ESLint 9 loads it",
+             str(c.project / "packages" / "api"), (WORK / "eslint.cwd").read_text())
+
+c = Case("codex-subfolder")
+c.file(".git/HEAD", "ref: refs/heads/main\n")
+c.file("ruff.toml", '[lint]\nignore = ["F403"]\n')
+payload = c.patch("PreToolUse", "*** Begin Patch\n*** Add File: helpers.py\n+from math import *\n*** End Patch")
+payload["cwd"] = str(c.project / "src")
+c.hook(payload, harness="codex", CLAUDE_PROJECT_DIR="")
+expect_lacks("a Codex session below the git root still uses the project's ruff config", "--isolated",
+             c.args().splitlines()[-1])
+
 c = Case("eslint-config")
 c.file("eslint.config.js", "export default [];\n")
 c.hook(c.write("a.ts", "var x = 1\n"), ESLINT_JSON=NO_VAR_ROW)
@@ -832,6 +850,21 @@ c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: demo.py\n@@\n+fr
 expect_equal("an insertion-only hunk goes after the last line of a file with no final newline",
              '"""\n"""\nfrom os import *\n', (WORK / "ruff.stdin").read_text())
 c.file("demo.py", "x = 1\n")
+c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: demo.py\n@@\n+try:\n+    pass\n@@\n+except:\n+    pass\n"
+                             "*** End Patch"), harness="codex")
+expect_equal("insertion-only hunks keep patch order, as Codex does",
+             "x = 1\ntry:\n    pass\nexcept:\n    pass\n", (WORK / "ruff.stdin").read_text())
+c.file("demo.py", "if True:\n    a = 1\n    b = 2\n")
+c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: demo.py\n@@\n a = 1\n-    b = 2\n+    from math import *\n"
+                             "*** End Patch"), harness="codex")
+expect_equal("a context line matched past whitespace keeps the file's text, as Codex does",
+             "if True:\n    a = 1\n    from math import *\n", (WORK / "ruff.stdin").read_text())
+c.file("demo.py", "x = 1\r\ny = 2\nz = 3\r\n")
+c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: demo.py\n@@\n-y = 2\n+from math import *\n"
+                             "*** End Patch"), harness="codex")
+expect_equal("a file with mixed line endings is patched, as Codex does",
+             "x = 1\r\nfrom math import *\nz = 3\r\n", (WORK / "ruff.stdin").read_bytes().decode())
+c.file("demo.py", "x = 1\n")
 c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: demo.py\n@@\n+from os import *\n@@\n-x = 1\n+x = 2\n"
                              "*** End of File\n*** End Patch"), harness="codex")
 expect_equal("an insertion before an End of File hunk goes after the original last line, as Codex does",
@@ -861,9 +894,20 @@ c.file("app.js", "/*\n * old // text */ var x = 1;\n")
 c.hook(c.write("app.js", "/*\n * new // text */ var x = 1;\n"),
        ESLINT_JSON='[{"messages":[{"ruleId":"no-var","line":2,"severity":2}]}]')
 expect_equal("and when an open block comment holds //", "", c.decision())
-c.file("app.js", 'var a = "//"; var x = 1;\n')
-c.hook(c.write("app.js", 'var a = "//"; let x = 1; var y = 2;\n'), ESLINT_JSON=NO_VAR_ROW)
-expect_equal("a // inside a string is code, so the changed line still counts as new", "deny", c.decision())
+c.file("app.js", "var x = /* explanation */ 1;\n")
+c.hook(c.write("app.js", "var x = 1;\n"), ESLINT_JSON=NO_VAR_ROW)
+expect_equal("and when the comment sits inside the statement", "", c.decision())
+c.file("app.js", "var a = 1; var b = 2;\n")
+c.hook(c.write("app.js", "var a = 1; let b = 2; var c = 3;\n"),
+       ESLINT_JSON='[{"messages":[{"ruleId":"no-var","line":1,"severity":2},'
+                   '{"ruleId":"no-var","line":1,"severity":2}]}]')
+expect_equal("an edit that keeps a rule's count on a changed line is not denied", "", c.decision())
+c.file("flat.py", "x = [a for b in c for a in b]; n = 1\n")
+c.hook(c.write("flat.py", "x = [a for b in c for a in b]; n = 2\n"))
+expect_equal("a changed line that keeps its old finding is not denied", "", c.decision())
+c.hook(c.write("flat.py", "x = [a for b in c for a in b]; n = 2\ny = [a for b in c for a in b]\n"))
+expect_contains("an edit that raises a rule's count is denied, and names the new line",
+                "code_quality:CQ001 at flat.py:2", c.reason())
 
 c = Case("eslint-project-warns")
 c.file("eslint.config.js", "export default [];\n")
@@ -900,8 +944,8 @@ expect_lacks("or GDScript tool", "gdlint", c.stdout)
 c = Case("ruff-narrower-ignore")
 c.file("ruff.toml", '[lint]\nignore = ["PTH123"]\n')
 c.hook(c.write("app.py", "x = 1\n"), PSTACK_GUIDELINES_DIR=str(PLUGIN / "skills" / "principle-code-quality" / "guidelines"))
-expect_contains("a narrower project ignore under a selected code stays ignored", "--extend-ignore PTH123",
-                c.args().splitlines()[-1])
+expect_lacks("a code with a narrower project selector under it is left to ruff", "PTH",
+             c.args().splitlines()[-1])
 
 c = Case("ruff-python-only")
 c.file("eslint.config.js", "export default [];\n")

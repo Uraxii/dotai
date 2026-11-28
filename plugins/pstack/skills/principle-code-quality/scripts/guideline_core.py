@@ -60,13 +60,6 @@ EVENT_KINDS = frozenset({
 })
 MAIN_AGENT = "main"
 PATH_IN_PROMPT = re.compile(r"[\w./\\-]*\.\w+(?:\.\w+)*")
-LINE_COMMENT = {
-    "python": "#", "gdscript": "#", "typescript": "//", "javascript": "//",
-    "csharp": "//",
-}
-BLOCK_COMMENT_LANGUAGES = frozenset({"typescript", "javascript", "csharp"})
-TRIPLE_QUOTE_LANGUAGES = frozenset({"python", "gdscript"})
-QUOTES = {"typescript": "'\"`", "javascript": "'\"`"}
 SHEBANG_LANGUAGES = {"python": "python", "node": "javascript"}
 UNSAFE_NAME_CHARS = re.compile(r"[^A-Za-z0-9_-]")
 
@@ -266,60 +259,8 @@ class Hit(NamedTuple):
     severity: str = "warn"
 
     @property
-    def identity(self) -> tuple[str, str, str]:
-        """The finding and its line's code without comments, so a
-        comment-only edit to a line that already broke the rule does not
-        count as new."""
-        return (self.finding.tool, self.finding.code, self.text)
-
-
-def code_lines(content: str, language: str) -> list[str]:
-    """Each line of the content with its comments blanked; string text
-    stays. A block comment or a multi-line string carries across lines."""
-    marker = LINE_COMMENT.get(language)
-    if marker is None:
-        return content.split("\n")
-    quotes = QUOTES.get(language, "'\"")
-    lines: list[str] = []
-    current: list[str] = []
-    quote = ""
-    in_block = False
-    index = 0
-    while index < len(content):
-        char = content[index]
-        step = 1
-        if char == "\n":
-            lines.append("".join(current))
-            current = []
-            quote = quote if len(quote) > 1 or quote == "`" else ""
-        elif in_block:
-            if content.startswith("*/", index):
-                in_block, step = False, 2
-                current.append(" ")
-        elif quote:
-            if char == "\\" and content[index + 1:index + 2] not in ("", "\n"):
-                step = 2
-            elif content.startswith(quote, index):
-                step, quote = len(quote), ""
-            current.append(content[index:index + step])
-        elif content.startswith(marker, index):
-            end = content.find("\n", index)
-            step = (len(content) if end < 0 else end) - index
-        elif language in BLOCK_COMMENT_LANGUAGES and (
-            content.startswith("/*", index)
-        ):
-            in_block, step = True, 2
-        else:
-            if char in quotes:
-                triple = char * 3
-                quote = triple if language in TRIPLE_QUOTE_LANGUAGES and (
-                    content.startswith(triple, index)
-                ) else char
-                step = len(quote)
-            current.append(content[index:index + step])
-        index += step
-    lines.append("".join(current))
-    return lines
+    def rule(self) -> tuple[str, str]:
+        return (self.finding.tool, self.finding.code)
 
 
 def guideline_for(
@@ -338,14 +279,23 @@ def guideline_for(
 
 
 def new_hits(after: list[Hit], before: list[Hit]) -> list[Hit]:
-    """Hits the edit adds: the multiset difference by line code."""
-    remaining = Counter(hit.identity for hit in before)
+    """Hits of each rule the edit finds more often than before. An edit
+    that keeps a rule's count, such as a changed comment or a changed
+    line next to an old finding, adds none of it. Of a grown rule, the
+    hits on lines that the old findings did not have are named."""
+    grown = Counter(hit.rule for hit in after)
+    grown.subtract(hit.rule for hit in before)
+    old_lines = Counter((hit.rule, hit.text) for hit in before)
     added = []
-    for hit in after:
-        if remaining[hit.identity] > 0:
-            remaining[hit.identity] -= 1
-        else:
-            added.append(hit)
+    for rule in (rule for rule, extra in grown.items() if extra > 0):
+        hits = [hit for hit in after if hit.rule == rule]
+        fresh = []
+        for hit in hits:
+            if old_lines[rule, hit.text] > 0:
+                old_lines[rule, hit.text] -= 1
+            else:
+                fresh.append(hit)
+        added += fresh or hits
     return added
 
 
@@ -527,7 +477,7 @@ class Engine:
         frozen = {tool: frozenset(found) for tool, found in codes.items()}
         results = detect(Detection(target, frozen, self.deadline, self.probes))
         hits, failed = [], set()
-        lines = code_lines(content, file.language)
+        lines = content.split("\n")
         for tool, result in results.items():
             if result.findings is None:
                 failed.add(tool)

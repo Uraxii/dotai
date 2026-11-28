@@ -158,11 +158,11 @@ def line_length(root: Path) -> int:
 
 
 def run_tool(
-    argv: list[str], target: Target
+    argv: list[str], target: Target, cwd: Path | None = None
 ) -> subprocess.CompletedProcess[str] | None:
     try:
         return subprocess.run(
-            argv, input=target.content, cwd=target.root, text=True,
+            argv, input=target.content, cwd=cwd or target.root, text=True,
             capture_output=True, check=False, timeout=RUNNER_TIMEOUT_S,
         )
     except (OSError, ValueError, subprocess.TimeoutExpired):
@@ -206,28 +206,18 @@ def ruff_arguments(target: Target) -> list[str]:
             for key in (*SELECT_KEYS, *IGNORE_KEYS)
             for selector in as_strings(table.get(key))
         )
+        # A selector on the command line beats the config, so a code is
+        # left to ruff when the config names it or any rule under it.
         added = sorted(
-            code for code in target.codes if not selected_by(code, named)
-        )
-        # A selector on the command line beats the config, so the config's
-        # narrower ignores under an added code go on the command line too,
-        # unless the config selects that rule again at least as narrowly.
-        selects = [
-            selector for table in tables for key in SELECT_KEYS
-            for selector in as_strings(table.get(key))
-        ]
-        narrower = sorted(
-            selector for table in tables for key in IGNORE_KEYS
-            for selector in as_strings(table.get(key))
-            if any(selector.startswith(code) for code in added)
-            and not any(again.startswith(selector) for again in selects)
+            code for code in target.codes
+            if not selected_by(code, named)
+            and not any(selector.startswith(code) for selector in named)
         )
         preview = any("preview" in table for table in tables)
         return [
             "--verbose", "--force-exclude",
             *([] if preview else ["--preview"]),
             *(["--extend-select", ",".join(added)] if added else []),
-            *(["--extend-ignore", ",".join(narrower)] if narrower else []),
         ]
     length = str(line_length(target.root))
     return [
@@ -267,24 +257,28 @@ def package_eslint_config(package: Path) -> bool:
     return isinstance(data, dict) and "eslintConfig" in data
 
 
-def eslint_config(path: Path, root: Path) -> bool:
-    return any(
-        ESLINT_CONFIG_PATTERN.match(entry.name) or (
-            entry.name == "package.json" and package_eslint_config(entry)
+def eslint_config(path: Path, root: Path) -> Path | None:
+    """The nearest folder with an ESLint config. ESLint 9 loads the flat
+    config it finds from its working folder, so it runs there."""
+    return next((
+        directory for directory in parents_within(path, root)
+        if directory.is_dir() and any(
+            ESLINT_CONFIG_PATTERN.match(entry.name) or (
+                entry.name == "package.json" and package_eslint_config(entry)
+            )
+            for entry in directory.iterdir()
         )
-        for directory in parents_within(path, root)
-        if directory.is_dir()
-        for entry in directory.iterdir()
-    )
+    ), None)
 
 
 def run_eslint(executable: str, target: Target) -> RunResult:
-    if not eslint_config(target.path, target.root):
+    config = eslint_config(target.path, target.root)
+    if config is None:
         return RunResult(None, "has no project config")
     process = run_tool([
         executable, "--stdin", "--stdin-filename", str(target.path),
         "-f", "json",
-    ], target)
+    ], target, config)
     if process is None:
         return RunResult(None, f"timed out after {RUNNER_TIMEOUT_S} s")
     try:
