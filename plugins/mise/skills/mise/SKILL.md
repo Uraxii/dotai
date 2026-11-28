@@ -21,7 +21,7 @@ metadata:
 ## Trust and secrets
 
 - Read each mise config file in a repository that you did not set up, before you run a mise command there. `mise run`, `mise exec`, and `mise install` trust the config with no prompt and install each missing tool.
-- Other mise commands stop with a `not trusted` error. Run `mise trust` after you read the config.
+- Other mise commands can stop with a `not trusted` error. Run `mise trust` after you read the config.
 - To inspect a config without trust, set `MISE_SAFE=1`. mise then loads tools and tasks and drops `[env]`.
 - A secret value is a password, a token, a key, or a URL that holds one.
 - Put no secret value in a file that git tracks. The user adds a secret value, not the agent.
@@ -45,7 +45,7 @@ metadata:
 | `test:<suite>` | One task for each test suite. |
 | `test` | An alias of `test:unit`. |
 | `lint` | Runs each `lint:*` task. |
-| `ci` | Depends on `lint:*` and `test:*`. People and CI both run `mise run ci`. |
+| `ci` | Depends on `lint:*` and `test:*`. People run `mise run ci`. CI runs `mise run --force ci`. |
 
 To add a linter or a suite, add one task. No other task changes.
 

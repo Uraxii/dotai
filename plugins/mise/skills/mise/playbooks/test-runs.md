@@ -1,6 +1,6 @@
 # Set up or change test runs
 
-Goal: `mise run ci` gives the same result for a person and for CI. A new suite needs one new task and no other edit.
+Goal: `mise run --force ci` gives the same result for a person and for CI. A new suite needs one new task and no other edit.
 
 | The repository has | Go to |
 |---|---|

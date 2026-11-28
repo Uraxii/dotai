@@ -1,6 +1,6 @@
 # Set up mise in a repository
 
-Goal: a person or a CI job clones the repository, runs `mise install` and `mise run ci`, and gets the same tools and the same result.
+Goal: a person or a CI job clones the repository, runs `mise install` and `mise run --force ci`, and gets the same tools and the same result.
 
 Do the steps in order. Do not start a step before the step above it is done.
 
@@ -18,7 +18,8 @@ Do the steps in order. Do not start a step before the step above it is done.
    - Done when each tool has an agreed version and an agreed source.
 
 3. **Start the config.**
-   - Copy [templates/mise.toml](../templates/mise.toml) to the repository root.
+   - If the repository has no `mise.toml`, copy [templates/mise.toml](../templates/mise.toml) to the repository root.
+   - If it has one, do not copy over it. Add the parts that it does not have, with the template as the model.
    - Remove the placeholder tool line. `mise use` fails while that line is there.
    - Set `min_version` to the version that `mise --version` prints.
    - Run `mise trust` at the repository root. Without it, `mise use` stops with a `not trusted` error.
