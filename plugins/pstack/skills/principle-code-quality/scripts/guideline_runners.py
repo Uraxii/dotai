@@ -186,7 +186,9 @@ def ruff_setting(
         return True
     if setting.name in RUFF_GIT_IGNORE_NAMES:
         return setting.parent in parents_within(code, root)
-    if setting.parts[-3:] == (".git", "info", "exclude"):
+    if setting.parts[-3:] == (".git", "info", "exclude") or setting in {
+        Path(excludes).resolve() for excludes in global_git_excludes()
+    }:
         return True
     if setting.name == ".editorconfig":
         return config is None and setting == root / ".editorconfig"
@@ -429,20 +431,29 @@ RUFF_IGNORE_UNKNOWN = (
 RUFF_GIT_IGNORE_NAMES = (".gitignore", ".ignore")
 
 
+@functools.cache
 def global_git_excludes() -> tuple[str, ...]:
     """The excludes files Ruff can read: its matcher reads core.excludesFile
-    only from the global git config, not from the repository's own. An
-    empty or repeated setting gives more than one candidate."""
+    from ~/.gitconfig, else from the XDG git config, not from the
+    repository's own or from $GIT_CONFIG_GLOBAL. An empty or repeated
+    setting gives more than one candidate."""
     config = os.environ.get("XDG_CONFIG_HOME") or os.path.expanduser("~/.config")
     default = os.path.join(config, "git", "ignore")
-    try:
-        values = subprocess.run(
-            ["git", "config", "--global", "--get-all", "core.excludesFile"],
-            stdin=subprocess.DEVNULL, capture_output=True, text=True,
-            timeout=1, check=False,
-        ).stdout.splitlines()
-    except (OSError, subprocess.SubprocessError):
-        values = []
+    values: list[str] = []
+    for source in (
+        os.path.expanduser("~/.gitconfig"), os.path.join(config, "git", "config"),
+    ):
+        try:
+            values = subprocess.run(
+                ["git", "config", "--file", source, "--get-all",
+                 "core.excludesFile"],
+                stdin=subprocess.DEVNULL, capture_output=True, text=True,
+                timeout=1, check=False,
+            ).stdout.splitlines()
+        except (OSError, subprocess.SubprocessError):
+            values = []
+        if values:
+            break
     candidates = [
         os.path.expanduser(value.strip()) if value.strip() else os.devnull
         for value in values
@@ -455,11 +466,17 @@ def global_git_excludes() -> tuple[str, ...]:
 def git_matches(target: Target, path: Path, *options: str) -> bool | None:
     """Whether git ignores the file, or None when git cannot tell (no
     git, no repository, or a path beyond a symlinked folder)."""
+    # Ruff, like git, uses the ignore rules of the file's own repository,
+    # also a nested one.
+    repository = next((
+        folder for folder in parents_within(path, target.root)
+        if (folder / ".git").exists()
+    ), target.root)
     try:
         process = subprocess.run(
             ["git", *options, "check-ignore", "-q", "--no-index",
              str(path)],
-            cwd=target.root, stdin=subprocess.DEVNULL,
+            cwd=repository, stdin=subprocess.DEVNULL,
             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
             timeout=1, check=False,
         )

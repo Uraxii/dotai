@@ -730,11 +730,34 @@ c.file(".gitignore", "made/\nCASEY.PY\ngen_*.py\n")
 xdg = c.project.parent / "xdg23"
 (xdg / "git").mkdir(parents=True)
 (xdg / "git" / "ignore").write_text("demo23.py\n")
-(c.project.parent / "global23").write_text("[core]\n\texcludesFile =\n")
+home = c.project.parent / "home23"
+home.mkdir()
+(home / ".gitconfig").write_text("[core]\n\texcludesFile =\n")
 c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Add File: demo23.py\n+from math import *\n*** End Patch"),
-       harness="codex", RUFF_JSON=F403_ROW, XDG_CONFIG_HOME=str(xdg), GIT_CONFIG_GLOBAL=str(c.project.parent / "global23"))
+       harness="codex", RUFF_JSON=F403_ROW, XDG_CONFIG_HOME=str(xdg), HOME=str(home))
 expect_equal("an empty global core.excludesFile is not read as the default file", "", c.decision())
 expect_contains("and says the ignore scope is unknown", "could not tell", str(c.output()))
+(c.project.parent / "excludes24").write_text("demo24.py\n")
+(c.project.parent / "empty24").write_text("")
+(home / ".gitconfig").write_text(f"[core]\n\texcludesFile = {c.project.parent / 'excludes24'}\n")
+c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Add File: demo24.py\n+from math import *\n*** End Patch"),
+       harness="codex", RUFF_JSON=F403_ROW, HOME=str(home), GIT_CONFIG_GLOBAL=str(c.project.parent / "empty24"))
+expect_equal("the excludes file in ~/.gitconfig counts, as Ruff ignores $GIT_CONFIG_GLOBAL", "", c.decision())
+expect_contains("and the file is skipped", "git ignores it", str(c.output()))
+(home / ".gitconfig").unlink()
+c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Add File: dotfiles/git/ignore\n+demo25.py\n*** Add File: demo25.py\n+from math import *\n*** End Patch"),
+       harness="codex", RUFF_JSON=F403_ROW, HOME=str(home), XDG_CONFIG_HOME=str(c.project / "dotfiles"))
+expect_contains("a change to the global excludes file counts as a Ruff setting", "also changes dotfiles/git/ignore", str(c.output()))
+subprocess.run(["git", "init", "-q", str(c.project / "nested26")], check=True)
+c.file(".gitignore", "made/\nCASEY.PY\ngen_*.py\napp26.py\n")
+c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Add File: nested26/app26.py\n+from math import *\n*** End Patch"),
+       harness="codex", RUFF_JSON=F403_ROW)
+expect_equal("a nested repository does not use the outer .gitignore", "deny", c.decision())
+c.file("nested26/.git/info/exclude", "app27.py\n")
+c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Add File: nested26/app27.py\n+from math import *\n*** End Patch"),
+       harness="codex", RUFF_JSON=F403_ROW)
+expect_equal("a nested repository uses its own excludes", "", c.decision())
+expect_contains("and the file is skipped", "git ignores it", str(c.output()))
 c = Case("ruff-ignore-no-git")
 c.file(".ignore", "skipme.py\n")
 c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Add File: skipme.py\n+from math import *\n*** End Patch"),
@@ -850,6 +873,14 @@ if NODE:
     subprocess.run([NODE, "outside.cjs"], cwd=trace.project, capture_output=True, env=os.environ | loader)
     recorded = listed.read_text().splitlines() if listed.exists() else []
     expect_equal("a symlink Node resolves to a file outside the root keeps its own name", True, str(trace.project.resolve() / "outrules.js") in recorded)
+    (trace.project / "probed.cjs").symlink_to(outside / "rules.js")
+    trace.file("probe2.cjs", "require('node:fs').existsSync(require('node:path').join(__dirname, 'probed.cjs')); require.resolve('./modx');\n")
+    listed.unlink(missing_ok=True)
+    subprocess.run([NODE, "probe2.cjs"], cwd=trace.project, capture_output=True, env=os.environ | loader)
+    recorded = listed.read_text().splitlines() if listed.exists() else []
+    expect_equal("a symlink the config checks keeps its own name, also to a file outside the root", True, str(trace.project.resolve() / "probed.cjs") in recorded)
+    expect_equal("a file require.resolve only resolves is not marked as loaded", False, "!" + str(trace.project.resolve() / "modx.js") in recorded)
+    expect_equal("but it is a read", True, str(trace.project.resolve() / "modx.js") in recorded)
     shutil.rmtree(outside)
     trace.file("eslint.config.mjs", "")
     trace.file("node_modules/disc/index.js", "module.exports = () => new Promise((done) => done(require('node:fs').existsSync(require('node:path').join(process.cwd(), 'eslint.config.mjs'))));\n")
@@ -1552,6 +1583,11 @@ expect_equal("a file added after its symlink is deleted moves as a regular file"
 c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Delete File: real32/link2.py\n*** Add File: real32/link2.py\n+x = [a for b in c for a in b]\n*** Delete File: alias32/link2.py\n*** End Patch"),
        harness="codex", **shared_env)
 expect_equal("a file added after its symlink is deleted is deleted as a regular file", "", c.decision())
+c.file("real33/app.py", "pass\n")
+(c.project / "alias33").symlink_to(c.project / "real33")
+c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: real33/app.py\n*** Move to: alias33/app.py\n@@\n-pass\n+x = [a for b in c for a in b]\n*** End Patch"),
+       harness="codex", **shared_env)
+expect_equal("a move onto the same file through a symlinked folder leaves no file, so no deny", "", c.decision())
 c.file("real9.py", "pass\n")
 c.file("aliases/keep", "")
 (c.project / "aliases" / "alias9.py").symlink_to("../real9.py")

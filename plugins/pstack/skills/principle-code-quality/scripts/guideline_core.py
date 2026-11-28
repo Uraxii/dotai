@@ -560,9 +560,15 @@ class Engine:
                 # The code file keeps its names through symlinked folders,
                 # so a setting counts by its own names or its real path.
                 real = resolve_in_root(raw, self.event.cwd, self.event.root)
+                # The trace names a symlink by its own name below its
+                # folder's real path.
+                folder = resolve_in_root(
+                    os.path.join(os.path.dirname(raw), "."),
+                    self.event.cwd, self.event.root,
+                )
                 names = {real, resolve_in_root(
                     raw, self.event.cwd, self.event.root, follow=False,
-                )} - {None}
+                ), folder and folder / os.path.basename(raw)} - {None}
                 tools = frozenset().union(*(
                     setting_tools(
                         setting, code, file.language, root, other.after

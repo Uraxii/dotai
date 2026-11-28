@@ -12,6 +12,7 @@ const { fileURLToPath } = require("node:url");
 const out = process.env.PSTACK_ESLINT_LOADED;
 if (out && typeof nodeModule.registerHooks === "function") {
   const realpathSync = fs.realpathSync;
+  const lstatSync = fs.lstatSync;
   const readFileSync = fs.readFileSync;
   // Each file maps to whether it was read, not only looked for: ESLint
   // looks for every flat config name, also ones it never loads.
@@ -27,6 +28,13 @@ if (out && typeof nodeModule.registerHooks === "function") {
     }
     if (typeof name !== "string") return;
     const full = path.resolve(name);
+    // A symlink read by its target also counts by its own name, as the
+    // edit can replace the symlink, also one to a file outside the root.
+    if (!own) {
+      try {
+        if (lstatSync(full).isSymbolicLink()) record(full, probe, true);
+      } catch {}
+    }
     // An absent file the config looks for can be added by the edit, so it
     // is kept below the real path of its nearest existing folder. A file
     // only looked for keeps its own name: ESLint looks for every flat
@@ -110,13 +118,15 @@ if (out && typeof nodeModule.registerHooks === "function") {
       for (const candidate of index < 0 ? candidates : candidates.slice(0, index)) record(candidate);
       // A candidate symlink keeps its own name, also to a file outside the root.
       if (index >= 0) record(candidates[index], false, true);
-      if (found) {
-        record(found);
-        try {
-          modules.add(realpathSync(found));
-        } catch {}
-      }
+      if (found) record(found);
       return result;
+    },
+    // Only a file Node loads is a module; require.resolve only resolves.
+    load(url, context, nextLoad) {
+      try {
+        if (url.startsWith("file:")) modules.add(realpathSync(fileURLToPath(url)));
+      } catch {}
+      return nextLoad(url, context);
     },
   });
   // A look-up the project's own config makes, also through a library such

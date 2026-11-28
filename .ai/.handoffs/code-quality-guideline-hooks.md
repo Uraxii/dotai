@@ -361,3 +361,8 @@ Scratch paths named in those notes (under `/tmp/...`) are gone; ignore them.
 - A code file in a symlinked folder gets the same-edit settings of its lexical and its real folders.
 - Codex: a path is a symlink only if the patch has not deleted it by any folder's name (`is_link`).
 - Recorder: the candidate symlink Node resolved keeps its own name, also when its target is outside the root.
+
+## Update: review 2d8590ad (fcf0bf7) findings fixed (6 blocking, 1 non-blocking)
+- Ruff ignore: git runs in the file's own (also nested) repository; the excludes file comes from `~/.gitconfig`, else the XDG git config, as in Ruff (not `$GIT_CONFIG_GLOBAL`); a same-edit change to that excludes file counts as a Ruff setting.
+- Recorder: a symlink read by its target also counts by its own name; only Node's `load` hook marks `!` (not `require.resolve`). The Engine also matches a setting by its own name below its folder's real path.
+- Codex: a move onto the same file through a symlinked folder leaves no file.

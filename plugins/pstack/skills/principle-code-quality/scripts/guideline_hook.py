@@ -592,10 +592,10 @@ def codex_tool_event(payload: Payload, base: Neutral) -> Neutral | None:
         dest = os.path.normpath(os.path.join(cwd, file.target))
         if (
             file.action != "Delete File" and not moves_link and dest != link
-            and is_link(dest) and target == source
+            and (is_link(dest) or named(dest) == named(link)) and target == source
         ):
-            # Moved onto a symlink to itself: Codex writes through the
-            # symlink, then removes the file, so the text is lost.
+            # Moved onto itself through a symlink or a symlinked folder:
+            # Codex writes the file, then removes it, so the text is lost.
             changes[source] = {"path": file.source, "before": None,
                                "after": None, "source": file.source}
             deleted.add(source)
