@@ -423,21 +423,27 @@ RUFF_IGNORE_UNKNOWN = (
 RUFF_GIT_IGNORE_NAMES = (".gitignore", ".ignore")
 
 
-def global_git_excludes() -> str:
-    """The excludes file Ruff reads: its matcher reads core.excludesFile
-    only from the global git config, not from the repository's own."""
+def global_git_excludes() -> tuple[str, ...]:
+    """The excludes files Ruff can read: its matcher reads core.excludesFile
+    only from the global git config, not from the repository's own. An
+    empty or repeated setting gives more than one candidate."""
+    config = os.environ.get("XDG_CONFIG_HOME") or os.path.expanduser("~/.config")
+    default = os.path.join(config, "git", "ignore")
     try:
-        value = subprocess.run(
-            ["git", "config", "--global", "--get", "core.excludesFile"],
+        values = subprocess.run(
+            ["git", "config", "--global", "--get-all", "core.excludesFile"],
             stdin=subprocess.DEVNULL, capture_output=True, text=True,
             timeout=1, check=False,
-        ).stdout.strip()
+        ).stdout.splitlines()
     except (OSError, subprocess.SubprocessError):
-        value = ""
-    if value:
-        return os.path.expanduser(value)
-    config = os.environ.get("XDG_CONFIG_HOME") or os.path.expanduser("~/.config")
-    return os.path.join(config, "git", "ignore")
+        values = []
+    candidates = [
+        os.path.expanduser(value.strip()) if value.strip() else os.devnull
+        for value in values
+    ]
+    if any(value == os.devnull for value in candidates):
+        candidates.append(default)
+    return tuple(dict.fromkeys(candidates)) or (default,)
 
 
 def git_matches(target: Target, path: Path, *options: str) -> bool | None:
@@ -477,26 +483,32 @@ def ruff_ignore_skip(target: Target) -> RunResult | None:
     if respects == {False}:
         return None
     # Ruff matches case-sensitively, whatever git's core.ignoreCase says.
-    options = (
-        "-c", f"core.excludesFile={global_git_excludes()}",
-        "-c", "core.ignoreCase=false",
-    )
-    ignored = git_matches(target, target.path, *options)
+    excludes = global_git_excludes()
+
+    def answers(path: Path) -> set[bool | None]:
+        # Ruff matches case-sensitively, whatever core.ignoreCase says.
+        return {
+            git_matches(
+                target, path, "-c", f"core.excludesFile={excludes_file}",
+                "-c", "core.ignoreCase=false",
+            ) for excludes_file in excludes
+        }
+
+    found = answers(target.path)
     real = target.path.resolve()
     # Git does not match a path through a symlinked folder; the real path
     # can be ignored by other rules, so that is unknown.
-    if ignored is None and real != target.path and git_matches(
-        target, real, *options,
-    ):
-        return RunResult(None, RUFF_IGNORE_UNKNOWN)
-    # A `.ignore` can also un-ignore what git ignores, with `!name`.
-    dot_ignore = any(
-        (folder / ".ignore").is_file()
+    if found == {None} and real != target.path:
+        return RunResult(None, RUFF_IGNORE_UNKNOWN) if True in answers(real) else None
+    # A `.ignore` can also un-ignore what git ignores, with `!name`, and
+    # git does not read a symlinked .gitignore, which Ruff follows.
+    unmatched = any(
+        (folder / ".ignore").is_file() or (folder / ".gitignore").is_symlink()
         for folder in parents_within(target.path, target.root)
     )
-    if respects == {True} and ignored and not dot_ignore:
+    if respects == {True} and found == {True} and not unmatched:
         return RunResult((), RUFF_GITIGNORED_PROBLEM)
-    if ignored or dot_ignore:
+    if True in found or unmatched:
         return RunResult(None, RUFF_IGNORE_UNKNOWN)
     return None
 

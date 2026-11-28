@@ -342,3 +342,8 @@ Scratch paths named in those notes (under `/tmp/...`) are gone; ignore them.
 ## Update: review ff7a6da3 (a1d1694) findings fixed (1 blocking, 1 non-blocking)
 - A changed setting counts by its lexical name or its real path, because the code file keeps its lexical name through symlinked folders.
 - Git does not match a path through a symlinked folder (exit 128); the hook then asks about the real path, and an ignored real path gives the "could not tell" warning.
+
+## Update: review 4edb7448 (7bb1f50) findings fixed (6 blocking)
+- Codex: deleting a symlink moves an earlier change made through it to the target's own path; a symlink deleted by a folder-alias name also unlinks its parent-resolved name.
+- Ruff ignore: a symlinked `.gitignore` (git does not read it, Ruff does) gives "could not tell"; an empty or repeated global `core.excludesFile` is asked with every candidate file, and differing answers give "could not tell".
+- Recorder: a file only looked for keeps its own name (parent resolved), so a symlinked unused flat config name is dropped; package `main` parses a `package.json` with a BOM.

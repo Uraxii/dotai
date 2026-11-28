@@ -551,9 +551,20 @@ def codex_tool_event(payload: Payload, base: Neutral) -> Neutral | None:
         )
         link = os.path.normpath(os.path.join(cwd, file.source))
         if file.action == "Delete File" and os.path.islink(link):
-            # Deleting a symlink leaves its target as it is.
+            # Deleting a symlink leaves its target as it is; an earlier
+            # change made through the symlink stays at the target's path.
             source = target = link
-            unlinked.add(link)
+            unlinked |= {link, os.path.join(
+                os.path.realpath(os.path.dirname(link)), os.path.basename(link),
+            )}
+            for key, change in list(changes.items()):
+                if key != link and os.path.normpath(
+                    os.path.join(cwd, str(change["path"]))
+                ) == link:
+                    source_of = os.path.normpath(os.path.join(cwd, str(change["source"])))
+                    changes[key] = change | {"path": key} | (
+                        {"source": key} if source_of == link else {}
+                    )
         # A moved symlink leaves its target, and the target's change, in place.
         moves_link = (
             file.action != "Delete File"

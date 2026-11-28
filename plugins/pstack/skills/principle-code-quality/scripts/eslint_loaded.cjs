@@ -27,9 +27,11 @@ if (out && typeof nodeModule.registerHooks === "function") {
     if (typeof name !== "string") return;
     const full = path.resolve(name);
     // An absent file the config looks for can be added by the edit, so it
-    // is kept below the real path of its nearest existing folder.
-    let folder = full;
-    let rest = "";
+    // is kept below the real path of its nearest existing folder. A file
+    // only looked for keeps its own name: ESLint looks for every flat
+    // config name, also a symlink to a file it never reads.
+    let folder = probe ? path.dirname(full) : full;
+    let rest = probe ? path.basename(full) : "";
     for (;;) {
       try {
         add(path.join(realpathSync(folder), rest), probe);
@@ -73,7 +75,8 @@ if (out && typeof nodeModule.registerHooks === "function") {
       const indexes = (folder) => suffixes.map((suffix) => path.join(folder, "index" + suffix));
       const mainOf = (folder) => {
         try {
-          const main = JSON.parse(readFileSync(path.join(folder, "package.json"), "utf8")).main;
+          const text = readFileSync(path.join(folder, "package.json"), "utf8");
+          const main = JSON.parse(text.replace(/^\uFEFF/, "")).main;
           return typeof main === "string" && main ? path.resolve(folder, main) : null;
         } catch {
           return null;

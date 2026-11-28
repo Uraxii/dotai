@@ -699,6 +699,23 @@ c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: link19/gen_a.py\
        harness="codex", RUFF_JSON=F403_ROW)
 expect_equal("a git-ignored file through a symlinked folder is not denied", "", c.decision())
 expect_contains("and says the ignore scope is unknown", "could not tell", str(c.output()))
+c.file("shared-ignore", "made/\nCASEY.PY\ngen_*.py\ndemo22.py\n")
+(c.project / ".gitignore").unlink()
+(c.project / ".gitignore").symlink_to(c.project / "shared-ignore")
+c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Add File: demo22.py\n+from math import *\n*** End Patch"),
+       harness="codex", RUFF_JSON=F403_ROW)
+expect_equal("a symlinked .gitignore, which git does not read, is not denied", "", c.decision())
+expect_contains("and says the ignore scope is unknown", "could not tell", str(c.output()))
+(c.project / ".gitignore").unlink()
+c.file(".gitignore", "made/\nCASEY.PY\ngen_*.py\n")
+xdg = c.project.parent / "xdg23"
+(xdg / "git").mkdir(parents=True)
+(xdg / "git" / "ignore").write_text("demo23.py\n")
+(c.project.parent / "global23").write_text("[core]\n\texcludesFile =\n")
+c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Add File: demo23.py\n+from math import *\n*** End Patch"),
+       harness="codex", RUFF_JSON=F403_ROW, XDG_CONFIG_HOME=str(xdg), GIT_CONFIG_GLOBAL=str(c.project.parent / "global23"))
+expect_equal("an empty global core.excludesFile is not read as the default file", "", c.decision())
+expect_contains("and says the ignore scope is unknown", "could not tell", str(c.output()))
 c = Case("ruff-ignore-no-git")
 c.file(".ignore", "skipme.py\n")
 c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Add File: skipme.py\n+from math import *\n*** End Patch"),
@@ -783,6 +800,20 @@ if NODE:
     recorded = listed.read_text().splitlines() if listed.exists() else []
     expect_equal("a realpathSync.native look-up by the config counts as a read", True, str(trace.project.resolve() / "eslint.config.cjs") in recorded)
     expect_equal("candidates stop at a symlink Node resolved", False, any("linked/index" in line for line in recorded))
+    trace.file("bom/package.json", "\ufeff{\"main\": \"lib/entry\"}\n")
+    trace.file("bom/lib/entry/index.js", "module.exports = 1;\n")
+    trace.file("probe/unrelated.cjs", "module.exports = 1;\n")
+    (trace.project / "probe" / "eslint.config.cjs").symlink_to(trace.project / "probe" / "unrelated.cjs")
+    trace.file("bom.cjs", "require('./bom');\n")
+    listed.unlink(missing_ok=True)
+    loader = {"NODE_OPTIONS": f"--require {ENGINE.parent / 'eslint_loaded.cjs'}", "PSTACK_ESLINT_LOADED": str(listed)}
+    subprocess.run([NODE, "bom.cjs"], cwd=trace.project, capture_output=True, env=os.environ | loader)
+    subprocess.run([NODE, "-e", "require('node:fs').existsSync('probe/eslint.config.cjs')"],
+                   cwd=trace.project, capture_output=True, env=os.environ | loader)
+    recorded = listed.read_text().splitlines() if listed.exists() else []
+    expect_equal("a package main is read from a package.json with a BOM", True, str(trace.project.resolve() / "bom/lib/entry.js") in recorded)
+    expect_equal("a symlink only looked for keeps its own name", True, "?" + str(trace.project.resolve() / "probe/eslint.config.cjs") in recorded)
+    expect_equal("and not the name of the file it points to", False, any("unrelated.cjs" in line for line in recorded))
     trace.file("eslint.config.mjs", "")
     trace.file("node_modules/disc/index.js", "module.exports = () => new Promise((done) => done(require('node:fs').existsSync(require('node:path').join(process.cwd(), 'eslint.config.mjs'))));\n")
     trace.file("node_modules/disc/run.js", "require('./index.js')();\n")
@@ -1425,6 +1456,19 @@ c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Delete File: middle17.py\n***
        harness="codex", **shared_env)
 expect_equal("a symlink chain resolves through the links the patch deleted", "deny", c.decision())
 expect_contains("and the deny names the new file", "middle17.py", str(c.output()))
+c.file("src20.py", "pass\n")
+(c.project / "build" / "alias20.py").symlink_to(c.project / "src20.py")
+c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: build/alias20.py\n@@\n-pass\n+x = [a for b in c for a in b]\n*** Delete File: build/alias20.py\n*** End Patch"),
+       harness="codex", **shared_env)
+expect_equal("an update through a symlink the patch then deletes is checked at the target", "deny", c.decision())
+expect_contains("and the deny names the target", "src20.py", str(c.output()))
+c.file("build/end21.py", "x = [a for b in c for a in b]\n")
+(c.project / "real21").mkdir()
+(c.project / "real21" / "middle.py").symlink_to(c.project / "build" / "end21.py")
+(c.project / "alias21").symlink_to(c.project / "real21")
+c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Delete File: alias21/middle.py\n*** Add File: real21/middle.py\n+x = [a for b in c for a in b]\n*** End Patch"),
+       harness="codex", **shared_env)
+expect_equal("a symlink deleted by a folder alias leaves its real name empty", "deny", c.decision())
 c.file("real9.py", "pass\n")
 c.file("aliases/keep", "")
 (c.project / "aliases" / "alias9.py").symlink_to("../real9.py")
