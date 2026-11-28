@@ -27,7 +27,7 @@ from guideline_files import (
 )
 from guideline_runners import (
     SKIPPED_FOR_BUDGET, Detection, Finding, Target, detect, glob_matches,
-    matches_code, project_disables, runs_on,
+    matches_code, runs_on,
 )
 
 EXCLUDED_DIRECTORIES = frozenset({
@@ -60,11 +60,13 @@ EVENT_KINDS = frozenset({
 })
 MAIN_AGENT = "main"
 PATH_IN_PROMPT = re.compile(r"[\w./\\-]*\.\w+(?:\.\w+)*")
-COMMENT_MARKERS = {
-    "python": ("#",), "gdscript": ("#",), "typescript": ("//", "/*"),
-    "javascript": ("//", "/*"), "csharp": ("//", "/*"),
+LINE_COMMENT = {
+    "python": "#", "gdscript": "#", "typescript": "//", "javascript": "//",
+    "csharp": "//",
 }
-BLOCK_COMMENT = re.compile(r"/\*.*?\*/")
+BLOCK_COMMENT_LANGUAGES = frozenset({"typescript", "javascript", "csharp"})
+TRIPLE_QUOTE_LANGUAGES = frozenset({"python", "gdscript"})
+QUOTES = {"typescript": "'\"`", "javascript": "'\"`"}
 SHEBANG_LANGUAGES = {"python": "python", "node": "javascript"}
 UNSAFE_NAME_CHARS = re.compile(r"[^A-Za-z0-9_-]")
 
@@ -263,24 +265,61 @@ class Hit(NamedTuple):
     text: str
     severity: str = "warn"
 
-    def identity(self, language: str) -> tuple[str, str, str]:
-        """The finding and its line's code, so a comment-only edit to a
-        line that already broke the rule does not count as new."""
-        markers = COMMENT_MARKERS.get(language, ())
-        code = self.text
-        if "/*" in markers:
-            # A closing */ left after the spans and // go is the end of a
-            # comment that opened on an earlier line.
-            code = BLOCK_COMMENT.sub(" ", code).split("//", 1)[0]
-            code = code.rsplit("*/", 1)[-1]
-        for marker in markers:
-            code = code.split(marker, 1)[0]
-        return (self.finding.tool, self.finding.code, code.strip())
+    @property
+    def identity(self) -> tuple[str, str, str]:
+        """The finding and its line's code without comments, so a
+        comment-only edit to a line that already broke the rule does not
+        count as new."""
+        return (self.finding.tool, self.finding.code, self.text)
 
 
-def line_text(content: str, line: int) -> str:
-    lines = content.splitlines()
-    return lines[line - 1].strip() if 0 < line <= len(lines) else ""
+def code_lines(content: str, language: str) -> list[str]:
+    """Each line of the content with its comments blanked; string text
+    stays. A block comment or a multi-line string carries across lines."""
+    marker = LINE_COMMENT.get(language)
+    if marker is None:
+        return content.split("\n")
+    quotes = QUOTES.get(language, "'\"")
+    lines: list[str] = []
+    current: list[str] = []
+    quote = ""
+    in_block = False
+    index = 0
+    while index < len(content):
+        char = content[index]
+        step = 1
+        if char == "\n":
+            lines.append("".join(current))
+            current = []
+            quote = quote if len(quote) > 1 or quote == "`" else ""
+        elif in_block:
+            if content.startswith("*/", index):
+                in_block, step = False, 2
+                current.append(" ")
+        elif quote:
+            if char == "\\" and content[index + 1:index + 2] not in ("", "\n"):
+                step = 2
+            elif content.startswith(quote, index):
+                step, quote = len(quote), ""
+            current.append(content[index:index + step])
+        elif content.startswith(marker, index):
+            end = content.find("\n", index)
+            step = (len(content) if end < 0 else end) - index
+        elif language in BLOCK_COMMENT_LANGUAGES and (
+            content.startswith("/*", index)
+        ):
+            in_block, step = True, 2
+        else:
+            if char in quotes:
+                triple = char * 3
+                quote = triple if language in TRIPLE_QUOTE_LANGUAGES and (
+                    content.startswith(triple, index)
+                ) else char
+                step = len(quote)
+            current.append(content[index:index + step])
+        index += step
+    lines.append("".join(current))
+    return lines
 
 
 def guideline_for(
@@ -298,15 +337,13 @@ def guideline_for(
     return best[1] if best else None
 
 
-def new_hits(
-    after: list[Hit], before: list[Hit], language: str
-) -> list[Hit]:
+def new_hits(after: list[Hit], before: list[Hit]) -> list[Hit]:
     """Hits the edit adds: the multiset difference by line code."""
-    remaining = Counter(hit.identity(language) for hit in before)
+    remaining = Counter(hit.identity for hit in before)
     added = []
     for hit in after:
-        if remaining[hit.identity(language)] > 0:
-            remaining[hit.identity(language)] -= 1
+        if remaining[hit.identity] > 0:
+            remaining[hit.identity] -= 1
         else:
             added.append(hit)
     return added
@@ -433,13 +470,7 @@ class Engine:
         excluded = any(glob_matches(rel, glob) for glob in guideline.exclude)
         if excluded or not in_paths:
             return None
-        detectors = tuple(
-            (tool, code) for tool, code in guideline.detectors
-            if not project_disables(tool, code, path, root)
-        )
-        if guideline.detectors and not detectors:
-            return None
-        return guideline._replace(detectors=detectors)
+        return guideline
 
     def note_language(
         self, language: str, guidelines: Iterable[Guideline]
@@ -496,6 +527,7 @@ class Engine:
         frozen = {tool: frozenset(found) for tool, found in codes.items()}
         results = detect(Detection(target, frozen, self.deadline, self.probes))
         hits, failed = [], set()
+        lines = code_lines(content, file.language)
         for tool, result in results.items():
             if result.findings is None:
                 failed.add(tool)
@@ -505,8 +537,9 @@ class Engine:
             for finding in result.findings:
                 owner = guideline_for(finding, file.guidelines)
                 if owner is not None:
-                    text = line_text(content, finding.line)
-                    hits.append(Hit(owner, finding, file.rel, text))
+                    line = finding.line
+                    text = lines[line - 1] if 0 < line <= len(lines) else ""
+                    hits.append(Hit(owner, finding, file.rel, text.strip()))
         return hits, failed
 
     def pre_write(self, change: FileChange) -> None:
@@ -520,7 +553,7 @@ class Engine:
         if change.before is not None and hits:
             old, failed = self.scan(file, change.before, quiet=True)
         blocking = [
-            hit for hit in new_hits(hits, old, file.language)
+            hit for hit in new_hits(hits, old)
             if hit.guideline.severity == "block" and hit.finding.blocks
         ]
         added = [hit for hit in blocking if hit.finding.tool not in failed]

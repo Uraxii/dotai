@@ -435,7 +435,9 @@ expect_lacks("ruff is not asked to select the ignored detector", "F403", c.args(
 
 c = Case("project-pyproject")
 c.file("pyproject.toml", '[tool.ruff.lint.per-file-ignores]\n"src/*" = ["F403"]\n')
-c.hook(c.write("src/app.py", "from os import *\n"), RUFF_JSON=F403_ROW)
+c.hook(c.write("src/app.py", "from os import *\n"), RUFF_JSON="[]")
+expect_contains("ruff applies the project's per-file ignores itself, so the hook still selects the code",
+                "F403", c.args().splitlines()[-1])
 expect_equal("a per-file ignore in pyproject.toml does not block", "", c.decision())
 c.hook(c.write("lib.py", "from os import *\n"), RUFF_JSON=F403_ROW)
 expect_equal("the same rule still blocks outside the ignored path", "deny", c.decision())
@@ -483,6 +485,15 @@ c.hook(c.write("a.ts", "var x = 1\n"), ESLINT_JSON=NO_VAR_ROW)
 expect_contains("eslint does not run without a project config",
                 "Notice: eslint has no project config, so detectors eslint:no-var did not run.", c.context())
 expect_equal("eslint was not started", "", c.args("eslint"))
+
+c = Case("eslint-package-config")
+c.file("package.json", '{"eslintConfig": {"rules": {"no-var": "error"}}}\n')
+c.hook(c.write("a.ts", "var x = 1\n"), ESLINT_JSON=NO_VAR_ROW)
+expect_equal("an eslintConfig in package.json is a project config", "deny", c.decision())
+c.file("package.json", '{"name": "demo"}\n')
+c.hook(c.write("b.ts", "var x = 1\n"), ESLINT_JSON=NO_VAR_ROW)
+expect_contains("a package.json without eslintConfig is not",
+                "eslint has no project config", c.context())
 
 c = Case("eslint-config")
 c.file("eslint.config.js", "export default [];\n")
@@ -820,6 +831,11 @@ c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: demo.py\n@@\n+fr
        harness="codex")
 expect_equal("an insertion-only hunk goes after the last line of a file with no final newline",
              '"""\n"""\nfrom os import *\n', (WORK / "ruff.stdin").read_text())
+c.file("demo.py", "x = 1\n")
+c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: demo.py\n@@\n+from os import *\n@@\n-x = 1\n+x = 2\n"
+                             "*** End of File\n*** End Patch"), harness="codex")
+expect_equal("an insertion before an End of File hunk goes after the original last line, as Codex does",
+             "x = 2\nfrom os import *\n", (WORK / "ruff.stdin").read_text())
 c.file("demo.py", "# release \u2014 notes\npass\n")
 c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: demo.py\n@@ # release - notes\n-pass\n"
                              "+from os import *\n*** End Patch"), harness="codex")
@@ -841,6 +857,13 @@ expect_equal("and when the comment opened on an earlier line", "", c.decision())
 c.file("app.js", "var x = 1; // matches */foo\n")
 c.hook(c.write("app.js", "var x = 1; // matches foo\n"), ESLINT_JSON=NO_VAR_ROW)
 expect_equal("and when a // comment holds */", "", c.decision())
+c.file("app.js", "/*\n * old // text */ var x = 1;\n")
+c.hook(c.write("app.js", "/*\n * new // text */ var x = 1;\n"),
+       ESLINT_JSON='[{"messages":[{"ruleId":"no-var","line":2,"severity":2}]}]')
+expect_equal("and when an open block comment holds //", "", c.decision())
+c.file("app.js", 'var a = "//"; var x = 1;\n')
+c.hook(c.write("app.js", 'var a = "//"; let x = 1; var y = 2;\n'), ESLINT_JSON=NO_VAR_ROW)
+expect_equal("a // inside a string is code, so the changed line still counts as new", "deny", c.decision())
 
 c = Case("eslint-project-warns")
 c.file("eslint.config.js", "export default [];\n")

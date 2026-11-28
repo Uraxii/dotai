@@ -32,7 +32,6 @@ ESLINT_CONFIG_PATTERN = re.compile(
 IGNORE_KEYS = ("ignore", "extend-ignore")
 SELECT_KEYS = ("select", "extend-select")
 RUFF_EXTENDS_MAX = 10
-PER_FILE_KEYS = ("per-file-ignores", "extend-per-file-ignores")
 EDITORCONFIG_LINE_LENGTH = re.compile(
     r"^\s*max_line_length\s*=\s*(\d+)\s*$", re.MULTILINE
 )
@@ -136,33 +135,6 @@ def ruff_tables(config: Path) -> Iterator[Mapping[str, object]]:
         yield from ruff_lint_tables(linked)
 
 
-class RuffIgnores(NamedTuple):
-    everywhere: frozenset[str]
-    this_file: frozenset[str]
-
-
-def ruff_ignored(path: Path, root: Path) -> RuffIgnores:
-    """Rule selectors the project's ruff config ignores: in its ignore
-    lists, and in per-file ignores that match this file."""
-    config = ruff_config(path, root)
-    if config is None:
-        return RuffIgnores(frozenset(), frozenset())
-    rel = path.relative_to(config.parent).as_posix()
-    everywhere: set[str] = set()
-    this_file: set[str] = set()
-    for table in ruff_tables(config):
-        for key in IGNORE_KEYS:
-            everywhere.update(as_strings(table.get(key)))
-        for key in PER_FILE_KEYS:
-            per_file = table.get(key)
-            if not isinstance(per_file, dict):
-                continue
-            for glob, codes in per_file.items():
-                if glob_matches(rel, str(glob)):
-                    this_file.update(as_strings(codes))
-    return RuffIgnores(frozenset(everywhere), frozenset(this_file))
-
-
 def selected_by(code: str, selectors: frozenset[str]) -> bool:
     return any(
         selector == "ALL" or code.startswith(selector)
@@ -174,17 +146,6 @@ def matches_code(tool: str, found: str, selector: str) -> bool:
     """Ruff codes match by prefix (`PTH` selects PTH123); other tools'
     rule ids match exactly."""
     return found.startswith(selector) if tool == "ruff" else found == selector
-
-
-def project_disables(tool: str, code: str, path: Path, root: Path) -> bool:
-    """True when the project's own config turns this detector off."""
-    if tool != "ruff":
-        # shortcut: only ruff's ignore lists are read, add a reader per
-        # tool when another one stores them in a format stdlib can parse.
-        return False
-    # A code in the ignore lists is left to ruff: it is not added to the
-    # selection, so ruff reports it only if a more specific select keeps it.
-    return selected_by(code, ruff_ignored(path, root).this_file)
 
 
 def line_length(root: Path) -> int:
@@ -249,11 +210,17 @@ def ruff_arguments(target: Target) -> list[str]:
             code for code in target.codes if not selected_by(code, named)
         )
         # A selector on the command line beats the config, so the config's
-        # narrower ignores under an added code go on the command line too.
+        # narrower ignores under an added code go on the command line too,
+        # unless the config selects that rule again at least as narrowly.
+        selects = [
+            selector for table in tables for key in SELECT_KEYS
+            for selector in as_strings(table.get(key))
+        ]
         narrower = sorted(
             selector for table in tables for key in IGNORE_KEYS
             for selector in as_strings(table.get(key))
             if any(selector.startswith(code) for code in added)
+            and not any(again.startswith(selector) for again in selects)
         )
         preview = any("preview" in table for table in tables)
         return [
@@ -291,9 +258,20 @@ def run_ruff(executable: str, target: Target) -> RunResult:
     return RunResult(findings, "")
 
 
+def package_eslint_config(package: Path) -> bool:
+    """True when package.json holds an eslintConfig (legacy config)."""
+    try:
+        data = json.loads(package.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return False
+    return isinstance(data, dict) and "eslintConfig" in data
+
+
 def eslint_config(path: Path, root: Path) -> bool:
     return any(
-        ESLINT_CONFIG_PATTERN.match(entry.name)
+        ESLINT_CONFIG_PATTERN.match(entry.name) or (
+            entry.name == "package.json" and package_eslint_config(entry)
+        )
         for directory in parents_within(path, root)
         if directory.is_dir()
         for entry in directory.iterdir()

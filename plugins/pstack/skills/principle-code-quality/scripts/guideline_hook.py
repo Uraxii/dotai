@@ -292,12 +292,14 @@ def find_hunk(
 
 def apply_update(current: str, body: Sequence[str]) -> str | None:
     """Apply the hunks in memory the way Codex does; None when a hunk or
-    its anchor does not match the file. Codex works on the lines without
-    a final empty one and always ends the file with a newline."""
+    its anchor does not match the file. Codex finds every hunk in the
+    original lines, without a final empty one, then replaces from the
+    end, and always ends the file with a newline."""
     ending = "\r\n" if "\r\n" in current else "\n"
     lines = current.split(ending)
     if lines[-1] == "":
         lines.pop()
+    replacements: list[tuple[int, int, list[str]]] = []
     cursor = 0
     for hunk in hunks(body):
         if hunk.anchor:
@@ -308,8 +310,7 @@ def apply_update(current: str, body: Sequence[str]) -> str | None:
         old = [line[1:] for line in hunk.rows if line[0] in " -"]
         new = [line[1:] for line in hunk.rows if line[0] in " +"]
         if not old:
-            at = len(lines) - 1 if lines and lines[-1] == "" else len(lines)
-            lines[at:at] = new
+            replacements.append((len(lines), 0, new))
             continue
         index = find_hunk(lines, hunk, old, cursor)
         if index is None and old[-1] == "":
@@ -318,8 +319,12 @@ def apply_update(current: str, body: Sequence[str]) -> str | None:
             index = find_hunk(lines, hunk, old, cursor)
         if index is None:
             return None
-        lines[index:index + len(old)] = new
-        cursor = index + len(new)
+        replacements.append((index, len(old), new))
+        cursor = index + len(old)
+    for start, length, new in sorted(
+        replacements, key=lambda item: item[0], reverse=True
+    ):
+        lines[start:start + length] = new
     return ending.join(lines) + ending
 
 

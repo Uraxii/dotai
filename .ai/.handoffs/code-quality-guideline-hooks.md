@@ -163,3 +163,10 @@ Scratch paths named in those notes (under `/tmp/...`) are gone; ignore them.
 - `locate()` uses `shutil.which` over node_modules/.bin, .venv/bin, .venv/Scripts, so Windows finds eslint.cmd / ruff.exe.
 - Comment identity cuts `//` before looking for a closing `*/`.
 - mise run ci green: guidelines.test.py 201/201.
+
+## Update: review 0353786a findings fixed (3 blocking, 1 non-blocking)
+- Comment identity: `code_lines()` lexes the whole file (line/block comments, strings, triple quotes, JS template strings) and Hit.text is the line with comments blanked. Replaces the per-line regex.
+- Codex apply: hunks are located in the original lines, then replaced from the end (Codex `compute_replacements` + reverse apply), so an insertion before an EOF hunk lands after the original last line.
+- Ruff per-file ignores: the hook no longer reads them; ruff applies them itself even to --extend-select codes (verified with ruff 0.17.6). `project_disables`/`ruff_ignored` removed. Narrower ignores are not put on the CLI when the config re-selects the rule as narrowly.
+- ESLint: a package.json with `eslintConfig` counts as a project config.
+- mise run ci green: guidelines.test.py 207/207.
