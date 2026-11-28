@@ -681,6 +681,12 @@ with (c.project / ".git" / "config").open("a") as config:
 c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Add File: localx.py\n+from math import *\n*** End Patch"),
        harness="codex", RUFF_JSON=F403_ROW)
 expect_equal("a repository's own core.excludesFile is not used, as in Ruff", "deny", c.decision())
+with (c.project / ".git" / "config").open("a") as config:
+    config.write("[core]\n\tignoreCase = true\n")
+c.file(".gitignore", "made/\nCASEY.PY\n")
+c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Add File: casey.py\n+from math import *\n*** End Patch"),
+       harness="codex", RUFF_JSON=F403_ROW)
+expect_equal("git's core.ignoreCase is not used, as Ruff matches case-sensitively", "deny", c.decision())
 c = Case("ruff-ignore-no-git")
 c.file(".ignore", "skipme.py\n")
 c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Add File: skipme.py\n+from math import *\n*** End Patch"),
@@ -756,6 +762,15 @@ if NODE:
     recorded = listed.read_text().splitlines() if listed.exists() else []
     expect_equal("a name ending in / tries no sibling file", False, str(trace.project.resolve() / "pkgdir.js") in recorded)
     expect_equal("a package main tries its extensions in order", True, str(trace.project.resolve() / "preset/src/preset.js") in recorded)
+    trace.file("config/linked.js", "module.exports = 1;\n")
+    (trace.project / "linked.js").symlink_to(trace.project / "config" / "linked.js")
+    trace.file("native.cjs", "require('node:fs').realpathSync.native(require('node:path').join(__dirname, 'eslint.config.cjs')); require('./linked');\n")
+    listed.unlink(missing_ok=True)
+    subprocess.run([NODE, "native.cjs"], cwd=trace.project, capture_output=True, env=os.environ | {
+        "NODE_OPTIONS": f"--require {ENGINE.parent / 'eslint_loaded.cjs'}", "PSTACK_ESLINT_LOADED": str(listed)})
+    recorded = listed.read_text().splitlines() if listed.exists() else []
+    expect_equal("a realpathSync.native look-up by the config counts as a read", True, str(trace.project.resolve() / "eslint.config.cjs") in recorded)
+    expect_equal("candidates stop at a symlink Node resolved", False, any("linked/index" in line for line in recorded))
     trace.file("eslint.config.mjs", "")
     trace.file("node_modules/disc/index.js", "module.exports = () => new Promise((done) => done(require('node:fs').existsSync(require('node:path').join(process.cwd(), 'eslint.config.mjs'))));\n")
     trace.file("node_modules/disc/run.js", "require('./index.js')();\n")
@@ -1379,6 +1394,25 @@ c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: a14.py\n*** Move
        harness="codex", **shared_env)
 expect_equal("an add through the symlink a move left is checked at the real path", "deny", c.decision())
 expect_contains("and the deny names it", "a14.py", str(c.output()))
+c.file("src/new15.py", "pass\n")
+c.file("build/old15.py", "x = [a for b in c for a in b]\n")
+(c.project / "build" / "alias15.py").symlink_to(c.project / "src" / "new15.py")
+c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: build/old15.py\n*** Move to: build/alias15.py\n@@\n x = [a for b in c for a in b]\n+# moved\n*** End Patch"),
+       harness="codex", **shared_env)
+expect_equal("a move onto a symlink keeps the move source's baseline at the real path", "deny", c.decision())
+expect_contains("and the deny names the real path", "new15.py", str(c.output()))
+c.file("build/real16/app.py", "pass\n")
+(c.project / "alias16").symlink_to(c.project / "build" / "real16")
+c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: alias16/app.py\n@@\n-pass\n+x = [a for b in c for a in b]\n*** End Patch"),
+       harness="codex", **shared_env)
+expect_equal("an edit through a symlinked folder is checked at its own name", "deny", c.decision())
+c.file("build/real17.py", "x = [a for b in c for a in b]\n")
+(c.project / "middle17.py").symlink_to(c.project / "build" / "real17.py")
+(c.project / "build" / "alias17.py").symlink_to(c.project / "middle17.py")
+c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Delete File: middle17.py\n*** Add File: build/alias17.py\n+x = [a for b in c for a in b]\n*** End Patch"),
+       harness="codex", **shared_env)
+expect_equal("a symlink chain resolves through the links the patch deleted", "deny", c.decision())
+expect_contains("and the deny names the new file", "middle17.py", str(c.output()))
 c.file("real9.py", "pass\n")
 c.file("aliases/keep", "")
 (c.project / "aliases" / "alias9.py").symlink_to("../real9.py")

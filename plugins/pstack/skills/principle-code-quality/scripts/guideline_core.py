@@ -72,14 +72,19 @@ def resolve_in_root(
     raw: str, cwd: str, root: str, follow: bool = True,
 ) -> Path | None:
     """Resolve a payload path; None when it leaves the project root.
-    Without follow, a symlink file keeps its own name, as linters see it."""
+    Without follow, a path below the root keeps its own names, also of
+    symlinks, as linters see it."""
     try:
+        top = Path(root).resolve()
+        full = Path(os.path.normpath(Path(cwd) / raw))
+        lexical = Path(os.path.normpath(root))
         if follow:
-            resolved = (Path(cwd) / raw).resolve()
+            resolved = full.resolve()
+        elif full.is_relative_to(lexical):
+            resolved = top / full.relative_to(lexical)
         else:
-            full = Path(os.path.normpath(Path(cwd) / raw))
             resolved = full.parent.resolve() / full.name
-        inside = resolved.is_relative_to(Path(root).resolve())
+        inside = resolved.is_relative_to(top)
     except (OSError, ValueError):
         return None
     return resolved if inside else None

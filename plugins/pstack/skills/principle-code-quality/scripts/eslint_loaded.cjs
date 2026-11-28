@@ -93,8 +93,15 @@ if (out && typeof nodeModule.registerHooks === "function") {
         for (const candidate of candidates) record(candidate);
         throw error;
       }
+      // Node reports the real path, so a candidate symlink to it is found.
       const found = result.url.startsWith("file:") ? fileURLToPath(result.url) : null;
-      const index = found ? candidates.indexOf(found) : -1;
+      const index = found ? candidates.findIndex((candidate) => {
+        try {
+          return candidate === found || realpathSync(candidate) === found;
+        } catch {
+          return false;
+        }
+      }) : -1;
       for (const candidate of index < 0 ? candidates : candidates.slice(0, index)) record(candidate);
       if (found) record(found);
       return result;
@@ -143,6 +150,10 @@ if (out && typeof nodeModule.registerHooks === "function") {
     [fs.promises, "realpath"],
   ]) {
     wrap(owner, name, (file) => record(file, !fromProject()));
+  }
+  // The wrappers above copied the original `native`, so it is wrapped on them.
+  for (const owner of [fs.realpathSync, fs.realpath]) {
+    wrap(owner, "native", (file) => record(file, !fromProject()));
   }
   // A listed folder is kept as `folder/*`: a file the edit adds in it
   // can change the config, also when a glob library lists it.

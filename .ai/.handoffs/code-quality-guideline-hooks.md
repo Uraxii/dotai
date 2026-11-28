@@ -332,3 +332,9 @@ Scratch paths named in those notes (under `/tmp/...`) are gone; ignore them.
 - Ruff git-ignore check passes `-c core.excludesFile=<global value or $XDG_CONFIG_HOME/git/ignore>`: Ruff's matcher ignores a repository's own `core.excludesFile`.
 - ESLint recorder candidates follow Node's `require` order: exact name and extensions (none for a name ending in `/`, `.`, `..`), then `package.json`, its `main` with extensions and index files, then the folder's index files.
 - Codex: every symlink a file is edited through is also checked (`link_names`), plus the real path; a move onto a symlink to the file itself leaves the symlink, so a later Add through it is checked at the real path.
+
+## Update: review b763fa17 (eca9e2b) findings fixed (5 blocking, 1 non-blocking)
+- Ruff git-ignore check also passes `-c core.ignoreCase=false`: Ruff matches case-sensitively.
+- A code file below the root keeps its lexical name, also through a symlinked folder (`resolve_in_root(follow=False)`); `with_link_targets` adds the real path whenever it differs, and a moved file keeps its move source as the baseline there.
+- `patched_realpath` follows symlinks one link at a time and stops at a link the patch deleted, so a chain broken by the same patch resolves to the new regular file.
+- Recorder wraps `realpathSync.native` and `realpath.native`, and stops candidates at the first one whose real path is the file Node found.

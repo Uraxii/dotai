@@ -476,8 +476,10 @@ def ruff_ignore_skip(target: Target) -> RunResult | None:
     }
     if respects == {False}:
         return None
+    # Ruff matches case-sensitively, whatever git's core.ignoreCase says.
     ignored = git_matches(
         target, "-c", f"core.excludesFile={global_git_excludes()}",
+        "-c", "core.ignoreCase=false",
     )
     # A `.ignore` can also un-ignore what git ignores, with `!name`.
     dot_ignore = any(

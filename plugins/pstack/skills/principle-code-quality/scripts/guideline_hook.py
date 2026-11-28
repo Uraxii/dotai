@@ -22,7 +22,7 @@ import sys
 import tempfile
 import time
 import traceback
-from collections.abc import Callable, Iterator, Sequence
+from collections.abc import Callable, Collection, Iterator, Sequence
 from pathlib import Path
 from typing import NamedTuple
 
@@ -111,24 +111,42 @@ def read_disk(raw: str, cwd: str, root: str) -> Disk:
         return Disk(None, f"it could not be read ({type(error).__name__})")
 
 
+def patched_realpath(path: str, unlinked: Collection[str] = ()) -> str:
+    """The real path, through the symlinks the patch has not deleted."""
+    for _ in range(40):
+        if path in unlinked:
+            return path
+        parent = os.path.realpath(os.path.dirname(path))
+        path = os.path.join(parent, os.path.basename(path))
+        if path in unlinked or not os.path.islink(path):
+            return path
+        path = os.path.normpath(os.path.join(parent, os.readlink(path)))
+    return path
+
+
 def with_link_targets(
     files: list[Neutral], cwd: str, root: str,
     unlinked: frozenset[str] | set[str] = frozenset(),
 ) -> list[Neutral]:
-    """A file edited through a symlink is also checked at the file the
-    symlink points to, with that path's own lint settings."""
+    """A file edited through a symlink, or a symlinked folder, is also
+    checked at its real path, with that path's own lint settings."""
     named = {os.path.normpath(os.path.join(cwd, str(file["path"]))) for file in files}
-    top = Path(root).resolve()
+    lexical, top = os.path.normpath(root), Path(root).resolve()
     extra: list[Neutral] = []
     for change in files:
         full = os.path.normpath(os.path.join(cwd, str(change["path"])))
-        if change.get("after") is None or full in unlinked or not os.path.islink(full):
+        if change.get("after") is None:
             continue
-        real = os.path.realpath(full)
-        if real in named or top not in Path(real).parents:
+        real = patched_realpath(full, unlinked)
+        # The same name below a symlinked root is the same file.
+        same = Path(full).is_relative_to(lexical) and Path(real) == top / os.path.relpath(full, lexical)
+        if real == full or same or real in named or top not in Path(real).parents:
             continue
         named.add(real)
-        extra.append(change | {"path": real, "source": real})
+        # A moved file keeps the baseline of the path it was moved from.
+        source = str(change.get("source") or "")
+        moved = source and os.path.normpath(os.path.join(cwd, source)) != full
+        extra.append(change | {"path": real, "source": source if moved else real})
     return files + extra
 
 
@@ -525,7 +543,7 @@ def codex_tool_event(payload: Payload, base: Neutral) -> Neutral | None:
     link_names: dict[str, list[str]] = {}
     for file in sections:
         source, target = (
-            path if path in unlinked else os.path.realpath(path)
+            patched_realpath(path, unlinked)
             for path in (
                 os.path.normpath(os.path.join(cwd, name))
                 for name in (file.source, file.target)
@@ -553,7 +571,7 @@ def codex_tool_event(payload: Payload, base: Neutral) -> Neutral | None:
                                "after": None, "source": file.source}
             deleted.add(source)
             continue
-        if file.action != "Delete File" and dest not in unlinked and os.path.islink(dest):
+        if file.action != "Delete File" and dest not in unlinked and target != dest:
             link_names.setdefault(target, []).append(dest)
         prior = changes.get(source) if moves_link else changes.pop(source, None)
         if file.action == "Delete File":
@@ -599,7 +617,7 @@ def codex_tool_event(payload: Payload, base: Neutral) -> Neutral | None:
             change | {"path": name, "source": name}
             for name in dict.fromkeys(names)
             if name != own and name not in unlinked
-            and os.path.realpath(name) == key
+            and patched_realpath(name, unlinked) == key
         ]
     return {"kind": "pre_write",
             "files": with_link_targets(files, cwd, root, unlinked)}
