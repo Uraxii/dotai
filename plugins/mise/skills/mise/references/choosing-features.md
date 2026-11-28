@@ -21,7 +21,7 @@ Query: `mise backends ls`, `mise search <name>`, `mise install --dry-run <backen
 | The repository has | Do this |
 |---|---|
 | No version file | Put exact versions in `mise.toml`. |
-| `.tool-versions` | mise reads it. Keep it if another tool reads it. If not, move the versions to `mise.toml`. |
+| `.tool-versions` | Move the versions to `mise.toml`. mise reads the file, but `mise lock` cannot lock its tools. If another tool reads the file, keep it and keep its versions equal to `mise.toml`. |
 | `.nvmrc`, `.python-version`, or a similar file | mise does not read it by default. If CI or another tool reads the file, keep it and add the tool to the `idiomatic_version_file_enable_tools` setting. If not, move the version to `mise.toml`. |
 
 `mise.toml` wins over `.tool-versions` in the same directory.
@@ -34,7 +34,7 @@ Query: `mise settings ls --all`, `mise ls --current`.
 | Need | Use |
 |---|---|
 | One command or a short chain | A TOML task in `mise.toml`. |
-| Shell logic, or typed arguments | A file task. Start from [templates/file-task](../templates/file-task). |
+| Shell logic, or typed arguments | A file task. Copy [templates/file-task](../templates/file-task) to `mise-tasks/<task name>`. |
 | The repository has the command as a package script or a Makefile target | A TOML task that calls it. Do not copy its body. |
 | Many tasks with one shape | `[task_templates.<name>]`, then `extends = "<name>"` in each task. |
 
@@ -53,7 +53,7 @@ Query: `mise tasks ls`, `mise tasks info <task>`, `mise tasks validate`.
 | Changes with the environment, such as staging or CI | `mise.<env>.toml`. Select it with `MISE_ENV` or `-E`. |
 | Is for one machine, or is secret | `mise.local.toml`. Keep this file out of git. The user adds a secret value, not the agent. |
 | Is in an env file that the repository has | `_.file = ".env"` in `[env]`. Keep the env file out of git. |
-| Must exist and has no safe default | `NAME = { required = "<how to get it>" }`. `mise run` then stops with that help text. |
+| Must exist and has no safe default | `NAME = { required = "<how to get it>" }`. While the value is not set, each mise command stops with that help text. Add it only when the user agrees. |
 | Comes from a secret manager | Ask the user. The secret sources in mise are experimental. |
 
 `mise.local.toml` wins over `mise.<env>.toml`, and that wins over `mise.toml`.
@@ -74,7 +74,7 @@ Query: `mise tasks ls --all`.
 
 | Need | Command | Check in the output |
 |---|---|---|
-| CI workflow | `mise generate github-action` | The push trigger uses the current branch name. The action references are tags. Pin them if the repository pins actions. |
+| CI workflow | `mise generate github-action --write` | The push trigger uses the current branch name. Set it to the branch that the repository releases from. The action references are tags. Pin them if another workflow in the repository pins actions. |
 | Task documentation | `mise generate task-docs` | Nothing. |
 | Devcontainer | `mise generate devcontainer` | The base image. |
 | Script that installs a pinned mise | `mise generate install-script` | The mise version in the script. |

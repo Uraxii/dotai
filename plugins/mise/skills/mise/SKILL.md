@@ -15,13 +15,15 @@ metadata:
 1. Run a tool with `mise exec -- <command>`. Run a task with `mise run <task>`. An agent shell has no mise activation, so a bare command runs the system tool.
 2. Do not rely on shims. A shim can run a system binary of the same name and give no error.
 3. Run `mise <command> --help` before you use a flag or a subcommand. The mise documentation describes the newest release. `mise run` reads an unknown flag as a task name.
-4. Pin each tool to an exact version with `mise use --pin`. Commit `mise.toml` and `mise.lock`.
+4. Pin each tool to an exact version with `mise use --pin`. Keep `mise.toml` and `mise.lock` in one commit.
 5. Wrap the test, lint, and build commands that the repository has. Do not replace them.
 
 ## Trust and secrets
 
 - Read each mise config file in a repository that you did not set up, before you run a mise command there. `mise run`, `mise exec`, and `mise install` trust the config with no prompt and install each missing tool.
+- Other mise commands stop with a `not trusted` error. Run `mise trust` after you read the config.
 - To inspect a config without trust, set `MISE_SAFE=1`. mise then loads tools and tasks and drops `[env]`.
+- A secret value is a password, a token, a key, or a URL that holds one.
 - Put no secret value in a file that git tracks. The user adds a secret value, not the agent.
 - Do not print the output of `mise env` into a reply or a log. Do not copy the `mise://env` MCP resource. mise hides a secret value only in task output.
 - Do not turn on an experimental feature on your own decision. The user decides.
@@ -51,18 +53,19 @@ To add a linter or a suite, add one task. No other task changes.
 
 - [templates/mise.toml](templates/mise.toml) is the base config for a repository that has none.
 - [templates/test-tasks.toml](templates/test-tasks.toml) is the test block for a repository that has a `mise.toml`.
-- [templates/file-task](templates/file-task) is a script task with typed arguments.
+- [templates/file-task](templates/file-task) is a script task with typed arguments. Copy it to `mise-tasks/<task name>` and make the file executable.
 
-Each placeholder starts with `REPLACE_WITH_`. Replace each one. The check script fails while one remains.
+Each placeholder starts with `REPLACE_WITH_`. Replace each one, and delete the template comment above it. The check script fails while a placeholder remains.
 
 ## Verify
 
 1. Run `scripts/check-mise-setup.sh -C <repository>`. Each `FAIL` line has a `fix:` line below it. Do the fix and run the script again.
-2. Run `mise run ci` in the repository.
+2. Run `mise run --force ci` in the repository. Without `--force`, mise can skip a suite and exit 0.
 
 The work is done when both commands exit 0.
 
-- `--run <task>` makes the script run one task after each check passes. Give the full task name, not an alias.
+- The script only reads. It does not trust a config, install a tool, or run a task. Its last line gives the number of failures.
+- In a monorepo, run the script for the root and for each project.
 - Do not use `mise doctor` as the check. It fails in each shell that has no mise activation.
 
 ## Ask the user
