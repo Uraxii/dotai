@@ -548,6 +548,12 @@ class Engine:
         root = Path(self.event.root).resolve()
         guideline_runners.trace_deadline = self.deadline + TRACE_GRACE_S
         settings: dict[str, frozenset[str]] = {}
+        # A code file in a symlinked folder also gets the settings of its
+        # real folder.
+        real_code = file.path.parent.resolve() / file.path.name
+        codes = [file.path] + [real_code] * (
+            real_code != file.path and real_code.is_relative_to(root)
+        )
         # A file can be its own lint config, so it is not left out.
         for other in (*self.event.files, *self.event.unchecked) if added else ():
             for raw in {other.path, other.source} - {""}:
@@ -559,8 +565,8 @@ class Engine:
                 )} - {None}
                 tools = frozenset().union(*(
                     setting_tools(
-                        setting, file.path, file.language, root, other.after
-                    ) for setting in names
+                        setting, code, file.language, root, other.after
+                    ) for setting in names for code in codes
                 ))
                 if tools:
                     shown = real or next(iter(names))

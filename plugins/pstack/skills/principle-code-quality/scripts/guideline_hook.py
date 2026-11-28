@@ -553,6 +553,13 @@ def codex_tool_event(payload: Payload, base: Neutral) -> Neutral | None:
             os.path.realpath(os.path.dirname(path)), os.path.basename(path),
         )
 
+    def is_link(path: str) -> bool:
+        """A symlink the patch has not deleted, by any folder's name."""
+        return (
+            path not in unlinked and named(path) not in unlinked
+            and os.path.islink(path)
+        )
+
     for file in sections:
         source, target = (
             patched_realpath(path, unlinked)
@@ -562,7 +569,7 @@ def codex_tool_event(payload: Payload, base: Neutral) -> Neutral | None:
             )
         )
         link = os.path.normpath(os.path.join(cwd, file.source))
-        if file.action == "Delete File" and os.path.islink(link):
+        if file.action == "Delete File" and is_link(link):
             # Deleting a symlink leaves its target as it is; an earlier
             # change made through the symlink stays at the target's path.
             source = target = link
@@ -580,12 +587,12 @@ def codex_tool_event(payload: Payload, base: Neutral) -> Neutral | None:
         moves_link = (
             file.action != "Delete File"
             and link != os.path.normpath(os.path.join(cwd, file.target))
-            and link not in unlinked and os.path.islink(link)
+            and is_link(link)
         )
         dest = os.path.normpath(os.path.join(cwd, file.target))
         if (
             file.action != "Delete File" and not moves_link and dest != link
-            and dest not in unlinked and os.path.islink(dest) and target == source
+            and is_link(dest) and target == source
         ):
             # Moved onto a symlink to itself: Codex writes through the
             # symlink, then removes the file, so the text is lost.
@@ -595,7 +602,7 @@ def codex_tool_event(payload: Payload, base: Neutral) -> Neutral | None:
             continue
         if file.action != "Delete File":
             reals[dest] = target
-        if file.action != "Delete File" and dest not in unlinked and target != dest:
+        if file.action != "Delete File" and dest not in unlinked and named(dest) not in unlinked and target != dest:
             link_names.setdefault(target, []).append(dest)
             through.add(named(dest))
         prior = changes.get(source) if moves_link else changes.pop(source, None)

@@ -108,6 +108,8 @@ if (out && typeof nodeModule.registerHooks === "function") {
         }
       }) : -1;
       for (const candidate of index < 0 ? candidates : candidates.slice(0, index)) record(candidate);
+      // A candidate symlink keeps its own name, also to a file outside the root.
+      if (index >= 0) record(candidates[index], false, true);
       if (found) {
         record(found);
         try {

@@ -356,3 +356,8 @@ Scratch paths named in those notes (under `/tmp/...`) are gone; ignore them.
 ## Update: review a49ea2af (1772012) findings fixed (1 blocking, 1 non-blocking)
 - Legacy mode drops the code file from the whole trace (reads and `?` look-ups) unless it is marked `!`; real ESLint 9 legacy `--print-config` looks the code file up.
 - Codex: `reals` keeps the real path each written path led to when its section was applied, so a later delete of a middle link does not move the real-path check.
+
+## Update: review 770712f1 (09bc0ee) findings fixed (2 blocking, 1 non-blocking)
+- A code file in a symlinked folder gets the same-edit settings of its lexical and its real folders.
+- Codex: a path is a symlink only if the patch has not deleted it by any folder's name (`is_link`).
+- Recorder: the candidate symlink Node resolved keeps its own name, also when its target is outside the root.
