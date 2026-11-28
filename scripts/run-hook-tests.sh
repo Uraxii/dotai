@@ -30,7 +30,7 @@ for test in "$root"/plugins/*/hooks/tests/*.test.py; do
   python3 "$test" || failed=1
 done
 (cd "$root/plugins/pstack/skills/principle-code-quality/scripts" \
-  && python3 -m unittest -q 2>&1 | tail -n 3) || failed=1
+  && python3 -m unittest -q) || failed=1
 bash "$root/plugins/shunt/evals/run.sh" 2>&1 | grep -E 'FAIL|^Total'
 [ "${PIPESTATUS[0]}" = 0 ] || failed=1
 exit "$failed"
