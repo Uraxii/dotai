@@ -270,6 +270,45 @@ capture env MISE_ENV=ci bash "$check" -C "$dir"
 expect_equal "MISE_ENV=ci gives the result of a run without it" "$plain" "$STATUS $STDOUT"
 expect_equal "a mise.ci.toml is not checked without MISE_ENV" "0 check-mise-setup.sh: $dir: 0 failed" "${plain%$'\n'}"
 
+for file in .mise/config.local.toml .config/mise/mise.local.toml; do
+  dir=$(repo "local-${file//\//-}")
+  mkdir -p "$dir/${file%/*}"
+  printf '[tools]\njq = "1.7.1"\n' >"$dir/$file"
+  (cd "$dir" && mise trust -q "$file" </dev/null)
+  run_hook "$check" -C "$dir"
+  expect_equal "a tool request in $file does not fail a pinned repository" \
+    "0 check-mise-setup.sh: $dir: 0 failed" "$STATUS ${STDOUT%$'\n'}"
+done
+
+root="$WORK/local-monorepo"
+mkdir -p "$root/apps"
+printf 'monorepo_root = true\n\n[monorepo]\nconfig_roots = ["apps/web"]\n' >"$root/mise.toml"
+cp -R "$WORK/good" "$root/apps/web"
+dir="$root/apps/web"
+(cd "$root" && mise trust -q </dev/null)
+(cd "$dir" && mise trust -q </dev/null)
+run_hook "$check" -C "$dir"
+expect_equal "a sound monorepo project passes with no local config" \
+  "0 check-mise-setup.sh: $dir: 0 failed" "$STATUS ${STDOUT%$'\n'}"
+for file in "$root/mise.local.toml" "$root/apps/mise.local.toml"; do
+  printf '[tools]\nyq = "4.44.3"\n' >"$file"
+  (cd "${file%/*}" && mise trust -q mise.local.toml </dev/null)
+  run_hook "$check" -C "$dir"
+  expect_equal "a tool request in ${file#"$root"/} does not fail a sound monorepo project" \
+    "0 check-mise-setup.sh: $dir: 0 failed" "$STATUS ${STDOUT%$'\n'}"
+  rm "$file"
+done
+
+dir="$WORK/override-filenames"
+cp -R "$WORK/fuzzy-latest" "$dir"
+printf '[tools]\njq = "1.8.1"\n' >"$dir/other.toml"
+(cd "$dir" && mise trust -q other.toml </dev/null)
+run_hook "$check" -C "$dir"
+plain="$STATUS $STDOUT"
+capture env MISE_OVERRIDE_CONFIG_FILENAMES=other.toml bash "$check" -C "$dir"
+expect_equal "MISE_OVERRIDE_CONFIG_FILENAMES gives the result of a run without it" "$plain" "$STATUS $STDOUT"
+expect_contains "a plain run fails the committed latest" "FAIL  mise.toml: jq is requested as latest, not an exact version" "$plain"
+
 dir="$WORK/dot-config"
 mkdir -p "$dir/.config/mise"
 printf '[settings]\nlockfile = true\n\n[tools]\njq = "1.8.1"\n\n[tasks.ci]\ndescription = "Run ci"\nrun = "true"\n' >"$dir/.config/mise/config.toml"

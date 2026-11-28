@@ -9,10 +9,11 @@
 # template exec() in a trusted config there does run. It ignores the global and
 # system config, except for the trust they give. It ignores each config above
 # the checked directory, or above the monorepo root, each MISE_<TOOL>_VERSION
-# variable, and MISE_ENV. It ignores each local config, such as mise.local.toml,
-# which is machine-local and not committed. It still names a REPLACE_WITH_
-# placeholder in a local config. It hides mise output, which can hold [env]
-# values.
+# variable, MISE_ENV, and each variable that changes the config file names. It
+# ignores each local config, such as mise.local.toml, in the checked directory
+# and in each directory up to the monorepo root, because a local config is
+# machine-local and not committed. It still names a REPLACE_WITH_ placeholder
+# in a local config. It hides mise output, which can hold [env] values.
 #
 # Usage: check-mise-setup.sh [-C DIR]
 
@@ -31,17 +32,12 @@ failed=0
 # A MISE_<TOOL>_VERSION variable replaces the request that the config makes.
 for name in $(compgen -e); do [[ $name == MISE_*_VERSION ]] && unset "$name"; done
 # MISE_ENV and MISE_PROFILE load a mise.<env>.toml that a plain run does not.
-unset MISE_ENV MISE_PROFILE
+# The filename variables make mise read other files than the committed ones.
+unset MISE_ENV MISE_PROFILE MISE_OVERRIDE_CONFIG_FILENAMES MISE_DEFAULT_CONFIG_FILENAME \
+  MISE_OVERRIDE_TOOL_VERSIONS_FILENAMES MISE_DEFAULT_TOOL_VERSIONS_FILENAME
 # `mise trust --show` only reads. It runs before the overrides below, so that
 # it sees the trust that the global trusted_config_paths setting gives.
 trust=$(mise trust --show 2>/dev/null)
-# The list replaces one from the caller, which could hide a committed config.
-ignored=
-for file in "$PWD"/mise.local.toml "$PWD"/.mise.local.toml "$PWD"/mise.*.local.toml "$PWD"/.mise.*.local.toml \
-  "$PWD"/.config/mise.local.toml "$PWD"/.config/mise/config.local.toml "$PWD"/mise/config.local.toml; do
-  [ -e "$file" ] && ignored+=${ignored:+:}$file
-done
-export MISE_IGNORED_CONFIG_PATHS=$ignored
 
 scratch=$(mktemp -d) || exit 2
 # Bash runs the EXIT trap on HUP, INT or TERM only when that signal has a trap.
@@ -94,6 +90,23 @@ done < <(grep -E ': (trusted|untrusted)$' <<<"$trust")
 # mise loads no config from a ceiling path or from above it.
 top=${root:-$PWD}
 [ "$top" = / ] || export MISE_CEILING_PATHS="${top%/*}/"
+# mise loads the local configs from each directory between $PWD and $top. The
+# list replaces one from the caller, which could hide a committed config.
+ignored=
+d=$PWD
+while :; do
+  p=${d%/}
+  for file in "$p"/mise.local.toml "$p"/.mise.local.toml "$p"/mise.*.local.toml "$p"/.mise.*.local.toml \
+    "$p"/.config/mise.local.toml "$p"/.config/mise/config.local.toml "$p"/.config/mise/mise.local.toml \
+    "$p"/.mise/config.local.toml "$p"/mise/config.local.toml; do
+    [ -e "$file" ] && ignored+=${ignored:+:}$file
+  done
+  # $top is $PWD or a directory above it. The test for / ends the walk if it is not.
+  [ "$d" = "$top" ] || [ -z "$p" ] && break
+  d=${d%/*}
+  d=${d:-/}
+done
+export MISE_IGNORED_CONFIG_PATHS=$ignored
 # Under a trusted monorepo root, mise trusts each project config, so `mise
 # tasks` runs in safe mode there. Safe mode drops [env].
 safe=${root:+1}
