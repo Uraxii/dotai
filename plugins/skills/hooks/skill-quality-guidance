@@ -3,17 +3,24 @@
 # SKILL.md or a reference Markdown file in a skill directory. It never blocks:
 # every path exits 0, because a Copilot hook that fails can deny the call.
 #
-# Usage: skill-quality-guidance --harness claude|codex|copilot
+# Usage: skill-quality-guidance --harness claude|codex|copilot [--lint]
 # - claude: PreToolUse on Write|Edit|MultiEdit, path in tool_input.file_path.
 # - codex: PreToolUse on apply_patch, paths in the patch's file headers.
 # - copilot: postToolUse on edit|create, path in toolArgs.path. Copilot's
 #   preToolUse cannot add context, so the guidance follows the first edit.
-# The guidance is added once per session for each skill directory.
+# The guidance is added once per session for each skill directory. When the
+# edit holds numbered steps or routes, one pointer to the playbook reference
+# is added, also once per session for each skill directory.
+#
+# --lint also runs the lint on each skill directory after the edit and adds
+# its FAIL and WARN lines, on every edit. Claude and Codex run it from
+# PostToolUse; there the guidance marker from PreToolUse is already set.
 
 hooks_dir=${BASH_SOURCE[0]%[/\\]*}
 [ "$hooks_dir" = "${BASH_SOURCE[0]}" ] && hooks_dir=.
 skill_md="$hooks_dir/../skills/skill-quality/SKILL.md"
 lint="$hooks_dir/../skills/skill-quality/scripts/lint-skills.sh"
+blocks="$hooks_dir/../skills/skill-quality/references/playbook-building-blocks.md"
 
 field() {
   printf '%s' "$input" | LC_ALL=C JSON_MODE=get JSON_PATH="$1" JSON_VIA="${2-}" awk -f "$hooks_dir/hook-json.awk"
@@ -25,6 +32,8 @@ quote() {
 harness=
 [ "${1:-}" = --harness ] && harness=${2:-}
 case "$harness" in claude | codex | copilot) ;; *) exit 0 ;; esac
+run_lint=
+[ "${3:-}" = --lint ] && run_lint=1
 
 [ -f "$skill_md" ] || exit 0
 input=$(cat)
@@ -32,20 +41,46 @@ cwd=$(field /cwd)
 case "$harness" in
   claude)
     paths=$(field /tool_input/file_path)
+    edit_text="$(field /tool_input/content)
+$(field /tool_input/new_string)"
     session=$(field /session_id)
     ;;
   codex)
-    paths=$(field /tool_input/command | sed -nE 's/^\*\*\* (Add File|Update File|Move to): (.*)$/\2/p')
+    edit_text=$(field /tool_input/command)
+    paths=$(sed -nE 's/^\*\*\* (Add File|Update File|Move to): (.*)$/\2/p' <<<"$edit_text")
     session=$(field /session_id)
     ;;
   copilot)
     paths=$(field /path /toolArgs)
+    edit_text=
     session=$(field /sessionId)
     ;;
 esac
 
-# Skill directories this edit touches that have not had the guidance yet.
+# new_marker NAME DIR: creates the once-per-session marker for NAME and DIR,
+# and fails if it exists. noclobber makes the check and the create one step,
+# so parallel edits cannot both add the same text. With no usable session id,
+# every edit counts as new.
+new_marker() {
+  [[ "$session" =~ ^[A-Za-z0-9_.-]+$ ]] || return 0
+  (set -C && : >"${TMPDIR:-/tmp}/skill-quality-$1$session-$(printf '%s' "$2" | cksum | cut -d' ' -f1)") 2>/dev/null
+}
+
+# A numbered list of three or more steps, a shape line, or three list items
+# that name a .md file. A codex patch prefixes each added line with +.
+has_procedure() {
+  local text
+  text=$({ [ -f "$1" ] && cat "$1"; printf '%s\n' "$edit_text"; } 2>/dev/null)
+  grep -qE '^\+?[[:space:]]*shape:[[:space:]]*["'\'']?(playbook|router)' <<<"$text" ||
+    [ "$(grep -cE '^\+?[[:space:]]*[0-9]+\.[[:space:]]' <<<"$text")" -ge 3 ] ||
+    [ "$(grep -cE '^\+?[[:space:]]*[-*+][[:space:]].*\.md' <<<"$text")" -ge 3 ]
+}
+
+# Skill directories this edit touches: all of them for the lint, the ones
+# new this session for the guidance, and the ones that need the pointer.
+all_dirs=()
 dirs=()
+pointer_dirs=()
 while IFS= read -r path; do
   path=${path%$'\r'}
   [ -n "$path" ] || continue
@@ -61,30 +96,54 @@ while IFS= read -r path; do
     { [ -f "$rest/SKILL.md" ] || [ "$path" = "$rest/SKILL.md" ]; } && dir=$rest
   done
   [ -n "$dir" ] || continue
-  if [[ "$session" =~ ^[A-Za-z0-9_.-]+$ ]]; then
-    marker="${TMPDIR:-/tmp}/skill-quality-$session-$(printf '%s' "$dir" | cksum | cut -d' ' -f1)"
-    # noclobber makes the check and the create one step, so parallel edits
-    # cannot both add the guidance.
-    (set -C && : >"$marker") 2>/dev/null || continue
+  [[ " ${all_dirs[*]} " == *" $dir "* ]] || all_dirs+=("$dir")
+  if [[ " ${dirs[*]} " != *" $dir "* ]] && new_marker "" "$dir"; then dirs+=("$dir"); fi
+  if [[ " ${pointer_dirs[*]} " != *" $dir "* ]] && has_procedure "$path" && new_marker pointer- "$dir"; then
+    pointer_dirs+=("$dir")
   fi
-  [[ " ${dirs[*]} " == *" $dir "* ]] || dirs+=("$dir")
 done <<<"$paths"
-[ "${#dirs[@]}" -gt 0 ] || exit 0
+[ "${#all_dirs[@]}" -gt 0 ] || exit 0
 
-body=$(awk 'NR == 1 && /^---$/ { front = 1; next } front && /^---$/ { front = 0; next } !front' "$skill_md")
-context="You are editing a skill. Follow this skill-quality guidance.
+context=
+if [ "${#dirs[@]}" -gt 0 ]; then
+  body=$(awk 'NR == 1 && /^---$/ { front = 1; next } front && /^---$/ { front = 0; next } !front' "$skill_md")
+  context="You are editing a skill. Follow this skill-quality guidance.
 
 $body
 
 The verification script is $(cd "${lint%/*}" && pwd)/lint-skills.sh. Run it on each skill directory you change:"
-for dir in "${dirs[@]}"; do
-  context="$context
+  for dir in "${dirs[@]}"; do
+    context="$context
 - $dir"
-done
+  done
+fi
+
+if [ "${#pointer_dirs[@]}" -gt 0 ] && [ -f "$blocks" ]; then
+  context="${context:+$context
+
+}This edit holds numbered steps or routes. Read $(cd "${blocks%/*}" && pwd)/${blocks##*/} for the chooser, the building blocks, and the templates."
+fi
+
+if [ -n "$run_lint" ]; then
+  for dir in "${all_dirs[@]}"; do
+    [ -f "$dir/SKILL.md" ] || continue
+    # The lint's own summary line is left out; only FAIL and WARN lines and
+    # their fixes are added. 40 lines keep the context small.
+    found=$(bash "$lint" "$dir" 2>/dev/null | grep -v '^lint-skills.sh: ' | head -n 40)
+    [ -n "$found" ] || continue
+    context="${context:+$context
+
+}The skill-quality lint found these problems in $dir. Repair each FAIL. Repair each WARN, or keep it for a real reason:
+$found"
+  done
+fi
+[ -n "$context" ] || exit 0
 
 if [ "$harness" = copilot ]; then
   printf '{"additionalContext":%s}\n' "$(quote "$context")"
 else
-  printf '{"hookSpecificOutput":{"hookEventName":"PreToolUse","additionalContext":%s}}\n' "$(quote "$context")"
+  event=PreToolUse
+  [ -n "$run_lint" ] && event=PostToolUse
+  printf '{"hookSpecificOutput":{"hookEventName":"%s","additionalContext":%s}}\n' "$event" "$(quote "$context")"
 fi
 exit 0

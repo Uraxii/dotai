@@ -12,6 +12,19 @@
           }
         ]
       }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "apply_patch",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${PLUGIN_ROOT}/hooks/skill-quality-guidance\" --harness codex --lint",
+            "commandWindows": "\"${PLUGIN_ROOT}/hooks/run-hook.cmd\" skill-quality-guidance --harness codex --lint",
+            "timeout": 30
+          }
+        ]
+      }
     ]
   }
 }
