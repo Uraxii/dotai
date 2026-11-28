@@ -179,3 +179,9 @@ Scratch paths named in those notes (under `/tmp/...`) are gone; ignore them.
 - Ruff: a guideline code is left to ruff when the config names it or any rule under it (no --extend-ignore).
 - parse_patch is linear; a 100k-line Add File runs in about 0.1 s.
 - mise run ci green: guidelines.test.py 215/215.
+
+## Update: review d4f1136e findings fixed (0 blocking, 3 non-blocking)
+- Ruff: `ruff_ignores()` finds the config's last word on a narrower rule (parent configs first; most specific selector wins; ignore wins a tie). Those rules go on the CLI as `--extend-ignore`, so `ignore = ["PTH123"]` keeps PTH118 on. Checked with real ruff.
+- Codex apply: `changed_runs()` makes one replacement per `-`/`+` run between context lines, as Codex does, so insertions at one offset keep Codex's order.
+- parse_patch splits on `\n` only and drops a trailing `\r`, like Rust `str::lines()`; a form-feed line is context.
+- mise run ci green: guidelines.test.py 220/220.

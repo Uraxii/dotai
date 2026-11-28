@@ -854,6 +854,16 @@ c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: demo.py\n@@\n+tr
                              "*** End Patch"), harness="codex")
 expect_equal("insertion-only hunks keep patch order, as Codex does",
              "x = 1\ntry:\n    pass\nexcept:\n    pass\n", (WORK / "ruff.stdin").read_text())
+c.file("demo.py", "a\nb\n")
+c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: demo.py\n@@\n+c\n@@\n b\n+d\n*** End Patch"),
+       harness="codex")
+expect_equal("a hunk is split at its context lines, so insertions at one offset keep Codex's order",
+             "a\nb\nc\nd\n", (WORK / "ruff.stdin").read_text())
+c.file("demo.py", "import os\n\x0c\ndef f():\n    return 1\n")
+c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: demo.py\n@@\n import os\n \x0c\n+from math import *\n"
+                             " def f():\n*** End Patch"), harness="codex")
+expect_equal("a patch splits on newlines only, so a form feed line is context, as in Codex",
+             "import os\n\x0c\nfrom math import *\ndef f():\n    return 1\n", (WORK / "ruff.stdin").read_text())
 c.file("demo.py", "if True:\n    a = 1\n    b = 2\n")
 c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: demo.py\n@@\n a = 1\n-    b = 2\n+    from math import *\n"
                              "*** End Patch"), harness="codex")
@@ -944,7 +954,16 @@ expect_lacks("or GDScript tool", "gdlint", c.stdout)
 c = Case("ruff-narrower-ignore")
 c.file("ruff.toml", '[lint]\nignore = ["PTH123"]\n')
 c.hook(c.write("app.py", "x = 1\n"), PSTACK_GUIDELINES_DIR=str(PLUGIN / "skills" / "principle-code-quality" / "guidelines"))
-expect_lacks("a code with a narrower project selector under it is left to ruff", "PTH",
+expect_contains("a narrower project ignore stays ignored", "--extend-ignore PTH123", c.args().splitlines()[-1])
+expect_contains("and the rest of the guideline code still runs", "PTH,", c.args().splitlines()[-1])
+c.file("ruff.toml", '[lint]\nselect = ["PTH123"]\nignore = ["PTH123"]\n')
+c.hook(c.write("app.py", "x = 1\n"), PSTACK_GUIDELINES_DIR=str(PLUGIN / "skills" / "principle-code-quality" / "guidelines"))
+expect_contains("an ignore wins a tie with a select in one config, as in ruff", "--extend-ignore PTH123",
+                c.args().splitlines()[-1])
+c.file("base.toml", '[lint]\nignore = ["PTH123"]\n')
+c.file("ruff.toml", 'extend = "base.toml"\n[lint]\nextend-select = ["PTH123"]\n')
+c.hook(c.write("app.py", "x = 2\n"), PSTACK_GUIDELINES_DIR=str(PLUGIN / "skills" / "principle-code-quality" / "guidelines"))
+expect_lacks("a rule the extending config selects again is not ignored", "--extend-ignore",
              c.args().splitlines()[-1])
 
 c = Case("ruff-python-only")

@@ -228,7 +228,10 @@ def parse_patch(patch: str) -> list[PatchFile]:
     """Split an apply_patch text into one entry per file."""
     files: list[PatchFile] = []
     bodies: list[list[str]] = []
-    for line in patch.splitlines():
+    lines = [line.removesuffix("\r") for line in patch.split("\n")]
+    if lines[-1] == "":
+        lines.pop()
+    for line in lines:
         header = PATCH_HEADER.match(line)
         if header and header.group(1) == "Move to" and files:
             files[-1] = files[-1]._replace(target=header.group(2))
@@ -304,18 +307,35 @@ def find_hunk(
     return find_lines(lines, old, max(start, 0))
 
 
-def merged(rows: list[str], window: list[str]) -> list[str]:
-    """The hunk's new lines. A context line keeps the file's text, as
-    Codex keeps it, even when it matched past whitespace."""
-    new: list[str] = []
-    old = 0
+def changed_runs(rows: list[str]) -> list[tuple[int, int, list[str]]]:
+    """One replacement per run of `-` and `+` rows, as Codex splits a hunk
+    at its context lines: the run's offset in the hunk's old lines, how
+    many lines it removes, and the lines it adds. Context keeps the file's
+    text."""
+    runs: list[tuple[int, int, list[str]]] = []
+    offset = 0
+    previous = " "
     for row in rows:
-        if row[0] == " ":
-            new.append(window[old] if old < len(window) else row[1:])
+        if row[0] in "-+" and previous == " ":
+            runs.append((offset, 0, []))
+        if row[0] == "-":
+            start, length, new = runs[-1]
+            runs[-1] = (start, length + 1, new)
         elif row[0] == "+":
-            new.append(row[1:])
-        old += row[0] in " -"
-    return new
+            runs[-1][2].append(row[1:])
+        offset += row[0] in " -"
+        previous = " " if row[0] == " " else "-"
+    return runs
+
+
+def without_final_empty(rows: list[str]) -> list[str]:
+    """The rows less the final empty old line, and an empty added line
+    after it, for Codex's retry without a trailing empty line."""
+    last = max(i for i, row in enumerate(rows) if row[0] in " -")
+    kept = rows[:last] + rows[last + 1:]
+    if rows[last][0] == "-" and kept and kept[-1] == "+":
+        kept = kept[:-1]
+    return kept
 
 
 def apply_update(current: str, body: Sequence[str]) -> str | None:
@@ -334,21 +354,24 @@ def apply_update(current: str, body: Sequence[str]) -> str | None:
             if anchor is None:
                 return None
             cursor = anchor + 1
-        old = [line[1:] for line in hunk.rows if line[0] in " -"]
+        rows = hunk.rows
+        old = [row[1:] for row in rows if row[0] in " -"]
         if not old:
-            replacements.append((len(lines), 0, merged(hunk.rows, [])))
+            replacements += [
+                (len(lines), 0, new) for _, _, new in changed_runs(rows)
+            ]
             continue
         index = find_hunk(lines, hunk, old, cursor)
-        trimmed = index is None and old[-1] == ""
-        if trimmed:
+        if index is None and old[-1] == "":
+            rows = without_final_empty(rows)
             old = old[:-1]
             index = find_hunk(lines, hunk, old, cursor)
         if index is None:
             return None
-        new = merged(hunk.rows, lines[index:index + len(old)])
-        if trimmed and new and new[-1] == "":
-            new = new[:-1]
-        replacements.append((index, len(old), new))
+        replacements += [
+            (index + offset, length, new)
+            for offset, length, new in changed_runs(rows)
+        ]
         cursor = index + len(old)
     # Codex applies from the end, so hunks at one offset keep patch order.
     for start, length, new in sorted(

@@ -194,6 +194,23 @@ def run_code_quality(executable: str, target: Target) -> RunResult:
     ), "")
 
 
+def ruff_ignores(rule: str, tables: list[Mapping[str, object]]) -> bool:
+    """Whether the config's last word on the rule is an ignore. Ruff reads
+    the extended configs first; in one config the most specific selector
+    wins, and an ignore wins a tie."""
+    ignored = False
+    for table in reversed(tables):
+        covering = [
+            (0 if selector == "ALL" else len(selector), key in IGNORE_KEYS)
+            for key in (*SELECT_KEYS, *IGNORE_KEYS)
+            for selector in as_strings(table.get(key))
+            if selector == "ALL" or rule.startswith(selector)
+        ]
+        if covering:
+            ignored = max(covering)[1]
+    return ignored
+
+
 def ruff_arguments(target: Target) -> list[str]:
     """Select the guideline codes the project's config does not name, so a
     code it selects or ignores, in any config it extends, is ruff's call."""
@@ -206,18 +223,23 @@ def ruff_arguments(target: Target) -> list[str]:
             for key in (*SELECT_KEYS, *IGNORE_KEYS)
             for selector in as_strings(table.get(key))
         )
-        # A selector on the command line beats the config, so a code is
-        # left to ruff when the config names it or any rule under it.
         added = sorted(
-            code for code in target.codes
-            if not selected_by(code, named)
-            and not any(selector.startswith(code) for selector in named)
+            code for code in target.codes if not selected_by(code, named)
         )
+        # A selector on the command line beats the config, so a narrower
+        # rule the config ends up ignoring goes on the command line too.
+        narrower = sorted({
+            selector for table in tables for key in IGNORE_KEYS
+            for selector in as_strings(table.get(key))
+            if any(selector.startswith(code) for code in added)
+            and ruff_ignores(selector, tables)
+        })
         preview = any("preview" in table for table in tables)
         return [
             "--verbose", "--force-exclude",
             *([] if preview else ["--preview"]),
             *(["--extend-select", ",".join(added)] if added else []),
+            *(["--extend-ignore", ",".join(narrower)] if narrower else []),
         ]
     length = str(line_length(target.root))
     return [
