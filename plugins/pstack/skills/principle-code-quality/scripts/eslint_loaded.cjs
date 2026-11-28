@@ -42,10 +42,21 @@ if (out && typeof nodeModule.registerHooks === "function") {
   };
   nodeModule.registerHooks({
     resolve(specifier, context, nextResolve) {
-      // Every file a relative lookup tries can be added by the edit, also
-      // the ones tried before the file it found.
-      if (/^\.{1,2}(\/|$)/.test(specifier) && context.parentURL?.startsWith("file:")) {
-        const base = path.resolve(path.dirname(fileURLToPath(context.parentURL)), specifier);
+      // Every file a path lookup from project code tries can be added by
+      // the edit, also the ones tried before the file it found. Lookups
+      // inside node_modules are left out: there are thousands.
+      const parent = context.parentURL?.startsWith("file:") ? fileURLToPath(context.parentURL) : null;
+      let base = null;
+      if (parent && !parent.split(path.sep).includes("node_modules")) {
+        if (specifier.startsWith("file:")) {
+          try {
+            base = fileURLToPath(specifier);
+          } catch {}
+        } else if (/^\.{1,2}(\/|$)/.test(specifier) || path.isAbsolute(specifier)) {
+          base = path.resolve(path.dirname(parent), specifier);
+        }
+      }
+      if (base) {
         const suffixes = ["", ".js", ".cjs", ".mjs", ".ts", ".cts", ".mts", ".json", ".node"];
         for (const suffix of suffixes) record(base + suffix);
         record(path.join(base, "package.json"));
@@ -67,6 +78,23 @@ if (out && typeof nodeModule.registerHooks === "function") {
     owner[name] = function (file, ...rest) {
       record(file);
       return original.call(this, file, ...rest);
+    };
+  }
+  // A folder project code lists is kept as `folder/*`: a file the edit
+  // adds there can change the config.
+  const fromProject = () => {
+    const frames = (new Error().stack || "").split("\n").slice(2);
+    const caller = frames.find((frame) => !frame.includes(__filename) && !frame.includes("node:"));
+    return caller !== undefined && !caller.split(/[\\/]/).includes("node_modules");
+  };
+  for (const [owner, name] of [
+    [fs, "readdirSync"], [fs, "readdir"], [fs, "opendirSync"], [fs, "opendir"],
+    [fs.promises, "readdir"], [fs.promises, "opendir"],
+  ]) {
+    const original = owner[name];
+    owner[name] = function (folder, ...rest) {
+      if (fromProject()) record(path.join(folder instanceof URL ? fileURLToPath(folder) : String(folder), "*"));
+      return original.call(this, folder, ...rest);
     };
   }
   // Appended, as Node processes the config starts record to the same list.

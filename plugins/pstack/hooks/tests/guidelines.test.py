@@ -617,6 +617,13 @@ c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Add File: src/policy.tsx\n+ex
                              "*** Add File: new11.js\n+var x = 1;\n*** End Patch"),
        harness="codex", ESLINT_JSON=NO_VAR_ROW, ESLINT_LOADED="none")
 expect_contains("with no trace, a changed TSX file counts", "also changes src/policy.tsx", str(c.output()))
+expect_contains("with no trace, the notice says the files could not be listed",
+                "could not be listed", str(c.output()))
+c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Add File: eslint-rules/off.mjs\n+export default {};\n"
+                             "*** Add File: new12.js\n+var x = 1;\n*** End Patch"),
+       harness="codex", ESLINT_JSON=NO_VAR_ROW, ESLINT_LOADED=str(c.project / "eslint-rules" / "*"))
+expect_contains("a file added to a folder the config lists counts", "also changes eslint-rules/off.mjs", str(c.output()))
+expect_lacks("with a trace, the notice does not say it failed", "could not be listed", str(c.output()))
 
 
 c = Case("ruff-symlink-extend")

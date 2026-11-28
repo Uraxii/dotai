@@ -257,6 +257,8 @@ def eslint_setting(
         executable, mode.folder if mode.flat else code, mode, root
     )
     if loaded is None:
+        global trace_failed
+        trace_failed = True
         return setting != code and (
             name == ".eslintignore" or setting.suffix in SETTING_SUFFIXES
         )
@@ -266,7 +268,7 @@ def eslint_setting(
         return any(setting.parent in path.parents for path in loaded) and (
             not setting.exists() or maps_modules(setting, text)
         )
-    return setting in loaded
+    return setting in loaded or setting.parent / "*" in loaded
 
 
 def maps_modules(manifest: Path, text: str | None) -> bool:
@@ -294,6 +296,8 @@ def outranked(setting: Path, folder: Path) -> bool:
 
 # Past this time a trace gives no file list, so the hook ends in time.
 trace_deadline = float("inf")
+# Set when a trace gave no file list.
+trace_failed = False
 
 
 @functools.cache

@@ -551,6 +551,11 @@ class Engine:
                 f" so {', '.join(held)} findings in {file.rel} are warnings "
                 "until it is written."
             )
+            if "eslint" in held and guideline_runners.trace_failed:
+                self.notices.append(
+                    "Notice: the files ESLint reads for its config could not "
+                    "be listed, so any changed script or data file counts."
+                )
             added = [hit for hit in added if hit.finding.tool not in changed]
         if added and change.before_problem:
             self.notices.append(

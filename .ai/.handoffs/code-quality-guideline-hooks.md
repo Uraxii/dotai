@@ -277,3 +277,9 @@ Scratch paths named in those notes (under `/tmp/...`) are gone; ignore them.
 - The unknown-trace fallback counts `.jsx/.tsx/.jsonc/.json5` too.
 - `find_lines` normalizes the file once per form for all hunks and finds the first line with `list.index` (3500 hunks: under 3 s, was 18.7 s).
 - Real ESLint 9 / ruff repros for 1, 2, 4; tests for 3 and 5.
+
+## Update: review d3f1e057 (e31bd21) findings fixed (2 blocking, 2 non-blocking)
+- eslint_loaded.cjs records lookup candidates only for lookups from project code (not inside node_modules), and also for absolute and `file:` specifiers. typescript-eslint + sonarjs + import-x + stylistic trace: 0.9 s, 2597 lines (was 3.6 s, 44537 lines); the 2-file TS edit denies again.
+- Folders project code lists (`readdir`/`opendir`) are kept as `folder/*`; a file the edit adds there counts.
+- When the trace gives no list, a notice says the files ESLint reads could not be listed.
+- Real ESLint 9 repros for all 4. Do not run `mise -C <repo> exec -- npm`: `-C` changes the cwd to the repo.
