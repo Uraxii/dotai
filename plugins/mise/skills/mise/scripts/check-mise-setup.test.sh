@@ -248,6 +248,28 @@ capture env MISE_JQ_VERSION=1.8.1 bash "$check" -C "$WORK/fuzzy-1.8"
 expect_contains "a MISE_<TOOL>_VERSION variable does not hide a request that is not exact" \
   "FAIL  mise.toml: jq is requested as 1.8, not an exact version" "$STDOUT"
 
+dir=$(repo local-override)
+printf '[tools]\njq = "1.7.1"\n' >"$dir/mise.local.toml"
+run_hook "$check" -C "$dir"
+expect_equal "a tool request in mise.local.toml does not fail a pinned repository" \
+  "0 check-mise-setup.sh: $dir: 0 failed" "$STATUS ${STDOUT%$'\n'}"
+
+dir="$WORK/local-pins-latest"
+cp -R "$WORK/fuzzy-latest" "$dir"
+printf '[tools]\njq = "1.8.1"\n' >"$dir/mise.local.toml"
+(cd "$dir" && mise trust -q)
+run_hook "$check" -C "$dir"
+expect_contains "an exact version in mise.local.toml does not hide a committed latest" \
+  "FAIL  mise.toml: jq is requested as latest, not an exact version" "$STDOUT"
+
+dir=$(repo env-ci)
+printf '[tools]\njq = "latest"\n' >"$dir/mise.ci.toml"
+run_hook "$check" -C "$dir"
+plain="$STATUS $STDOUT"
+capture env MISE_ENV=ci bash "$check" -C "$dir"
+expect_equal "MISE_ENV=ci gives the result of a run without it" "$plain" "$STATUS $STDOUT"
+expect_equal "a mise.ci.toml is not checked without MISE_ENV" "0 check-mise-setup.sh: $dir: 0 failed" "${plain%$'\n'}"
+
 dir="$WORK/dot-config"
 mkdir -p "$dir/.config/mise"
 printf '[settings]\nlockfile = true\n\n[tools]\njq = "1.8.1"\n\n[tasks.ci]\ndescription = "Run ci"\nrun = "true"\n' >"$dir/.config/mise/config.toml"
