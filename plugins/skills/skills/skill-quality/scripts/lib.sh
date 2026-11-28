@@ -11,7 +11,7 @@ failed=0
 
 refs=()
 while IFS= read -r ref; do refs+=("$ref"); done < <(
-  find "$dir/references" "$dir/playbooks" "$dir/examples" -type f -name '*.md' 2>/dev/null | sort)
+  find "$dir/references" "$dir/playbooks" "$dir/examples" -type f -name '*.md' 2>/dev/null | LC_ALL=C sort)
 
 report() { # LEVEL FILE MESSAGE FIX
   printf '%s  %s: %s\n      fix: %s\n' "$1" "${2#"$dir"/}" "$3" "$4"

@@ -60,11 +60,22 @@ until_loop() {
 
 # SKILL.md and every other .md file at any depth in the skill directory, so a
 # playbook beside SKILL.md is checked too. It covers refs, each file once.
-# find -type f lists no symlink, so no link leads out of the directory.
-files=("$skill")
+# -H follows the skill directory when it is a link; -type f lists no link
+# inside it, so no link leads out. .git, node_modules and a nested skill (a
+# folder with its own SKILL.md) are not part of this skill.
+mds=() nested=()
 while IFS= read -r file; do
-  [ "$file" = "$skill" ] || files+=("$file")
-done < <(find "$dir" -type f -name '*.md' | sort)
+  mds+=("$file")
+  case $file in */SKILL.md) [ "$file" = "$skill" ] || nested+=("${file%SKILL.md}") ;; esac
+done < <(find -H "$dir" \( -name .git -o -name node_modules \) -prune -o -type f -name '*.md' -print 2>/dev/null | LC_ALL=C sort)
+files=("$skill")
+for file in ${mds[@]+"${mds[@]}"}; do
+  [ "$file" = "$skill" ] && continue
+  for inner in ${nested[@]+"${nested[@]}"}; do
+    case $file in "$inner"*) continue 2 ;; esac
+  done
+  files+=("$file")
+done
 
 for file in "${files[@]}"; do
   [ -f "$file" ] || continue

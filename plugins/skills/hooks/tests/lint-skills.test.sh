@@ -308,6 +308,25 @@ WARN  deep/er/x.md: line 9 has a loop with no limit
 WARN  deep/my play.md: line 8 has a loop with no limit
 WARN  deep/my play.md: line 9 has a loop with no limit" "$(grep -E '^(FAIL|WARN)' <<<"$STDOUT")"
 
+dir=$(skill waitcap "$good" "Read [x](references/x.md) when needed.")
+printf '%s\n' "$waitcap" >"$dir/references/x.md"
+mkdir -p "$WORK/link"
+ln -s "$dir" "$WORK/link/waitcap"
+run_hook "$lint" "$WORK/link/waitcap"
+expect_equal "a linked skill directory still checks its references" "WARN  references/x.md: line 8 has a loop with no limit
+WARN  references/x.md: line 9 has a loop with no limit" "$(grep -E '^(FAIL|WARN)' <<<"$STDOUT")"
+expect_contains "a linked skill directory is counted" "0 failed, 2 warnings" "$STDOUT"
+
+dir=$(skill waitcap "$good" "Read [x](inner-b/x.md) when needed.")
+mkdir -p "$dir/.git" "$dir/node_modules/pkg" "$dir/inner/deep" "$dir/inner-b"
+for file in .git/a.md node_modules/pkg/README.md inner/x.md inner/deep/y.md inner-b/x.md; do
+  printf '%s\n' "$waitcap" >"$dir/$file"
+done
+printf -- '---\nname: inner\ndescription: %s\n---\n\nBody.\n' "$good" >"$dir/inner/SKILL.md"
+run_hook "$shape" "$dir"
+expect_equal ".git, node_modules and a nested skill are not checked" "WARN  inner-b/x.md: line 8 has a loop with no limit
+WARN  inner-b/x.md: line 9 has a loop with no limit" "$(grep -E '^(FAIL|WARN)' <<<"$STDOUT")"
+
 run_hook "$lint" "$PLUGIN_ROOT_DIR/skills/skill-quality"
 expect_equal "skill-quality passes its own verification" 0 "$STATUS"
 

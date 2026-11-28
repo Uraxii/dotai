@@ -153,6 +153,14 @@ printf -- '---\nshape: playbook\n---\n\n# X\n\n1. Push the branch. Expect it on 
 run_hook "$hook" --harness claude --lint <<<"$(input claude s-waitcap "$skill_w/x.md")"
 expect_contains "a playbook beside SKILL.md gets its lint line" "WARN  x.md: line 9 has a loop with no limit" "$(context)"
 
+# An edit through a linked skill directory reports its references' warnings.
+mkdir -p "$skill_w/references" "$WORK/linkrepo/skills"
+cp "$skill_w/x.md" "$skill_w/references/r.md"
+printf 'Read [r](references/r.md) when needed.\n' >>"$skill_w/SKILL.md"
+ln -s "$skill_w" "$WORK/linkrepo/skills/waitcap"
+run_hook "$hook" --harness claude --lint <<<"$(input claude s-waitlink "$WORK/linkrepo/skills/waitcap/references/r.md")"
+expect_contains "a linked skill directory gets its reference lint line" "WARN  references/r.md: line 9 has a loop with no limit" "$(context)"
+
 # The lint runs only on a skill directory whose SKILL.md exists.
 mkdir -p "$WORK/repo/skills/zeta"
 run_hook "$hook" --harness claude --lint <<<"$(input claude s-guard "$WORK/repo/skills/zeta/SKILL.md")"
