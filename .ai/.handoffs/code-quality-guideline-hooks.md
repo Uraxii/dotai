@@ -238,3 +238,10 @@ Scratch paths named in those notes (under `/tmp/...`) are gone; ignore them.
 - Settings are scanned only when a deny is possible: 50 files + 20 imported modules now take 2.7 s (was 28 s).
 - Ruff `extend` follows the path through symlinks, as Ruff does. Codex: a path a move chain leaves empty gets a delete entry.
 - Real ESLint 9 / Node 24 / ruff repros for all 8. The self-config case is checked only with real ESLint (the stub returns the same findings before and after). mise run ci green.
+
+## Update: review eebc8fdc findings fixed (3 blocking, 1 non-blocking)
+- `eslint_loaded` finds a project-local eslint (it passed a folder to `locate`, which starts at the parent).
+- NODE_OPTIONS gets the recorder path with forward slashes, JSON-quoted (Node reads `\` in quotes as an escape, which broke Windows paths).
+- eslint_loaded.cjs also records files read with fs (`readFile*`, `open*`, sync and promises): jiti TypeScript configs and JSON/ignore files a config reads.
+- When the loaded list is unknown, the code file itself is not a setting, so a one-file edit still denies.
+- Real ESLint 9.39 / Node 24 / jiti repros: local-only eslint denies, a module of eslint.config.ts and an fs-read rules.json lower to warnings.

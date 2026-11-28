@@ -240,7 +240,9 @@ def eslint_setting(
         return True
     loaded = eslint_loaded(mode.folder if mode.flat else code, mode, root)
     if loaded is None:
-        return name == ".eslintignore" or setting.suffix in SETTING_SUFFIXES
+        return setting != code and (
+            name == ".eslintignore" or setting.suffix in SETTING_SUFFIXES
+        )
     return setting in loaded
 
 
@@ -263,17 +265,20 @@ def eslint_loaded(
     """The project files ESLint reads to build a config, with the nearest
     package.json of each, or None when they cannot be found. ESLint loads
     the config itself under a Node resolve hook that lists them."""
-    executable = locate("eslint", target if mode.flat else target.parent, root)
+    probe = target / "_.js" if mode.flat else target
+    executable = locate("eslint", probe, root)
     if executable is None:
         return None
+    # NODE_OPTIONS reads backslashes in quotes as escapes, so the path is
+    # written with forward slashes and its quotes escaped.
+    recorder = json.dumps(LOADED_RECORDER.as_posix())
     env = os.environ | {"NODE_OPTIONS": " ".join(filter(None, (
-        os.environ.get("NODE_OPTIONS"), f'--require "{LOADED_RECORDER}"',
+        os.environ.get("NODE_OPTIONS"), f"--require {recorder}",
     )))}
     if not mode.flat:
         env["ESLINT_USE_FLAT_CONFIG"] = "false"
     with tempfile.TemporaryDirectory() as work:
         env["PSTACK_ESLINT_LOADED"] = str(Path(work) / "loaded")
-        probe = target / "_.js" if mode.flat else target
         try:
             subprocess.run(
                 [executable, "--print-config", str(probe)], cwd=mode.folder,

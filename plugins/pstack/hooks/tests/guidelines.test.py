@@ -578,6 +578,9 @@ c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: lint/other.cjs\n
                              "*** Add File: new2.js\n+var x = 1;\n*** End Patch"),
        harness="codex", ESLINT_JSON=NO_VAR_ROW, ESLINT_LOADED="none")
 expect_contains("when ESLint's loaded files are unknown, a changed module counts", "also changes lint/other.cjs", str(c.output()))
+c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Add File: new5.js\n+var x = 1;\n*** End Patch"),
+       harness="codex", ESLINT_JSON=NO_VAR_ROW, ESLINT_LOADED="none")
+expect_equal("when ESLint's loaded files are unknown, the code file alone still denies", "deny", c.decision())
 c.file("eslint.config.js", "export default [];\n")
 c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Add File: eslint.config.mjs\n+export default [];\n"
                              "*** Add File: new3.js\n+var x = 1;\n*** End Patch"),
