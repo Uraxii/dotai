@@ -627,10 +627,14 @@ def codex_tool_event(payload: Payload, base: Neutral) -> Neutral | None:
         deleted.discard(target)
         # Moving a symlink removes the symlink, not its target: the moved
         # text was the target's, and the target is checked at its own path.
+        # A target outside the root has no rules there; the link's apply.
         if moves_link:
             moved_away.add(link)
             unlinked |= {link, named(link)}
-            changes[target] = changes[target] | {"source": source}
+            inside = resolve_in_root(source, cwd, root) is not None
+            changes[target] = changes[target] | {
+                "source": source if inside else link,
+            }
             if prior is not None and source != target:
                 changes[source] = prior | {"path": source, "source": source}
         elif source != target:

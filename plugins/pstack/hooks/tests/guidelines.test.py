@@ -1460,6 +1460,13 @@ c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Delete File: link4.py\n*** Ad
                              "*** Update File: link4.py\n*** Move to: moved4.py\n@@\n-x = [a for b in c for a in b]\n+x = 1\n*** End Patch"),
        harness="codex", **shared_env)
 expect_lacks("a file added where a symlink was, then moved, is not checked at the old target", "real4.py", str(c.output()))
+EXTERNAL = Path(tempfile.mkdtemp())
+(EXTERNAL / "real5.py").write_text("x = [a for b in c for a in b]\n")
+(c.project / "link5.py").symlink_to(EXTERNAL / "real5.py")
+c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: link5.py\n*** Move to: moved5.py\n@@\n-x = [a for b in c for a in b]\n"
+                             "+x = [a for b in c for a in b]  # flat\n*** End Patch"), harness="codex", **shared_env)
+expect_equal("a symlink to a file outside the root moved with a comment edit does not deny", "", c.decision())
+shutil.rmtree(EXTERNAL)
 c.file("deep/real7.py", "pass\n")
 (c.project / "link7.py").symlink_to(c.project / "deep" / "real7.py")
 c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Delete File: link7.py\n*** Add File: link7.py\n+x = [a for b in c for a in b]\n*** End Patch"),

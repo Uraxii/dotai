@@ -372,3 +372,4 @@ Scratch paths named in those notes (under `/tmp/...`) are gone; ignore them.
 - CI: the broken-`python3` fall-through test now uses `PATH` with only its own folder, like the other launcher tests (it failed on the GitHub runner, not locally).
 - `read_disk` checks the root without following the last symlink: a Write through a project symlink to an outside file now has a baseline, so a comment-only edit is not denied.
 - Rejected: `code_quality` findings in git-ignored files still apply (the skip copies Ruff's scan scope only). Escalated: project-local linters run with the harness trust as the only gate.
+- A Codex move of a project symlink to an outside file reads the old text with the link's rules (the target has none in the project), so an unchanged violation is not denied.
