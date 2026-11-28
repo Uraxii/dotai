@@ -444,12 +444,16 @@ def codex_tool_event(payload: Payload, base: Neutral) -> Neutral | None:
         ]}
     if name != "PreToolUse":
         return None
-    # Keyed by normalized path, as `./a.py` and `a.py` are one file.
+    # Keyed by absolute path, as `./a.py`, `a.py` and `$PWD/a.py` are
+    # one file.
     changes: dict[str, Neutral] = {}
     deleted: set[str] = set()
     moved_away: set[str] = set()
     for file in sections:
-        source, target = map(os.path.normpath, (file.source, file.target))
+        source, target = (
+            os.path.normpath(os.path.join(cwd, path))
+            for path in (file.source, file.target)
+        )
         prior = changes.pop(source, None)
         if file.action == "Delete File":
             # Kept, as a deleted file can be a lint setting of the others;

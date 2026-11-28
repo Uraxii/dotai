@@ -245,3 +245,11 @@ Scratch paths named in those notes (under `/tmp/...`) are gone; ignore them.
 - eslint_loaded.cjs also records files read with fs (`readFile*`, `open*`, sync and promises): jiti TypeScript configs and JSON/ignore files a config reads.
 - When the loaded list is unknown, the code file itself is not a setting, so a one-file edit still denies.
 - Real ESLint 9.39 / Node 24 / jiti repros: local-only eslint denies, a module of eslint.config.ts and an fs-read rules.json lower to warnings.
+
+## Update: review db26c41c findings fixed (4 blocking, 1 non-blocking)
+- `eslint_loaded` traces with the ESLint that lints the code file (`locate` from the code file), so a package-local ESLint under a root config traces.
+- eslint_loaded.cjs records absent paths the config looks for (and `exists`/`stat`/`access` calls), so adding an optional file the config reads lowers the deny.
+- A package.json the edit adds above a loaded file counts (it becomes that file's manifest, e.g. its `imports`).
+- Codex sections are keyed by absolute path (`a.py` = `$PWD/a.py`).
+- NODE_OPTIONS keeps non-ASCII recorder paths (`ensure_ascii=False`).
+- Real ESLint 9 / jiti / ruff repros for all 5. mise run ci green: guidelines.test.py 272/272.

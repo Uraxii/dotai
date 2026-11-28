@@ -238,11 +238,18 @@ def eslint_setting(
         setting == mode.folder / ".eslintignore"
     ):
         return True
-    loaded = eslint_loaded(mode.folder if mode.flat else code, mode, root)
+    # Traced with the ESLint that lints the code file.
+    executable = locate("eslint", code, root)
+    loaded = None if executable is None else eslint_loaded(
+        executable, mode.folder if mode.flat else code, mode, root
+    )
     if loaded is None:
         return setting != code and (
             name == ".eslintignore" or setting.suffix in SETTING_SUFFIXES
         )
+    # A package.json the edit adds above a loaded file becomes its manifest.
+    if name == "package.json" and not setting.exists():
+        return any(setting.parent in path.parents for path in loaded)
     return setting in loaded
 
 
@@ -260,18 +267,15 @@ def outranked(setting: Path, folder: Path) -> bool:
 
 @functools.cache
 def eslint_loaded(
-    target: Path, mode: EslintMode, root: Path
+    executable: str, target: Path, mode: EslintMode, root: Path
 ) -> frozenset[Path] | None:
     """The project files ESLint reads to build a config, with the nearest
     package.json of each, or None when they cannot be found. ESLint loads
     the config itself under a Node resolve hook that lists them."""
     probe = target / "_.js" if mode.flat else target
-    executable = locate("eslint", probe, root)
-    if executable is None:
-        return None
     # NODE_OPTIONS reads backslashes in quotes as escapes, so the path is
     # written with forward slashes and its quotes escaped.
-    recorder = json.dumps(LOADED_RECORDER.as_posix())
+    recorder = json.dumps(LOADED_RECORDER.as_posix(), ensure_ascii=False)
     env = os.environ | {"NODE_OPTIONS": " ".join(filter(None, (
         os.environ.get("NODE_OPTIONS"), f"--require {recorder}",
     )))}

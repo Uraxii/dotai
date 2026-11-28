@@ -586,6 +586,18 @@ c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Add File: eslint.config.mjs\n
                              "*** Add File: new3.js\n+var x = 1;\n*** End Patch"),
        harness="codex", ESLINT_JSON=NO_VAR_ROW)
 expect_equal("a flat config that an eslint.config.js outranks is not a setting", "deny", c.decision())
+c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Add File: local-rules.json\n+{}\n"
+                             "*** Add File: new6.js\n+var x = 1;\n*** End Patch"),
+       harness="codex", ESLINT_JSON=NO_VAR_ROW, ESLINT_LOADED=str(c.project / "local-rules.json"))
+expect_contains("an absent file the config looks for counts when the edit adds it", "also changes local-rules.json", str(c.output()))
+c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Add File: lint/sub/package.json\n+{}\n"
+                             "*** Add File: new7.js\n+var x = 1;\n*** End Patch"),
+       harness="codex", ESLINT_JSON=NO_VAR_ROW, ESLINT_LOADED=str(c.project / "lint" / "sub" / "rules.cjs"))
+expect_contains("an added package.json above a loaded file counts", "also changes lint/sub/package.json", str(c.output()))
+c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Add File: notes/package.json\n+{}\n"
+                             "*** Add File: new8.js\n+var x = 1;\n*** End Patch"),
+       harness="codex", ESLINT_JSON=NO_VAR_ROW)
+expect_equal("an added package.json above no loaded file is not a setting", "deny", c.decision())
 
 
 c = Case("ruff-symlink-extend")
@@ -1100,6 +1112,11 @@ c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: gone2.py\n@@\n-p
                              "*** Delete File: ./gone2.py\n*** End Patch"),
        harness="codex", RUFF_JSON=F403_ROW, **shared_env)
 expect_equal("a delete spelled ./gone2.py cancels the update of gone2.py", "", c.decision())
+c.file("alias.py", "pass\n")
+c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: alias.py\n@@\n-pass\n+from math import *\n"
+                             f"*** Update File: {c.project}/alias.py\n@@\n-from math import *\n+import math\n*** End Patch"),
+       harness="codex", RUFF_JSON=F403_ROW, **shared_env)
+expect_lacks("an absolute and a relative header are one file", "could not build", str(c.output()))
 c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: ruff.toml\n*** Move to: scratch/old.toml\n@@\n-extend = \"${DOTAI_SHARED}/base.toml\"\n+x = 1\n"
                              "*** Delete File: scratch/old.toml\n*** Add File: newmod10.py\n+from math import *\n*** End Patch"),
        harness="codex", RUFF_JSON=F403_ROW, **shared_env)
