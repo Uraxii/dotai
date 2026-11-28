@@ -5,7 +5,7 @@ description: >-
   smells and focused repairs. Use when writing, changing, or reviewing a skill.
 compatibility: The lint scripts need bash.
 metadata:
-  version: 1.0.0
+  version: 1.1.0
   author: Uraxii
   homepage: https://github.com/Uraxii/dotai
 ---
@@ -32,13 +32,16 @@ links, orphan references.
 - **Option buffet.** Many tools, no default. Pick default. Name alternative's
   trigger.
 - **Missing utility script.** Repeated deterministic work belongs in script.
-  Add only when repeat or verification earns it.
+  Add only when repeat or verification earns it. Each test run writes same
+  helper code? Move it to script.
 - **Missing decision tree.** Material branch, no chooser. Add short rule there.
 
 ## Over-prescribed guidance
 
 - **Series of commands.** Fixed commands, paths, or args block adaptation.
   State goal + invariant. Exact commands stay for fragile or safety work.
+- **Unexplained absolute rule.** MUST or NEVER with no reason, outside safety
+  or fragile step. Give reason, or soften.
 
 ## Missing verification and feedback
 
@@ -74,6 +77,8 @@ links, orphan references.
 - **Buried gotchas.** Critical warning easy to miss. Put beside constrained
   decision under clear heading.
 - **Missing usage rules.** No trigger, scope, or permission rule. Add minimum.
+- **Surprising behavior.** Skill does what description does not state. State
+  it in description, or cut it.
 - **Missing caveats.** Common failure case has no resolution. Add only when
   likely and action-changing.
 
@@ -90,6 +95,19 @@ links, orphan references.
   reader.
 - **Non-third-person description.** Description not third person. Rewrite as
   capability statement.
+- **Non-imperative instructions.** Steps describe instead of command. Use
+  imperative form.
+
+## Procedure smells
+
+Read `references/playbook-building-blocks.md` when skill holds numbered steps
+or routes. It has chooser (regular skill or router), route-line rules, and
+blocks to name in each step.
+- No stop predicate. Unbounded loop. Gate without runnable check.
+- Compound branch: and/or in one condition. Step without expected state.
+- Critical item late: move it first. Oversize playbook: over 10 steps, split.
+- Unvalidated agent-written playbook: no baseline, no paired test. Add both.
+- Overlapping routes: add "not X, see Y". No default route: add one.
 
 ## Unstructured output
 
