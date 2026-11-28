@@ -11,6 +11,8 @@ and to word each block.
 - [Route lines](#route-lines)
 - [Core blocks](#core-blocks)
 - [Optional blocks](#optional-blocks)
+- [Compose a playbook](#compose-a-playbook)
+- [Update a playbook](#update-a-playbook)
 
 ## Regular skill or router
 
@@ -209,3 +211,38 @@ Use a block only when the procedure needs it.
 - Fields: the state, and the file.
 - Source: StateFlow, which keeps the current state apart from the step
   content; Anthropic skill best practices, with a checklist to copy and track.
+
+## Compose a playbook
+
+An agent can write a playbook only behind these checks. SkillsBench measured
+skills that agents wrote for themselves at 8.1 to 11.5 points below the
+baseline with no skill.
+
+1. Run the task without the playbook, and record the failure. If no failure
+   occurs, do not write the playbook.
+2. Use [Regular skill or router](#regular-skill-or-router) to choose the
+   kind of skill.
+3. Start from the nearest template in `examples/`. Each template has
+   `shape: playbook` or `shape: router` in its frontmatter. In a `SKILL.md`,
+   put the `shape:` line under `metadata:`.
+4. Name each building block that each step uses.
+5. Run `scripts/checks/playbook-shape.sh` on the skill directory. Expect no
+   FAIL.
+6. Test the description, or the route lines of a router. Write about 20
+   queries. Half must trigger and half must not. Make the negative queries
+   near misses. Use 60% of the queries to tune and 40% to test. Select the
+   wording by the test score. Stop after 5 rounds.
+7. Run a paired test: the same prompts with the playbook and without it.
+   Give each assertion a descriptive name, and make each one objective. Flag
+   each assertion that passes in both runs, because it does not measure the
+   playbook.
+8. Ask a person to approve the playbook before release.
+
+To update a skill that exists, keep its name. Copy the old version first, and
+use the copy as the baseline in step 7. The Anthropic skill authoring guide
+uses the same trigger test and paired test.
+
+## Update a playbook
+
+Edit one step at a time. Never rewrite the whole file. ACE measured a context
+that fell from 18,282 tokens to 122 after a full rewrite.

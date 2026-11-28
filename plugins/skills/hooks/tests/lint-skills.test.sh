@@ -107,6 +107,82 @@ awk '{ printf "%s\r\n", $0 }' "$dir/SKILL.md" >"$WORK/tmp" && mv "$WORK/tmp" "$d
 run_hook "$lint" "$dir"
 expect_equal "a SKILL.md with CRLF line endings passes" 0 "$STATUS"
 
+shape="${lint%/*}/checks/playbook-shape.sh"
+# shaped KIND BODY: a skill whose references/p.md has that shape and body.
+shaped() {
+  local dir
+  dir=$(skill shaped "$good" "Read [p](references/p.md) when a widget breaks.")
+  printf -- '---\nshape: %s\n---\n\n%s\n' "$1" "$2" >"$dir/references/p.md"
+  printf '%s\n' "$dir"
+}
+playbook=$'1. Read the log. Expect the error line.\n2. Fix it. Expect the test to pass.\n\nDone when the test passes.\n\n**Reply:** cause, fix.'
+
+dir=$(shaped playbook "$playbook")
+run_hook "$lint" "$dir"
+expect_contains "a playbook with a stop predicate and a Reply line passes" "$dir: 0 failed, 0 warnings" "$STDOUT"
+
+dir=$(shaped playbook "${playbook/Done when/Finish}")
+run_hook "$shape" "$dir"
+expect_equal "a playbook with no stop predicate fails" 1 "$STATUS"
+expect_contains "the stop predicate is named" "FAIL  references/p.md: playbook has no stop predicate" "$STDOUT"
+
+dir=$(shaped playbook "${playbook/\*\*Reply:\*\*/Report}")
+run_hook "$shape" "$dir"
+expect_equal "a playbook with no Reply line fails" 1 "$STATUS"
+expect_contains "the Reply line is named" "FAIL  references/p.md: playbook has no Reply line" "$STDOUT"
+
+dir=$(shaped playbook "$playbook"$'\n3. Retry the build until it passes.')
+run_hook "$shape" "$dir"
+expect_contains "a loop with no limit warns" "WARN  references/p.md: line 11 has a loop with no limit" "$STDOUT"
+expect_equal "a loop with no limit still passes" 0 "$STATUS"
+dir=$(shaped playbook "$playbook"$'\n3. Retry the build at most 3 times.')
+run_hook "$shape" "$dir"
+expect_equal "a loop with a limit adds nothing" "0 " "$STATUS $STDOUT"
+dir=$(shaped playbook "$playbook"$'\nUse for "run until done". Not for one fix; see diagnose-loop.')
+run_hook "$shape" "$dir"
+expect_equal "loop words in quotes or in a hyphenated name add nothing" "0 " "$STATUS $STDOUT"
+
+dir=$(shaped playbook "$playbook"$'\n'"$(printf '%s. Step.\n' $(seq 3 11))")
+run_hook "$shape" "$dir"
+expect_contains "a playbook over 10 steps warns" "playbook has 11 steps, over 10" "$STDOUT"
+
+router=$'- Use for "fix": read [fix](fix.md).\n- Use for "ship": read `references/ship.md`.\n\nDefault: ask which one.'
+dir=$(shaped router "$router")
+printf '# Fix\n' >"$dir/references/fix.md"
+printf '# Ship\n' >"$dir/references/ship.md"
+run_hook "$shape" "$dir"
+expect_equal "a router whose routes exist and that has a default passes" "0 " "$STATUS $STDOUT"
+rm "$dir/references/ship.md"
+run_hook "$shape" "$dir"
+expect_contains "a route to a missing file fails" "FAIL  references/p.md: line 6 routes to references/ship.md, which does not exist" "$STDOUT"
+
+dir=$(shaped router "${router/Default: ask which one./Ask which one.}")
+printf '# Fix\n' >"$dir/references/fix.md"
+printf '# Ship\n' >"$dir/references/ship.md"
+run_hook "$shape" "$dir"
+expect_equal "a router with no default route fails" 1 "$STATUS"
+expect_contains "the default route is named" "FAIL  references/p.md: router has no default route" "$STDOUT"
+
+dir=$(shaped flow "No steps.")
+run_hook "$shape" "$dir"
+expect_contains "an unknown shape warns" "shape 'flow' is not playbook or router" "$STDOUT"
+
+dir=$(skill unshaped "$good" "Read [p](references/p.md) when a widget breaks.")
+printf '1. Retry until done.\n' >"$dir/references/p.md"
+run_hook "$shape" "$dir"
+expect_equal "a file with no shape is skipped" "0 " "$STATUS $STDOUT"
+
+dir=$(skill meta "$good" "1. Fix it.")
+printf -- '---\nname: meta\ndescription: %s\nmetadata:\n  shape: playbook\n---\n\n1. Fix it.\n' "$good" >"$dir/SKILL.md"
+run_hook "$shape" "$dir"
+expect_contains "a shape under metadata in SKILL.md is checked" "FAIL  SKILL.md: playbook has no stop predicate" "$STDOUT"
+
+for template in "$PLUGIN_ROOT_DIR"/skills/skill-quality/examples/*.md; do
+  expect_contains "${template##*/} declares a shape" "shape: " "$(head -n 5 "$template")"
+done
+run_hook "$shape" "$PLUGIN_ROOT_DIR/skills/skill-quality"
+expect_equal "the six templates pass the shape check" "0 6" "$STATUS $(ls "$PLUGIN_ROOT_DIR"/skills/skill-quality/examples/*.md | wc -l | tr -d ' ')"
+
 run_hook "$lint" "$PLUGIN_ROOT_DIR/skills/skill-quality"
 expect_equal "skill-quality passes its own verification" 0 "$STATUS"
 

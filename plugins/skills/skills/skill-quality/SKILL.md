@@ -23,7 +23,7 @@ Repair each `FAIL`. Repair each `WARN`, or keep it only for a real reason.
 Each check is own script in `scripts/checks/`. Run one alone with
 `scripts/checks/<check>.sh <skill-dir>`. Scripts own: frontmatter, name and
 description length, XML in description, body length, backslash paths, broken
-links, orphan references.
+links, orphan references, playbook shape.
 
 ## Under-specified guidance
 
@@ -101,8 +101,9 @@ links, orphan references.
 ## Procedure smells
 
 Read `references/playbook-building-blocks.md` when skill holds numbered steps
-or routes. It has chooser (regular skill or router), route-line rules, and
-blocks to name in each step.
+or routes. It has chooser (regular skill or router), route-line rules,
+blocks to name in each step, and compose procedure. Read
+[examples/](examples/) when writing new playbook or router: one template each.
 - No stop predicate. Unbounded loop. Gate without runnable check.
 - Compound branch: and/or in one condition. Step without expected state.
 - Critical item late: move it first. Oversize playbook: over 10 steps, split.
