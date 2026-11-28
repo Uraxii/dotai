@@ -352,3 +352,7 @@ Scratch paths named in those notes (under `/tmp/...`) are gone; ignore them.
 - Codex: a symlink deleted or moved also unlinks its folder-resolved name; a delete rescans earlier changes only when the patch edited through that name (6,000 symlink deletes stay fast); a change with no `source` field no longer fails.
 - Ruff ignore: `.ignore`/symlinked `.gitignore` are looked for in the lexical and the real parents; an edit to `.git/info/exclude` counts as a Ruff setting.
 - Recorder: `readlink` look-ups keep the link's own name; files Node loads as modules are marked `!`, and in legacy mode the code file counts as its own setting only when marked.
+
+## Update: review a49ea2af (1772012) findings fixed (1 blocking, 1 non-blocking)
+- Legacy mode drops the code file from the whole trace (reads and `?` look-ups) unless it is marked `!`; real ESLint 9 legacy `--print-config` looks the code file up.
+- Codex: `reals` keeps the real path each written path led to when its section was applied, so a later delete of a middle link does not move the real-path check.

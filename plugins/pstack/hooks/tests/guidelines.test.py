@@ -570,6 +570,9 @@ expect_equal("with flat mode off, a flat config is not a setting", "deny", c.dec
 c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Add File: new3.js\n+var x = 1;\n*** End Patch"),
        harness="codex", ESLINT_JSON=NO_VAR_ROW, ESLINT_USE_FLAT_CONFIG="false", ESLINT_LOADED=str(c.project / "new3.js"))
 expect_equal("in legacy mode the code file ESLint reads is not its own setting", "deny", c.decision())
+c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Add File: new8.js\n+var x = 1;\n*** End Patch"),
+       harness="codex", ESLINT_JSON=NO_VAR_ROW, ESLINT_USE_FLAT_CONFIG="false", ESLINT_LOADED="?" + str(c.project / "new8.js"))
+expect_equal("in legacy mode the code file ESLint looks for is not its own setting", "deny", c.decision())
 c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Add File: rules7.js\n+var x = 1;\n*** End Patch"),
        harness="codex", ESLINT_JSON=NO_VAR_ROW, ESLINT_USE_FLAT_CONFIG="false", ESLINT_LOADED="!" + str(c.project / "rules7.js"))
 expect_contains("in legacy mode a code file the config loads as a module is a setting", "also changes rules7.js", str(c.output()))
@@ -1518,6 +1521,13 @@ c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Add File: new29.py\n+x = [a f
        harness="codex", **shared_env)
 expect_equal("a patch that deletes 6,000 symlinks still denies", "deny", c.decision())
 expect_equal("well inside the hook timeout", True, time.monotonic() - started < 5)
+c.file("src30.py", "pass\n")
+(c.project / "build" / "l2_30.py").symlink_to(c.project / "src30.py")
+(c.project / "build" / "l1_30.py").symlink_to(c.project / "build" / "l2_30.py")
+c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: build/l1_30.py\n@@\n-pass\n+x = [a for b in c for a in b]\n*** Delete File: build/l2_30.py\n*** End Patch"),
+       harness="codex", **shared_env)
+expect_equal("an edit through a symlink chain is checked at the target a later delete leaves", "deny", c.decision())
+expect_contains("and the deny names the target", "src30.py", str(c.output()))
 c.file("real9.py", "pass\n")
 c.file("aliases/keep", "")
 (c.project / "aliases" / "alias9.py").symlink_to("../real9.py")

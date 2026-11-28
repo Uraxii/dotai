@@ -349,13 +349,13 @@ def eslint_loaded(
         except (OSError, subprocess.SubprocessError):
             return None
     read = {Path(name.removeprefix("!")) for name in names if name and name[0] != "?"}
-    # Legacy ESLint reads the file it lints; it is a setting only when the
-    # config loads it as a module (`!`).
+    files = read | {Path(name[1:]) for name in names if name[:1] == "?"}
+    # Legacy ESLint reads or looks for the file it lints; it is a setting
+    # only when the config loads it as a module (`!`).
     if not mode.flat:
-        read -= {target, target.resolve()} - {
+        files -= {target, target.resolve()} - {
             Path(name[1:]) for name in names if name[:1] == "!"
         }
-    files = read | {Path(name[1:]) for name in names if name[:1] == "?"}
     # ESLint looks for every flat config name; one it only looked for is
     # not loaded (a closer or higher-ranked one is a setting by name).
     files = {

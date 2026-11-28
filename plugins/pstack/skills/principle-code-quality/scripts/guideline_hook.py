@@ -22,7 +22,7 @@ import sys
 import tempfile
 import time
 import traceback
-from collections.abc import Callable, Collection, Iterator, Sequence
+from collections.abc import Callable, Collection, Iterator, Mapping, Sequence
 from pathlib import Path
 from typing import NamedTuple
 
@@ -127,6 +127,7 @@ def patched_realpath(path: str, unlinked: Collection[str] = ()) -> str:
 def with_link_targets(
     files: list[Neutral], cwd: str, root: str,
     unlinked: frozenset[str] | set[str] = frozenset(),
+    reals: Mapping[str, str] | None = None,
 ) -> list[Neutral]:
     """A file edited through a symlink, or a symlinked folder, is also
     checked at its real path, with that path's own lint settings."""
@@ -137,7 +138,8 @@ def with_link_targets(
         full = os.path.normpath(os.path.join(cwd, str(change["path"])))
         if change.get("after") is None:
             continue
-        real = patched_realpath(full, unlinked)
+        # A path's real path when it was written, before later deletes.
+        real = (reals or {}).get(full) or patched_realpath(full, unlinked)
         # The same name below a symlinked root is the same file.
         same = Path(full).is_relative_to(lexical) and Path(real) == top / os.path.relpath(full, lexical)
         if real == full or same or real in named or top not in Path(real).parents:
@@ -543,6 +545,8 @@ def codex_tool_event(payload: Payload, base: Neutral) -> Neutral | None:
     link_names: dict[str, list[str]] = {}
     # Those paths with their folders resolved.
     through: set[str] = set()
+    # The real path each written path led to when its section was applied.
+    reals: dict[str, str] = {}
 
     def named(path: str) -> str:
         return os.path.join(
@@ -589,6 +593,8 @@ def codex_tool_event(payload: Payload, base: Neutral) -> Neutral | None:
                                "after": None, "source": file.source}
             deleted.add(source)
             continue
+        if file.action != "Delete File":
+            reals[dest] = target
         if file.action != "Delete File" and dest not in unlinked and target != dest:
             link_names.setdefault(target, []).append(dest)
             through.add(named(dest))
@@ -639,7 +645,7 @@ def codex_tool_event(payload: Payload, base: Neutral) -> Neutral | None:
             and patched_realpath(name, unlinked) == key
         ]
     return {"kind": "pre_write",
-            "files": with_link_targets(files, cwd, root, unlinked)}
+            "files": with_link_targets(files, cwd, root, unlinked, reals)}
 
 
 def codex_event(payload: Payload) -> Neutral | None:
