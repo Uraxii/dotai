@@ -43,15 +43,18 @@ count='([0-9]+|<[^>]+>|one|two|three|four|five|six|seven|eight|nine|ten)'
 limit="(at most|no more than|up to|max|maximum|maximum of) $count([^a-z]|$)|(^|[^a-z])$count (times|rounds|tries|attempts)"
 limit="$limit|(^|[^a-z])(once|twice)([[:space:]]+(more|again))?[[:space:]]*([.,;:)]|$)"
 # "until" alone is a loop, except after a negation in the same clause (a
-# gate: "do not merge until the review passes") or at the end of a clause
-# that names a step (a hold: "keep it until step 6").
-not_loop_until="(^|[^a-z])(do not|don't|don’t|never|must not)[[:space:]].*until([^a-z]|$)|until (step|steps) $count[[:space:]]*$"
+# gate: "do not merge until the review passes") or before a step (a hold:
+# "keep it until step 6").
+# shortcut: a loop after a negation or before a step is missed ("never skip a
+# test, and run it until it passes", "poll until step 4 succeeds"); a WARN that
+# fires on gates and holds is worse. Upgrade if real playbooks hide loops so.
+not_loop_until="(^|[^a-z])(do not|don't|don’t|never|must not)[^a-z].*until([^a-z]|$)|until (step|steps) $count"
 
 # until_loop: true when a clause of the text on standard input has an "until"
-# that is a loop. Clauses end at a comma, a semicolon, " and ", or the end of
-# a sentence; a dot inside a word, as in README.md, ends nothing.
+# that is a loop. Clauses end at a semicolon or the end of a sentence; a dot
+# inside a word, as in README.md, ends nothing.
 until_loop() {
-  awk '{ gsub(/[,;]|[.!?]([ \t]|$)|[ \t][Aa][Nn][Dd][ \t]/, "\n"); print }' |
+  awk '{ gsub(/;|[.!?]([ \t]|$)/, "\n"); print }' |
     grep -iE "(^|[^a-z-])until([^a-z-]|$)" | grep -viE "$not_loop_until" | grep -q .
 }
 

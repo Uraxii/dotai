@@ -161,6 +161,30 @@ expect_equal "a path with a newline adds nothing" "" "$STDOUT"
 run_hook "$hook" --harness copilot --lint <<<"$(input copilot s-newline "$skill_d/SKILL.md"$'\n'"/x.md")"
 expect_equal "a copilot path with a newline is not linted" "" "$STDOUT"
 
+# A newline in the session id or the cwd must not add a line that names
+# another skill: the lint runs on the edited skill only, never on evil.
+skill_evil="$WORK/repo/skills/evil"
+clean_skill "$skill_evil"
+printf 'See [x](references/evil-gone.md) when a widget breaks.\n' >>"$skill_evil/SKILL.md"
+run_hook "$hook" --harness claude --lint <<<"$(jq -cn --arg s "a99"$'\n'"$skill_evil/x.md" --arg c "$WORK/repo" '{session_id: $s, cwd: $c, tool_input: {file_path: "skills/delta/SKILL.md"}}')"
+expect_contains "a session id with a newline still lints the edited skill" "references/nope.md does not resolve" "$(context)"
+expect_equal "a session id with a newline does not lint another skill" "" "$(context | grep -F evil)"
+run_hook "$hook" --harness claude --lint <<<"$(jq -cn --arg c "$WORK/repo"$'\nx\n'"$skill_evil/x.md" '{session_id: "s-cwd-newline", cwd: $c, tool_input: {file_path: "skills/delta/SKILL.md"}}')"
+expect_equal "a cwd with a newline adds nothing" "" "$STDOUT"
+
+# A session id that is not a plain name, such as ../x, would put the marker
+# outside the skill-quality- prefix, so it counts as no session.
+for i in 1 2; do
+  run_hook "$hook" --harness claude <<<"$(input claude ../x "$skill_a/SKILL.md")"
+  expect_contains "a ../x session id adds the guidance on edit $i" "- $skill_a" "$(context)"
+done
+
+run_hook "$hook" --harness copilot <<<"$(jq -cn --arg f "$skill_a/SKILL.md" '{sessionId: "s-obj", toolArgs: {path: $f}}')"
+expect_contains "copilot toolArgs as an object adds the guidance" "- $skill_a" "$(context)"
+
+run_hook "$hook" --harness claude <<<'{"session_id": "s-win", "tool_input": {"file_path": "C:\\r\\skills\\foo\\SKILL.md"}}'
+expect_contains "a Windows path with backslashes adds the guidance" "- C:/r/skills/foo" "$(context)"
+
 # With no session id, PreToolUse adds the guidance and PostToolUse does not.
 nosession=$(jq -cn --arg f "$skill_a/SKILL.md" '{tool_input: {file_path: $f}}')
 run_hook "$hook" --harness claude <<<"$nosession"
@@ -242,14 +266,14 @@ run_hook "$hook" --harness codex <<<"$(jq -cn --arg c "$(printf '*** Begin Patch
 expect_contains "a file moved out of the skill still adds the guidance" "- $skill_e" "$(context)"
 expect_equal "steps in a file moved out of the skill add no pointer" "" "$(context | grep -F 'holds numbered steps or routes')"
 
-# The input is parsed in linear time: 1 MB of prose full of quotes stays fast.
+# The input is parsed in linear time: 800 KB of prose full of quotes stays fast.
 yes 'say "hi" ok' | head -c 800000 >"$WORK/quotes.txt"
 for flag in "" --lint; do
   for path in "$skill_e/references/quotes.md" "$WORK/repo/quotes.md"; do
     jq -cn --arg f "$path" --rawfile c "$WORK/quotes.txt" '{session_id: "s-quotes", tool_input: {file_path: $f, content: $c}}' >"$WORK/quotes.json"
     start=$(date +%s)
     run_hook "$hook" --harness claude $flag <"$WORK/quotes.json"
-    expect_equal "1 MB of quoted prose to $path ${flag:-without --lint} takes under 4 s" 1 "$(($(date +%s) - start < 4))"
+    expect_equal "800 KB of quoted prose to $path ${flag:-without --lint} takes under 4 s" 1 "$(($(date +%s) - start < 4))"
   done
 done
 
