@@ -535,10 +535,14 @@ def codex_tool_event(payload: Payload, base: Neutral) -> Neutral | None:
         ) else base
         changes[target] = patch_change(file, start, prior)
         deleted.discard(target)
-        # Moving a symlink removes the symlink, not its target.
+        # Moving a symlink removes the symlink, not its target: the moved
+        # text was the target's, and the target is checked at its own path.
         if moves_link:
             moved_away.add(link)
             unlinked.add(link)
+            changes[target] = changes[target] | {"source": source}
+            if prior is not None and source != target:
+                changes[source] = prior | {"path": source, "source": source}
         elif source != target:
             moved_away.add(source)
     # A path a move left empty is deleted, also when another section

@@ -313,3 +313,11 @@ Scratch paths named in those notes (under `/tmp/...`) are gone; ignore them.
 - `eslint_setting`: the code file's real path (symlink target) is not its own setting, also with an unknown trace.
 - Ruff `.ignore`: a nested `.ignore` with path patterns is unknown before git is asked; when git cannot tell (no repository, no git) a `.ignore` is unknown (warning), not "not ignored".
 - Test ESLint stub returns no findings for empty source.
+
+## Update: review 18c69a31 (63a61ad) findings fixed (5 blocking, 3 non-blocking)
+- Ruff ignore scope is no longer copied for `.ignore`: any `.ignore` in the file's folder or a parent, or a root config whose `respect-gitignore` differs from the file's own, gives a "could not tell" warning. Only a git ignore match with `respect-gitignore` true in both is a skip.
+- ESLint recorder: a look-up made from project code (not node_modules, per the call stack) counts as a read; lookup candidates are kept only up to the file Node found (Node's CJS order). Every look-up-only flat config name is dropped from the trace.
+- `eslint_setting`: the code file (or its real path) is a setting only in flat mode when the trace lists it exactly (a config symlink to the edited file).
+- Codex: a moved symlink's text is compared with the target's own rules, and the target's change is checked at the target's path.
+- Known limit: after a symlink is moved, the PostToolUse check sees only the patch's destination names, not the old target.
+- Recorder call-stack check skips frames with no file (`new Promise (<anonymous>)`), as ESLint's discovery runs inside one. Real ESLint 9 repros for all 8.

@@ -244,12 +244,15 @@ def eslint_setting(
         return True
     # ESLint reads the file it lints and tries every flat config name, but
     # neither is a setting unless the name rules above say so.
-    if setting in (code, code.resolve()):
+    # In flat mode the trace lists the code file only when the config loads
+    # it, as with a config symlink to the file.
+    own = setting in (code, code.resolve())
+    if own and not mode.flat:
         return False
     shadowed = flat_name and outranked(setting, setting.parent)
     # A config can read any data file in ways no trace sees, so a changed
     # data or ignore file always counts.
-    if setting != code and name != "package.json" and (
+    if not own and name != "package.json" and (
         setting.suffix in DATA_SUFFIXES
         or name.startswith(".") and name.endswith("ignore")
     ):
@@ -262,11 +265,11 @@ def eslint_setting(
     if loaded is None:
         global trace_failed
         trace_failed = True
-        return not shadowed and (
+        return not own and not shadowed and (
             name == ".eslintignore" or setting.suffix in SETTING_SUFFIXES
         )
     # An outranked config name still counts when the config loads it.
-    if shadowed and setting not in loaded:
+    if (shadowed or own) and setting not in loaded:
         return False
     # A package.json above a loaded file counts when the edit adds it (it
     # becomes that file's manifest) or it maps the package's modules.
@@ -347,12 +350,11 @@ def eslint_loaded(
             return None
     read = {Path(name) for name in names if name and name[0] != "?"}
     files = read | {Path(name[1:]) for name in names if name[:1] == "?"}
-    # ESLint looks for every flat config name; one it only looked for that
-    # exists is not loaded.
+    # ESLint looks for every flat config name; one it only looked for is
+    # not loaded (a closer or higher-ranked one is a setting by name).
     files = {
         path for path in files if root in path.parents and (
-            path in read or not path.exists()
-            or FLAT_ESLINT_CONFIG.match(path.name) is None
+            path in read or FLAT_ESLINT_CONFIG.match(path.name) is None
         )
     }
     for path in list(files):
@@ -415,7 +417,9 @@ RUFF_EXCLUDED_PROBLEM = (
     "(the project's or ruff's defaults)"
 )
 RUFF_GITIGNORED_PROBLEM = "skips this file, as git ignores it"
-RUFF_IGNORED_PROBLEM = "skips this file, as a .ignore file excludes it"
+RUFF_IGNORE_UNKNOWN = (
+    "could not tell whether a .ignore file or git excludes this file"
+)
 RUFF_GIT_IGNORE_NAMES = (".gitignore", ".ignore")
 
 
@@ -435,43 +439,34 @@ def git_matches(target: Target, *options: str) -> bool | None:
     return {0: True, 1: False}.get(process.returncode)
 
 
-def ruff_ignore_skip(target: Target) -> RunResult | None:
-    """Ruff skips a file that git or a `.ignore` file ignores in its own
-    runs, but not one given on stdin, so the hook asks git. Tracked files
-    count, as Ruff matches only the ignore rules."""
-    config = ruff_config(target.path, target.root)
-    respect = next((
+def respects_gitignore(code: Path, root: Path) -> bool:
+    config = ruff_config(code, root)
+    return next((
         table["respect-gitignore"] for table in ruff_tables(config)
         if "respect-gitignore" in table
     ), True) if config is not None else True
-    if respect is False:
+
+
+def ruff_ignore_skip(target: Target) -> RunResult | None:
+    """Ruff skips a file that git or a `.ignore` file ignores in its own
+    runs, but not one given on stdin, so the hook asks git. Tracked files
+    count, as Ruff matches only the ignore rules. Git cannot match `.ignore`
+    files, and a run from the root can use another `respect-gitignore`
+    than the file's own config, so those cases are unknown."""
+    respects = {
+        respects_gitignore(target.path, target.root),
+        respects_gitignore(target.root / "_.py", target.root),
+    }
+    if respects == {False}:
         return None
-    if git_matches(target):
+    ignored = git_matches(target)
+    if respects == {True} and ignored:
         return RunResult((), RUFF_GITIGNORED_PROBLEM)
-    for folder in parents_within(target.path, target.root):
-        ignore = folder / ".ignore"
-        if not ignore.is_file():
-            continue
-        # git reads the file's patterns from the project root, so a nested
-        # file's path patterns are not known.
-        try:
-            anchored = folder != target.root and any(
-                "/" in line.strip().rstrip("/")
-                for line in ignore.read_text(encoding="utf-8").splitlines()
-                if line.strip() and not line.startswith("#")
-            )
-        except (OSError, UnicodeDecodeError):
-            anchored = True
-        matched = None if anchored else git_matches(
-            target, "-c", f"core.excludesFile={ignore}"
-        )
-        if matched:
-            return RunResult((), RUFF_IGNORED_PROBLEM)
-        if matched is None:
-            name = ignore.relative_to(target.root).as_posix()
-            return RunResult(
-                None, f"could not tell whether {name} excludes this file"
-            )
+    if ignored or any(
+        (folder / ".ignore").is_file()
+        for folder in parents_within(target.path, target.root)
+    ):
+        return RunResult(None, RUFF_IGNORE_UNKNOWN)
     return None
 
 

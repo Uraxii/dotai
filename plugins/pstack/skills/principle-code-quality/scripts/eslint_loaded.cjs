@@ -60,17 +60,38 @@ if (out && typeof nodeModule.registerHooks === "function") {
           base = path.resolve(path.dirname(parent), specifier);
         }
       }
-      if (base) {
-        const suffixes = ["", ".js", ".cjs", ".mjs", ".ts", ".cts", ".mts", ".json", ".node"];
-        for (const suffix of suffixes) record(base + suffix, true);
-        record(path.join(base, "package.json"), true);
-        for (const suffix of suffixes.slice(1)) record(path.join(base, "index" + suffix), true);
+      // In Node's order: only the files tried before the one found matter.
+      const suffixes = ["", ".js", ".json", ".node", ".cjs", ".mjs", ".ts", ".cts", ".mts"];
+      const candidates = base ? [
+        ...suffixes.map((suffix) => base + suffix),
+        path.join(base, "package.json"),
+        ...suffixes.slice(1).map((suffix) => path.join(base, "index" + suffix)),
+      ] : [];
+      let result;
+      try {
+        result = nextResolve(specifier, context);
+      } catch (error) {
+        for (const candidate of candidates) record(candidate, true);
+        throw error;
       }
-      const result = nextResolve(specifier, context);
-      if (result.url.startsWith("file:")) record(new URL(result.url));
+      const found = result.url.startsWith("file:") ? fileURLToPath(result.url) : null;
+      const index = found ? candidates.indexOf(found) : -1;
+      for (const candidate of index < 0 ? candidates : candidates.slice(0, index)) record(candidate, true);
+      if (found) record(found);
       return result;
     },
   });
+  // A look-up the project's own config makes can change the config, also
+  // for a flat config name, so it counts as a read; ESLint's own look-ups
+  // come from node_modules.
+  const fromProject = () => {
+    for (const line of (new Error().stack || "").split("\n").slice(1)) {
+      // Frames with no file, such as `new Promise (<anonymous>)`, are skipped.
+      if (line.includes(__filename) || line.includes("(node:") || line.includes(" node:") || !/[\\/]/.test(line)) continue;
+      return !/[\\/]node_modules[\\/]/.test(line);
+    }
+    return false;
+  };
   // The wrapper keeps the original's own properties, such as the custom
   // promisify of fs.exists and realpathSync.native.
   const wrap = (owner, name, before) => {
@@ -99,7 +120,7 @@ if (out && typeof nodeModule.registerHooks === "function") {
     [fs.promises, "stat"], [fs.promises, "access"], [fs.promises, "lstat"],
     [fs.promises, "realpath"],
   ]) {
-    wrap(owner, name, (file) => record(file, true));
+    wrap(owner, name, (file) => record(file, !fromProject()));
   }
   // A listed folder is kept as `folder/*`: a file the edit adds in it
   // can change the config, also when a glob library lists it.

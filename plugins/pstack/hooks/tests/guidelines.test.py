@@ -138,7 +138,8 @@ with open(os.path.join(os.environ["WORK"], "eslint.env"), "w") as env:
     env.write(os.environ.get("ESLINT_USE_FLAT_CONFIG", ""))
 # Empty source has no findings, as in ESLint.
 source = sys.stdin.read()
-print(source.strip() and os.environ.get("ESLINT_JSON") or '[{{"messages":[]}}]')
+found = source.strip() and os.environ.get("ESLINT_ONLY", "") in source
+print(found and os.environ.get("ESLINT_JSON") or '[{{"messages":[]}}]')
 """
 
 
@@ -525,7 +526,7 @@ c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: tools/rules.mjs\
 expect_contains("a module the flat config imports counts as a setting", "also changes tools/rules.mjs", str(c.output()))
 c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Add File: packages/web/eslint.config.ts\n+export default [];\n"
                              "*** Add File: packages/web/new9.ts\n+var x = 1\n*** End Patch"),
-       harness="codex", ESLINT_LOADED=str(c.project / "packages/web/eslint.config.ts"), ESLINT_JSON=NO_VAR_ROW)
+       harness="codex", ESLINT_LOADED="?" + str(c.project / "packages/web/eslint.config.ts"), ESLINT_JSON=NO_VAR_ROW)
 expect_equal("an outranked flat config ESLint only looked for is not a setting", "deny", c.decision())
 c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: .eslintignore\n@@\n-dist/\n+packages/web/main.ts\n"
                              "*** Add File: packages/web/new1.ts\n+var x = 1\n*** End Patch"),
@@ -648,8 +649,8 @@ expect_contains("a .gitignore change in the same edit counts as a Ruff setting",
 c.file(".ignore", "skipme.py\n")
 c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Add File: skipme.py\n+from math import *\n*** End Patch"),
        harness="codex", RUFF_JSON=F403_ROW)
-expect_equal("a file a .ignore excludes is not denied, as Ruff skips it", "", c.decision())
-expect_contains("and the notice names the .ignore", ".ignore file excludes it", str(c.output()))
+expect_equal("a file a .ignore may exclude is not denied", "", c.decision())
+expect_contains("and the notice says the scope is not known", "could not tell whether a .ignore file or git excludes", str(c.output()))
 c.file("base.toml", "respect-gitignore = false\n")
 c.file("ruff.toml", 'extend = "base.toml"\nrespect-gitignore = true\n')
 c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Add File: made/two.py\n+from math import *\n*** End Patch"),
@@ -659,7 +660,16 @@ expect_equal("a child config's respect-gitignore beats the one it extends", "", 
 c.file("sub/.ignore", "sub/foo.py\n")
 c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Add File: sub/foo.py\n+from math import *\n*** End Patch"),
        harness="codex", RUFF_JSON=F403_ROW)
-expect_contains("a nested .ignore path pattern is unknown, not a skip", "could not tell whether sub/.ignore", str(c.output()))
+expect_contains("a nested .ignore is unknown, not a skip", "could not tell whether a .ignore", str(c.output()))
+(c.project / "sub" / ".ignore").unlink()
+(c.project / ".ignore").unlink()
+c.file("src/ruff.toml", "respect-gitignore = true\n")
+c.file("ruff.toml", "respect-gitignore = false\n")
+c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Add File: src/made/x.py\n+from math import *\n*** End Patch"),
+       harness="codex", RUFF_JSON=F403_ROW)
+expect_contains("a root run with another respect-gitignore is unknown", "could not tell whether a .ignore file or git", str(c.output()))
+(c.project / "ruff.toml").unlink()
+(c.project / "src" / "ruff.toml").unlink()
 c = Case("ruff-ignore-no-git")
 c.file(".ignore", "skipme.py\n")
 c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Add File: skipme.py\n+from math import *\n*** End Patch"),
@@ -684,6 +694,12 @@ expect_equal("a file that replaces a symlink is not its own setting", "deny", c.
 c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Delete File: link16.js\n*** Add File: link16.js\n+var a = 1;\n*** End Patch"),
        harness="codex", ESLINT_JSON=NO_VAR_ROW, ESLINT_LOADED="none")
 expect_equal("also when the trace is unknown", "deny", c.decision())
+c = Case("eslint-config-symlink")
+c.file("lint-entry.js", "module.exports = [];\n")
+(c.project / "eslint.config.js").symlink_to(c.project / "lint-entry.js")
+c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: lint-entry.js\n@@\n-module.exports = [];\n+var rules = {};\n*** End Patch"),
+       harness="codex", ESLINT_JSON=NO_VAR_ROW, ESLINT_ONLY="var ", ESLINT_LOADED="lint-entry.js")
+expect_contains("the real file behind a config symlink is a setting of itself", "also changes lint-entry.js", str(c.output()))
 NODE = shutil.which("node")
 if NODE:
     trace = Case("eslint-recorder")
@@ -700,6 +716,24 @@ if NODE:
     expect_equal("the recorder keeps fs.exists working with promisify", 0, process.returncode)
     expect_contains("so the file loaded after it is listed", str((trace.project / "rules.cjs").resolve()), names)
     expect_contains("a realpath lookup of an absent file is listed", str(trace.project.resolve() / "overrides.cjs"), names)
+    trace.file("eslint.config.cjs", "")
+    trace.file("lib.js", "")
+    trace.file("own.cjs", "require('node:fs').existsSync(require('node:path').join(__dirname, 'eslint.config.cjs')); require('./lib');\n")
+    listed.unlink(missing_ok=True)
+    subprocess.run([NODE, "own.cjs"], cwd=trace.project, capture_output=True, env=os.environ | {
+        "NODE_OPTIONS": f"--require {ENGINE.parent / 'eslint_loaded.cjs'}", "PSTACK_ESLINT_LOADED": str(listed)})
+    recorded = listed.read_text().splitlines() if listed.exists() else []
+    expect_equal("a look-up the config makes itself counts as a read", True, str((trace.project / "eslint.config.cjs").resolve()) in recorded)
+    expect_equal("a lookup candidate Node tries after the found file is left out", False, any(line.endswith("lib.cjs") for line in recorded))
+    expect_equal("one it tries before is kept", True, "?" + str(trace.project.resolve() / "lib") in recorded)
+    trace.file("eslint.config.mjs", "")
+    trace.file("node_modules/disc/index.js", "module.exports = () => new Promise((done) => done(require('node:fs').existsSync(require('node:path').join(process.cwd(), 'eslint.config.mjs'))));\n")
+    trace.file("disc.cjs", "require('disc')();\n")
+    listed.unlink(missing_ok=True)
+    subprocess.run([NODE, "disc.cjs"], cwd=trace.project, capture_output=True, env=os.environ | {
+        "NODE_OPTIONS": f"--require {ENGINE.parent / 'eslint_loaded.cjs'}", "PSTACK_ESLINT_LOADED": str(listed)})
+    recorded = listed.read_text().splitlines() if listed.exists() else []
+    expect_equal("a look-up from node_modules inside a Promise is only a look-up", True, "?" + str(trace.project.resolve() / "eslint.config.mjs") in recorded)
 c = Case("ruff-symlink-extend")
 c.file("ruff.toml", 'extend = "b/config.toml"\n')
 c.file("a/source/config.toml", 'extend = "../shared.toml"\n')
@@ -1277,6 +1311,18 @@ c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: link8.py\n*** Mo
        harness="codex", **shared_env)
 expect_equal("moving a symlink onto its own target keeps the target's change", "deny", c.decision())
 expect_contains("and the deny names the target", "real8.py", str(c.output()))
+c.file("real9.py", "pass\n")
+c.file("aliases/keep", "")
+(c.project / "aliases" / "alias9.py").symlink_to("../real9.py")
+c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: aliases/alias9.py\n@@\n-pass\n+x = [a for b in c for a in b]\n"
+                             "*** Update File: aliases/alias9.py\n*** Move to: aliases/copied9.py\n@@\n x = [a for b in c for a in b]\n*** End Patch"),
+       harness="codex", **shared_env)
+expect_contains("a symlink updated, then moved, leaves the target checked at its own path", "real9.py", str(c.output()))
+c.file("real10.py", "x = [a for b in c for a in b]\n")
+(c.project / "aliases" / "alias10.py").symlink_to("../real10.py")
+c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: aliases/alias10.py\n*** Move to: real10.py\n@@\n x = [a for b in c for a in b]\n*** End Patch"),
+       harness="codex", **shared_env)
+expect_equal("moving a symlink onto its target compares with the target's own text", "", c.decision())
 c.hook(c.patch("PreToolUse", "*** Begin Patch\n*** Update File: ruff.toml\n*** Move to: scratch/old.toml\n@@\n-extend = \"${DOTAI_SHARED}/base.toml\"\n+x = 1\n"
                              "*** Delete File: scratch/old.toml\n*** Add File: newmod10.py\n+from math import *\n*** End Patch"),
        harness="codex", RUFF_JSON=F403_ROW, **shared_env)
